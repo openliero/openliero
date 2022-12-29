@@ -106,7 +106,7 @@ struct SettingsMenu : Menu
 };
 
 struct Joystick {
-	SDL_Joystick *sdlJoystick;
+	SDL_GameController *sdlGameController;
 	bool btnState[MaxJoyButtons];
 
 	void clearState() {

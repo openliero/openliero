@@ -111,7 +111,7 @@ try
 	if(!tcSet)
 		tcName = "Liero v1.33";
 
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 
 	initKeys();
 
