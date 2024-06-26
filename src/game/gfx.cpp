@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <memory>
 #include <limits>
+#include <random>
 
 #include "gfx.hpp"
 #include "reader.hpp"
@@ -2201,8 +2202,9 @@ int Gfx::menuLoop()
 			{
 				nobjMap.push_back(i);
 			}
-
-			std::random_shuffle(nobjMap.begin(), nobjMap.end(), r);
+			std::random_device rd;
+			std::mt19937 g(rd());
+			std::shuffle(nobjMap.begin(), nobjMap.end(), g);
 
 			for (auto& w : common.weapons)
 			{
