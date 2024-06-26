@@ -66,6 +66,8 @@
 #  define GVL_ARM 1
 # elif defined(__aarch64__) || defined(_M_ARM64)
 #  define GVL_ARM_64 1
+# elif defined(__EMSCRIPTEN__)
+#  define GVL_LITTLE_ENDIAN 1
 # else
 #  error "Unknown architecture, please add it"
 # endif
