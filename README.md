@@ -107,3 +107,7 @@ mv TC/liero-1.36-bundle TC/"Liero v1.33"
 rm liero-1.36-bundle.zip
 rm -rf liero-1.36-bundle
 ```
+
+## Emscripten
+
+* Install from git: https://emscripten.org/docs/getting_started/downloads.html
