@@ -111,3 +111,5 @@ rm -rf liero-1.36-bundle
 ## Emscripten
 
 * Install from git: https://emscripten.org/docs/getting_started/downloads.html
+* Run: emcmake cmake
+* 

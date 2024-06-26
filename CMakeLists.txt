@@ -6,6 +6,14 @@ project(openliero
   LANGUAGES C CXX
 )
 
+if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+    set(USE_FLAGS "--use-port=sdl2 --use-port=sdl2_image:formats=png")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USE_FLAGS}")
+    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS}")
+    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
+    set(CMAKE_EXECUTABLE_SUFFIX .html)
+endif()
+
 # options at top so they're easy to find
 option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
@@ -107,11 +115,13 @@ endif()
 
 # game
 add_library(game ${GAME_SOURCES})
-target_link_libraries(game
-  SDL2::SDL2
-  SDL2_image::SDL2_image
-  miniz
-)
+if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+  target_link_libraries(game
+    SDL2::SDL2
+    SDL2_image::SDL2_image
+    miniz
+  )
+endif()
 if(APPLE)
   add_executable(openliero MACOSX_BUNDLE src/game/main.cpp)
 elseif(WIN32)
