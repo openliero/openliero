@@ -195,6 +195,11 @@ struct Gfx
 
 	void processEvent(SDL_Event& ev, Controller* controller = 0);
 
+#ifdef __EMSCRIPTEN__
+	void mainLoopIteration(double time, void *userData);
+#else
+	void mainLoopIteration();
+#endif
 	int menuLoop();
 	void mainLoop();
 	void drawBasicMenu(/*int curSel*/);
