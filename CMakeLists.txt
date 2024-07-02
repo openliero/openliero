@@ -7,10 +7,10 @@ project(openliero
 )
 
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
-    set(USE_FLAGS "--use-port=sdl2 --use-port=sdl2_image:formats=png")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USE_FLAGS}")
-    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS}")
-    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
+    set(USE_FLAGS "-fexceptions --use-port=sdl2 --use-port=sdl2_image:formats=png")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USE_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "--preload-file pkg ${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
     set(CMAKE_EXECUTABLE_SUFFIX .html)
 endif()
 
