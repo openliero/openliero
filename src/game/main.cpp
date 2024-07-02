@@ -82,7 +82,8 @@ try
 	bool tcSet = false;
 
 	std::string tcName;
-	std::string configPath; // Default to current dir
+	// Default to "pkg"
+	std::string configPath = "pkg";
 
 	for(int i = 1; i < argc; ++i)
 	{
