@@ -96,7 +96,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 	if(worm.visible)
 	{
 		int lifebarWidth = worm.health * 100 / worm.settings->health;
-		drawBar(renderer.bmp, worm.statsX, renderer.renderResY - 39, lifebarWidth, lifebarWidth / 10 + 234);
+		drawBar(renderer.bmp, worm.statsX * multiplier, renderer.renderResY - 39, lifebarWidth, lifebarWidth / 10 + 234);
 	}
 	else
 	{
@@ -105,7 +105,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 		{
 			if(lifebarWidth > 100)
 				lifebarWidth = 100;
-			drawBar(renderer.bmp, worm.statsX, renderer.renderResY - 39, lifebarWidth, lifebarWidth / 10 + 234);
+			drawBar(renderer.bmp, worm.statsX * multiplier, renderer.renderResY - 39, lifebarWidth, lifebarWidth / 10 + 234);
 		}
 	}
 
@@ -120,7 +120,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 			int ammoBarWidth = ww.ammo * 100 / ww.type->ammo;
 
 			if(ammoBarWidth > 0)
-				drawBar(renderer.bmp, worm.statsX, renderer.renderResY - 34, ammoBarWidth, ammoBarWidth / 10 + 245);
+				drawBar(renderer.bmp, worm.statsX * multiplier, renderer.renderResY - 34, ammoBarWidth, ammoBarWidth / 10 + 245);
 		}
 	}
 	else
@@ -138,22 +138,22 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 		}
 
 		if(ammoBarWidth > 0)
-			drawBar(renderer.bmp, worm.statsX, renderer.renderResY - 34, ammoBarWidth, ammoBarWidth / 10 + 245);
+			drawBar(renderer.bmp, worm.statsX * multiplier, renderer.renderResY - 34, ammoBarWidth, ammoBarWidth / 10 + 245);
 
 		if((game.cycles % 20) > 10
 		&& worm.visible)
 		{
-			common.font.drawText(renderer.bmp, LS(Reloading), worm.statsX, 164 * multiplier, 50);
+			common.font.drawText(renderer.bmp, LS(Reloading), worm.statsX * multiplier, 164 * multiplier, 50);
 		}
 	}
 
-	common.font.drawText(renderer.bmp, (LS(Kills) + toString(worm.kills)), worm.statsX, renderer.renderResY - 29, 10);
+	common.font.drawText(renderer.bmp, (LS(Kills) + toString(worm.kills)), worm.statsX * multiplier, renderer.renderResY - 29, 10);
 
 	if(isReplay)
 	{
-		common.font.drawText(renderer.bmp, worm.settings->name, worm.statsX, renderer.renderResY - 15, 7);
-		fillRect(renderer.bmp, worm.statsX, renderer.renderResY - 7 - 1, 8, 8, 7);
-		fillRect(renderer.bmp, worm.statsX + 1, renderer.renderResY - 7, 6, 6, worm.settings->color);
+		common.font.drawText(renderer.bmp, worm.settings->name, worm.statsX * multiplier, renderer.renderResY - 15, 7);
+		fillRect(renderer.bmp, worm.statsX * multiplier, renderer.renderResY - 7 - 1, 8, 8, 7);
+		fillRect(renderer.bmp, (worm.statsX + 1) * multiplier, renderer.renderResY - 7, 6, 6, worm.settings->color);
 		common.font.drawText(renderer.bmp, timeToStringEx(game.cycles * 14, false, true), 95 * multiplier, renderer.renderResY - 15, 7);
 	}
 
@@ -164,7 +164,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 	case Settings::GMKillEmAll:
 	case Settings::GMScalesOfJustice:
 	{
-		common.font.drawText(renderer.bmp, (LS(Lives) + toString(worm.lives)), worm.statsX, renderer.renderResY - 22, 6);
+		common.font.drawText(renderer.bmp, (LS(Lives) + toString(worm.lives)), worm.statsX * multiplier, renderer.renderResY - 22, 6);
 	}
 	break;
 
