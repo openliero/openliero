@@ -25,11 +25,7 @@ ItemBehavior* HiddenMenu::getItemBehavior(Common& common, MenuItem& item)
 		case DoubleRes:
 			return new BooleanSwitchBehavior(common, gfx.doubleRes, [](bool v) { gfx.setDoubleRes(v); });
 		case Fullscreen:
-			return new BooleanSwitchBehavior(common, gfx.fullscreen, [](bool v) { gfx.setFullscreen(v); });
-		case FullscreenW:
-			return new IntegerBehavior(common, gfx.settings->fullscreenW, 0, 9999, 0);
-		case FullscreenH:
-			return new IntegerBehavior(common, gfx.settings->fullscreenH, 0, 9999, 0);
+			return new BooleanSwitchBehavior(common, gfx.settings->fullscreen, [](bool v) { gfx.setFullscreen(v); });
 		case AiFrames:
 			return new IntegerBehavior(common, gfx.settings->aiFrames, 1, 70 * 5);
 		case AiMutations:

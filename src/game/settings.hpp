@@ -15,7 +15,7 @@
 // It can then easily reset the extensions if they fail to load.
 struct Extensions
 {
-	static int const myVersion = 8;
+	static int const myVersion = 9;
 	static bool const extensions = true;
 
 	Extensions();
@@ -29,8 +29,7 @@ struct Extensions
 	bool aiTraces;
 	int32_t aiParallels;
 
-	int32_t fullscreenW;
-	int32_t fullscreenH;
+	bool fullscreen;
 
 	int32_t zoneTimeout;
 	uint32_t selectBotWeapons;
@@ -204,12 +203,13 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand)
 
 		bool extDummy = true;
 		uint8_t extDummy8 = 0;
+		uint32_t extDummy16 = 0;
 		ar.b(extDummy);
 		ar.b(settings.recordReplays);
 		ar.b(settings.loadPowerlevelPalette);
 		ar.ui8(extDummy8);
-		ar.ui16(settings.fullscreenW);
-		ar.ui16(settings.fullscreenH);
+		ar.ui16(extDummy16); // old fullscreenW
+		ar.ui16(extDummy16); // old fullscreenH
 
 		if (fileExtensionVersion >= 4)
 			ar.str(settings.levelFile);
@@ -257,6 +257,8 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand)
 		gvl::enable_when(ar, fileExtensionVersion >= 8)
 			.b(settings.spectatorWindow, false);
 
+		gvl::enable_when(ar, fileExtensionVersion >= 9)
+			.b(settings.fullscreen, false);
 	}
 	catch(std::runtime_error&)
 	{
@@ -305,14 +307,15 @@ void archive(Archive ar, Settings& settings)
 
 	bool extDummy = true;
 	uint8_t extDummy8 = 0;
+	int32_t extDummy16 = 0;
 
 	ar
-	.b(extDummy)
-	.b(settings.recordReplays)
-	.b(settings.loadPowerlevelPalette)
-	.ui8(extDummy8)
-	.ui16(settings.fullscreenW)
-	.ui16(settings.fullscreenH);
+		.b(extDummy)
+		.b(settings.recordReplays)
+		.b(settings.loadPowerlevelPalette)
+		.ui8(extDummy8)
+		.ui16(extDummy16) // old fullscreenW
+		.ui16(extDummy16); // old fullscreenH
 
 	if (fileExtensionVersion >= 2)
 		ar.b(extDummy);
@@ -326,6 +329,8 @@ void archive(Archive ar, Settings& settings)
 		.b(settings.singleScreenReplay, false);
 	gvl::enable_when(ar, fileExtensionVersion >= 8)
 		.b(settings.spectatorWindow, false);
+	gvl::enable_when(ar, fileExtensionVersion >= 9)
+		.b(settings.fullscreen, false);
 	ar.check();
 }
 
@@ -356,8 +361,6 @@ void archive_text(Settings& settings, Archive& ar)
 
 	ar.b(S(recordReplays));
 	ar.b(S(loadPowerlevelPalette));
-	ar.i32(S(fullscreenW));
-	ar.i32(S(fullscreenH));
 
 	ar
 	.i32(S(aiMutations))
@@ -372,6 +375,7 @@ void archive_text(Settings& settings, Archive& ar)
 	ar.b(S(allowViewingSpawnPoint));
 	ar.b(S(singleScreenReplay));
 	ar.b(S(spectatorWindow));
+	ar.b(S(fullscreen));
 
 	#undef S
 

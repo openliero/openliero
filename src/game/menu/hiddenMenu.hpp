@@ -15,8 +15,6 @@ struct HiddenMenu : Menu
 		//ScalingFilter,
 		DoubleRes,
 		Fullscreen,
-		FullscreenW,
-		FullscreenH,
 		AiFrames,
 		AiMutations,
 		PaletteSelect,
