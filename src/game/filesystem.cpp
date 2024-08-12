@@ -405,13 +405,13 @@ struct FsNodeZipArchive : gvl::shared
 	FsNodeZipFile* root;
 };
 
-gvl::shared_ptr<FsNodeImp> join(gvl::shared_ptr<FsNodeImp> a, gvl::shared_ptr<FsNodeImp> b);
+std::shared_ptr<FsNodeImp> join(std::shared_ptr<FsNodeImp> a, std::shared_ptr<FsNodeImp> b);
 
 struct FsNodeJoin : FsNodeImp
 {
-	gvl::shared_ptr<FsNodeImp> a, b;
+	std::shared_ptr<FsNodeImp> a, b;
 
-	FsNodeJoin(gvl::shared_ptr<FsNodeImp> aInit, gvl::shared_ptr<FsNodeImp> bInit)
+	FsNodeJoin(std::shared_ptr<FsNodeImp> aInit, std::shared_ptr<FsNodeImp> bInit)
 	: a(std::move(aInit)), b(std::move(bInit))
 	{
 	}
@@ -426,7 +426,7 @@ struct FsNodeJoin : FsNodeImp
 		return a->iter() | b->iter();
 	}
 
-	gvl::shared_ptr<FsNodeImp> go(std::string const& name)
+	std::shared_ptr<FsNodeImp> go(std::string const& name)
 	{
 		return join(a->go(name), b->go(name));
 	}
@@ -453,18 +453,18 @@ struct FsNodeJoin : FsNodeImp
 	}
 };
 
-gvl::shared_ptr<FsNodeImp> join(gvl::shared_ptr<FsNodeImp> a, gvl::shared_ptr<FsNodeImp> b)
+std::shared_ptr<FsNodeImp> join(std::shared_ptr<FsNodeImp> a, std::shared_ptr<FsNodeImp> b)
 {
 	if (!b)
 		return a;
 	if (!a)
 		return b;
-	return gvl::shared_ptr<FsNodeImp>(new FsNodeJoin(std::move(a), std::move(b)));
+	return std::shared_ptr<FsNodeImp>(new FsNodeJoin(std::move(a), std::move(b)));
 }
 
 struct FsNodeZipFile : FsNodeImp
 {
-	gvl::shared_ptr<FsNodeZipArchive> archive;
+	std::shared_ptr<FsNodeZipArchive> archive;
 	std::string path;
 	std::string relPath;
 	int fileIndex;
@@ -518,7 +518,7 @@ struct FsNodeZipFile : FsNodeImp
 		}
 	}
 
-	FsNodeZipFile(gvl::shared_ptr<FsNodeZipArchive> archive, std::string const& fullPath, std::string const& relPath, int fileIndex, bool isDir)
+	FsNodeZipFile(std::shared_ptr<FsNodeZipArchive> archive, std::string const& fullPath, std::string const& relPath, int fileIndex, bool isDir)
 	: archive(std::move(archive))
 	, path(fullPath)
 	, relPath(relPath)
@@ -527,7 +527,7 @@ struct FsNodeZipFile : FsNodeImp
 	{
 	}
 
-	std::map<std::string, gvl::shared_ptr<FsNodeZipFile>> children;
+	std::map<std::string, std::shared_ptr<FsNodeZipFile>> children;
 
 	std::string const& fullPath()
 	{
@@ -536,7 +536,7 @@ struct FsNodeZipFile : FsNodeImp
 
 	DirectoryListing iter()
 	{
-		//std::unique_ptr<dir_zip_archive_itr_imp> imp(new dir_zip_archive_itr_imp(gvl::shared_ptr<FsNodeZipFile>(this, gvl::shared_ownership())));
+		//std::unique_ptr<dir_zip_archive_itr_imp> imp(new dir_zip_archive_itr_imp(std::shared_ptr<FsNodeZipFile>(this, gvl::shared_ownership())));
 
 		//if (imp->cur == imp->end)
 		//	imp.reset();
@@ -551,12 +551,12 @@ struct FsNodeZipFile : FsNodeImp
 		return DirectoryListing(std::move(subs));
 	}
 
-	gvl::shared_ptr<FsNodeImp> go(std::string const& name)
+	std::shared_ptr<FsNodeImp> go(std::string const& name)
 	{
 		auto i = children.find(name);
 		if (i != children.end())
 			return i->second;
-		return gvl::shared_ptr<FsNodeImp>();
+		return std::shared_ptr<FsNodeImp>();
 	}
 
 	bool exists() const
@@ -607,10 +607,10 @@ struct FsNodeFilesystem : FsNodeImp
 		return DirectoryListing(path);
 	}
 
-	gvl::shared_ptr<FsNodeImp> go(std::string const& name)
+	std::shared_ptr<FsNodeImp> go(std::string const& name)
 	{
 		std::string fullPath(joinPath(path, name));
-		gvl::shared_ptr<FsNodeImp> imp;
+		std::shared_ptr<FsNodeImp> imp;
 
 		//struct stat st;
 		//if (stat(fullPath.c_str(), &st) == 0)
@@ -626,11 +626,11 @@ struct FsNodeFilesystem : FsNodeImp
 		if (access(zipPath.c_str(), 0) != -1)
 		{
 			// We have a zip file, merge nodes
-			imp = join(std::move(imp), gvl::shared_ptr<FsNodeImp>(new FsNodeZipFile(zipPath, true)));
+			imp = join(std::move(imp), std::shared_ptr<FsNodeImp>(new FsNodeZipFile(zipPath, true)));
 		}
 		else if (access(fullPath.c_str(), 0) != -1 && endsWith(fullPath, ".zip"))
 		{
-			imp = join(std::move(imp), gvl::shared_ptr<FsNodeImp>(new FsNodeZipFile(fullPath, true)));
+			imp = join(std::move(imp), std::shared_ptr<FsNodeImp>(new FsNodeZipFile(fullPath, true)));
 		}
 
 		return imp;

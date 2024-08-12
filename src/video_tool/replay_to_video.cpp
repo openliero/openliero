@@ -22,7 +22,7 @@ extern "C"
 }
 
 void replayToVideo(
-	gvl::shared_ptr<Common> const& common,
+	std::shared_ptr<Common> const& common,
 	bool spectator,
 	std::string const& fullPath,
 	std::string const& replayVideoName)
@@ -47,7 +47,7 @@ void replayToVideo(
 
 	std::unique_ptr<Game> game(
 		replayReader.beginPlayback(common,
-			gvl::shared_ptr<SoundPlayer>(new RecordSoundPlayer(*common, mixer))));
+			std::shared_ptr<SoundPlayer>(new RecordSoundPlayer(*common, mixer))));
 
 	// FIXME: the viewports are changed based on the replay for some
 	// reason, so we need to restore them here. Probably makes more sense

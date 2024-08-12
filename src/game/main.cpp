@@ -135,7 +135,7 @@ try
 
 	// TC loading
 	FsNode lieroRoot(configNode / "TC" / gfx.settings->tc);
-	gvl::shared_ptr<Common> common(new Common());
+	std::shared_ptr<Common> common(new Common());
 	common->load(std::move(lieroRoot));
 	gfx.common = common;
 	gfx.playRenderer.loadPalette(*common); // This gets the palette from common

@@ -71,7 +71,7 @@ try
 	precomputeTables();
 
 	// TODO: Fix loading
-	gvl::shared_ptr<Common> common(new Common());
+	std::shared_ptr<Common> common(new Common());
 	FsNode configNode(""); // current dir
 	FsNode lieroRoot(configNode / "TC" / tcName);
 	common->load(std::move(lieroRoot));

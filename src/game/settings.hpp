@@ -4,7 +4,6 @@
 #include "worm.hpp"
 #include <string>
 #include <cstring>
-#include <gvl/resman/shared_ptr.hpp>
 #include <gvl/support/cstdint.hpp>
 #include <gvl/crypt/gash.hpp>
 #include <gvl/serialization/archive.hpp> // For gvl::enable_when
@@ -83,7 +82,7 @@ struct Settings : gvl::shared, Extensions
 	bool map;
 	bool screenSync;
 
-	gvl::shared_ptr<WormSettings> wormSettings[2];
+	std::shared_ptr<WormSettings> wormSettings[2];
 
 	gvl::gash::value_type hash;
 };
@@ -393,7 +392,7 @@ void archive_text(Settings& settings, Archive& ar)
 
 	#define S(n) #n, ws->n
 
-	ar.array_obj("worms", settings.wormSettings, [&] (gvl::shared_ptr<WormSettings> const& ws) {
+	ar.array_obj("worms", settings.wormSettings, [&] (std::shared_ptr<WormSettings> const& ws) {
 		ar.u32(S(controller));
 		if(ar.in) ws->controller = limit<0, 3>(ws->controller);
 		ar.arr("color", ws->rgb, [&] (int& c) { ar.i32(0, c); if (ar.in) c &= 63; });
