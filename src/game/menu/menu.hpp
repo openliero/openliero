@@ -10,7 +10,6 @@
 #include "../gfx/color.hpp"
 #include "../gfx/renderer.hpp"
 
-#include <gvl/resman/shared_ptr.hpp>
 #include <gvl/support/cstdint.hpp>
 
 #include "menuItem.hpp"

@@ -13,9 +13,9 @@
 #include "ai/predictive_ai.hpp"
 
 Game::Game(
-	gvl::shared_ptr<Common> common,
-	gvl::shared_ptr<Settings> settingsInit,
-	gvl::shared_ptr<SoundPlayer> soundPlayer)
+	std::shared_ptr<Common> common,
+	std::shared_ptr<Settings> settingsInit,
+	std::shared_ptr<SoundPlayer> soundPlayer)
 : common(common)
 , soundPlayer(soundPlayer)
 , settings(settingsInit)

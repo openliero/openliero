@@ -10,7 +10,6 @@
 #include "gfx/palette.hpp"
 #include "gfx/sprite.hpp"
 #include <string>
-#include <gvl/resman/shared_ptr.hpp>
 #include <gvl/support/platform.hpp>
 extern "C" {
 #include "mixer/mixer.h"
@@ -115,7 +114,7 @@ using std::vector;
 #define IF_ENABLE_TRACING(x) ((void)0)
 #endif
 
-struct Common : gvl::shared
+struct Common
 {
 	Common();
 

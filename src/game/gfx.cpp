@@ -1198,7 +1198,7 @@ void SettingsMenu::onUpdate()
 using std::string;
 using std::vector;
 using std::pair;
-using gvl::shared_ptr;
+using std::shared_ptr;
 
 void Gfx::selectLevel()
 {

@@ -91,7 +91,7 @@ struct ReplayReader : Replay
 		// Nothing
 	}
 
-	std::unique_ptr<Game> beginPlayback(gvl::shared_ptr<Common> common, gvl::shared_ptr<SoundPlayer> soundPlayer);
+	std::unique_ptr<Game> beginPlayback(std::shared_ptr<Common> common, std::shared_ptr<SoundPlayer> soundPlayer);
 	bool playbackFrame(Renderer& renderer);
 
 	gvl::octet_reader reader;

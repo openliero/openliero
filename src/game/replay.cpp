@@ -443,7 +443,7 @@ ReplayReader::ReplayReader(gvl::source str_init)
 
 uint32_t const replayMagic = ('L' << 24) | ('R' << 16) | ('P' << 8) | 'F';
 
-std::unique_ptr<Game> ReplayReader::beginPlayback(gvl::shared_ptr<Common> common, gvl::shared_ptr<SoundPlayer> soundPlayer)
+std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common, std::shared_ptr<SoundPlayer> soundPlayer)
 {
 	uint32_t readMagic = gvl::read_uint32(reader);
 	if(readMagic != replayMagic)
@@ -452,7 +452,7 @@ std::unique_ptr<Game> ReplayReader::beginPlayback(gvl::shared_ptr<Common> common
 	if(context.replayVersion > myReplayVersion)
 		throw gvl::archive_check_error("Replay version is too recent");
 
-	gvl::shared_ptr<Settings> settings(new Settings);
+	std::shared_ptr<Settings> settings(new Settings);
 
 	std::unique_ptr<Game> game(new Game(common, settings, soundPlayer));
 
