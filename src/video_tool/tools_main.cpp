@@ -65,7 +65,7 @@ try
 
 	if (!tcSet)
 	{
-		tcName = "Liero v1.33";
+		tcName = "openliero";
 	}
 
 	precomputeTables();

@@ -108,8 +108,8 @@ try
 		}
 	}
 
-	if(!tcSet)
-		tcName = "Liero v1.33";
+	if (!tcSet)
+		tcName = "openliero";
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 
