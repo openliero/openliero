@@ -296,12 +296,12 @@ void Gfx::init()
 
 	playRenderer.init(320, 200);
 	singleScreenRenderer.init(640, 400);
-	// Joystick init:
-	SDL_JoystickEventState(SDL_ENABLE);
+	// Joystick init
+	SDL_GameControllerEventState(SDL_ENABLE);
 	int numJoysticks = SDL_NumJoysticks();
 	joysticks.resize(numJoysticks);
 	for ( int i = 0; i < numJoysticks; ++i ) {
-		joysticks[i].sdlJoystick = SDL_JoystickOpen(i);
+		joysticks[i].sdlGameController= SDL_GameControllerOpen(i);
 		joysticks[i].clearState();
 	}
 }
