@@ -1116,61 +1116,61 @@ void benchAll()
 	uint32_t t;
 
 	/*
-	t = gvl::get_ticks();
+	t = std::clock()();
 	State<ObjectLinked, LinkedObjectList<ObjectLinked, 1000>> state3;
 	state3.bench();
-	t = gvl::get_ticks() - t;
+	t = std::clock()() - t;
 	printf("%f\n", t / 1000.0);
 	*/
 
 #if 1
 	{
-		t = gvl::get_ticks();
+		t = std::clock();
 		auto* state = new State<ObjectLinked2, LinkedObjectList2<ObjectLinked2, 1000>, Bruteforce<LinkedObjectList2<ObjectLinked2, 1000>, ObjectLinked2>>;
 		state->bench();
-		t = gvl::get_ticks() - t;
+		t = std::clock() - t;
 		printf("%f\n", t / 1000.0);
 	}
 #endif
 
 #if 1
 	{
-		t = gvl::get_ticks();
+		t = std::clock()();
 		auto* state = new State<ObjectLinked2, LinkedObjectList3<ObjectLinked2, 1000>, Bruteforce<LinkedObjectList3<ObjectLinked2, 1000>, ObjectLinked2>>;
 		state->bench();
-		t = gvl::get_ticks() - t;
+		t = std::clock()() - t;
 		printf("%f\n", t / 1000.0);
 	}
 #endif
 
 #if 0
-	t = gvl::get_ticks();
+	t = std::clock()();
 	State<Object, FixedCopyObjectList<Object, 1000>, Bruteforce<FixedCopyObjectList<Object, 1000>, Object>> state3;
 	state3.bench2();
-	t = gvl::get_ticks() - t;
+	t = std::clock()() - t;
 	printf("%f\n", t / 1000.0);
 #endif
 
 #if 0
-	t = gvl::get_ticks();
+	t = std::clock()();
 	auto* state6 = new State<ObjectLinkedC, LinkedObjectList2<ObjectLinkedC, 1000>, Cellphase<LinkedObjectList2<ObjectLinkedC, 1000>, ObjectLinkedC>>;
 	state6->bench();
-	t = gvl::get_ticks() - t;
+	t = std::clock()() - t;
 	printf("%f\n", t / 1000.0);
 #endif
 
 	/*
-	t = gvl::get_ticks();
+	t = std::clock()();
 	State<ObjectExact, ExactObjectList<ObjectExact, 1000>> state1;
 	state1.bench();
-	t = gvl::get_ticks() - t;
+	t = std::clock()() - t;
 	printf("%f\n", t / 1000.0);
 
 
-	t = gvl::get_ticks();
+	t = std::clock()();
 	State<Object, FixedObjectList<Object, 1000>> state2;
 	state2.bench();
-	t = gvl::get_ticks() - t;
+	t = std::clock()() - t;
 	printf("%f\n", t / 1000.0);
 	*/
 
@@ -1179,10 +1179,10 @@ void benchAll()
 
 
 	/*
-	t = gvl::get_ticks();
+	t = std::clock()();
 	State<ObjectExact, CompressObjectList<ObjectExact, 1000>> state4;
 	state4.bench();
-	t = gvl::get_ticks() - t;
+	t = std::clock()() - t;
 	printf("%f\n", t / 1000.0);
 	*/
 }
