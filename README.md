@@ -60,10 +60,15 @@ Building a release build
 * $ cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
 * Run "make"
 
-Extracting the game data
+Extracting game data for total conversions
 ======================
 
-You need data from the original Liero in order to run local builds. You can get the data from the original game by following these steps:
+For copyright reasons, this repository does not contain the original Liero sound
+files. Included instead is the original ruleset together with the lierolibre
+sound effects.
+
+In order to use the original data, or any total conversion, you need to run
+the tctool on the game data. Example on how to do this is included below:
 
 Windows
 ---------------------

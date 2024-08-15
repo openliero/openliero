@@ -37,6 +37,7 @@ struct Extensions
 	bool allowViewingSpawnPoint;
 	bool singleScreenReplay;
 	bool spectatorWindow;
+	std::string tc;
 };
 
 struct Rand;
@@ -259,6 +260,9 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand)
 
 		gvl::enable_when(ar, fileExtensionVersion >= 9)
 			.b(settings.fullscreen, false);
+
+		gvl::enable_when(ar, fileExtensionVersion >= 10)
+			.str(settings.tc, std::string("openliero"));			
 	}
 	catch(std::runtime_error&)
 	{
@@ -331,6 +335,8 @@ void archive(Archive ar, Settings& settings)
 		.b(settings.spectatorWindow, false);
 	gvl::enable_when(ar, fileExtensionVersion >= 9)
 		.b(settings.fullscreen, false);
+	gvl::enable_when(ar, fileExtensionVersion >= 10)
+		.str(settings.tc, std::string("openliero"));
 	ar.check();
 }
 
@@ -376,6 +382,7 @@ void archive_text(Settings& settings, Archive& ar)
 	ar.b(S(singleScreenReplay));
 	ar.b(S(spectatorWindow));
 	ar.b(S(fullscreen));
+	ar.str(S(tc));
 
 	#undef S
 
