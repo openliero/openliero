@@ -108,9 +108,6 @@ try
 		}
 	}
 
-	if (!tcSet)
-		tcName = "openliero";
-
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 
 	initKeys();
@@ -124,21 +121,24 @@ try
 
 	FsNode configNode(gfx.getConfigNode());
 
-	// TC loading
-	FsNode lieroRoot(configNode / "TC" / tcName);
-	gvl::shared_ptr<Common> common(new Common());
-	common->load(std::move(lieroRoot));
-	gfx.common = common;
-	gfx.playRenderer.loadPalette(*common); // This gets the palette from common
-
-	if(!gfx.loadSettings(configNode / "liero.cfg"))
+	if (!gfx.loadSettings(configNode / "liero.cfg"))
 	{
-		if(!gfx.loadSettingsLegacy(configNode / "LIERO.DAT"))
+		if (!gfx.loadSettingsLegacy(configNode / "LIERO.DAT"))
 		{
 			gfx.settings.reset(new Settings);
 			gfx.saveSettings(configNode / "liero.cfg");
 		}
 	}
+
+	if (tcSet)
+		gfx.settings->tc = tcName;
+
+	// TC loading
+	FsNode lieroRoot(configNode / "TC" / gfx.settings->tc);
+	gvl::shared_ptr<Common> common(new Common());
+	common->load(std::move(lieroRoot));
+	gfx.common = common;
+	gfx.playRenderer.loadPalette(*common); // This gets the palette from common
 
 	gfx.setVideoMode();
 	sfx.init();

@@ -32,6 +32,7 @@ Extensions::Extensions()
 , allowViewingSpawnPoint(false)
 , singleScreenReplay(false)
 , spectatorWindow(false)
+, tc(std::string("openliero"))
 {
 }
 
