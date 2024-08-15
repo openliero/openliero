@@ -279,7 +279,6 @@ Gfx::Gfx()
 , curMenu(0)
 , sdlDrawSurface(0)
 , running(true)
-, fullscreen(false)
 , doubleRes(true)
 , menuCycles(0)
 , windowW(320 * 2)
@@ -298,12 +297,12 @@ void Gfx::init()
 
 	playRenderer.init(320, 200);
 	singleScreenRenderer.init(640, 400);
-	// Joystick init:
-	SDL_JoystickEventState(SDL_ENABLE);
+	// Joystick init
+	SDL_GameControllerEventState(SDL_ENABLE);
 	int numJoysticks = SDL_NumJoysticks();
 	joysticks.resize(numJoysticks);
 	for ( int i = 0; i < numJoysticks; ++i ) {
-		joysticks[i].sdlJoystick = SDL_JoystickOpen(i);
+		joysticks[i].sdlGameController= SDL_GameControllerOpen(i);
 		joysticks[i].clearState();
 	}
 }
@@ -365,7 +364,7 @@ void Gfx::setVideoMode()
 
 	flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 
-	if (fullscreen)
+	if (settings->fullscreen)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
@@ -394,7 +393,7 @@ void Gfx::setVideoMode()
 	}
 	else
 	{
-		if (fullscreen)
+		if (settings->fullscreen)
 		{
 			SDL_SetWindowFullscreen(sdlWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		}
@@ -582,12 +581,12 @@ void Gfx::setSpectatorFullscreen(bool newFullscreen)
 
 void Gfx::setFullscreen(bool newFullscreen)
 {
-	if (newFullscreen == fullscreen)
+	if (newFullscreen == settings->fullscreen)
 		return;
-	fullscreen = newFullscreen;
+	settings->fullscreen = newFullscreen;
 
 	// fullscreen will automatically set window size
-	if (!fullscreen)
+	if (!settings->fullscreen)
 	{
 		if (doubleRes)
 		{
@@ -648,7 +647,7 @@ void Gfx::processEvent(SDL_Event& ev, Controller* controller)
 			{
 				if (SDL_GetWindowFromID(ev.key.windowID) == sdlWindow)
 				{
-					setFullscreen(!fullscreen);
+					setFullscreen(!settings->fullscreen);
 				}
 				else
 				{
