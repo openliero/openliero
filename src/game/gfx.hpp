@@ -281,7 +281,7 @@ struct Gfx
 	Bitmap frozenSpectatorScreen;
 
 	bool running;
-	bool fullscreen, spectatorFullscreen, doubleRes;
+	bool spectatorFullscreen, doubleRes;
 
 	Uint32 lastFrame;
 	unsigned menuCycles;
