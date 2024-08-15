@@ -2,6 +2,6 @@
 #define LIERO_VERSION_HPP
 
 static int const myGameVersion = 9;
-static int const myReplayVersion = 3;
+static int const myReplayVersion = 4;
 
 #endif // LIERO_VERSION_HPP
