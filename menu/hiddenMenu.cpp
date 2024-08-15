@@ -50,6 +50,8 @@ ItemBehavior* HiddenMenu::getItemBehavior(Common& common, MenuItem& item)
 			return new BooleanSwitchBehavior(common, gfx.settings->allowViewingSpawnPoint);
 		case SingleScreenReplay:
 			return new BooleanSwitchBehavior(common, gfx.settings->singleScreenReplay);
+		case SpectatorWindow:
+			return new BooleanSwitchBehavior(common, gfx.settings->spectatorWindow, [](bool v) { gfx.settings->spectatorWindow = v; gfx.setVideoMode(); });
 
 		default:
 			return Menu::getItemBehavior(common, item);
@@ -68,7 +70,7 @@ void HiddenMenu::drawItemOverlay(Common& common, MenuItem& item, int x, int y, b
 		int w = 30;
 		int offsX = 44;
 
-		drawRoundedBox(gfx.screenBmp, x + offsX, y, selected ? 168 : 0, 7, w);
-		fillRect(gfx.screenBmp, x + offsX + 1, y + 1, w + 1, 5, paletteColor);
+		drawRoundedBox(gfx.playRenderer.bmp, x + offsX, y, selected ? 168 : 0, 7, w);
+		fillRect(gfx.playRenderer.bmp, x + offsX + 1, y + 1, w + 1, 5, paletteColor);
 	}
 }
