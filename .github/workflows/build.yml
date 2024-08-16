@@ -22,12 +22,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - uses: libsdl-org/setup-sdl@main
-        id: sdl
-        with:
-          install-linux-dependencies: true
-          version: 2-latest
-          version-sdl-image: 2-latest
+      # does not work, see: https://github.com/libsdl-org/setup-sdl/issues/23
+      #- uses: libsdl-org/setup-sdl@main
+      #  id: sdl
+      #  with:
+      #    install-linux-dependencies: true
+      #    version: 2-latest
+      #    version-sdl-image: 2-latest
+      - name: Install dependencies
+        run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
       - name: Prepare build
         run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
       - name: Build
