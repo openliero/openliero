@@ -101,9 +101,9 @@ jobs:
             name: windows-build
             path: windows-build
       - run: chmod +x ubuntu-build/openliero ubuntu-build/tctool
-      - run: cd ubuntu-build && tar cfJ liero-linux-x64-${{ github.sha }}.tar.xz * && cd ..
+      - run: cd ubuntu-build && tar cfJ liero-ubuntu-x64-${{ github.sha }}.tar.xz * && cd ..
       - run: cd windows-build && zip -r liero-windows-x64-${{ github.sha }}.zip . && cd ..
-      - run: mv ubuntu-build/liero-linux-x64-${{ github.sha }}.tar.xz .
+      - run: mv ubuntu-build/liero-ubuntu-x64-${{ github.sha }}.tar.xz .
       - run: mv windows-build/liero-windows-x64-${{ github.sha }}.zip .
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -111,5 +111,5 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}-${{ github.sha }}
           files: |
-            liero-linux-x64-${{ github.sha }}.tar.xz
+            liero-ubuntu-x64-${{ github.sha }}.tar.xz
             liero-windows-x64-${{ github.sha }}.zip
