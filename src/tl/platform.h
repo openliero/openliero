@@ -62,7 +62,7 @@
 #  define TL_X86 1
 # elif defined(__arm__) || defined(_M_ARM)
 #  define TL_ARM 1
-# elif defined(__aarch_64__) || defined(_M_ARM64)
+# elif defined(__aarch64__) || defined(_M_ARM64)
 #  define TL_ARM_64 1
 # else
 #  error "Unknown architecture, please add it"
