@@ -2,29 +2,40 @@ name: Build
 on: [push, workflow_dispatch]
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      #- uses: libsdl-org/setup-sdl@main
-      #  id: sdl
-      #  with:
-      #    install-linux-dependencies: true
-      #    version: 2-latest
-      #    version-sdl-image: 2-latest
-      - name: Setup SDL2 frameworks
-        uses: BrettDong/setup-sdl2-frameworks@main
-        with:
-          sdl2: latest
-          sdl2-ttf: none
-          sdl2-image: latest
-          sdl2-mixer: none
-          sdl2-net: none
-      - name: Prepare build
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
-      - name: Build
-        run: make
+  # disabled, since MacOS builds are broken at the moment
+  #build-macos:
+  #  runs-on: macos-latest
+  #  steps:
+  #    - name: Checkout repository
+  #      uses: actions/checkout@v4
+  #    #- uses: libsdl-org/setup-sdl@main
+  #    #  id: sdl
+  #    #  with:
+  #    #    install-linux-dependencies: true
+  #    #    version: 2-latest
+  #    #    version-sdl-image: 2-latest
+  #    - name: Setup SDL2 frameworks
+  #      uses: BrettDong/setup-sdl2-frameworks@main
+  #      with:
+  #        sdl2: latest
+  #        sdl2-ttf: none
+  #        sdl2-image: latest
+  #        sdl2-mixer: none
+  #        sdl2-net: none
+  #    - name: Prepare build
+  #      run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
+  #    - name: Build
+  #      run: make
+  #    - name: Archive build
+  #      run: zip -r ubuntu-build.zip openliero tctool TC
+  #    - name: Upload build
+  #      uses: actions/upload-artifact@v4
+  #      with:
+  #        name: macos-build
+  #        path: |
+  #          openliero
+  #          tctool
+  #          TC
   build-ubuntu:
     # this is later than ubuntu-latest
     runs-on: ubuntu-24.04
@@ -44,6 +55,14 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
       - name: Build
         run: make
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-build
+          path: |
+            openliero
+            tctool
+            TC
   build-windows:
     runs-on: windows-latest
     steps:
@@ -59,3 +78,13 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022"
       - name: Build
         run: cmake --build . --config Release
+      - name: Move executables
+        run: Move-Item -Path Release/openliero.exe,Release/tctool.exe -Destination .
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            openliero.exe
+            tctool.exe
+            TC
