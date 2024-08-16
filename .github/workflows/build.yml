@@ -11,6 +11,7 @@ jobs:
   #    #- uses: libsdl-org/setup-sdl@main
   #    #  id: sdl
   #    #  with:
+  #    #    build-type: Release
   #    #    install-linux-dependencies: true
   #    #    version: 2-latest
   #    #    version-sdl-image: 2-latest
@@ -46,6 +47,7 @@ jobs:
       #- uses: libsdl-org/setup-sdl@main
       #  id: sdl
       #  with:
+      #    build-type: Release
       #    install-linux-dependencies: true
       #    version: 2-latest
       #    version-sdl-image: 2-latest
@@ -71,6 +73,7 @@ jobs:
       - uses: libsdl-org/setup-sdl@main
         id: sdl
         with:
+          build-type: Release
           install-linux-dependencies: true
           version: 2-latest
           version-sdl-image: 2-latest
