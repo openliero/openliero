@@ -88,3 +88,27 @@ jobs:
             openliero.exe
             tctool.exe
             TC
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-ubuntu, build-windows]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-build
+          path: ubuntu-build
+      - uses: actions/download-artifact@v4
+        with:
+            name: windows-build
+            path: windows-build
+      - run: cd ubuntu-build && zip -r liero-linux-x64-${{ github.sha }}.zip . && cd ..
+      - run: cd windows-build && zip -r liero-windows-x64-${{ github.sha }}.zip . && cd ..
+      - run: mv ubuntu-build/liero-linux-x64-${{ github.sha }}.zip .
+      - run: mv windows-build/liero-windows-x64-${{ github.sha }}.zip .
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ github.ref_name == 'master' }}
+        with:
+          tag_name: ${{ github.ref_name }}-${{ github.sha }}
+          files: |
+            liero-linux-x64-${{ github.sha }}.zip
+            liero-windows-x64-${{ github.sha }}.zip
