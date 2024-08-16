@@ -7,12 +7,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - uses: libsdl-org/setup-sdl@main
-        id: sdl
+      #- uses: libsdl-org/setup-sdl@main
+      #  id: sdl
+      #  with:
+      #    install-linux-dependencies: true
+      #    version: 2-latest
+      #    version-sdl-image: 2-latest
+      - name: Setup SDL2 frameworks
+        uses: BrettDong/setup-sdl2-frameworks@main
         with:
-          install-linux-dependencies: true
-          version: 2-latest
-          version-sdl-image: 2-latest
+          sdl2: latest
+          sdl2-ttf: none
+          sdl2-image: latest
+          sdl2-mixer: none
+          sdl2-net: none
       - name: Prepare build
         run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
       - name: Build
