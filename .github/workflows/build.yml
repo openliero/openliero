@@ -104,17 +104,28 @@ jobs:
         with:
             name: windows-build
             path: windows-build
-      - run: chmod +x ubuntu-build/openliero ubuntu-build/tctool
-      - run: curl -L -o windows-build/sdl2-win-x64.zip https://github.com/libsdl-org/SDL/releases/download/release-2.30.6/SDL2-2.30.6-win32-x64.zip
-      - run: curl -L -o windows-build/sdl2_image-win-x64.zip https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2-win32-x64.zip
-      - run: cd ubuntu-build && tar cfJ liero-ubuntu-x64-${{ github.sha }}.tar.xz * && cd ..
-      - run: cd windows-build && unzip sdl2-win-x64.zip && rm -rf sdl2-win-x64.zip && unzip sdl2_image-win-x64.zip && rm -rf sdl2_image-win-x64.zip optional && mv README.txt README-SDL_image.txt && zip -r liero-windows-x64-${{ github.sha }}.zip . && cd ..
-      - run: mv ubuntu-build/liero-ubuntu-x64-${{ github.sha }}.tar.xz
-      - run: mv windows-build/liero-windows-x64-${{ github.sha }}.zip .
+      - name: Create ubuntu tarball
+        run: |
+          chmod +x ubuntu-build/openliero ubuntu-build/tctool
+          cd ubuntu-build
+          tar cfJ liero-ubuntu-x64-${{ github.sha }}.tar.xz *
+          cd ..
+      - name: Create windows zip file
+        run: |
+          curl -L -o windows-build/sdl2-win-x64.zip https://github.com/libsdl-org/SDL/releases/download/release-2.30.6/SDL2-2.30.6-win32-x64.zip
+          curl -L -o windows-build/sdl2_image-win-x64.zip https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2-win32-x64.zip
+          cd windows-build
+          unzip sdl2-win-x64.zip
+          rm -rf sdl2-win-x64.zip
+          unzip sdl2_image-win-x64.zip
+          rm -rf sdl2_image-win-x64.zip optional
+          mv README.txt README-SDL_image.txt
+          zip -r liero-windows-x64-${{ github.sha }}.zip .
+          cd ..
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}-${{ github.sha }}
           files: |
-            liero-ubuntu-x64-${{ github.sha }}.tar.xz
-            liero-windows-x64-${{ github.sha }}.zip
+            ubuntu-build/liero-ubuntu-x64-${{ github.sha }}.tar.xz
+            windows-build/liero-windows-x64-${{ github.sha }}.zip
