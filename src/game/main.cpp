@@ -15,7 +15,6 @@
 #include "constants.hpp"
 #include "math.hpp"
 #include "console.hpp"
-#include <gvl/support/platform.hpp>
 
 #include <ctime>
 #include <exception>

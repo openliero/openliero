@@ -10,7 +10,6 @@
 #include "gfx/palette.hpp"
 #include "gfx/sprite.hpp"
 #include <string>
-#include <gvl/support/platform.hpp>
 #include "mixer/mixer.hpp"
 
 #if ENABLE_TRACING

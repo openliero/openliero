@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <memory>
 #include <map>
-#include <gvl/support/platform.hpp>
 #include <gvl/io2/stream.hpp>
 #include <gvl/zlib/zlib2.h>
 
