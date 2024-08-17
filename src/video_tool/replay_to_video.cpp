@@ -18,8 +18,8 @@ extern "C"
 {
 #include "video_recorder.h"
 #include "tl/vector.h"
-#include "game/mixer/mixer.h"
 }
+#include "game/mixer/mixer.hpp"
 
 void replayToVideo(
 	std::shared_ptr<Common> const& common,

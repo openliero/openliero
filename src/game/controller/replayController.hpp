@@ -13,10 +13,7 @@
 #include "../console.hpp"
 #include <gvl/serialization/except.hpp>
 #include <ctime>
-extern "C"
-{
-#include "../mixer/mixer.h"
-}
+#include "../mixer/mixer.hpp"
 
 struct Game;
 

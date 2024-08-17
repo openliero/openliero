@@ -42,7 +42,7 @@ set(SOURCES
     src/game/gfx/palette.cpp
     src/game/gfx/renderer.cpp
     src/game/gfx/sprite.cpp
-    src/game/mixer/mixer.c
+    src/game/mixer/mixer.cpp
     src/game/mixer/player.cpp
     src/gvl/zlib/miniz.c
     src/gvl/system/system.c

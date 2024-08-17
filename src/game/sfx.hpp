@@ -2,9 +2,7 @@
 #define LIERO_SFX_HPP
 
 #if !DISABLE_SOUND
-extern "C" {
-#include "mixer/mixer.h"
-}
+#include "mixer/mixer.hpp"
 #endif
 #include <vector>
 #include "mixer/player.hpp"

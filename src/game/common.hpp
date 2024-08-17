@@ -11,9 +11,7 @@
 #include "gfx/sprite.hpp"
 #include <string>
 #include <gvl/support/platform.hpp>
-extern "C" {
-#include "mixer/mixer.h"
-}
+#include "mixer/mixer.hpp"
 
 #if ENABLE_TRACING
 #include <gvl/io2/fstream.hpp>
