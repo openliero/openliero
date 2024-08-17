@@ -1,8 +1,9 @@
 #include "mixer.hpp"
-#include "tl/vector.h"
-#include "tl/memory.h"
 #include <string.h>
 #include <stdlib.h>
+#include <cstring>
+#include <vector>
+#include "tl/memory.h"
 
 typedef struct channel
 {
@@ -39,7 +40,7 @@ struct sfx_mixer
 
 struct sfx_sound
 {
-	tl_vector samples;
+	std::vector<int16_t> samples;
 };
 
 int32_t sfx_mixer_now(sfx_mixer* mixer)
@@ -47,24 +48,22 @@ int32_t sfx_mixer_now(sfx_mixer* mixer)
 	return mixer->base_frame;
 }
 
-sfx_sound* sfx_new_sound(size_t samples)
+sfx_sound* sfx_new_sound(std::size_t samples)
 {
 	sfx_sound* snd = new sfx_sound();
 
-	tl_vector_new(snd->samples, uint16_t, samples);
-	tl_vector_post_enlarge(snd->samples, uint16_t, samples);
+	snd->samples = std::vector<int16_t>(samples);
 	return snd;
 }
 
 void sfx_free_sound(sfx_sound* snd)
 {
-	tl_vector_free(snd->samples);
-	free(snd);
+	delete snd;
 }
 
-void* sfx_sound_data(sfx_sound* snd)
+std::vector<int16_t>& sfx_sound_data(sfx_sound* snd)
 {
-	return tl_vector_idx(snd->samples, uint16_t, 0);
+	return snd->samples;
 }
 
 #define INACTIVE_FLAGS (-1)
@@ -91,7 +90,7 @@ static int add_channel(int16_t* out, unsigned long frame_count, uint32_t now, ch
 	// TODO: Get rid of undefined cast
 	int32_t diff = (int32_t)(pos - now);
 	int32_t relbegin = diff;
-	uint32_t soundlen = (uint32_t)tl_vector_size(sound->samples);
+	uint32_t soundlen = sound->samples.size();
 	uint32_t flags = ch->flags;
 
 	if(relbegin < 0)
@@ -104,7 +103,7 @@ static int add_channel(int16_t* out, unsigned long frame_count, uint32_t now, ch
 	for(cur = (uint32_t)relbegin; cur < frame_count; ++cur)
 	{
 		int32_t samp = out[cur];
-		int32_t soundsamp = tl_vector_el(sound->samples, int16_t, (uint32_t)(ch->soundpos >> 32));
+		int32_t soundsamp = sound->samples[(uint32_t)(ch->soundpos >> 32)];
 		samp += (soundsamp * scaler) >> 12;
 		if(samp < -32768)
 			samp = -32768;
@@ -214,7 +213,7 @@ void sfx_mixer_stop(sfx_mixer* self, void* h)
 	self->channel_states[ch].flags = -1;
 }
 
-void* sfx_mixer_add(sfx_mixer* self, sfx_sound* snd, uint32_t time, void* h, uint32 flags)
+void* sfx_mixer_add(sfx_mixer* self, sfx_sound* snd, uint32_t time, void* h, uint32_t flags)
 {
 	int ch_idx = find_free_channel(self);
 

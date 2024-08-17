@@ -2189,7 +2189,7 @@ int Gfx::menuLoop()
 #if 1
 		if (testSDLKeyOnce(SDL_SCANCODE_F8))
 		{
-			uint32 s = 14;
+			uint32_t s = 14;
 
 			Rand r;
 			r.seed(s);
@@ -2250,7 +2250,7 @@ int Gfx::menuLoop()
 				w.splinterColour = r(256);
 				w.splinterScatter = r(2);
 				w.splinterType = r(common.nobjectTypes.size());
-				w.startFrame = r((uint32)common.smallSprites.count - 13);
+				w.startFrame = r((uint32_t)common.smallSprites.count - 13);
 				w.numFrames = r(5);
 				w.timeToExplo = 50 + r(200);
 				w.timeToExploV = 10 + r(50);
@@ -2279,7 +2279,7 @@ int Gfx::menuLoop()
 				n.hitDamage = r(10);
 				n.leaveObj = r(5) == 0 ? r(common.sobjectTypes.size()) : -1;
 				n.leaveObjDelay = 10 + r(80);
-				n.startFrame = r((uint32)common.smallSprites.count - 13);
+				n.startFrame = r((uint32_t)common.smallSprites.count - 13);
 				n.numFrames = r(5);
 				n.speed = r(150);
 				n.splinterAmount = idx > 0 && r(5) == 0 ? r(10) : 0;
@@ -2299,7 +2299,7 @@ int Gfx::menuLoop()
 				s.detectRange = r(20);
 				s.dirtEffect = r(9);
 				s.flash = r(5);
-				s.startFrame = r((uint32)common.largeSprites.count - 7);
+				s.startFrame = r((uint32_t)common.largeSprites.count - 7);
 				s.numFrames = r(7);
 				s.startSound = r(common.sounds.size());
 				s.shake = r(10);
@@ -2347,5 +2347,3 @@ int Gfx::menuLoop()
 
 	return selected;
 }
-
-
