@@ -2,12 +2,11 @@
 #include "text.hpp"
 #include <gvl/support/platform.hpp>
 #include <gvl/io2/fstream.hpp>
-#include <tl/platform.h>
 #include <stdexcept>
 #include <cassert>
 #include <cctype>
 #include <sys/stat.h>
-#if TL_WINDOWS
+#if _WIN32
 #include <io.h>
 #else
 #include <unistd.h>
@@ -693,7 +692,7 @@ FsNode::FsNode(std::string const& path)
 			std::string const& part = path.substr(beg, i - beg);
 			if (!imp)
 			{
-#if TL_WINDOWS
+#if _WIN32
 				if (part.size() == 2 && part[1] == ':')
 					imp.reset(new FsNodeFilesystem(part));
 				else
@@ -726,7 +725,7 @@ FsNode::FsNode(std::string const& path)
 
 		if (!imp)
 		{
-#if TL_WINDOWS
+#if _WIN32
 			if (path.size() == 2 && path[1] == ':')
 				imp.reset(new FsNodeFilesystem(part));
 			else
