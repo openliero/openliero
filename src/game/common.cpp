@@ -550,20 +550,20 @@ std::string Common::guessName() const
 
 void SfxSample::createSound()
 {
-	int16_t* ptr = reinterpret_cast<int16_t*>(sfx_sound_data(sound));
+	std::vector<int16_t>& samples = sfx_sound_data(sound);
 
-	int prev = ((int8_t)originalData[0]) * 30;
-	*ptr++ = prev;
+	int prev = static_cast<int8_t>(originalData[0]) * 30;
+	samples.push_back(prev);
 
-	for(std::size_t j = 1; j < originalData.size(); ++j)
+	for (std::size_t j = 1; j < originalData.size(); ++j)
 	{
-		int cur = (int8_t)originalData[j] * 30;
-		*ptr++ = (prev + cur) / 2;
-		*ptr++ = cur;
-		prev = cur;
+			int cur = static_cast<int8_t>(originalData[j]) * 30;
+			samples.push_back((prev + cur) / 2);
+			samples.push_back(cur);
+			prev = cur;
 	}
 
-	*ptr++ = prev;
+	samples.push_back(prev);
 }
 
 
