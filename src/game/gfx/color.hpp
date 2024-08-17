@@ -1,7 +1,7 @@
 #ifndef UUID_5BD6F9D1EBD64180EE632D8970906BDA
 #define UUID_5BD6F9D1EBD64180EE632D8970906BDA
 
-#include <gvl/cstdint.hpp>
+#include <cstdint>
 
 typedef unsigned char PalIdx;
 
