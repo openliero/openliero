@@ -1,6 +1,7 @@
 #ifndef REPLAY_TO_VIDEO_HPP
 #define REPLAY_TO_VIDEO_HPP
 
+#include <memory>
 #include <string>
 #include "game/common.hpp"
 
