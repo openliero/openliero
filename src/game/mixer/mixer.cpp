@@ -1,4 +1,4 @@
-#include "mixer.h"
+#include "mixer.hpp"
 #include "tl/vector.h"
 #include "tl/memory.h"
 #include <string.h>
@@ -49,7 +49,7 @@ int32_t sfx_mixer_now(sfx_mixer* mixer)
 
 sfx_sound* sfx_new_sound(size_t samples)
 {
-	sfx_sound* snd = calloc(1, sizeof(sfx_sound));
+	sfx_sound* snd = new sfx_sound();
 
 	tl_vector_new(snd->samples, uint16_t, samples);
 	tl_vector_post_enlarge(snd->samples, uint16_t, samples);
@@ -73,7 +73,7 @@ void* sfx_sound_data(sfx_sound* snd)
 
 sfx_mixer* sfx_mixer_create(void)
 {
-	sfx_mixer* self = calloc(1, sizeof(sfx_mixer));
+	sfx_mixer* self = new sfx_mixer();
 	uint32_t i;
 	for(i = 0; i < CHANNEL_COUNT; ++i)
 		self->channel_states[i].flags = INACTIVE_FLAGS;
