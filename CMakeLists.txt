@@ -30,7 +30,6 @@ set(SOURCES
     src/game/sobject.cpp
     src/game/spectatorviewport.cpp
     src/game/stats_recorder.cpp
-    src/game/sys.cpp
     src/game/text.cpp
     src/game/viewport.cpp
     src/game/weapon.cpp

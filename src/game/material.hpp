@@ -1,7 +1,7 @@
 #ifndef LIERO_MATERIAL_HPP
 #define LIERO_MATERIAL_HPP
 
-#include <gvl/cstdint.hpp>
+#include <cstdint>
 
 struct Material
 {
