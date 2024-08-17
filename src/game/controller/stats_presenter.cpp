@@ -1,9 +1,9 @@
 #include "stats_presenter.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <type_traits>
 #include <gvl/io2/convert.hpp>
-#include <gvl/system/system.hpp>
 #include "game/text.hpp"
 #include "game/stats.hpp"
 #include "game/game.hpp"
@@ -319,10 +319,8 @@ void presentStats(NormalStatsRecorder& recorder, Game& game)
 			renderer.y = oldy;
 
 			{
-				uint64_t ticks_per_sec = gvl::hires_ticks_per_sec();
-
 				renderer.drawWormStat("ai processing", [&](WormStats& w, cell& c) {
-					c << (int)(w.aiProcessTime * 1000 / ticks_per_sec) << "ms";
+					c << (int)(std::chrono::duration_cast<std::chrono::milliseconds>(w.aiProcessTime).count()) << "ms";
 				});
 			}
 
