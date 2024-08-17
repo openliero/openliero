@@ -17,7 +17,6 @@
 extern "C"
 {
 #include "video_recorder.h"
-#include "tl/vector.h"
 }
 #include "game/mixer/mixer.hpp"
 
@@ -82,8 +81,7 @@ void replayToVideo(
 	video_recorder vidrec;
 	vidrec_init(&vidrec, replayVideoName.c_str(), w, h, framerate);
 
-	tl_vector soundBuffer;
-	tl_vector_new_empty(soundBuffer);
+	std::vector<int16_t> soundBuffer = std::vector<int16_t>();
 
 	std::size_t audioCodecFrames = 1024;
 
@@ -112,14 +110,13 @@ void replayToVideo(
 		int mixerFrames = sampleDebt.num / sampleDebt.den; // floor(sampleDebt)
 		sampleDebt.num -= mixerFrames * sampleDebt.den; // sampleDebt -= mixerFrames
 
-		std::size_t mixerStart = soundBuffer.size;
-		tl_vector_reserve(soundBuffer, int16_t, soundBuffer.size + mixerFrames);
-		sfx_mixer_mix(mixer, tl_vector_idx(soundBuffer, int16_t, mixerStart), mixerFrames);
-		tl_vector_post_enlarge(soundBuffer, int16_t, mixerFrames);
+		std::size_t mixerStart = soundBuffer.size();
+
+		sfx_mixer_mix(mixer, &soundBuffer[mixerStart], mixerFrames);
 
 		{
-			int16_t* audioSamples = tl_vector_idx(soundBuffer, int16_t, 0);
-			std::size_t samplesLeft = soundBuffer.size;
+			int16_t* audioSamples = &soundBuffer[0];
+			std::size_t samplesLeft = soundBuffer.size();
 
 			while (samplesLeft > audioCodecFrames)
 			{
@@ -150,9 +147,9 @@ void replayToVideo(
 			}
 
 			// Move rest to the beginning of the buffer
-			assert(audioSamples + samplesLeft == tl_vector_idx(soundBuffer, int16_t, soundBuffer.size));
-			memmove(soundBuffer.impl, audioSamples, samplesLeft * sizeof(int16_t));
-			soundBuffer.size = samplesLeft;
+			assert(audioSamples[samplesLeft] == soundBuffer.back());
+			soundBuffer.resize(samplesLeft);
+			std::copy(audioSamples, audioSamples + samplesLeft, soundBuffer.begin());
 		}
 
 		if ((f % (70 * 5)) == 0)
@@ -162,6 +159,5 @@ void replayToVideo(
 		}
 	}
 
-	tl_vector_free(soundBuffer);
 	vidrec_finalize(&vidrec);
 }
