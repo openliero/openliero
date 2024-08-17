@@ -1,7 +1,7 @@
 
 #include "localController.hpp"
 
-#include <gvl/system/system.hpp>
+#include <chrono>
 #include <gvl/io2/fstream.hpp>
 #include "stats_presenter.hpp"
 #include "../keys.hpp"
@@ -161,9 +161,9 @@ bool LocalController::process()
 				Worm& worm = *game.worms[(i + phase) % game.worms.size()];
 				if(worm.ai.get())
 				{
-					uint64_t time = gvl::get_hires_ticks();
+					auto start_time = std::chrono::high_resolution_clock::now();
 					worm.ai->process(game, worm);
-					time = gvl::get_hires_ticks() - time;
+					auto time = std::chrono::high_resolution_clock::now() - start_time;
 					game.statsRecorder->aiProcessTime(&worm, time);
 				}
 			}
