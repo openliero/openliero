@@ -4,7 +4,7 @@
 #include "worm.hpp"
 #include <string>
 #include <cstring>
-#include <gvl/support/cstdint.hpp>
+#include <cstdint>
 #include <gvl/crypt/gash.hpp>
 #include <gvl/serialization/archive.hpp> // For gvl::enable_when
 #include <stdexcept>
@@ -261,7 +261,7 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand)
 			.b(settings.fullscreen, false);
 
 		gvl::enable_when(ar, fileExtensionVersion >= 10)
-			.str(settings.tc, std::string("openliero"));			
+			.str(settings.tc, std::string("openliero"));
 	}
 	catch(std::runtime_error&)
 	{
