@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <gvl/io2/stream.hpp>
 #include <gvl/serialization/coding.hpp>
-#include <gvl/support/platform.hpp>
 
 struct ReaderFile : gvl::noncopyable
 {

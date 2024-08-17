@@ -1,6 +1,5 @@
 #include "filesystem.hpp"
 #include "text.hpp"
-#include <gvl/support/platform.hpp>
 #include <gvl/io2/fstream.hpp>
 #include <stdexcept>
 #include <cassert>
@@ -108,7 +107,7 @@ std::size_t fileLength(FILE* f)
 	return len;
 }
 
-#if GVL_WINDOWS
+#if _WIN32
 #  include "windows.h"
 
 #  if defined(__BORLANDC__) || defined(__MWERKS__)
@@ -151,7 +150,7 @@ struct filename_result
 	char const* name;
 };
 
-#if GVL_LINUX || __APPLE__
+#if __unix__ || __APPLE__
 
 # define BOOST_HANDLE DIR *
 # define BOOST_INVALID_HANDLE_VALUE 0
@@ -193,7 +192,7 @@ BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_TYPE & )
 	}
 	return filename_result(dp->d_name);
 }
-#elif GVL_WINDOWS
+#elif _WIN32
 
 # define BOOST_HANDLE HANDLE
 # define BOOST_INVALID_HANDLE_VALUE INVALID_HANDLE_VALUE
@@ -245,7 +244,7 @@ BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_TYPE & data )
 
 }
 
-#if GVL_WINDOWS
+#if _WIN32
 
 inline char isDirSep(char c)
 {
