@@ -5,7 +5,6 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include <gvl/support/debug.hpp>
 
 template<typename T>
 struct FastObjectList
