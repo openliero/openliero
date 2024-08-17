@@ -5,7 +5,6 @@
 
 #include "gfx.hpp"
 #include "sfx.hpp"
-#include "sys.hpp"
 #include "game.hpp"
 #include "viewport.hpp"
 #include "worm.hpp"
