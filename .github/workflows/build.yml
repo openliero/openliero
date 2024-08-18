@@ -1,5 +1,10 @@
 name: Build
-on: [push, workflow_dispatch]
+on: 
+    pull_request:
+    push:
+      branches:
+        - master
+    workflow_dispatch:
 
 jobs:
   # disabled, since MacOS builds are broken at the moment
