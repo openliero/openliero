@@ -1,0 +1,131 @@
+name: Build
+on: [push, workflow_dispatch]
+
+jobs:
+  # disabled, since MacOS builds are broken at the moment
+  #build-macos:
+  #  runs-on: macos-latest
+  #  steps:
+  #    - name: Checkout repository
+  #      uses: actions/checkout@v4
+  #    #- uses: libsdl-org/setup-sdl@main
+  #    #  id: sdl
+  #    #  with:
+  #    #    build-type: Release
+  #    #    install-linux-dependencies: true
+  #    #    version: 2-latest
+  #    #    version-sdl-image: 2-latest
+  #    - name: Setup SDL2 frameworks
+  #      uses: BrettDong/setup-sdl2-frameworks@main
+  #      with:
+  #        sdl2: latest
+  #        sdl2-ttf: none
+  #        sdl2-image: latest
+  #        sdl2-mixer: none
+  #        sdl2-net: none
+  #    - name: Prepare build
+  #      run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
+  #    - name: Build
+  #      run: make
+  #    - name: Archive build
+  #      run: zip -r ubuntu-build.zip openliero tctool TC
+  #    - name: Upload build
+  #      uses: actions/upload-artifact@v4
+  #      with:
+  #        name: macos-build
+  #        path: |
+  #          openliero
+  #          tctool
+  #          TC
+  build-ubuntu:
+    # this is later than ubuntu-latest
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      # does not work, see: https://github.com/libsdl-org/setup-sdl/issues/23
+      #- uses: libsdl-org/setup-sdl@main
+      #  id: sdl
+      #  with:
+      #    build-type: Release
+      #    install-linux-dependencies: true
+      #    version: 2-latest
+      #    version-sdl-image: 2-latest
+      - name: Install dependencies
+        run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
+      - name: Prepare build
+        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
+      - name: Build
+        run: make
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-build
+          path: |
+            openliero
+            tctool
+            TC
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: libsdl-org/setup-sdl@main
+        id: sdl
+        with:
+          build-type: Release
+          install-linux-dependencies: true
+          version: 2-latest
+          version-sdl-image: 2-latest
+      - name: Prepare build
+        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022"
+      - name: Build
+        run: cmake --build . --config Release
+      - name: Move executables
+        run: Move-Item -Path Release/openliero.exe,Release/tctool.exe -Destination .
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            openliero.exe
+            tctool.exe
+            TC
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-ubuntu, build-windows]
+    if: github.ref_name == 'master'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-build
+          path: ubuntu-build
+      - uses: actions/download-artifact@v4
+        with:
+            name: windows-build
+            path: windows-build
+      - name: Create ubuntu tarball
+        run: |
+          chmod +x ubuntu-build/openliero ubuntu-build/tctool
+          cd ubuntu-build
+          tar cfJ liero-ubuntu-x64-${{ github.sha }}.tar.xz *
+          cd ..
+      - name: Create windows zip file
+        run: |
+          curl -L -o windows-build/sdl2-win-x64.zip https://github.com/libsdl-org/SDL/releases/download/release-2.30.6/SDL2-2.30.6-win32-x64.zip
+          curl -L -o windows-build/sdl2_image-win-x64.zip https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2-win32-x64.zip
+          cd windows-build
+          unzip sdl2-win-x64.zip
+          rm -rf sdl2-win-x64.zip
+          unzip sdl2_image-win-x64.zip
+          rm -rf sdl2_image-win-x64.zip optional
+          mv README.txt README-SDL_image.txt
+          zip -r liero-windows-x64-${{ github.sha }}.zip .
+          cd ..
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}-${{ github.sha }}
+          files: |
+            ubuntu-build/liero-ubuntu-x64-${{ github.sha }}.tar.xz
+            windows-build/liero-windows-x64-${{ github.sha }}.zip
