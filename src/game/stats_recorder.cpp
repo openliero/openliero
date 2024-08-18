@@ -151,7 +151,7 @@ void NormalStatsRecorder::preTick(Game& game)
 
 void NormalStatsRecorder::tick(Game& game)
 {
-	auto frameEnd = std::chrono::high_resolution_clock::now();
+	auto frameEnd = std::chrono::steady_clock::now();
 	processTimeTotal += std::chrono::duration_cast<std::chrono::milliseconds>(frameEnd - frameStart).count();
 
 	for (auto* w : game.worms)

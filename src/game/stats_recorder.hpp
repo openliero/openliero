@@ -116,7 +116,7 @@ struct WormStats
 struct NormalStatsRecorder : StatsRecorder
 {
 	NormalStatsRecorder()
-	: frame(0), frameStart(std::chrono::system_clock::now()), processTimeTotal(0)
+	: frame(0), frameStart(std::chrono::steady_clock::now()), processTimeTotal(0)
 	, gameTime(0)
 	, presence(504 / 2, 350 / 2, 504, 350)
 	{
@@ -128,7 +128,7 @@ struct NormalStatsRecorder : StatsRecorder
 
 	int frame;
 	WormStats worms[2];
-	std::chrono::time_point<std::chrono::system_clock> frameStart;
+	std::chrono::time_point<std::chrono::steady_clock> frameStart;
 	int64_t processTimeTotal;
 	int gameTime;
 
