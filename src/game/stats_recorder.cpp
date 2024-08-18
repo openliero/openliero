@@ -133,7 +133,7 @@ void NormalStatsRecorder::afterDeath(Worm* worm)
 
 void NormalStatsRecorder::preTick(Game& game)
 {
-	frameStart = std::chrono::high_resolution_clock::now();
+	frameStart = std::chrono::steady_clock::now();
 
 	for (auto& w : worms)
 	{
@@ -151,7 +151,7 @@ void NormalStatsRecorder::preTick(Game& game)
 
 void NormalStatsRecorder::tick(Game& game)
 {
-	auto frameEnd = std::chrono::high_resolution_clock::now();
+	auto frameEnd = std::chrono::steady_clock::now();
 	processTimeTotal += std::chrono::duration_cast<std::chrono::milliseconds>(frameEnd - frameStart).count();
 
 	for (auto* w : game.worms)
