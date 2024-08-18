@@ -90,7 +90,7 @@ Settings::Settings()
 typedef gvl::in_archive<gvl::octet_reader> in_archive_t;
 typedef gvl::out_archive<gvl::octet_writer> out_archive_t;
 
-bool Settings::load(FsNode node, Rand& rand)
+bool Settings::load(FsNode node)
 {
 	try
 	{
@@ -109,14 +109,14 @@ bool Settings::load(FsNode node, Rand& rand)
 	return true;
 }
 
-bool Settings::loadLegacy(FsNode node, Rand& rand)
+bool Settings::loadLegacy(FsNode node)
 {
 	try
 	{
 		auto reader = node.toOctetReader();
 		gvl::default_serialization_context context;
 
-		archive_liero(in_archive_t(reader, context), *this, rand);
+		archive_liero(in_archive_t(reader, context), *this);
 	}
 	catch (std::runtime_error&)
 	{
@@ -138,55 +138,11 @@ gvl::gash::value_type& Settings::updateHash()
 	return hash;
 }
 
-void Settings::save(FsNode node, Rand& rand)
+void Settings::save(FsNode node)
 {
 	auto writer = node.toOctetWriter();
 
 	gvl::toml::writer<gvl::octet_writer> ar(writer);
 
 	archive_text(*this, ar);
-}
-
-void Settings::generateName(WormSettings& ws, Rand& rand)
-{
-#if 0 // TODO
-	try
-	{
-		ReaderFile f(FsNode(joinPath(configRoot, "NAMES.DAT")).read());
-
-		std::vector<std::string> names;
-
-		std::size_t len = f.len;
-
-		// TODO: This is a bit silly since we switched to ReaderFile
-		std::vector<char> chars(len);
-
-		f.get(reinterpret_cast<uint8_t*>(&chars[0]), len);
-
-		std::size_t begin = 0;
-		for(std::size_t i = 0; i < len; ++i)
-		{
-			if(chars[i] == '\r'
-			|| chars[i] == '\n')
-			{
-				if(i > begin)
-				{
-					names.push_back(std::string(chars.begin() + begin, chars.begin() + i));
-				}
-
-				begin = i + 1;
-			}
-		}
-
-		if(!names.empty())
-		{
-			ws.name = names[rand(uint32_t(names.size()))];
-			ws.randomName = true;
-		}
-	}
-	catch (std::runtime_error)
-	{
-		return;
-	}
-#endif
 }

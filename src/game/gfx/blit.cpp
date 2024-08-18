@@ -423,11 +423,12 @@ void blitStone(Common& common, Level& level, bool p1, PalIdx* mem, int x, int y)
 	}
 }
 
-void drawDirtEffect(Common& common, Rand& rand, Level& level, int dirtEffect, int x, int y)
+void drawDirtEffect(Common& common, std::mt19937& rand, Level& level, int dirtEffect, int x, int y)
 {
 	assert(dirtEffect >= 0 && dirtEffect < 9);
 	Texture& tex = common.textures[dirtEffect];
-	PalIdx* tFrame = common.largeSprites.spritePtr(tex.sFrame + rand(tex.rFrame));
+	std::uniform_int_distribution<int> distTexrFrame(0, tex.rFrame - 1);
+	PalIdx* tFrame = common.largeSprites.spritePtr(tex.sFrame + distTexrFrame(rand));
 	PalIdx* mFrame = common.largeSprites.spritePtr(tex.mFrame);
 
 	LTRACE(draw, dirtEffect, xpos, x);
@@ -582,8 +583,9 @@ void drawNinjarope(Common& common, Bitmap& scr, int fromX, int fromY, int toX, i
 	});
 }
 
-void drawLaserSight(Bitmap& scr, Rand& rand, int fromX, int fromY, int toX, int toY)
+void drawLaserSight(Bitmap& scr, std::mt19937& rand, int fromX, int fromY, int toX, int toY)
 {
+	std::uniform_int_distribution<int> dist83To84(2, 84);
 	gvl::rect& clip = scr.clip_rect;
 	PalIdx* ptr = scr.pixels;
 	unsigned int pitch = scr.pitch;
@@ -594,7 +596,7 @@ void drawLaserSight(Bitmap& scr, Rand& rand, int fromX, int fromY, int toX, int 
 		if(rand(5) == 0)
 		{
 			if(clip.inside(cx, cy))
-				ptr[cy*pitch + cx] = rand(2) + 83;
+				ptr[cy*pitch + cx] = dist83To84(rand);
 		}
 	});
 }

@@ -927,6 +927,8 @@ void Worm::doRespawning(Game& game)
 
 void Worm::processWeapons(Game& game)
 {
+	std::uniform_int_distribution<int> dist0ToNeg19999(0, -19999);
+	std::uniform_int_distribution <int>dist8000To15999(8000, 15999);
 	Common& common = *game.common;
 
 	for(int i = 0; i < Settings::selectableWeapons; ++i)
@@ -963,8 +965,8 @@ void Worm::processWeapons(Game& game)
 	{
 		if(--leaveShellTimer <= 0)
 		{
-			auto velY = -int(game.rand(20000));
-			auto velX = game.rand(16000) - 8000;
+			auto velY = dist0ToNeg19999(rand);
+			auto velX = dist8000To15999(rand);
 			common.nobjectTypes[7].create1(game, fixedvec(velX, velY), pos, 0, index, 0);
 		}
 	}

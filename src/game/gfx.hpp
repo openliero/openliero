@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <cassert>
+#include <random>
 
 #include "gfx/font.hpp"
 #include "gfx/blit.hpp"
@@ -230,7 +231,7 @@ struct Gfx
 	}
 
 	// PRNG for things that don't affect the game
-	Rand rand;
+	std::mt19937 rand;
 
 	// renders everything for actual play
 	Renderer playRenderer;

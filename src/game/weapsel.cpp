@@ -21,6 +21,7 @@ WeaponSelection::WeaponSelection(Game& game)
 , focused(true)
 {
 	Common& common = *game.common;
+	std::uniform_int_distribution<uint32_t> dist1To40(1, 40);
 
 	for(int i = 0; i < 40; ++i)
 	{
@@ -51,7 +52,7 @@ WeaponSelection::WeaponSelection(Game& game)
 		{
 			if(ws.weapons[j] == 0 || randomWeapons)
 			{
-				ws.weapons[j] = gfx.rand(1, 41);
+				ws.weapons[j] = dist1To40(gfx.rand);
 			}
 
 			bool enoughWeapons = (enabledWeaps >= Settings::selectableWeapons);
@@ -60,7 +61,7 @@ WeaponSelection::WeaponSelection(Game& game)
 			{
 				while (true)
 				{
-					ws.weapons[j] = gfx.rand(1, 41);
+					ws.weapons[j] = dist1To40(gfx.rand);
 
 					int w = common.weapOrder[ws.weapons[j] - 1];
 
@@ -215,6 +216,7 @@ void WeaponSelection::draw(Renderer& renderer, GameState state, bool useSpectato
 bool WeaponSelection::processFrame()
 {
 	Common& common = *game.common;
+	std::uniform_int_distribution<uint32_t> dist1To40(1, 40);
 
 	bool allReady = true;
 
@@ -303,7 +305,7 @@ bool WeaponSelection::processFrame()
 					{
 						while(true)
 						{
-							ws.weapons[j] = gfx.rand(1, 41);
+							ws.weapons[j] = dist1To40(gfx.rand);
 
 							int w = common.weapOrder[ws.weapons[j] - 1];
 

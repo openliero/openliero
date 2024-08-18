@@ -37,7 +37,7 @@ struct Viewport
 	int wormIdx;
 	int bannerY;
 	gvl::rect rect;
-	Rand rand;
+	std::mt19937 rand;
 
 
 	void setCenter(int x, int y)

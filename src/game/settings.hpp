@@ -58,12 +58,10 @@ struct Settings : gvl::shared, Extensions
 
 	Settings();
 
-	bool load(FsNode node, Rand& rand);
-	bool loadLegacy(FsNode node, Rand& rand);
-	void save(FsNode node, Rand& rand);
+	bool load(FsNode node);
+	bool loadLegacy(FsNode node);
+	void save(FsNode node);
 	gvl::gash::value_type& updateHash();
-
-	static void generateName(WormSettings& ws, Rand& rand);
 
 	uint32_t weapTable[40];
 	int32_t maxBonuses;
@@ -99,7 +97,7 @@ inline T limit(T v)
 }
 
 template<typename Archive>
-void archive_liero(Archive ar, Settings& settings, Rand& rand)
+void archive_liero(Archive ar, Settings& settings)
 {
 	ar
 	.ui8(settings.maxBonuses)
@@ -157,8 +155,8 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand)
 			ar.pascal_str(settings.wormSettings[i]->name, 21);
 			if(ar.in)
 			{
-				if(settings.wormSettings[i]->name.empty())
-					settings.generateName(*settings.wormSettings[i], rand);
+				if(!settings.wormSettings[i]->name.empty())
+					settings.wormSettings[i]->randomName = true;
 				else
 					settings.wormSettings[i]->randomName = false;
 			}

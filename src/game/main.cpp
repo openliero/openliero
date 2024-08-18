@@ -18,7 +18,7 @@
 
 #include <ctime>
 #include <exception>
-#include <gvl/math/cmwc.hpp>
+#include <random>
 
 #if __APPLE__
 #define gameEntry SDL_main
@@ -27,8 +27,10 @@
 int gameEntry(int argc, char* argv[])
 try
 {
+	std::random_device r;
+	auto rand = std::mt19937(r());
 	// TODO: Better PRNG seeding
-	gfx.rand.seed(Uint32(std::time(0)));
+	gfx.rand = rand;
 
 	bool tcSet = false;
 
@@ -94,7 +96,7 @@ try
 
 	gfx.mainLoop();
 
-	gfx.settings->save(configNode / "liero.cfg", gfx.rand);
+	gfx.settings->save(configNode / "liero.cfg");
 
 	sfx.deinit();
 	SDL_Quit();

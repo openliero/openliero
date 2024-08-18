@@ -102,10 +102,6 @@ struct WormNameBehavior : ItemBehavior
 
 		gfx.inputString(ws.name, 20, x, y);
 
-		if(ws.name.empty())
-		{
-			Settings::generateName(ws, gfx.rand);
-		}
 		sfx.play(common, 27);
 		onUpdate(menu, item);
 		return -1;
@@ -1937,20 +1933,20 @@ restart:
 void Gfx::saveSettings(FsNode node)
 {
 	settingsNode = node;
-	settings->save(node, rand);
+	settings->save(node);
 }
 
 bool Gfx::loadSettings(FsNode node)
 {
 	settingsNode = node;
 	settings.reset(new Settings);
-	return settings->load(node, rand);
+	return settings->load(node);
 }
 
 bool Gfx::loadSettingsLegacy(FsNode node)
 {
 	settings.reset(new Settings);
-	return settings->loadLegacy(node, rand);
+	return settings->loadLegacy(node);
 }
 
 void Gfx::drawBasicMenu(/*int curSel*/)

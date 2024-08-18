@@ -1,10 +1,11 @@
 #ifndef LIERO_LEVEL_HPP
 #define LIERO_LEVEL_HPP
 
-#include <vector>
-#include <string>
 #include <cstdio>
+#include <random>
+#include <string>
 #include <utility>
+#include <vector>
 #include "gfx/palette.hpp"
 #include "material.hpp"
 #include "common.hpp"
@@ -27,11 +28,11 @@ struct Level
 
 	bool load(Common& common, Settings const& settings, gvl::octet_reader r);
 
-	void generateDirtPattern(Common& common, Rand& rand);
-	void generateRandom(Common& common, Settings const& settings, Rand& rand);
+	void generateDirtPattern(Common& common, std::mt19937& rand);
+	void generateRandom(Common& common, Settings const& settings, std::mt19937& rand);
 	void makeShadow(Common& common);
-	void generateFromSettings(Common& common, Settings const& settings, Rand& rand);
-	bool selectSpawn(Rand& rand, int w, int h, gvl::ivec2& selected);
+	void generateFromSettings(Common& common, Settings const& settings, std::mt19937& rand);
+	bool selectSpawn(std::mt19937& rand, int w, int h, gvl::ivec2& selected);
 	void drawMiniature(Bitmap& dest, int mapX, int mapY, int step);
 
 	unsigned char pixel(int x, int y)
