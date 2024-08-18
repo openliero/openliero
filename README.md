@@ -1,3 +1,14 @@
+openliero
+=========
+
+This is a continuation of the openliero project, originally located at 
+https://github.com/gliptic/liero, also known as Liero 1.36.
+
+The main ambition is to keep Liero running as faithfully as possible on 
+modern machines, although we are not opposed to making careful changes 
+and improvements to the original game (especially if they are optional).
+
+Patches are welcome!
 
 How to build (Windows)
 ======================
