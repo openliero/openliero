@@ -5,6 +5,8 @@ on:
       branches:
         - master
     workflow_dispatch:
+permissions:
+    contents: write
 
 jobs:
   # disabled, since MacOS builds are broken at the moment
