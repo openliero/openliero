@@ -71,8 +71,8 @@ try
 
 	// TODO: Fix loading
 	std::shared_ptr<Common> common(new Common());
-	FsNode configNode(""); // current dir
-	FsNode lieroRoot(configNode / "TC" / tcName);
+	FsNode currentDirNode("");
+	FsNode lieroRoot(currentDirNode / "TC" / tcName);
 	common->load(std::move(lieroRoot));
 
 	std::string suffix = "_n";

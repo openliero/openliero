@@ -119,12 +119,12 @@ try
 
 	FsNode configNode(gfx.getConfigNode());
 
-	if (!gfx.loadSettings(configNode / "liero.cfg"))
+	if (!gfx.loadSettings(configNode / "Setups" / "liero.cfg"))
 	{
 		if (!gfx.loadSettingsLegacy(configNode / "LIERO.DAT"))
 		{
 			gfx.settings.reset(new Settings);
-			gfx.saveSettings(configNode / "liero.cfg");
+			gfx.saveSettings(configNode / "Setups" / "liero.cfg");
 		}
 	}
 
@@ -143,7 +143,7 @@ try
 
 	gfx.mainLoop();
 
-	gfx.settings->save(configNode / "liero.cfg", gfx.rand);
+	gfx.settings->save(configNode / "Setups" / "liero.cfg", gfx.rand);
 
 	sfx.deinit();
 	SDL_Quit();

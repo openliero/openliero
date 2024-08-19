@@ -1083,7 +1083,7 @@ struct OptionsSaveBehavior : ItemBehavior
 		if(gfx.inputString(name, 30, x, y) && !name.empty())
 		{
 			//gfx.saveSettings(joinPath(configRoot, name + ".cfg"));
-			gfx.saveSettings(gfx.getConfigNode() / (name + ".cfg"));
+			gfx.saveSettings(gfx.getConfigNode() / "Setups" / (name + ".cfg"));
 		}
 
 		sfx.play(common, 27);
@@ -1411,6 +1411,7 @@ void Gfx::selectOptions()
 		});
 
 		optionsSel.setFolder(optionsSel.rootNode);
+		optionsSel.select(joinPath(getConfigNode().fullPath(), "Setups"));
 	}
 
 	do
