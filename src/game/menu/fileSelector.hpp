@@ -7,12 +7,11 @@
 #include "text.hpp"
 #include "menu.hpp"
 #include "common.hpp"
-#include <gvl/resman/shared_ptr.hpp>
 
 using std::string;
 using std::vector;
 using std::pair;
-using gvl::shared_ptr;
+using std::shared_ptr;
 
 typedef bool (*FileFilter)(string const& name, string const& ext);
 

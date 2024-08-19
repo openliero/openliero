@@ -1,14 +1,13 @@
 #ifndef LIERO_READER_HPP
 #define LIERO_READER_HPP
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <stdexcept>
-#include <gvl/cstdint.hpp>
 #include <gvl/io2/stream.hpp>
 #include <gvl/serialization/coding.hpp>
-#include <gvl/support/platform.hpp>
 
 struct ReaderFile : gvl::noncopyable
 {

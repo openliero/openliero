@@ -1,6 +1,7 @@
 #ifndef STATS_RECORDER_HPP
 #define STATS_RECORDER_HPP
 
+#include <chrono>
 #include "worm.hpp"
 #include "gfx/blit.hpp"
 
@@ -21,7 +22,7 @@ struct StatsRecorder : gvl::shared
 	virtual void tick(Game& game);
 	virtual void finish(Game& game);
 
-	virtual void aiProcessTime(Worm* worm, uint64_t time);
+	virtual void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
 
 	//virtual void write(Common& common, gvl::stream_ptr sink);
 };
@@ -109,13 +110,13 @@ struct WormStats
 	int index;
 
 	int lives, timer, kills;
-	uint64_t aiProcessTime;
+	std::chrono::nanoseconds aiProcessTime;
 };
 
 struct NormalStatsRecorder : StatsRecorder
 {
 	NormalStatsRecorder()
-	: frame(0), frameStart(0), processTimeTotal(0)
+	: frame(0), frameStart(std::chrono::steady_clock::now()), processTimeTotal(0)
 	, gameTime(0)
 	, presence(504 / 2, 350 / 2, 504, 350)
 	{
@@ -127,8 +128,8 @@ struct NormalStatsRecorder : StatsRecorder
 
 	int frame;
 	WormStats worms[2];
-	uint64_t frameStart;
-	uint64_t processTimeTotal;
+	std::chrono::time_point<std::chrono::steady_clock> frameStart;
+	int64_t processTimeTotal;
 	int gameTime;
 
 	Heatmap presence;
@@ -145,7 +146,7 @@ struct NormalStatsRecorder : StatsRecorder
 	void tick(Game& game);
 
 	void finish(Game& game);
-	void aiProcessTime(Worm* worm, uint64_t time);
+	void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
 
 
 	//void write(Common& common, gvl::stream_ptr sink);

@@ -1,7 +1,7 @@
 
 #include "localController.hpp"
 
-#include <gvl/system/system.hpp>
+#include <chrono>
 #include <gvl/io2/fstream.hpp>
 #include "stats_presenter.hpp"
 #include "../keys.hpp"
@@ -17,19 +17,19 @@
 
 #include <cctype>
 
-gvl::shared_ptr<WormAI> createAi(int controller, Worm& worm, Settings& settings)
+std::shared_ptr<WormAI> createAi(int controller, Worm& worm, Settings& settings)
 {
 	if (controller == 1)
-		return gvl::shared_ptr<WormAI>(new DumbLieroAI());
+		return std::shared_ptr<WormAI>(new DumbLieroAI());
 	else if (controller == 2)
-		return gvl::shared_ptr<WormAI>(new FollowAI(
+		return std::shared_ptr<WormAI>(new FollowAI(
 			Weights(), settings.aiParallels, worm.index == 0));
 
-	return gvl::shared_ptr<WormAI>();
+	return std::shared_ptr<WormAI>();
 }
 
-LocalController::LocalController(gvl::shared_ptr<Common> common, gvl::shared_ptr<Settings> settings)
-: game(common, settings, gvl::shared_ptr<SoundPlayer>(new DefaultSoundPlayer(*common)))
+LocalController::LocalController(std::shared_ptr<Common> common, std::shared_ptr<Settings> settings)
+: game(common, settings, std::shared_ptr<SoundPlayer>(new DefaultSoundPlayer(*common)))
 , state(StateInitial)
 , fadeValue(0)
 , goingToMenu(false)
@@ -161,9 +161,9 @@ bool LocalController::process()
 				Worm& worm = *game.worms[(i + phase) % game.worms.size()];
 				if(worm.ai.get())
 				{
-					uint64_t time = gvl::get_hires_ticks();
+					auto start_time = std::chrono::steady_clock::now();
 					worm.ai->process(game, worm);
-					time = gvl::get_hires_ticks() - time;
+					auto time = std::chrono::steady_clock::now() - start_time;
 					game.statsRecorder->aiProcessTime(&worm, time);
 				}
 			}

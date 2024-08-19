@@ -5,7 +5,6 @@
 
 #include "gfx.hpp"
 #include "sfx.hpp"
-#include "sys.hpp"
 #include "game.hpp"
 #include "viewport.hpp"
 #include "worm.hpp"
@@ -16,7 +15,6 @@
 #include "constants.hpp"
 #include "math.hpp"
 #include "console.hpp"
-#include <gvl/support/platform.hpp>
 
 #include <ctime>
 #include <exception>
@@ -135,7 +133,7 @@ try
 
 	// TC loading
 	FsNode lieroRoot(configNode / "TC" / gfx.settings->tc);
-	gvl::shared_ptr<Common> common(new Common());
+	std::shared_ptr<Common> common(new Common());
 	common->load(std::move(lieroRoot));
 	gfx.common = common;
 	gfx.playRenderer.loadPalette(*common); // This gets the palette from common

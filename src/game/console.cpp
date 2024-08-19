@@ -1,5 +1,4 @@
 #include "console.hpp"
-#include <gvl/support/platform.hpp>
 #include <cstdio>
 
 namespace Console

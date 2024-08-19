@@ -155,7 +155,7 @@ void Worm::processPhysics(Game& game)
 
 	fixedvec absvel(std::abs(vel.x), std::abs(vel.y));
 
-	int32 rh, rv, mbh, mbv;
+	int32_t rh, rv, mbh, mbv;
 
 	rh = reacts[vel.x >= 0 ? RFLeft : RFRight];
 	rv = reacts[vel.y >= 0 ? RFUp : RFDown];

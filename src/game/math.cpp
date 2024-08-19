@@ -1,5 +1,5 @@
 #include "math.hpp"
-#include <gvl/cstdint.hpp>
+#include <cstdint>
 #include <cmath>
 
 fixedvec cossinTable[128];

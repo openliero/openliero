@@ -7,7 +7,7 @@
 #include "../sfx.hpp"
 
 ReplayController::ReplayController(
-	gvl::shared_ptr<Common> common, gvl::source source)
+	std::shared_ptr<Common> common, gvl::source source)
 : state(StateInitial)
 , fadeValue(0)
 , goingToMenu(false)
@@ -43,7 +43,7 @@ void ReplayController::focus()
 	{
 		try
 		{
-			game = replay->beginPlayback(common, gvl::shared_ptr<SoundPlayer>(new DefaultSoundPlayer(*common)));
+			game = replay->beginPlayback(common, std::shared_ptr<SoundPlayer>(new DefaultSoundPlayer(*common)));
 		}
 		catch(std::runtime_error& e)
 		{

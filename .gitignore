@@ -25,6 +25,7 @@ CMakeFiles/
 CMakeScripts/
 CMakeCache.txt
 Makefile
+build.ninja
 cmake_install.cmake
 *.xcodeproj/
 

@@ -1,7 +1,7 @@
 #include "stats_recorder.hpp"
 
+#include <chrono>
 #include "common.hpp"
-#include <gvl/system/system.hpp>
 #include "game.hpp"
 #include "text.hpp"
 
@@ -43,7 +43,7 @@ void StatsRecorder::tick(Game& game)
 
 }
 
-void StatsRecorder::aiProcessTime(Worm* worm, uint64_t time)
+void StatsRecorder::aiProcessTime(Worm* worm, std::chrono::nanoseconds time)
 {
 }
 
@@ -133,7 +133,7 @@ void NormalStatsRecorder::afterDeath(Worm* worm)
 
 void NormalStatsRecorder::preTick(Game& game)
 {
-	frameStart = gvl::get_hires_ticks();
+	frameStart = std::chrono::steady_clock::now();
 
 	for (auto& w : worms)
 	{
@@ -151,8 +151,8 @@ void NormalStatsRecorder::preTick(Game& game)
 
 void NormalStatsRecorder::tick(Game& game)
 {
-	uint64_t frameEnd = gvl::get_hires_ticks();
-	processTimeTotal += (frameEnd - frameStart);
+	auto frameEnd = std::chrono::steady_clock::now();
+	processTimeTotal += std::chrono::duration_cast<std::chrono::milliseconds>(frameEnd - frameStart).count();
 
 	for (auto* w : game.worms)
 	{
@@ -198,7 +198,7 @@ void NormalStatsRecorder::finish(Game& game)
 	gameTime = frame;
 }
 
-void NormalStatsRecorder::aiProcessTime(Worm* worm, uint64_t time)
+void NormalStatsRecorder::aiProcessTime(Worm* worm, std::chrono::nanoseconds time)
 {
 	WormStats& w = worms[worm->index];
 	w.aiProcessTime += time;

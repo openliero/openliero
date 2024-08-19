@@ -3,9 +3,7 @@
 
 #include <gvl/resman/shared.hpp>
 
-extern "C" {
-#include "mixer.h"
-}
+#include "mixer.hpp"
 
 struct Common;
 

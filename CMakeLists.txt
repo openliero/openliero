@@ -30,7 +30,6 @@ set(SOURCES
     src/game/sobject.cpp
     src/game/spectatorviewport.cpp
     src/game/stats_recorder.cpp
-    src/game/sys.cpp
     src/game/text.cpp
     src/game/viewport.cpp
     src/game/weapon.cpp
@@ -42,7 +41,7 @@ set(SOURCES
     src/game/gfx/palette.cpp
     src/game/gfx/renderer.cpp
     src/game/gfx/sprite.cpp
-    src/game/mixer/mixer.c
+    src/game/mixer/mixer.cpp
     src/game/mixer/player.cpp
     src/gvl/zlib/miniz.c
     src/gvl/system/system.c

@@ -5,10 +5,8 @@
 #include <cstdio>
 #include <memory>
 #include <map>
-#include <gvl/support/platform.hpp>
 #include <gvl/io2/stream.hpp>
 #include <gvl/zlib/zlib2.h>
-#include <gvl/resman/shared_ptr.hpp>
 
 std::string changeLeaf(std::string const& path, std::string const& newLeaf);
 std::string getRoot(std::string const& path);
@@ -80,7 +78,7 @@ struct FsNodeImp : gvl::shared
 {
 	virtual std::string const& fullPath() = 0;
 	virtual DirectoryListing iter() = 0;
-	virtual gvl::shared_ptr<FsNodeImp> go(std::string const& name) = 0;
+	virtual std::shared_ptr<FsNodeImp> go(std::string const& name) = 0;
 	virtual gvl::source tryToSource() = 0;
 	virtual gvl::sink tryToSink() = 0;
 	virtual bool exists() const = 0;
@@ -88,7 +86,7 @@ struct FsNodeImp : gvl::shared
 
 struct FsNode
 {
-	gvl::shared_ptr<FsNodeImp> imp;
+	std::shared_ptr<FsNodeImp> imp;
 
 	FsNode()
 	{
@@ -104,7 +102,7 @@ struct FsNode
 	{
 	}
 
-	FsNode(gvl::shared_ptr<FsNodeImp> imp)
+	FsNode(std::shared_ptr<FsNodeImp> imp)
 	: imp(std::move(imp))
 	{
 	}

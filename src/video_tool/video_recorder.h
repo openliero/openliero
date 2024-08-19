@@ -1,12 +1,9 @@
 #ifndef VIDEOTEST_H
 #define VIDEOTEST_H
 
-#include "tl/platform.h"
-
 #include "libavformat/avformat.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
-#define inline TL_INLINE
 
 typedef struct video_recorder {
 	AVFrame *picture, *tmp_picture;
