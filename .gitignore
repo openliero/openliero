@@ -32,10 +32,8 @@ cmake_install.cmake
 # created by running Liero
 /Replays/
 /Profiles/
+/Setups/
 /TC/
-/liero.cfg
-/orbmit.cfg
-/original.cfg
 
 # copied manually for building/running project
 /_build/*icon*.png

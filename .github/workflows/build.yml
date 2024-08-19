@@ -71,6 +71,7 @@ jobs:
           path: |
             openliero
             tctool
+            Setups
             Profiles
             TC
   build-windows:
@@ -98,6 +99,7 @@ jobs:
           path: |
             openliero.exe
             tctool.exe
+            Setups
             Profiles
             TC
   release:
