@@ -2,9 +2,9 @@
 #define LIERO_WORK_QUEUE_HPP
 
 #include <SDL.h>
+#include <SDL_atomic.h>
 #include <sstream>
 #include <vector>
-#include "tl/memory.h"
 #include <memory>
 
 struct LockMutex
@@ -59,8 +59,9 @@ struct Work
 		{
 			LockMutex m(mutex);
 
+			SDL_MemoryBarrierAcquire();
 			done_ = true;
-			TL_WRITE_SYNC();
+			SDL_MemoryBarrierRelease();
 
 			SDL_CondSignal(stateCond);
 		}
