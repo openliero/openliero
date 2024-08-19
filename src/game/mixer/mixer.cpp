@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <vector>
-#include "tl/memory.h"
+#include <SDL_atomic.h>
 
 typedef struct channel
 {
@@ -142,9 +142,10 @@ void sfx_mixer_mix(sfx_mixer* self, void* output, unsigned long frame_count)
 			if(!add_channel(out, frame_count, self->base_frame, ch))
 			{
 				// Remove
+				SDL_MemoryBarrierAcquire();
 				ch->flags = INACTIVE_FLAGS;
 				ch->id = NULL;
-				TL_WRITE_SYNC(); // Make ch->flags and ch->id write visible
+				SDL_MemoryBarrierRelease(); // Make ch->flags and ch->id write visible
 			}
 		}
 	}
@@ -219,6 +220,7 @@ void* sfx_mixer_add(sfx_mixer* self, sfx_sound* snd, uint32_t time, void* h, uin
 
 	if (ch_idx >= 0)
 	{
+		SDL_MemoryBarrierAcquire();
 		channel* ch = self->channel_states + ch_idx;
 		ch->sound = snd;
 		ch->pos = time;
@@ -227,7 +229,7 @@ void* sfx_mixer_add(sfx_mixer* self, sfx_sound* snd, uint32_t time, void* h, uin
 		ch->volumes = 0x10001000;
 		ch->id = h;
 
-		TL_WRITE_SYNC(); // Make sure everything is written before ch->flags
+		SDL_MemoryBarrierRelease(); // Make sure everything is written before ch->flags
 
 		ch->flags = flags;
 		return h;
