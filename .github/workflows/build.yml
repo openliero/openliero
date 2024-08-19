@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
       - name: Prepare build
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
+        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" -DOPENLIERO_BUILD_TCTOOL=ON
       - name: Build
         run: make
       - name: Upload build
@@ -85,7 +85,7 @@ jobs:
           version: 2-latest
           version-sdl-image: 2-latest
       - name: Prepare build
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022"
+        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -DOPENLIERO_BUILD_TCTOOL=ON
       - name: Build
         run: cmake --build . --config Release
       - name: Move executables
