@@ -72,6 +72,7 @@ jobs:
             openliero
             tctool
             Setups
+            Profiles
             TC
   build-windows:
     runs-on: windows-latest
@@ -99,6 +100,7 @@ jobs:
             openliero.exe
             tctool.exe
             Setups
+            Profiles
             TC
   release:
     runs-on: ubuntu-latest
