@@ -1,5 +1,5 @@
 name: Build
-on: 
+on:
     pull_request:
     push:
       branches:
@@ -71,6 +71,7 @@ jobs:
           path: |
             openliero
             tctool
+            Profiles
             TC
   build-windows:
     runs-on: windows-latest
@@ -97,6 +98,7 @@ jobs:
           path: |
             openliero.exe
             tctool.exe
+            Profiles
             TC
   release:
     runs-on: ubuntu-latest
