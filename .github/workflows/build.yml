@@ -106,6 +106,7 @@ jobs:
           cmake
           -DCMAKE_BUILD_TYPE=Release
           -G "Visual Studio 17 2022"
+          -A X64
           -DOPENLIERO_BUILD_TCTOOL=ON
       - name: Build
         run: cmake --build . --config Release

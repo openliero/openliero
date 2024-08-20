@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"[cpp]": {
+				"editor.formatOnSave": false,
+		},
+		"cmake.debugConfig": {
+			"cwd": "${workspaceFolder}"
+		},
+	}
+}

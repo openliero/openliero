@@ -6,8 +6,8 @@
       "currentDir": "${workspaceRoot}",
       "type": "default",
       "project": "CMakeLists.txt",
-      "projectTarget": "openliero.exe",
-      "name": "openliero.exe"
+      "projectTarget": "openliero.exe (Debug\\openliero.exe)",
+      "name": "openliero.exe (Debug\\openliero.exe)"
     }
   ]
 }
