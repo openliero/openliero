@@ -251,9 +251,10 @@ struct Gfx
 	PlayerMenu playerMenu;
 	HiddenMenu hiddenMenu;
 
-	enum GfxGameState { GSInitialize, GSMenuInit, GSMenuRun, GSGame };
+	enum GfxGameState { GSInitialize, GSMenuInit, GSMenuFading, GSMenuSelected, GSMenuRun, GSGame };
 
 	GfxGameState gfxGameState;
+	int selectedMenuOption;
 
 	Menu* curMenu;
 	std::string prevSelectedReplayPath;

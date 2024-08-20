@@ -278,6 +278,7 @@ Gfx::Gfx()
 , hiddenMenu(178, 20)
 , curMenu(0)
 , gfxGameState(GfxGameState::GSInitialize)
+, selectedMenuOption(0)
 , sdlDrawSurface(0)
 , running(true)
 , doubleRes(true)
@@ -1866,9 +1867,38 @@ bool Gfx::mainLoop()
 
 	if (gfxGameState == GfxGameState::GSMenuRun)
 	{
-		int selection = menuLoop();
+		selectedMenuOption = menuLoop();
 
-		if(selection == MainMenu::MaNewGame)
+		if (selectedMenuOption != MainMenu::MaNoSelection)
+		{
+			playRenderer.fadeValue = 31;
+			gfxGameState = GfxGameState::GSMenuFading;
+		}
+		else
+		{
+			menuFlip();
+			process();
+		}
+	}
+
+	if (gfxGameState == GfxGameState::GSMenuFading)
+	{
+		if (playRenderer.fadeValue > 0)
+		{
+			--playRenderer.fadeValue;
+			menuFlip(true);
+		}
+		else
+		{
+			gfxGameState = GfxGameState::GSMenuSelected;
+			menuFlip();
+		}
+		process();
+	}
+
+	if (gfxGameState == GfxGameState::GSMenuSelected)
+	{
+		if(selectedMenuOption == MainMenu::MaNewGame)
 		{
 			std::unique_ptr<Controller> newController(new LocalController(common, settings));
 
@@ -1892,7 +1922,7 @@ bool Gfx::mainLoop()
 			controller = std::move(newController);
 			gfxGameState = GfxGameState::GSGame;
 		}
-		else if(selection == MainMenu::MaResumeGame)
+		else if(selectedMenuOption == MainMenu::MaResumeGame)
 		{
 			if (controller->isReplay())
 			{
@@ -1900,11 +1930,11 @@ bool Gfx::mainLoop()
 			}
 			gfxGameState = GfxGameState::GSGame;
 		}
-		else if(selection == MainMenu::MaQuit) // QUIT TO OS
+		else if(selectedMenuOption == MainMenu::MaQuit) // QUIT TO OS
 		{
 			return false;
 		}
-		else if(selection == MainMenu::MaReplay)
+		else if(selectedMenuOption == MainMenu::MaReplay)
 		{
 			if (settings->singleScreenReplay)
 			{
@@ -1912,7 +1942,7 @@ bool Gfx::mainLoop()
 			}
 			gfxGameState = GfxGameState::GSGame;
 		}
-		else if (selection == MainMenu::MaTc)
+		else if (selectedMenuOption == MainMenu::MaTc)
 		{
 			gfxGameState = GfxGameState::GSInitialize;
 		}
@@ -2346,19 +2376,6 @@ int Gfx::menuLoop()
 		sfx.play(common, 25);
 
 		curMenu->movementPage(1);
-	}
-	if (selected >= 0)
-	{
-		for (playRenderer.fadeValue = 32; playRenderer.fadeValue > 0; --playRenderer.fadeValue)
-		{
-			menuFlip(true);
-			process();
-		}
-	}
-	else
-	{
-		menuFlip();
-		process();
 	}
 
 	return selected;
