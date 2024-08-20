@@ -50,6 +50,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       # does not work, see: https://github.com/libsdl-org/setup-sdl/issues/23
       #- uses: libsdl-org/setup-sdl@main
       #  id: sdl
