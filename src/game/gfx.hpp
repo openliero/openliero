@@ -282,7 +282,7 @@ struct Gfx
 	bool running;
 	bool spectatorFullscreen, doubleRes;
 
-	Uint32 lastFrame;
+	uint64_t lastFrame;
 	unsigned menuCycles;
 	int windowW, windowH;
 	int prevMag; // Previous magnification used for drawing

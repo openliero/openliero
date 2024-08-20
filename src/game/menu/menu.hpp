@@ -187,7 +187,7 @@ struct Menu
 	void scroll(int amount);
 
 	std::string searchPrefix;
-	Uint32 searchTime;
+	Uint64 searchTime;
 
 	std::vector<MenuItem> items;
 	int itemHeight;

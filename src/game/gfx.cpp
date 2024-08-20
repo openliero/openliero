@@ -293,7 +293,7 @@ Gfx::Gfx()
 void Gfx::init()
 {
 	SDL_ShowCursor(SDL_DISABLE);
-	lastFrame = SDL_GetTicks();
+	lastFrame = SDL_GetTicks64();
 
 	playRenderer.init(320, 200);
 	singleScreenRenderer.init(640, 400);
@@ -923,11 +923,11 @@ void Gfx::flip()
 
 	static unsigned int const delay = 14u;
 
-	uint32_t wantedTime = lastFrame + delay;
+	auto wantedTime = lastFrame + delay;
 
 	while(true)
 	{
-		uint32_t now = SDL_GetTicks();
+		auto now = SDL_GetTicks64();
 		if(now >= wantedTime)
 			break;
 

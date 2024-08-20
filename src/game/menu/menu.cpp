@@ -18,7 +18,7 @@ void Menu::onKeys(SDL_Keysym* begin, SDL_Keysym* end, bool contains)
 		if ((begin->sym >= 32 && begin->sym <= 127) // x >= SDLK_SPACE && x <= SDLK_DELETE
 		  || isTab)
 		{
-			Uint32 time = SDL_GetTicks();
+			auto time = SDL_GetTicks64();
 			if (!isTab && time - searchTime > 1500)
 				searchPrefix.clear();
 
