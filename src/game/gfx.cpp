@@ -869,7 +869,6 @@ void Gfx::menuFlip(bool quitting)
 	singleScreenRenderer.pal.rotateFrom(singleScreenRenderer.origpal, 168, 174, menuCycles);
 	singleScreenRenderer.pal.setWormColours(*settings);
 	singleScreenRenderer.pal.fade(singleScreenRenderer.fadeValue);
-	flip();
 }
 
 void Gfx::draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdlRenderer, Renderer& renderer)
@@ -1291,6 +1290,7 @@ void Gfx::selectLevel()
 		}
 
 		menuFlip();
+		flip();
 		process();
 	}
 	while(true);
@@ -1338,6 +1338,7 @@ void Gfx::selectProfile(WormSettings& ws)
 		}
 
 		menuFlip();
+		flip();
 		process();
 	}
 	while(true);
@@ -1396,6 +1397,7 @@ int Gfx::selectReplay()
 			}
 		}
 		menuFlip();
+		flip();
 		process();
 	}
 	while(true);
@@ -1446,6 +1448,7 @@ void Gfx::selectOptions()
 			}
 		}
 		menuFlip();
+		flip();
 		process();
 	}
 	while(true);
@@ -1505,6 +1508,7 @@ std::unique_ptr<Common> Gfx::selectTc()
 			}
 		}
 		menuFlip();
+		flip();
 		process();
 	}
 	while(true);
@@ -1598,6 +1602,7 @@ void Gfx::weaponOptions()
 		weaponMenu.onKeys(gfx.keyBuf, gfx.keyBufPtr);
 
 		menuFlip();
+		flip();
 		process();
 
 		if(testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
@@ -1877,7 +1882,6 @@ bool Gfx::mainLoop()
 		else
 		{
 			menuFlip();
-			process();
 		}
 	}
 
@@ -1893,7 +1897,6 @@ bool Gfx::mainLoop()
 			gfxGameState = GfxGameState::GSMenuSelected;
 			menuFlip();
 		}
-		process();
 	}
 
 	if (gfxGameState == GfxGameState::GSMenuSelected)
@@ -1966,10 +1969,17 @@ bool Gfx::mainLoop()
 			controller->draw(this->singleScreenRenderer, true);
 
 			++gfx.menuCycles;
-
-			flip();
-			process(controller.get());
 		}
+	}
+
+	flip();
+	if(gfxGameState == GfxGameState::GSGame)
+	{
+		process(controller.get());
+	}
+	else
+	{
+		process();
 	}
 	return true;
 }
