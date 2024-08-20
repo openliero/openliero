@@ -10,6 +10,7 @@ struct MainMenu : Menu
 {
 	enum
 	{
+		MaNoSelection = -1,
 		MaResumeGame,
 		MaNewGame,
 		MaSettings,
