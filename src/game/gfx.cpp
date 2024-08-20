@@ -35,15 +35,12 @@ Gfx gfx;
 
 struct KeyBehavior : ItemBehavior
 {
-	KeyBehavior(Common& common, uint32_t& key, uint32_t& keyEx, bool extended = false)
-	: common(common)
-	, key(key)
-	, keyEx(keyEx)
-	, extended(extended)
+	KeyBehavior(Common &common, uint32_t &key, uint32_t &keyEx, bool extended = false)
+			: common(common), key(key), keyEx(keyEx), extended(extended)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 		uint32_t k;
@@ -52,12 +49,11 @@ struct KeyBehavior : ItemBehavior
 		{
 			k = gfx.waitForKeyEx();
 			isEx = isExtendedKey(k);
-		}
-		while(!extended && isEx);
+		} while (!extended && isEx);
 
-		if(k != DkEscape)
+		if (k != DkEscape)
 		{
-			if(!isEx)
+			if (!isEx)
 				key = k;
 			keyEx = k;
 
@@ -68,41 +64,40 @@ struct KeyBehavior : ItemBehavior
 		return -1;
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
 		item.value = gfx.getKeyName(extended ? keyEx : key);
 		item.hasValue = true;
 	}
 
-	Common& common;
-	uint32_t& key;
-	uint32_t& keyEx;
+	Common &common;
+	uint32_t &key;
+	uint32_t &keyEx;
 	bool extended;
 };
 
 struct WormNameBehavior : ItemBehavior
 {
-	WormNameBehavior(Common& common, WormSettings& ws)
-	: common(common)
-	, ws(ws)
+	WormNameBehavior(Common &common, WormSettings &ws)
+			: common(common), ws(ws)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 
 		ws.randomName = false;
 
 		int x, y;
-		if(!menu.itemPosition(item, x, y))
+		if (!menu.itemPosition(item, x, y))
 			return -1;
 
 		x += menu.valueOffsetX + 2;
 
 		gfx.inputString(ws.name, 20, x, y);
 
-		if(ws.name.empty())
+		if (ws.name.empty())
 		{
 			Settings::generateName(ws, gfx.rand);
 		}
@@ -111,42 +106,39 @@ struct WormNameBehavior : ItemBehavior
 		return -1;
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
 		item.value = ws.name;
 		item.hasValue = true;
 	}
 
-	Common& common;
-	WormSettings& ws;
+	Common &common;
+	WormSettings &ws;
 };
-
 
 struct ProfileSaveBehavior : ItemBehavior
 {
-	ProfileSaveBehavior(Common& common, WormSettings& ws, bool saveAs = false)
-	: common(common)
-	, ws(ws)
-	, saveAs(saveAs)
+	ProfileSaveBehavior(Common &common, WormSettings &ws, bool saveAs = false)
+			: common(common), ws(ws), saveAs(saveAs)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 
 		int x, y;
-		if(!menu.itemPosition(item, x, y))
+		if (!menu.itemPosition(item, x, y))
 			return -1;
 
 		x += menu.valueOffsetX + 2;
 
-		if(saveAs)
+		if (saveAs)
 		{
 			std::string name;
-			if(gfx.inputString(name, 30, x, y) && !name.empty())
+			if (gfx.inputString(name, 30, x, y) && !name.empty())
 			{
-				//ws.saveProfile(joinPath(joinPath(configRoot, "Profiles"), name));
+				// ws.saveProfile(joinPath(joinPath(configRoot, "Profiles"), name));
 				ws.saveProfile(gfx.getConfigNode() / "Profiles" / (name + ".lpf"));
 			}
 
@@ -159,28 +151,27 @@ struct ProfileSaveBehavior : ItemBehavior
 		return -1;
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
-		if(!saveAs)
+		if (!saveAs)
 		{
 			item.visible = (bool)ws.profileNode;
 		}
 	}
 
-	Common& common;
-	WormSettings& ws;
+	Common &common;
+	WormSettings &ws;
 	bool saveAs;
 };
 
 struct ProfileLoadedBehavior : ItemBehavior
 {
-	ProfileLoadedBehavior(Common& common, WormSettings& ws)
-	: common(common)
-	, ws(ws)
+	ProfileLoadedBehavior(Common &common, WormSettings &ws)
+			: common(common), ws(ws)
 	{
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
 		if (ws.profileNode)
 		{
@@ -196,52 +187,53 @@ struct ProfileLoadedBehavior : ItemBehavior
 		item.hasValue = true;
 	}
 
-	Common& common;
-	WormSettings& ws;
+	Common &common;
+	WormSettings &ws;
 };
 
 #define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
 
-int levenshtein(char const *s1, char const *s2) {
-    std::size_t x, y, s1len, s2len;
-    s1len = strlen(s1);
-    s2len = strlen(s2);
-	std::size_t w = s1len+1;
+int levenshtein(char const *s1, char const *s2)
+{
+	std::size_t x, y, s1len, s2len;
+	s1len = strlen(s1);
+	s2len = strlen(s2);
+	std::size_t w = s1len + 1;
 	std::vector<unsigned> matrix(w * (s2len + 1));
-    matrix[0] = 0;
-    for (x = 1; x <= s2len; x++)
-        matrix[x*w] = matrix[(x-1)*w] + 1;
-    for (y = 1; y <= s1len; y++)
-        matrix[y] = matrix[y-1] + 1;
-    for (x = 1; x <= s2len; x++)
-        for (y = 1; y <= s1len; y++)
+	matrix[0] = 0;
+	for (x = 1; x <= s2len; x++)
+		matrix[x * w] = matrix[(x - 1) * w] + 1;
+	for (y = 1; y <= s1len; y++)
+		matrix[y] = matrix[y - 1] + 1;
+	for (x = 1; x <= s2len; x++)
+		for (y = 1; y <= s1len; y++)
 		{
-			int c = std::tolower(s1[y-1]) == std::tolower(s2[x-1]) ? 0 : 1;
-            matrix[x*w + y] = MIN3(matrix[(x-1)*w + y] + 1, matrix[x*w + y - 1] + 1, matrix[(x-1)*w + y - 1] + c);
+			int c = std::tolower(s1[y - 1]) == std::tolower(s2[x - 1]) ? 0 : 1;
+			matrix[x * w + y] = MIN3(matrix[(x - 1) * w + y] + 1, matrix[x * w + y - 1] + 1, matrix[(x - 1) * w + y - 1] + c);
 		}
 
-    return(matrix[s2len*w + s1len]);
+	return (matrix[s2len * w + s1len]);
 }
 
 struct WeaponEnumBehavior : EnumBehavior
 {
-	WeaponEnumBehavior(Common& common, uint32_t& v)
-	: EnumBehavior(common, v, 1, (uint32_t)common.weapons.size(), false)
+	WeaponEnumBehavior(Common &common, uint32_t &v)
+			: EnumBehavior(common, v, 1, (uint32_t)common.weapons.size(), false)
 	{
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
 		item.value = common.weapons[common.weapOrder[v - 1]].name;
 		item.hasValue = true;
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 
 		int x, y;
-		if(!menu.itemPosition(item, x, y))
+		if (!menu.itemPosition(item, x, y))
 			return -1;
 
 		x += menu.valueOffsetX + 2;
@@ -253,7 +245,7 @@ struct WeaponEnumBehavior : EnumBehavior
 			double minimum = std::numeric_limits<double>::max();
 			for (uint32_t i = min; i <= max; ++i)
 			{
-				std::string& name = common.weapons[common.weapOrder[i - 1]].name;
+				std::string &name = common.weapons[common.weapOrder[i - 1]].name;
 
 				double dist = levenshtein(name.c_str(), search.c_str()) / (double)name.length();
 				if (dist < minimum)
@@ -272,19 +264,7 @@ struct WeaponEnumBehavior : EnumBehavior
 };
 
 Gfx::Gfx()
-: mainMenu(53, 20)
-, settingsMenu(178, 20)
-, playerMenu(178, 20)
-, hiddenMenu(178, 20)
-, curMenu(0)
-, sdlDrawSurface(0)
-, running(true)
-, doubleRes(true)
-, menuCycles(0)
-, windowW(320 * 2)
-, windowH(200 * 2)
-, prevMag(0)
-, keyBufPtr(keyBuf)
+		: mainMenu(53, 20), settingsMenu(178, 20), playerMenu(178, 20), hiddenMenu(178, 20), curMenu(0), sdlDrawSurface(0), running(true), doubleRes(true), menuCycles(0), windowW(320 * 2), windowH(200 * 2), prevMag(0), keyBufPtr(keyBuf)
 {
 	clearKeys();
 	primaryRenderer = &playRenderer;
@@ -301,8 +281,9 @@ void Gfx::init()
 	SDL_GameControllerEventState(SDL_ENABLE);
 	int numJoysticks = SDL_NumJoysticks();
 	joysticks.resize(numJoysticks);
-	for ( int i = 0; i < numJoysticks; ++i ) {
-		joysticks[i].sdlGameController= SDL_GameControllerOpen(i);
+	for (int i = 0; i < numJoysticks; ++i)
+	{
+		joysticks[i].sdlGameController = SDL_GameControllerOpen(i);
 		joysticks[i].clearState();
 	}
 }
@@ -326,21 +307,21 @@ void Gfx::setVideoMode()
 		if (!sdlSpectatorWindow)
 		{
 			sdlSpectatorWindow = SDL_CreateWindow("Liero Spectator Window",
-				SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowW, windowH, flags);
+																						SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowW, windowH, flags);
 		}
 		else
 		{
 			if (spectatorFullscreen)
 			{
 				SDL_SetWindowFullscreen(sdlSpectatorWindow,
-					SDL_WINDOW_FULLSCREEN_DESKTOP);
+																SDL_WINDOW_FULLSCREEN_DESKTOP);
 			}
 			else
 			{
 				SDL_SetWindowFullscreen(sdlSpectatorWindow, 0);
 			}
 		}
-		sdlSpectatorRenderer = SDL_CreateRenderer(sdlSpectatorWindow, -1, 0/*SDL_RENDERER_PRESENTVSYNC*/);
+		sdlSpectatorRenderer = SDL_CreateRenderer(sdlSpectatorWindow, -1, 0 /*SDL_RENDERER_PRESENTVSYNC*/);
 		onWindowResize(SDL_GetWindowID(sdlSpectatorWindow));
 	}
 	else
@@ -382,7 +363,7 @@ void Gfx::setVideoMode()
 		// The Mac app will automatically use the .icns icon file located in the
 		// .app bundle, so don't override that here.
 #ifndef __APPLE__
-		std::string s = joinPath(getConfigNode().fullPath(), "icon.png");
+		std::string s = (getConfigNode() / "Resources" / "icon.png").fullPath();
 		SDL_Surface *icon = IMG_Load(s.c_str());
 		if (icon)
 		{
@@ -419,7 +400,7 @@ void Gfx::setVideoMode()
 #ifndef __APPLE__
 	if (sdlSpectatorWindow)
 	{
-		std::string s = joinPath(getConfigNode().fullPath(), "spectator_icon.png");
+		std::string s = (getConfigNode() / "Resources" / "spectator_icon.png").fullPath();
 		SDL_Surface *spectator_icon = IMG_Load(s.c_str());
 		if (spectator_icon)
 		{
@@ -440,9 +421,9 @@ void Gfx::onWindowResize(Uint32 windowID)
 			sdlTexture = NULL;
 		}
 		sdlTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888,
-			                           SDL_TEXTUREACCESS_STREAMING,
-			                           doubleRes ? 640 : 320,
-		                         	   doubleRes ? 400 : 200);
+																	 SDL_TEXTUREACCESS_STREAMING,
+																	 doubleRes ? 640 : 320,
+																	 doubleRes ? 400 : 200);
 
 		if (sdlDrawSurface)
 		{
@@ -450,12 +431,12 @@ void Gfx::onWindowResize(Uint32 windowID)
 			sdlDrawSurface = NULL;
 		}
 		sdlDrawSurface = SDL_CreateRGBSurface(0, doubleRes ? 640 : 320,
-		                         doubleRes ? 400 : 200, 32, 0, 0, 0, 0);
+																					doubleRes ? 400 : 200, 32, 0, 0, 0, 0);
 		// linear for that old-school chunky look, but consider adding a user
 		// option for this
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 		SDL_RenderSetLogicalSize(sdlRenderer, doubleRes ? 640 : 320,
-		                         doubleRes ? 400 : 200);
+														 doubleRes ? 400 : 200);
 	}
 	else
 	{
@@ -473,11 +454,11 @@ void Gfx::onWindowResize(Uint32 windowID)
 		if (settings->spectatorWindow)
 		{
 			sdlSpectatorTexture = SDL_CreateTexture(sdlSpectatorRenderer,
-			                                        SDL_PIXELFORMAT_ARGB8888,
-				                           			SDL_TEXTUREACCESS_STREAMING,
-				                           			640, 400);
+																							SDL_PIXELFORMAT_ARGB8888,
+																							SDL_TEXTUREACCESS_STREAMING,
+																							640, 400);
 			sdlSpectatorDrawSurface = SDL_CreateRGBSurface(0, 640, 400, 32, 0,
-			                                               0, 0, 0);
+																										 0, 0, 0);
 			SDL_RenderSetLogicalSize(sdlSpectatorRenderer, 640, 400);
 		}
 	}
@@ -542,7 +523,7 @@ void Gfx::loadMenus()
 	settingsMenu.addItem(MenuItem(48, 7, "LOAD SETUP", SettingsMenu::LoadOptions));
 
 	mainMenu.addItem(MenuItem(10, 10, "", MainMenu::MaResumeGame)); // string set in menuLoop
-	mainMenu.addItem(MenuItem(10, 10, "", MainMenu::MaNewGame)); // string set in menuLoop
+	mainMenu.addItem(MenuItem(10, 10, "", MainMenu::MaNewGame));		// string set in menuLoop
 	mainMenu.addItem(MenuItem(48, 48, "OPTIONS (F2)", MainMenu::MaAdvanced));
 	mainMenu.addItem(MenuItem(48, 48, "REPLAYS (F3)", MainMenu::MaReplays));
 	mainMenu.addItem(MenuItem(48, 48, "TC", MainMenu::MaTc));
@@ -623,145 +604,144 @@ void Gfx::setDoubleRes(bool newDoubleRes)
 	hiddenMenu.updateItems(*common);
 }
 
-void Gfx::processEvent(SDL_Event& ev, Controller* controller)
+void Gfx::processEvent(SDL_Event &ev, Controller *controller)
 {
-	switch(ev.type)
+	switch (ev.type)
 	{
-		case SDL_KEYDOWN:
+	case SDL_KEYDOWN:
+	{
+
+		SDL_Scancode s = ev.key.keysym.scancode;
+
+		if (keyBufPtr < keyBuf + 32)
+			*keyBufPtr++ = ev.key.keysym;
+
+		Uint32 dosScan = SDLToDOSKey(ev.key.keysym.scancode);
+		if (dosScan)
 		{
+			dosKeys[dosScan] = true;
+			if (controller)
+				controller->onKey(dosScan, true);
+		}
 
-			SDL_Scancode s = ev.key.keysym.scancode;
-
-			if (keyBufPtr < keyBuf + 32)
-				*keyBufPtr++ = ev.key.keysym;
-
-			Uint32 dosScan = SDLToDOSKey(ev.key.keysym.scancode);
-			if(dosScan)
+		if (s == SDL_SCANCODE_F11)
+		{
+			if (SDL_GetWindowFromID(ev.key.windowID) == sdlWindow)
 			{
-				dosKeys[dosScan] = true;
-				if(controller)
-					controller->onKey(dosScan, true);
+				setFullscreen(!settings->fullscreen);
 			}
-
-			if(s == SDL_SCANCODE_F11)
+			else
 			{
-				if (SDL_GetWindowFromID(ev.key.windowID) == sdlWindow)
-				{
-					setFullscreen(!settings->fullscreen);
-				}
-				else
-				{
-					setSpectatorFullscreen(!spectatorFullscreen);
-				}
-
+				setSpectatorFullscreen(!spectatorFullscreen);
 			}
 		}
-		break;
+	}
+	break;
 
-		case SDL_KEYUP:
+	case SDL_KEYUP:
+	{
+		SDL_Scancode s = ev.key.keysym.scancode;
+
+		Uint32 dosScan = SDLToDOSKey(s);
+		if (dosScan)
 		{
-			SDL_Scancode s = ev.key.keysym.scancode;
-
-			Uint32 dosScan = SDLToDOSKey(s);
-			if(dosScan)
-			{
-				dosKeys[dosScan] = false;
-				if(controller)
-					controller->onKey(dosScan, false);
-			}
+			dosKeys[dosScan] = false;
+			if (controller)
+				controller->onKey(dosScan, false);
 		}
-		break;
+	}
+	break;
 
-		case SDL_WINDOWEVENT:
+	case SDL_WINDOWEVENT:
+	{
+		switch (ev.window.event)
 		{
-			switch (ev.window.event)
-			{
-				case SDL_WINDOWEVENT_RESIZED:
-				{
-					onWindowResize(ev.window.windowID);
-				}
-				break;
-
-				default:
-				break;
-			}
-		}
-		break;
-
-		case SDL_QUIT:
+		case SDL_WINDOWEVENT_RESIZED:
 		{
-			running = false;
-		}
-		break;
-
-		case SDL_JOYAXISMOTION:
-		{
-			Joystick& js = joysticks[ev.jaxis.which];
-			int jbtnBase = 4 + 2 * ev.jaxis.axis;
-
-			bool newBtnStates[2];
-			newBtnStates[0] = (ev.jaxis.value > JoyAxisThreshold);
-			newBtnStates[1] = (ev.jaxis.value < -JoyAxisThreshold);
-
-			for(int i = 0; i < 2; ++i)
-			{
-				int jbtn = jbtnBase + i;
-				bool newState = newBtnStates[i];
-
-				if(newState != js.btnState[jbtn])
-				{
-					js.btnState[jbtn] = newState;
-					if (controller)
-						controller->onKey(joyButtonToExKey(ev.jaxis.which, jbtn), newState);
-				}
-			}
-		}
-		break;
-
-		case SDL_JOYHATMOTION:
-		{
-			Joystick& js = joysticks[ev.jhat.which];
-
-			bool newBtnStates[4];
-			newBtnStates[0] = (ev.jhat.value & SDL_HAT_UP) != 0;
-			newBtnStates[1] = (ev.jhat.value & SDL_HAT_DOWN) != 0;
-			newBtnStates[2] = (ev.jhat.value & SDL_HAT_LEFT) != 0;
-			newBtnStates[3] = (ev.jhat.value & SDL_HAT_RIGHT) != 0;
-
-			for(int jbtn = 0; jbtn < 4; ++jbtn)
-			{
-				bool newState = newBtnStates[jbtn];
-				if(newState != js.btnState[jbtn])
-				{
-					js.btnState[jbtn] = newState;
-					if(controller)
-						controller->onKey(joyButtonToExKey(ev.jhat.which, jbtn), newState);
-				}
-			}
-		}
-		break;
-
-		case SDL_JOYBUTTONDOWN:
-		case SDL_JOYBUTTONUP: /* Fall-through */
-		{
-			Joystick& js = joysticks[ev.jbutton.which];
-			int jbtn = 16 + ev.jbutton.button;
-			js.btnState[jbtn] = (ev.jbutton.state == SDL_PRESSED);
-			if(controller)
-				controller->onKey(joyButtonToExKey(ev.jbutton.which, jbtn), js.btnState[jbtn]);
+			onWindowResize(ev.window.windowID);
 		}
 		break;
 
 		default:
 			break;
+		}
+	}
+	break;
+
+	case SDL_QUIT:
+	{
+		running = false;
+	}
+	break;
+
+	case SDL_JOYAXISMOTION:
+	{
+		Joystick &js = joysticks[ev.jaxis.which];
+		int jbtnBase = 4 + 2 * ev.jaxis.axis;
+
+		bool newBtnStates[2];
+		newBtnStates[0] = (ev.jaxis.value > JoyAxisThreshold);
+		newBtnStates[1] = (ev.jaxis.value < -JoyAxisThreshold);
+
+		for (int i = 0; i < 2; ++i)
+		{
+			int jbtn = jbtnBase + i;
+			bool newState = newBtnStates[i];
+
+			if (newState != js.btnState[jbtn])
+			{
+				js.btnState[jbtn] = newState;
+				if (controller)
+					controller->onKey(joyButtonToExKey(ev.jaxis.which, jbtn), newState);
+			}
+		}
+	}
+	break;
+
+	case SDL_JOYHATMOTION:
+	{
+		Joystick &js = joysticks[ev.jhat.which];
+
+		bool newBtnStates[4];
+		newBtnStates[0] = (ev.jhat.value & SDL_HAT_UP) != 0;
+		newBtnStates[1] = (ev.jhat.value & SDL_HAT_DOWN) != 0;
+		newBtnStates[2] = (ev.jhat.value & SDL_HAT_LEFT) != 0;
+		newBtnStates[3] = (ev.jhat.value & SDL_HAT_RIGHT) != 0;
+
+		for (int jbtn = 0; jbtn < 4; ++jbtn)
+		{
+			bool newState = newBtnStates[jbtn];
+			if (newState != js.btnState[jbtn])
+			{
+				js.btnState[jbtn] = newState;
+				if (controller)
+					controller->onKey(joyButtonToExKey(ev.jhat.which, jbtn), newState);
+			}
+		}
+	}
+	break;
+
+	case SDL_JOYBUTTONDOWN:
+	case SDL_JOYBUTTONUP: /* Fall-through */
+	{
+		Joystick &js = joysticks[ev.jbutton.which];
+		int jbtn = 16 + ev.jbutton.button;
+		js.btnState[jbtn] = (ev.jbutton.state == SDL_PRESSED);
+		if (controller)
+			controller->onKey(joyButtonToExKey(ev.jbutton.which, jbtn), js.btnState[jbtn]);
+	}
+	break;
+
+	default:
+		break;
 	}
 }
 
-void Gfx::process(Controller* controller)
+void Gfx::process(Controller *controller)
 {
 	SDL_Event ev;
 	keyBufPtr = keyBuf;
-	while(SDL_PollEvent(&ev))
+	while (SDL_PollEvent(&ev))
 	{
 		processEvent(ev, controller);
 	}
@@ -770,10 +750,10 @@ void Gfx::process(Controller* controller)
 SDL_Keysym Gfx::waitForKey()
 {
 	SDL_Event ev;
-	while(SDL_WaitEvent(&ev))
+	while (SDL_WaitEvent(&ev))
 	{
 		processEvent(ev);
-		if(ev.type == SDL_KEYDOWN)
+		if (ev.type == SDL_KEYDOWN)
 		{
 			return ev.key.keysym;
 		}
@@ -785,7 +765,7 @@ SDL_Keysym Gfx::waitForKey()
 uint32_t Gfx::waitForKeyEx()
 {
 	SDL_Event ev;
-	while(SDL_WaitEvent(&ev))
+	while (SDL_WaitEvent(&ev))
 	{
 		processEvent(ev);
 		switch (ev.type)
@@ -794,16 +774,16 @@ uint32_t Gfx::waitForKeyEx()
 			return SDLToDOSKey(ev.key.keysym);
 
 		case SDL_JOYAXISMOTION:
-			if(ev.jaxis.value > JoyAxisThreshold)
-				return joyButtonToExKey( ev.jaxis.which, 4 + 2 * ev.jaxis.axis );
-			else if ( ev.jaxis.value < -JoyAxisThreshold )
-				return joyButtonToExKey( ev.jaxis.which, 5 + 2 * ev.jaxis.axis );
+			if (ev.jaxis.value > JoyAxisThreshold)
+				return joyButtonToExKey(ev.jaxis.which, 4 + 2 * ev.jaxis.axis);
+			else if (ev.jaxis.value < -JoyAxisThreshold)
+				return joyButtonToExKey(ev.jaxis.which, 5 + 2 * ev.jaxis.axis);
 
 			break;
 		case SDL_JOYHATMOTION:
-			if(ev.jhat.value & SDL_HAT_UP)
+			if (ev.jhat.value & SDL_HAT_UP)
 				return joyButtonToExKey(ev.jhat.which, 0);
-			else if(ev.jhat.value & SDL_HAT_DOWN)
+			else if (ev.jhat.value & SDL_HAT_DOWN)
 				return joyButtonToExKey(ev.jhat.which, 1);
 			else if (ev.jhat.value & SDL_HAT_LEFT)
 				return joyButtonToExKey(ev.jhat.which, 2);
@@ -823,11 +803,11 @@ uint32_t Gfx::waitForKeyEx()
 
 std::string Gfx::getKeyName(uint32_t key)
 {
-	if(key < MaxDOSKey)
+	if (key < MaxDOSKey)
 	{
 		return common->texts.keyNames[key];
 	}
-	else if(key >= JoyKeysStart)
+	else if (key >= JoyKeysStart)
 	{
 		key -= JoyKeysStart;
 		int joyNum = key / MaxJoyButtons;
@@ -843,9 +823,9 @@ void Gfx::clearKeys()
 	std::memset(dosKeys, 0, sizeof(dosKeys));
 }
 
-void Gfx::preparePalette(SDL_PixelFormat* format, Color realPal[256], uint32_t (&pal32)[256])
+void Gfx::preparePalette(SDL_PixelFormat *format, Color realPal[256], uint32_t (&pal32)[256])
 {
-	for(int i = 0; i < 256; ++i)
+	for (int i = 0; i < 256; ++i)
 	{
 		pal32[i] = SDL_MapRGB(format, realPal[i].r, realPal[i].g, realPal[i].b);
 	}
@@ -870,18 +850,18 @@ void Gfx::menuFlip(bool quitting)
 	flip();
 }
 
-void Gfx::draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdlRenderer, Renderer& renderer)
+void Gfx::draw(SDL_Surface &surface, SDL_Texture &texture, SDL_Renderer &sdlRenderer, Renderer &renderer)
 {
 	gvl::rect updateRect;
 	Color realPal[256];
 	renderer.pal.activate(realPal);
 	int offsetX, offsetY;
 	int mag = fitScreen(surface.w, surface.h,
-						renderer.renderResX, renderer.renderResY, offsetX, offsetY);
+											renderer.renderResX, renderer.renderResY, offsetX, offsetY);
 
 	gvl::rect newRect(offsetX, offsetY, renderer.renderResX * mag, renderer.renderResY * mag);
 
-	if(mag != prevMag)
+	if (mag != prevMag)
 	{
 		// Clear background if magnification is decreased to
 		// avoid leftovers.
@@ -895,8 +875,8 @@ void Gfx::draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdlRend
 	std::size_t destPitch = surface.pitch;
 	std::size_t srcPitch = renderer.bmp.pitch;
 
-	PalIdx* dest = reinterpret_cast<PalIdx*>(surface.pixels) + offsetY * destPitch + offsetX * surface.format->BytesPerPixel;
-	PalIdx* src = renderer.bmp.pixels;
+	PalIdx *dest = reinterpret_cast<PalIdx *>(surface.pixels) + offsetY * destPitch + offsetX * surface.format->BytesPerPixel;
+	PalIdx *src = renderer.bmp.pixels;
 
 	uint32_t pal32[256];
 	preparePalette(surface.format, realPal, pal32);
@@ -925,10 +905,10 @@ void Gfx::flip()
 
 	auto wantedTime = lastFrame + delay;
 
-	while(true)
+	while (true)
 	{
 		auto now = SDL_GetTicks64();
-		if(now >= wantedTime)
+		if (now >= wantedTime)
 			break;
 
 		SDL_Delay(wantedTime - now);
@@ -937,9 +917,9 @@ void Gfx::flip()
 	lastFrame = wantedTime;
 }
 
-void playChangeSound(Common& common, int change)
+void playChangeSound(Common &common, int change)
 {
-	if(change > 0)
+	if (change > 0)
 	{
 		sfx.play(common, 25);
 	}
@@ -955,14 +935,14 @@ void resetLeftRight()
 	gfx.releaseSDLKey(SDL_SCANCODE_RIGHT);
 }
 
-template<typename T>
-void changeVariable(T& var, T change, T min, T max, T scale)
+template <typename T>
+void changeVariable(T &var, T change, T min, T max, T scale)
 {
-	if(change < 0 && var > min)
+	if (change < 0 && var > min)
 	{
 		var += change * scale;
 	}
-	if(change > 0 && var < max)
+	if (change > 0 && var < max)
 	{
 		var += change * scale;
 	}
@@ -970,13 +950,12 @@ void changeVariable(T& var, T change, T min, T max, T scale)
 
 struct ProfileLoadBehavior : ItemBehavior
 {
-	ProfileLoadBehavior(Common& common, WormSettings& ws)
-	: common(common)
-	, ws(ws)
+	ProfileLoadBehavior(Common &common, WormSettings &ws)
+			: common(common), ws(ws)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 		gfx.selectProfile(ws);
@@ -985,39 +964,36 @@ struct ProfileLoadBehavior : ItemBehavior
 		return -1;
 	}
 
-	Common& common;
-	WormSettings& ws;
+	Common &common;
+	WormSettings &ws;
 };
-
-
 
 struct PlayerSettingsBehavior : ItemBehavior
 {
-	PlayerSettingsBehavior(Common& common, int player)
-	: common(common)
-	, player(player)
+	PlayerSettingsBehavior(Common &common, int player)
+			: common(common), player(player)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 		gfx.playerSettings(player);
 		return -1;
 	}
 
-	Common& common;
+	Common &common;
 	int player;
 };
 
 struct LevelSelectBehavior : ItemBehavior
 {
-	LevelSelectBehavior(Common& common)
-	: common(common)
+	LevelSelectBehavior(Common &common)
+			: common(common)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 		gfx.selectLevel();
@@ -1026,10 +1002,10 @@ struct LevelSelectBehavior : ItemBehavior
 		return -1;
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
 		item.hasValue = true;
-		if(!gfx.settings->randomLevel)
+		if (!gfx.settings->randomLevel)
 		{
 			item.value = '"' + getBasename(getLeaf(gfx.settings->levelFile)) + '"';
 			menu.itemFromId(SettingsMenu::SiRegenerateLevel)->string = LS(ReloadLevel); // Not string?
@@ -1041,17 +1017,17 @@ struct LevelSelectBehavior : ItemBehavior
 		}
 	}
 
-	Common& common;
+	Common &common;
 };
 
 struct WeaponOptionsBehavior : ItemBehavior
 {
-	WeaponOptionsBehavior(Common& common)
-	: common(common)
+	WeaponOptionsBehavior(Common &common)
+			: common(common)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 		gfx.weaponOptions();
@@ -1059,30 +1035,30 @@ struct WeaponOptionsBehavior : ItemBehavior
 		return -1;
 	}
 
-	Common& common;
+	Common &common;
 };
 
 struct OptionsSaveBehavior : ItemBehavior
 {
-	OptionsSaveBehavior(Common& common)
-	: common(common)
+	OptionsSaveBehavior(Common &common)
+			: common(common)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 
 		int x, y;
-		if(!menu.itemPosition(item, x, y))
+		if (!menu.itemPosition(item, x, y))
 			return -1;
 
 		x += menu.valueOffsetX + 2;
 
 		std::string name = getBasename(getLeaf(gfx.settingsNode.fullPath()));
-		if(gfx.inputString(name, 30, x, y) && !name.empty())
+		if (gfx.inputString(name, 30, x, y) && !name.empty())
 		{
-			//gfx.saveSettings(joinPath(configRoot, name + ".cfg"));
+			// gfx.saveSettings(joinPath(configRoot, name + ".cfg"));
 			gfx.saveSettings(gfx.getConfigNode() / "Setups" / (name + ".cfg"));
 		}
 
@@ -1092,23 +1068,23 @@ struct OptionsSaveBehavior : ItemBehavior
 		return -1;
 	}
 
-	void onUpdate(Menu& menu, MenuItem& item)
+	void onUpdate(Menu &menu, MenuItem &item)
 	{
 		item.value = getBasename(getLeaf(gfx.settingsNode.fullPath()));
 		item.hasValue = true;
 	}
 
-	Common& common;
+	Common &common;
 };
 
 struct OptionsSelectBehavior : ItemBehavior
 {
-	OptionsSelectBehavior(Common& common)
-	: common(common)
+	OptionsSelectBehavior(Common &common)
+			: common(common)
 	{
 	}
 
-	int onEnter(Menu& menu, MenuItem& item)
+	int onEnter(Menu &menu, MenuItem &item)
 	{
 		sfx.play(common, 27);
 		gfx.selectOptions();
@@ -1117,55 +1093,55 @@ struct OptionsSelectBehavior : ItemBehavior
 		return -1;
 	}
 
-	Common& common;
+	Common &common;
 };
 
-ItemBehavior* SettingsMenu::getItemBehavior(Common& common, MenuItem& item)
+ItemBehavior *SettingsMenu::getItemBehavior(Common &common, MenuItem &item)
 {
-	switch(item.id)
+	switch (item.id)
 	{
-		case SiNamesOnBonuses:
-			return new BooleanSwitchBehavior(common, gfx.settings->namesOnBonuses);
-		case SiMap:
-			return new BooleanSwitchBehavior(common, gfx.settings->map);
-		case SiRegenerateLevel:
-			return new BooleanSwitchBehavior(common, gfx.settings->regenerateLevel);
-		case SiLoadingTimes:
-			return new IntegerBehavior(common, gfx.settings->loadingTime, 0, 9999, 1, true);
-		case SiMaxBonuses:
-			return new IntegerBehavior(common, gfx.settings->maxBonuses, 0, 99, 1);
-		case SiAmountOfBlood:
-		{
-			IntegerBehavior* ret = new IntegerBehavior(common, gfx.settings->blood, 0, LC(BloodLimit), LC(BloodStepUp), true);
-			ret->allowEntry = false;
-			return ret;
-		}
+	case SiNamesOnBonuses:
+		return new BooleanSwitchBehavior(common, gfx.settings->namesOnBonuses);
+	case SiMap:
+		return new BooleanSwitchBehavior(common, gfx.settings->map);
+	case SiRegenerateLevel:
+		return new BooleanSwitchBehavior(common, gfx.settings->regenerateLevel);
+	case SiLoadingTimes:
+		return new IntegerBehavior(common, gfx.settings->loadingTime, 0, 9999, 1, true);
+	case SiMaxBonuses:
+		return new IntegerBehavior(common, gfx.settings->maxBonuses, 0, 99, 1);
+	case SiAmountOfBlood:
+	{
+		IntegerBehavior *ret = new IntegerBehavior(common, gfx.settings->blood, 0, LC(BloodLimit), LC(BloodStepUp), true);
+		ret->allowEntry = false;
+		return ret;
+	}
 
-		case SiLives:
-			return new IntegerBehavior(common, gfx.settings->lives, 1, 999, 1);
-		case SiTimeToLose:
-		case SiTimeToWin:
-			return new TimeBehavior(common, gfx.settings->timeToLose, 60, 3600, 10);
-		case SiZoneTimeout:
-			return new TimeBehavior(common, gfx.settings->zoneTimeout, 10, 3600, 10);
-		case SiFlagsToWin:
-			return new IntegerBehavior(common, gfx.settings->flagsToWin, 1, 999, 1);
+	case SiLives:
+		return new IntegerBehavior(common, gfx.settings->lives, 1, 999, 1);
+	case SiTimeToLose:
+	case SiTimeToWin:
+		return new TimeBehavior(common, gfx.settings->timeToLose, 60, 3600, 10);
+	case SiZoneTimeout:
+		return new TimeBehavior(common, gfx.settings->zoneTimeout, 10, 3600, 10);
+	case SiFlagsToWin:
+		return new IntegerBehavior(common, gfx.settings->flagsToWin, 1, 999, 1);
 
-		case SiLevel:
-			return new LevelSelectBehavior(common);
+	case SiLevel:
+		return new LevelSelectBehavior(common);
 
-		case SiGameMode:
-			return new ArrayEnumBehavior(common, gfx.settings->gameMode, common.texts.gameModes);
-		case SiWeaponOptions:
-			return new WeaponOptionsBehavior(common);
-		case LoadOptions:
-			return new OptionsSelectBehavior(common);
-		case SaveOptions:
-			return new OptionsSaveBehavior(common);
-		case LoadChange:
-			return new BooleanSwitchBehavior(common, gfx.settings->loadChange);
-		default:
-			return Menu::getItemBehavior(common, item);
+	case SiGameMode:
+		return new ArrayEnumBehavior(common, gfx.settings->gameMode, common.texts.gameModes);
+	case SiWeaponOptions:
+		return new WeaponOptionsBehavior(common);
+	case LoadOptions:
+		return new OptionsSelectBehavior(common);
+	case SaveOptions:
+		return new OptionsSaveBehavior(common);
+	case LoadChange:
+		return new BooleanSwitchBehavior(common, gfx.settings->loadChange);
+	default:
+		return Menu::getItemBehavior(common, item);
 	}
 }
 
@@ -1177,39 +1153,40 @@ void SettingsMenu::onUpdate()
 	setVisibility(SiZoneTimeout, false);
 	setVisibility(SiFlagsToWin, false);
 
-	switch(gfx.settings->gameMode)
+	switch (gfx.settings->gameMode)
 	{
-		case Settings::GMKillEmAll:
-		case Settings::GMScalesOfJustice:
-			setVisibility(SiLives, true);
+	case Settings::GMKillEmAll:
+	case Settings::GMScalesOfJustice:
+		setVisibility(SiLives, true);
 		break;
 
-		case Settings::GMGameOfTag:
-			setVisibility(SiTimeToLose, true);
+	case Settings::GMGameOfTag:
+		setVisibility(SiTimeToLose, true);
 		break;
 
-		case Settings::GMHoldazone:
-			setVisibility(SiTimeToWin, true);
-			setVisibility(SiZoneTimeout, true);
+	case Settings::GMHoldazone:
+		setVisibility(SiTimeToWin, true);
+		setVisibility(SiZoneTimeout, true);
 		break;
 	}
 }
 
-using std::string;
-using std::vector;
 using std::pair;
 using std::shared_ptr;
+using std::string;
+using std::vector;
 
 void Gfx::selectLevel()
 {
-	Common& common = *this->common;
+	Common &common = *this->common;
 	FileSelector levSel(common);
 
 	shared_ptr<FileNode> random(new FileNode(
-		LS(Random), "", "", false, &levSel.rootNode));
+			LS(Random), "", "", false, &levSel.rootNode));
 
 	{
-		levSel.fill(getConfigNode(), [](string const& name, string const& ext) { return ciCompare(ext, "LEV"); });
+		levSel.fill(getConfigNode(), [](string const &name, string const &ext)
+								{ return ciCompare(ext, "LEV"); });
 
 		random->id = 1;
 		levSel.rootNode.children.insert(levSel.rootNode.children.begin(), random);
@@ -1217,7 +1194,7 @@ void Gfx::selectLevel()
 		levSel.select(settings->levelFile);
 	}
 
-	FileNode* previewNode = 0;
+	FileNode *previewNode = 0;
 
 	do
 	{
@@ -1235,7 +1212,7 @@ void Gfx::selectLevel()
 		drawRoundedBox(playRenderer.bmp, 178, 20, 0, 7, wid);
 		common.font.drawText(playRenderer.bmp, title, 180, 21, 50);
 
-		FileNode* sel = levSel.curSel();
+		FileNode *sel = levSel.curSel();
 		if (previewNode != sel && sel && sel != random.get() && !sel->folder)
 		{
 			Level level(common);
@@ -1252,7 +1229,7 @@ void Gfx::selectLevel()
 					level.drawMiniature(frozenSpectatorScreen, centerX - 126, singleScreenRenderer.renderResY - 208, 2);
 				}
 			}
-			catch (std::runtime_error&)
+			catch (std::runtime_error &)
 			{
 				// Ignore
 			}
@@ -1265,12 +1242,11 @@ void Gfx::selectLevel()
 		if (!levSel.process())
 			break;
 
-		if(testSDLKeyOnce(SDL_SCANCODE_RETURN)
-		|| testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
+		if (testSDLKeyOnce(SDL_SCANCODE_RETURN) || testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
 		{
 			sfx.play(common, 27);
 
-			auto* sel = levSel.enter();
+			auto *sel = levSel.enter();
 
 			if (sel)
 			{
@@ -1290,16 +1266,16 @@ void Gfx::selectLevel()
 
 		menuFlip();
 		process();
-	}
-	while(true);
+	} while (true);
 }
 
-void Gfx::selectProfile(WormSettings& ws)
+void Gfx::selectProfile(WormSettings &ws)
 {
 	FileSelector profileSel(*common, 28);
 
 	{
-		profileSel.fill(getConfigNode(), [](string const& name, string const& ext) { return ciCompare(ext, "LPF"); });
+		profileSel.fill(getConfigNode(), [](string const &name, string const &ext)
+										{ return ciCompare(ext, "LPF"); });
 
 		profileSel.setFolder(profileSel.rootNode);
 		profileSel.select(joinPath(getConfigNode().fullPath(), "Profiles"));
@@ -1323,10 +1299,9 @@ void Gfx::selectProfile(WormSettings& ws)
 		if (!profileSel.process())
 			break;
 
-		if(testSDLKeyOnce(SDL_SCANCODE_RETURN)
-		|| testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
+		if (testSDLKeyOnce(SDL_SCANCODE_RETURN) || testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
 		{
-			auto* sel = profileSel.enter();
+			auto *sel = profileSel.enter();
 
 			if (sel)
 			{
@@ -1337,8 +1312,7 @@ void Gfx::selectProfile(WormSettings& ws)
 
 		menuFlip();
 		process();
-	}
-	while(true);
+	} while (true);
 
 	return;
 }
@@ -1348,11 +1322,11 @@ int Gfx::selectReplay()
 	FileSelector replaySel(*common, 28);
 
 	{
-		replaySel.fill(getConfigNode(), [](string const& name, string const& ext) { return ciCompare(ext, "LRP"); });
+		replaySel.fill(getConfigNode(), [](string const &name, string const &ext)
+									 { return ciCompare(ext, "LRP"); });
 
 		replaySel.setFolder(replaySel.rootNode);
-		if (prevSelectedReplayPath.empty()
-		  || !replaySel.select(prevSelectedReplayPath))
+		if (prevSelectedReplayPath.empty() || !replaySel.select(prevSelectedReplayPath))
 		{
 			replaySel.select(joinPath(getConfigNode().fullPath(), "Replays"));
 		}
@@ -1376,10 +1350,9 @@ int Gfx::selectReplay()
 		if (!replaySel.process())
 			break;
 
-		if(testSDLKeyOnce(SDL_SCANCODE_RETURN)
-		|| testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
+		if (testSDLKeyOnce(SDL_SCANCODE_RETURN) || testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
 		{
-			auto* sel = replaySel.enter();
+			auto *sel = replaySel.enter();
 
 			if (sel)
 			{
@@ -1395,8 +1368,7 @@ int Gfx::selectReplay()
 		}
 		menuFlip();
 		process();
-	}
-	while(true);
+	} while (true);
 
 	return -1;
 }
@@ -1406,9 +1378,8 @@ void Gfx::selectOptions()
 	FileSelector optionsSel(*common, 28);
 
 	{
-		optionsSel.fill(getConfigNode(), [](string const& name, string const& ext) {
-			return ciCompare(ext, "CFG");
-		});
+		optionsSel.fill(getConfigNode(), [](string const &name, string const &ext)
+										{ return ciCompare(ext, "CFG"); });
 
 		optionsSel.setFolder(optionsSel.rootNode);
 		optionsSel.select(joinPath(getConfigNode().fullPath(), "Setups"));
@@ -1432,10 +1403,9 @@ void Gfx::selectOptions()
 		if (!optionsSel.process())
 			break;
 
-		if(testSDLKeyOnce(SDL_SCANCODE_RETURN)
-		|| testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
+		if (testSDLKeyOnce(SDL_SCANCODE_RETURN) || testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
 		{
-			auto* sel = optionsSel.enter();
+			auto *sel = optionsSel.enter();
 
 			if (sel)
 			{
@@ -1445,8 +1415,7 @@ void Gfx::selectOptions()
 		}
 		menuFlip();
 		process();
-	}
-	while(true);
+	} while (true);
 }
 
 std::unique_ptr<Common> Gfx::selectTc()
@@ -1458,14 +1427,14 @@ std::unique_ptr<Common> Gfx::selectTc()
 
 		tcSel.setFolder(tcSel.rootNode);
 
-		auto end = std::remove_if(tcSel.rootNode.children.begin(), tcSel.rootNode.children.end(), [](shared_ptr<FileNode> const& n) {
+		auto end = std::remove_if(tcSel.rootNode.children.begin(), tcSel.rootNode.children.end(), [](shared_ptr<FileNode> const &n)
+															{
 			auto tc = n->getFsNode() / "tc.cfg";
-			return !tc.exists();
-		});
+			return !tc.exists(); });
 
 		tcSel.rootNode.children.erase(end, tcSel.rootNode.children.end());
 
-		for (auto& c : tcSel.rootNode.children)
+		for (auto &c : tcSel.rootNode.children)
 		{
 			c->folder = false;
 		}
@@ -1489,10 +1458,9 @@ std::unique_ptr<Common> Gfx::selectTc()
 		if (!tcSel.process())
 			break;
 
-		if(testSDLKeyOnce(SDL_SCANCODE_RETURN)
-		|| testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
+		if (testSDLKeyOnce(SDL_SCANCODE_RETURN) || testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
 		{
-			auto* sel = tcSel.enter();
+			auto *sel = tcSel.enter();
 
 			if (sel)
 			{
@@ -1504,8 +1472,7 @@ std::unique_ptr<Common> Gfx::selectTc()
 		}
 		menuFlip();
 		process();
-	}
-	while(true);
+	} while (true);
 
 	return std::unique_ptr<Common>();
 }
@@ -1513,11 +1480,11 @@ std::unique_ptr<Common> Gfx::selectTc()
 struct WeaponMenu : Menu
 {
 	WeaponMenu(int x, int y)
-	: Menu(x, y)
+			: Menu(x, y)
 	{
 	}
 
-	ItemBehavior* getItemBehavior(Common& common, MenuItem& item)
+	ItemBehavior *getItemBehavior(Common &common, MenuItem &item)
 	{
 		int index = common.weapOrder[item.id];
 		return new ArrayEnumBehavior(common, gfx.settings->weapTable[index], common.texts.weapStates);
@@ -1526,13 +1493,13 @@ struct WeaponMenu : Menu
 
 void Gfx::weaponOptions()
 {
-	Common& common = *this->common;
+	Common &common = *this->common;
 	WeaponMenu weaponMenu(179, 28);
 
 	weaponMenu.setHeight(14);
 	weaponMenu.valueOffsetX = 89;
 
-	for(int i = 0; i < (int)common.weapons.size(); ++i)
+	for (int i = 0; i < (int)common.weapons.size(); ++i)
 	{
 		int index = common.weapOrder[i];
 		weaponMenu.addItem(MenuItem(48, 7, common.weapons[index].name, i));
@@ -1541,7 +1508,7 @@ void Gfx::weaponOptions()
 	weaponMenu.moveToFirstVisible();
 	weaponMenu.updateItems(common);
 
-	while(true)
+	while (true)
 	{
 		playRenderer.bmp.copy(frozenScreen);
 
@@ -1555,37 +1522,37 @@ void Gfx::weaponOptions()
 
 		weaponMenu.draw(common, playRenderer, false);
 
-		if(testSDLKeyOnce(SDL_SCANCODE_UP))
+		if (testSDLKeyOnce(SDL_SCANCODE_UP))
 		{
 			sfx.play(common, 26);
 			weaponMenu.movement(-1);
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_DOWN))
+		if (testSDLKeyOnce(SDL_SCANCODE_DOWN))
 		{
 			sfx.play(common, 25);
 			weaponMenu.movement(1);
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_LEFT))
+		if (testSDLKeyOnce(SDL_SCANCODE_LEFT))
 		{
 			weaponMenu.onLeftRight(common, -1);
 		}
-		if(testSDLKeyOnce(SDL_SCANCODE_RIGHT))
+		if (testSDLKeyOnce(SDL_SCANCODE_RIGHT))
 		{
 			weaponMenu.onLeftRight(common, 1);
 		}
 
-		if(settings->extensions)
+		if (settings->extensions)
 		{
-			if(testSDLKeyOnce(SDL_SCANCODE_PAGEUP))
+			if (testSDLKeyOnce(SDL_SCANCODE_PAGEUP))
 			{
 				sfx.play(common, 26);
 
 				weaponMenu.movementPage(-1);
 			}
 
-			if(testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN))
+			if (testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN))
 			{
 				sfx.play(common, 25);
 
@@ -1598,17 +1565,17 @@ void Gfx::weaponOptions()
 		menuFlip();
 		process();
 
-		if(testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
+		if (testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
 		{
 			int count = 0;
 
-			for(int i = 0; i < 40; ++i)
+			for (int i = 0; i < 40; ++i)
 			{
-				if(settings->weapTable[i] == 0)
+				if (settings->weapTable[i] == 0)
 					++count;
 			}
 
-			if(count > 0)
+			if (count > 0)
 				break; // Enough weapons available
 
 			infoBox(LS(NoWeaps), 223, 68, false);
@@ -1616,11 +1583,11 @@ void Gfx::weaponOptions()
 	}
 }
 
-void Gfx::infoBox(std::string const& text, int x, int y, bool clearScreen)
+void Gfx::infoBox(std::string const &text, int x, int y, bool clearScreen)
 {
 	static int const bgColor = 0;
 
-	if(clearScreen)
+	if (clearScreen)
 	{
 		playRenderer.pal = common->exepal;
 		fill(playRenderer.bmp, bgColor);
@@ -1629,11 +1596,11 @@ void Gfx::infoBox(std::string const& text, int x, int y, bool clearScreen)
 	int height;
 	int width = common->font.getDims(text, &height);
 
-	int cx = x - width/2 - 2;
-	int cy = y - height/2 - 2;
+	int cx = x - width / 2 - 2;
+	int cy = y - height / 2 - 2;
 
-	drawRoundedBox(playRenderer.bmp, cx, cy, 0, height+1, width+1);
-	common->font.drawText(playRenderer.bmp, text, cx+2, cy+2, 6);
+	drawRoundedBox(playRenderer.bmp, cx, cy, 0, height + 1, width + 1);
+	common->font.drawText(playRenderer.bmp, text, cx + 2, cy + 2, 6);
 
 	flip();
 	process();
@@ -1641,29 +1608,29 @@ void Gfx::infoBox(std::string const& text, int x, int y, bool clearScreen)
 	waitForKey();
 	clearKeys();
 
-	if(clearScreen)
+	if (clearScreen)
 		fill(playRenderer.bmp, bgColor);
 }
 
-bool Gfx::inputString(std::string& dest, std::size_t maxLen, int x, int y, int (*filter)(int), std::string const& prefix, bool centered)
+bool Gfx::inputString(std::string &dest, std::size_t maxLen, int x, int y, int (*filter)(int), std::string const &prefix, bool centered)
 {
 	std::string buffer = dest;
 
-	while(true)
+	while (true)
 	{
 		std::string str = prefix + buffer + '_';
 
-		Font& font = common->font;
+		Font &font = common->font;
 
 		int width = font.getDims(str);
 
-		int adjust = centered ? width/2 : 0;
+		int adjust = centered ? width / 2 : 0;
 
 		int clrX = x - 10 - adjust;
 
 		SDL_Event ev;
 
-		//int offset = clrX + y*320; // TODO: Unhardcode 320
+		// int offset = clrX + y*320; // TODO: Unhardcode 320
 
 		blitImageNoKeyColour(playRenderer.bmp, &frozenScreen.getPixel(clrX, y), clrX, y, clrX + 10 + width, 8, frozenScreen.pitch);
 
@@ -1678,51 +1645,51 @@ bool Gfx::inputString(std::string& dest, std::size_t maxLen, int x, int y, int (
 
 		switch (ev.type)
 		{
-			case SDL_KEYDOWN:
-				switch (ev.key.keysym.scancode)
-				{
-					case SDL_SCANCODE_BACKSPACE:
-						if(!buffer.empty())
-						{
-							buffer.erase(buffer.size() - 1);
-						}
-						break;
-
-					case SDL_SCANCODE_RETURN:
-					case SDL_SCANCODE_KP_ENTER:
-						dest = buffer;
-						sfx.play(*common, 27);
-						clearKeys();
-						return true;
-
-					case SDL_SCANCODE_ESCAPE:
-						clearKeys();
-						return false;
-
-					default:
-						break;
-				}
-				break;
-
-			case SDL_TEXTINPUT:
+		case SDL_KEYDOWN:
+			switch (ev.key.keysym.scancode)
 			{
-				int k = utf8ToDOS(ev.text.text);
-				if (k && buffer.size() < maxLen &&
-					(!filter || (k = filter(k))))
+			case SDL_SCANCODE_BACKSPACE:
+				if (!buffer.empty())
 				{
-					buffer += char(k);
+					buffer.erase(buffer.size() - 1);
 				}
 				break;
-			}
-			case SDL_TEXTEDITING:
-				// since there's no support for any characters that can use a
-				// complex IME input (like East Asian languages), we naively
-				// discard this event
-				break;
+
+			case SDL_SCANCODE_RETURN:
+			case SDL_SCANCODE_KP_ENTER:
+				dest = buffer;
+				sfx.play(*common, 27);
+				clearKeys();
+				return true;
+
+			case SDL_SCANCODE_ESCAPE:
+				clearKeys();
+				return false;
 
 			default:
 				break;
-        }
+			}
+			break;
+
+		case SDL_TEXTINPUT:
+		{
+			int k = utf8ToDOS(ev.text.text);
+			if (k && buffer.size() < maxLen &&
+					(!filter || (k = filter(k))))
+			{
+				buffer += char(k);
+			}
+			break;
+		}
+		case SDL_TEXTEDITING:
+			// since there's no support for any characters that can use a
+			// complex IME input (like East Asian languages), we naively
+			// discard this event
+			break;
+
+		default:
+			break;
+		}
 	}
 }
 
@@ -1731,28 +1698,27 @@ int filterDigits(int k)
 	return std::isdigit(k) ? k : 0;
 }
 
-void Gfx::inputInteger(int& dest, int min, int max, std::size_t maxLen, int x, int y)
+void Gfx::inputInteger(int &dest, int min, int max, std::size_t maxLen, int x, int y)
 {
 	std::string str(toString(dest));
 
-	if(inputString(str, maxLen, x, y, filterDigits)
-	&& !str.empty())
+	if (inputString(str, maxLen, x, y, filterDigits) && !str.empty())
 	{
 		dest = std::atoi(str.c_str());
-		if(dest < min)
+		if (dest < min)
 			dest = min;
-		else if(dest > max)
+		else if (dest > max)
 			dest = max;
 	}
 }
 
-void PlayerMenu::drawItemOverlay(Common& common, MenuItem& item, int x, int y, bool selected, bool disabled)
+void PlayerMenu::drawItemOverlay(Common &common, MenuItem &item, int x, int y, bool selected, bool disabled)
 {
-	if(item.id >= PlayerMenu::PlRed && item.id <= PlayerMenu::PlBlue) //Color settings
+	if (item.id >= PlayerMenu::PlRed && item.id <= PlayerMenu::PlBlue) // Color settings
 	{
 		int rgbcol = item.id - PlayerMenu::PlRed;
 
-		if(selected)
+		if (selected)
 		{
 			drawRoundedBox(gfx.playRenderer.bmp, x + 24, y, 168, 7, ws->rgb[rgbcol] - 1);
 		}
@@ -1765,61 +1731,60 @@ void PlayerMenu::drawItemOverlay(Common& common, MenuItem& item, int x, int y, b
 	} // CED9
 }
 
-ItemBehavior* PlayerMenu::getItemBehavior(Common& common, MenuItem& item)
+ItemBehavior *PlayerMenu::getItemBehavior(Common &common, MenuItem &item)
 {
 	if (item.id >= PlWeap0 && item.id < PlWeap0 + 5)
 		return new WeaponEnumBehavior(common, ws->weapons[item.id - PlWeap0]);
 
-	switch(item.id)
+	switch (item.id)
 	{
-		case PlName:
-			return new WormNameBehavior(common, *ws);
-		case PlHealth:
-		{
-			auto* b = new IntegerBehavior(common, ws->health, 1, 10000, 1, true);
-			b->scrollInterval = 4;
-			return b;
-		}
+	case PlName:
+		return new WormNameBehavior(common, *ws);
+	case PlHealth:
+	{
+		auto *b = new IntegerBehavior(common, ws->health, 1, 10000, 1, true);
+		b->scrollInterval = 4;
+		return b;
+	}
 
-		case PlRed:
-		case PlGreen:
-		case PlBlue:
-		{
-			auto* b = new IntegerBehavior(common, ws->rgb[item.id - PlRed], 0, 63, 1, false);
-			b->scrollInterval = 4;
-			return b;
-		}
+	case PlRed:
+	case PlGreen:
+	case PlBlue:
+	{
+		auto *b = new IntegerBehavior(common, ws->rgb[item.id - PlRed], 0, 63, 1, false);
+		b->scrollInterval = 4;
+		return b;
+	}
 
-		case PlUp: // D2AB
-		case PlDown:
-		case PlLeft:
-		case PlRight:
-		case PlFire:
-		case PlChange:
-		case PlJump:
-			return new KeyBehavior(common, ws->controls[item.id - PlUp], ws->controlsEx[item.id - PlUp], gfx.settings->extensions);
+	case PlUp: // D2AB
+	case PlDown:
+	case PlLeft:
+	case PlRight:
+	case PlFire:
+	case PlChange:
+	case PlJump:
+		return new KeyBehavior(common, ws->controls[item.id - PlUp], ws->controlsEx[item.id - PlUp], gfx.settings->extensions);
 
-		case PlDig: // Controls Extension
-			return new KeyBehavior(common, ws->controlsEx[item.id - PlUp], ws->controlsEx[item.id - PlUp], gfx.settings->extensions);
+	case PlDig: // Controls Extension
+		return new KeyBehavior(common, ws->controlsEx[item.id - PlUp], ws->controlsEx[item.id - PlUp], gfx.settings->extensions);
 
+	case PlController: // Controller
+		return new ArrayEnumBehavior(common, ws->controller, common.texts.controllers);
 
-		case PlController: // Controller
-			return new ArrayEnumBehavior(common, ws->controller, common.texts.controllers);
+	case PlSaveProfile: // Save profile
+		return new ProfileSaveBehavior(common, *ws, false);
 
-		case PlSaveProfile: // Save profile
-			return new ProfileSaveBehavior(common, *ws, false);
+	case PlSaveProfileAs: // Save profile as
+		return new ProfileSaveBehavior(common, *ws, true);
 
-		case PlSaveProfileAs: // Save profile as
-			return new ProfileSaveBehavior(common, *ws, true);
+	case PlLoadProfile:
+		return new ProfileLoadBehavior(common, *ws);
 
-		case PlLoadProfile:
-			return new ProfileLoadBehavior(common, *ws);
+	case PlLoadedProfile:
+		return new ProfileLoadedBehavior(common, *ws);
 
-		case PlLoadedProfile:
-			return new ProfileLoadedBehavior(common, *ws);
-
-		default:
-			return Menu::getItemBehavior(common, item);
+	default:
+		return Menu::getItemBehavior(common, item);
 	}
 }
 
@@ -1850,7 +1815,7 @@ restart:
 
 	// TODO: Unfocus game when necessary
 
-	while(true)
+	while (true)
 	{
 		playRenderer.clear();
 		controller->draw(this->playRenderer, false);
@@ -1858,19 +1823,15 @@ restart:
 		singleScreenRenderer.clear();
 		controller->draw(this->singleScreenRenderer, true);
 
-
 		int selection = menuLoop();
 
-		if(selection == MainMenu::MaNewGame)
+		if (selection == MainMenu::MaNewGame)
 		{
 			std::unique_ptr<Controller> newController(new LocalController(common, settings));
 
-			Level* oldLevel = controller->currentLevel();
+			Level *oldLevel = controller->currentLevel();
 
-			if(oldLevel
-			&& !settings->regenerateLevel
-			&& settings->randomLevel == oldLevel->oldRandomLevel
-			&& settings->levelFile == oldLevel->oldLevelFile)
+			if (oldLevel && !settings->regenerateLevel && settings->randomLevel == oldLevel->oldRandomLevel && settings->levelFile == oldLevel->oldLevelFile)
 			{
 				// Take level and palette from old game
 				newController->swapLevel(*oldLevel);
@@ -1884,18 +1845,18 @@ restart:
 
 			controller = std::move(newController);
 		}
-		else if(selection == MainMenu::MaResumeGame)
+		else if (selection == MainMenu::MaResumeGame)
 		{
 			if (controller->isReplay())
 			{
 				primaryRenderer = &singleScreenRenderer;
 			}
 		}
-		else if(selection == MainMenu::MaQuit) // QUIT TO OS
+		else if (selection == MainMenu::MaQuit) // QUIT TO OS
 		{
 			break;
 		}
-		else if(selection == MainMenu::MaReplay)
+		else if (selection == MainMenu::MaReplay)
 		{
 			if (settings->singleScreenReplay)
 			{
@@ -1909,9 +1870,9 @@ restart:
 
 		controller->focus();
 
-		while(true)
+		while (true)
 		{
-			if(!controller->process())
+			if (!controller->process())
 				break;
 			playRenderer.clear();
 			controller->draw(this->playRenderer, false);
@@ -1963,12 +1924,12 @@ void Gfx::drawBasicMenu(/*int curSel*/)
 
 void Gfx::drawSpectatorInfo()
 {
-	Common& common = *this->common;
+	Common &common = *this->common;
 	int centerX = singleScreenRenderer.renderResX / 2;
 	int centerY = singleScreenRenderer.renderResY / 4;
 
 	singleScreenRenderer.bmp.copy(frozenSpectatorScreen);
-	if(settings->levelFile.empty())
+	if (settings->levelFile.empty())
 	{
 		common.font.drawCenteredText(singleScreenRenderer.bmp, LS(LevelRandom), centerX, centerY - 32, 7, 2);
 	}
@@ -2001,9 +1962,8 @@ int upperCaseOnly(int k)
 {
 	k = std::toupper(k);
 
-	if((k >= 'A' && k <= 'Z')
-	|| (k == 0x8f || k == 0x8e || k == 0x99) // � �and �
-	|| (k >= '0' && k <= '9'))
+	if ((k >= 'A' && k <= 'Z') || (k == 0x8f || k == 0x8e || k == 0x99) // � �and �
+			|| (k >= '0' && k <= '9'))
 		return k;
 
 	return 0;
@@ -2020,7 +1980,7 @@ void Gfx::openHiddenMenu()
 
 int Gfx::menuLoop()
 {
-	Common& common = *this->common;
+	Common &common = *this->common;
 	int centerX = singleScreenRenderer.renderResX / 2;
 
 	std::memset(playRenderer.pal.entries, 0, sizeof(playRenderer.pal.entries));
@@ -2069,81 +2029,80 @@ int Gfx::menuLoop()
 		drawBasicMenu();
 		drawSpectatorInfo();
 
-		if(curMenu == &mainMenu)
+		if (curMenu == &mainMenu)
 			settingsMenu.draw(common, playRenderer, true);
 		else
 			curMenu->draw(common, playRenderer, false);
 
-		if(testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
+		if (testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
 		{
-			if(curMenu == &mainMenu)
+			if (curMenu == &mainMenu)
 				mainMenu.moveToId(MainMenu::MaQuit);
 			else
 				curMenu = &mainMenu;
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_UP))
+		if (testSDLKeyOnce(SDL_SCANCODE_UP))
 		{
 			sfx.play(common, 26);
 			curMenu->movement(-1);
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_DOWN))
+		if (testSDLKeyOnce(SDL_SCANCODE_DOWN))
 		{
 			sfx.play(common, 25);
 			curMenu->movement(1);
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_RETURN)
-		|| testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
+		if (testSDLKeyOnce(SDL_SCANCODE_RETURN) || testSDLKeyOnce(SDL_SCANCODE_KP_ENTER))
 		{
-			if(curMenu == &mainMenu)
+			if (curMenu == &mainMenu)
 			{
 				sfx.play(common, 27);
 
 				int s = mainMenu.selectedId();
 				switch (s)
 				{
-					case MainMenu::MaSettings:
-					{
-						curMenu = &settingsMenu; // Go into settings menu
-						break;
-					}
+				case MainMenu::MaSettings:
+				{
+					curMenu = &settingsMenu; // Go into settings menu
+					break;
+				}
 
-					case MainMenu::MaPlayer1Settings:
-					case MainMenu::MaPlayer2Settings:
-					{
-						playerSettings(s - MainMenu::MaPlayer1Settings);
-						break;
-					}
+				case MainMenu::MaPlayer1Settings:
+				case MainMenu::MaPlayer2Settings:
+				{
+					playerSettings(s - MainMenu::MaPlayer1Settings);
+					break;
+				}
 
-					case MainMenu::MaAdvanced:
-					{
-						openHiddenMenu();
-						break;
-					}
+				case MainMenu::MaAdvanced:
+				{
+					openHiddenMenu();
+					break;
+				}
 
-					case MainMenu::MaReplays:
-					{
-						selected = curMenu->onEnter(common);
-						break;
-					}
+				case MainMenu::MaReplays:
+				{
+					selected = curMenu->onEnter(common);
+					break;
+				}
 
-					case MainMenu::MaTc:
-					{
-						if (curMenu->onEnter(common) == MainMenu::MaTc)
-							return MainMenu::MaTc;
-						break;
-					}
+				case MainMenu::MaTc:
+				{
+					if (curMenu->onEnter(common) == MainMenu::MaTc)
+						return MainMenu::MaTc;
+					break;
+				}
 
-					default:
-					{
-						curMenu = &mainMenu;
-						selected = s;
-					}
+				default:
+				{
+					curMenu = &mainMenu;
+					selected = s;
+				}
 				}
 			}
-			else if(curMenu == &settingsMenu)
+			else if (curMenu == &settingsMenu)
 			{
 				settingsMenu.onEnter(common);
 			}
@@ -2153,18 +2112,18 @@ int Gfx::menuLoop()
 			}
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_F1))
+		if (testSDLKeyOnce(SDL_SCANCODE_F1))
 		{
 			curMenu = &mainMenu;
 			mainMenu.moveToId(startItemId);
 			selected = startItemId;
 		}
-		if(testSDLKeyOnce(SDL_SCANCODE_F2))
+		if (testSDLKeyOnce(SDL_SCANCODE_F2))
 		{
 			mainMenu.moveToId(MainMenu::MaAdvanced);
 			openHiddenMenu();
 		}
-		if(testSDLKeyOnce(SDL_SCANCODE_F3))
+		if (testSDLKeyOnce(SDL_SCANCODE_F3))
 		{
 			curMenu = &mainMenu;
 			mainMenu.moveToId(MainMenu::MaReplays);
@@ -2195,7 +2154,7 @@ int Gfx::menuLoop()
 			Rand r;
 			r.seed(s);
 
-			Common& common = *this->common;
+			Common &common = *this->common;
 
 			vector<std::size_t> nobjMap;
 
@@ -2207,7 +2166,7 @@ int Gfx::menuLoop()
 			std::mt19937 g(rd());
 			std::shuffle(nobjMap.begin(), nobjMap.end(), g);
 
-			for (auto& w : common.weapons)
+			for (auto &w : common.weapons)
 			{
 				w.addSpeed = r(30) - 5;
 				w.affectByExplosions = r(2) == 0;
@@ -2259,10 +2218,10 @@ int Gfx::menuLoop()
 				w.wormExplode = r(3) > 0;
 			}
 
-			//for (auto& n : common.nobjectTypes)
+			// for (auto& n : common.nobjectTypes)
 			for (std::size_t idx = 0; idx < common.nobjectTypes.size(); ++idx)
 			{
-				auto& n = common.nobjectTypes[nobjMap[idx]];
+				auto &n = common.nobjectTypes[nobjMap[idx]];
 				n.affectByExplosions = r(5) == 0;
 				n.bloodOnHit = r(5);
 				n.bloodTrail = r(10) == 0;
@@ -2292,7 +2251,7 @@ int Gfx::menuLoop()
 				n.wormExplode = r(2) == 0;
 			}
 
-			for (auto& s : common.sobjectTypes)
+			for (auto &s : common.sobjectTypes)
 			{
 				s.animDelay = 1 + r(10);
 				s.blowAway = r(2) == 0 ? r(10000) : 0;
@@ -2310,25 +2269,25 @@ int Gfx::menuLoop()
 		}
 #endif
 
-		if(testSDLKey(SDL_SCANCODE_LEFT))
+		if (testSDLKey(SDL_SCANCODE_LEFT))
 		{
-			if(!curMenu->onLeftRight(common, -1))
+			if (!curMenu->onLeftRight(common, -1))
 				resetLeftRight();
 		}
-		if(testSDLKey(SDL_SCANCODE_RIGHT))
+		if (testSDLKey(SDL_SCANCODE_RIGHT))
 		{
-			if(!curMenu->onLeftRight(common, 1))
+			if (!curMenu->onLeftRight(common, 1))
 				resetLeftRight();
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_PAGEUP))
+		if (testSDLKeyOnce(SDL_SCANCODE_PAGEUP))
 		{
 			sfx.play(common, 26);
 
 			curMenu->movementPage(-1);
 		}
 
-		if(testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN))
+		if (testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN))
 		{
 			sfx.play(common, 25);
 
@@ -2337,8 +2296,7 @@ int Gfx::menuLoop()
 
 		menuFlip();
 		process();
-	}
-	while(selected < 0);
+	} while (selected < 0);
 
 	for (playRenderer.fadeValue = 32; playRenderer.fadeValue > 0; --playRenderer.fadeValue)
 	{

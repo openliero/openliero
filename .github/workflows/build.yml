@@ -75,7 +75,7 @@ jobs:
           -G "Unix Makefiles"
           -DOPENLIERO_BUILD_TCTOOL=ON
       - name: Build
-        run: make
+        run: cmake --build . --config Release
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
@@ -83,6 +83,7 @@ jobs:
           path: |
             openliero
             tctool
+            Resources
             Setups
             Profiles
             TC
@@ -120,6 +121,7 @@ jobs:
           path: |
             openliero.exe
             tctool.exe
+            Resources
             Setups
             Profiles
             TC
