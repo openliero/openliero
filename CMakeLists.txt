@@ -26,6 +26,7 @@ endif()
 # find dependencies
 find_package(SDL2 REQUIRED)
 find_package(SDL2_Image REQUIRED)
+add_subdirectory(libs/miniz)
 
 # TODO get rid of this kludgy hack
 include_directories(
@@ -63,7 +64,6 @@ set(SOURCES
   src/game/gfx/sprite.cpp
   src/game/mixer/mixer.cpp
   src/game/mixer/player.cpp
-  src/gvl/zlib/miniz.c
   src/gvl/system/system.c
   src/gvl/support/bits.c
   src/gvl/support/debug.cpp
@@ -107,7 +107,7 @@ endif()
 
 # game
 add_library(game ${GAME_SOURCES})
-target_link_libraries(game SDL2::SDL2 SDL2_image::SDL2_image)
+target_link_libraries(game SDL2::SDL2 SDL2_image::SDL2_image miniz)
 if(APPLE)
   add_executable(openliero MACOSX_BUNDLE src/game/main.cpp)
 elseif(WIN32)
@@ -125,7 +125,7 @@ if(OPENLIERO_BUILD_TCTOOL)
   )
 
   add_library(tc ${TC_TOOL_SOURCES})
-  target_link_libraries(tc SDL2::SDL2)
+  target_link_libraries(tc SDL2::SDL2 miniz)
   add_executable(tctool ${TC_TOOL_SOURCES})
   target_link_libraries(tctool tc)
 endif()
@@ -138,7 +138,7 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
     src/video_tool/video_recorder.c
   )
   add_library(vt ${VIDEO_TOOL_SOURCES})
-  target_link_libraries(vt SDL2::SDL2 avcodec avformat avutil dl pthread swresample swscale x264)
+  target_link_libraries(vt SDL2::SDL2 avcodec avformat avutil dl pthread swresample swscale x264 miniz)
   target_include_directories(vt ffmpeg)
   target_link_directories(vt
     ffmpeg/libavcodec
