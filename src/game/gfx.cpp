@@ -1849,10 +1849,10 @@ bool Gfx::mainLoop()
 
 		controller->currentGame()->focus(this->playRenderer);
 		controller->currentGame()->focus(this->singleScreenRenderer);
-		gfxGameState = GfxGameState::GSMenu;
+		gfxGameState = GfxGameState::GSMenuInit;
 	}
 
-	if(gfxGameState == GfxGameState::GSMenu)
+	if(gfxGameState == GfxGameState::GSMenuInit)
 	{
 		playRenderer.clear();
 		controller->draw(this->playRenderer, false);
@@ -1860,6 +1860,12 @@ bool Gfx::mainLoop()
 		singleScreenRenderer.clear();
 		controller->draw(this->singleScreenRenderer, true);
 
+		menuLoopInit();
+		gfxGameState = GfxGameState::GSMenuRun;
+	}
+
+	if (gfxGameState == GfxGameState::GSMenuRun)
+	{
 		int selection = menuLoop();
 
 		if(selection == MainMenu::MaNewGame)
@@ -1916,7 +1922,7 @@ bool Gfx::mainLoop()
 	{
 		if(!controller->process())
 		{
-			gfxGameState = GfxGameState::GSMenu;
+			gfxGameState = GfxGameState::GSMenuInit;
 			primaryRenderer = &playRenderer;
 			controller->unfocus();
 			clearKeys();
@@ -2021,7 +2027,7 @@ void Gfx::openHiddenMenu()
 	curMenu->moveToFirstVisible();
 }
 
-int Gfx::menuLoop()
+void Gfx::menuLoopInit()
 {
 	Common& common = *this->common;
 	int centerX = singleScreenRenderer.renderResX / 2;
@@ -2064,8 +2070,12 @@ int Gfx::menuLoop()
 		controller->currentLevel()->drawMiniature(singleScreenRenderer.bmp, centerX - 126, singleScreenRenderer.renderResY - 208, 2);
 	}
 	frozenSpectatorScreen.copy(singleScreenRenderer.bmp);
-
 	menuCycles = 0;
+}
+
+int Gfx::menuLoop()
+{
+	Common& common = *this->common;
 	int selected = -1;
 	do
 	{
@@ -2159,6 +2169,7 @@ int Gfx::menuLoop()
 		if(testSDLKeyOnce(SDL_SCANCODE_F1))
 		{
 			curMenu = &mainMenu;
+			int startItemId = controller->running() ? MainMenu::MaResumeGame : MainMenu::MaNewGame;
 			mainMenu.moveToId(startItemId);
 			selected = startItemId;
 		}

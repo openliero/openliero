@@ -195,6 +195,7 @@ struct Gfx
 
 	void processEvent(SDL_Event& ev, Controller* controller = 0);
 
+	void menuLoopInit();
 	int menuLoop();
 	bool mainLoop();
 	void drawBasicMenu(/*int curSel*/);
@@ -250,7 +251,7 @@ struct Gfx
 	PlayerMenu playerMenu;
 	HiddenMenu hiddenMenu;
 
-	enum GfxGameState { GSInitialize, GSMenu, GSGame };
+	enum GfxGameState { GSInitialize, GSMenuInit, GSMenuRun, GSGame };
 
 	GfxGameState gfxGameState;
 
