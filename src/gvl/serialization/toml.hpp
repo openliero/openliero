@@ -430,7 +430,7 @@ struct reader
 						array a;
 						a.v.emplace_back(object());
 						c = a.v.back();
-						v = value(move(a));
+						v = value(std::move(a));
 					}
 					else
 					{
@@ -587,7 +587,7 @@ struct reader
 		value parent(cur);
 		cur = f(name);
 		func();
-		cur = move(parent);
+		cur = std::move(parent);
 		return *this;
 	}
 
@@ -608,14 +608,14 @@ struct reader
 			func(e);
 		}
 
-		cur = move(parent);
+		cur = std::move(parent);
 		return *this;
 	}
 
 	template<typename A, typename F>
 	reader& array_obj(char const* name, A& a, F func)
 	{
-		arr(name, a, move(func));
+		arr(name, a, std::move(func));
 		return *this;
 	}
 
@@ -769,7 +769,7 @@ struct reader
 
 			check(']');
 
-			return value(move(a));
+			return value(std::move(a));
 		}
 		else if (c == 't')
 		{

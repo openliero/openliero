@@ -7,8 +7,9 @@
 
 inline std::string toString(int v)
 {
-	char buf[20];
-	std::sprintf(buf, "%d", v);
+  const int BUF_MAX = 20;
+	char buf[BUF_MAX];
+	std::snprintf(buf, BUF_MAX * sizeof(char), "%d", v);
 	return buf;
 }
 
