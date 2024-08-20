@@ -1,16 +1,22 @@
+---
+
 name: Build
-on:
-    pull_request:
-    push:
-      branches:
-        - master
-    workflow_dispatch:
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
 permissions:
-    contents: write
+  contents: write
 
 jobs:
   # disabled, since MacOS builds are broken at the moment
-  #build-macos:
+  # build-macos:
   #  runs-on: macos-latest
   #  steps:
   #    - name: Checkout repository
@@ -50,8 +56,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       # does not work, see: https://github.com/libsdl-org/setup-sdl/issues/23
-      #- uses: libsdl-org/setup-sdl@main
+      # - uses: libsdl-org/setup-sdl@main
       #  id: sdl
       #  with:
       #    build-type: Release
@@ -61,7 +69,11 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
       - name: Prepare build
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" -DOPENLIERO_BUILD_TCTOOL=ON
+        run: >
+          cmake
+          -DCMAKE_BUILD_TYPE=Release
+          -G "Unix Makefiles"
+          -DOPENLIERO_BUILD_TCTOOL=ON
       - name: Build
         run: make
       - name: Upload build
@@ -79,6 +91,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: libsdl-org/setup-sdl@main
         id: sdl
         with:
@@ -87,11 +101,18 @@ jobs:
           version: 2-latest
           version-sdl-image: 2-latest
       - name: Prepare build
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022" -DOPENLIERO_BUILD_TCTOOL=ON
+        run: >
+          cmake
+          -DCMAKE_BUILD_TYPE=Release
+          -G "Visual Studio 17 2022"
+          -DOPENLIERO_BUILD_TCTOOL=ON
       - name: Build
         run: cmake --build . --config Release
       - name: Move executables
-        run: Move-Item -Path Release/openliero.exe,Release/tctool.exe -Destination .
+        run: >
+          Move-Item
+          -Path Release/openliero.exe,Release/tctool.exe
+          -Destination .
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
@@ -113,8 +134,8 @@ jobs:
           path: ubuntu-build
       - uses: actions/download-artifact@v4
         with:
-            name: windows-build
-            path: windows-build
+          name: windows-build
+          path: windows-build
       - name: Create ubuntu tarball
         run: |
           chmod +x ubuntu-build/openliero ubuntu-build/tctool
@@ -123,8 +144,12 @@ jobs:
           cd ..
       - name: Create windows zip file
         run: |
-          curl -L -o windows-build/sdl2-win-x64.zip https://github.com/libsdl-org/SDL/releases/download/release-2.30.6/SDL2-2.30.6-win32-x64.zip
-          curl -L -o windows-build/sdl2_image-win-x64.zip https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2-win32-x64.zip
+          curl -L \
+          -o windows-build/sdl2-win-x64.zip \
+          https://github.com/libsdl-org/SDL/releases/download/release-2.30.6/SDL2-2.30.6-win32-x64.zip
+          curl -L \
+          -o windows-build/sdl2_image-win-x64.zip \
+          https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2-win32-x64.zip
           cd windows-build
           unzip sdl2-win-x64.zip
           rm -rf sdl2-win-x64.zip

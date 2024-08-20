@@ -3,7 +3,7 @@
 
 #include "stream.hpp"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-#include "../zlib/zlib2.h"
+#include <miniz.h>
 #include <memory>
 
 namespace gvl

@@ -6,7 +6,7 @@
 #include <memory>
 #include <map>
 #include <gvl/io2/stream.hpp>
-#include <gvl/zlib/zlib2.h>
+#include <miniz.h>
 
 std::string changeLeaf(std::string const& path, std::string const& newLeaf);
 std::string getRoot(std::string const& path);

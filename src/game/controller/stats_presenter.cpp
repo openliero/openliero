@@ -17,8 +17,9 @@ std::string percent(int nom, int den)
 	if (den == 0)
 		return "";
 
-	char buf[256];
-	sprintf(buf, "%.2f%%", double(nom)*100.0/den);
+  const int BUF_MAX = 256;
+	char buf[BUF_MAX];
+	std::snprintf(buf, BUF_MAX * sizeof(char), "%.2f%%", double(nom)*100.0/den);
 	return buf;
 }
 
