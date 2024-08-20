@@ -277,6 +277,7 @@ Gfx::Gfx()
 , playerMenu(178, 20)
 , hiddenMenu(178, 20)
 , curMenu(0)
+, gfxGameState(GfxGameState::GSInitialize)
 , sdlDrawSurface(0)
 , running(true)
 , doubleRes(true)
@@ -1834,29 +1835,93 @@ void Gfx::playerSettings(int player)
 	return;
 }
 
-enum GfxGameState { GSMenu, GSGame };
 
-void Gfx::mainLoop()
+bool Gfx::mainLoop()
 {
-	auto state = GfxGameState::GSMenu;
-restart:
-	state = GfxGameState::GSMenu;
-	controller.reset(new LocalController(common, settings));
-
+	if(gfxGameState == GfxGameState::GSInitialize)
 	{
-		Level newLevel(*common);
-		newLevel.generateFromSettings(*common, *settings, rand);
-		controller->swapLevel(newLevel);
+		controller.reset(new LocalController(common, settings));
+		{
+			Level newLevel(*common);
+			newLevel.generateFromSettings(*common, *settings, rand);
+			controller->swapLevel(newLevel);
+		}
+
+		controller->currentGame()->focus(this->playRenderer);
+		controller->currentGame()->focus(this->singleScreenRenderer);
+		gfxGameState = GfxGameState::GSMenu;
 	}
 
-	controller->currentGame()->focus(this->playRenderer);
-	controller->currentGame()->focus(this->singleScreenRenderer);
-
-	// TODO: Unfocus game when necessary
-
-	while(true)
+	if(gfxGameState == GfxGameState::GSMenu)
 	{
-		if (state == GfxGameState::GSMenu)
+		playRenderer.clear();
+		controller->draw(this->playRenderer, false);
+
+		singleScreenRenderer.clear();
+		controller->draw(this->singleScreenRenderer, true);
+
+		int selection = menuLoop();
+
+		if(selection == MainMenu::MaNewGame)
+		{
+			std::unique_ptr<Controller> newController(new LocalController(common, settings));
+
+			Level* oldLevel = controller->currentLevel();
+
+			if(oldLevel
+			&& !settings->regenerateLevel
+			&& settings->randomLevel == oldLevel->oldRandomLevel
+			&& settings->levelFile == oldLevel->oldLevelFile)
+			{
+				// Take level and palette from old game
+				newController->swapLevel(*oldLevel);
+			}
+			else
+			{
+				Level newLevel(*common);
+				newLevel.generateFromSettings(*common, *settings, rand);
+				newController->swapLevel(newLevel);
+			}
+
+			controller = std::move(newController);
+			gfxGameState = GfxGameState::GSGame;
+		}
+		else if(selection == MainMenu::MaResumeGame)
+		{
+			if (controller->isReplay())
+			{
+				primaryRenderer = &singleScreenRenderer;
+			}
+			gfxGameState = GfxGameState::GSGame;
+		}
+		else if(selection == MainMenu::MaQuit) // QUIT TO OS
+		{
+			return false;
+		}
+		else if(selection == MainMenu::MaReplay)
+		{
+			if (settings->singleScreenReplay)
+			{
+				primaryRenderer = &singleScreenRenderer;
+			}
+			gfxGameState = GfxGameState::GSGame;
+		}
+		else if (selection == MainMenu::MaTc)
+		{
+			gfxGameState = GfxGameState::GSInitialize;
+		}
+		controller->focus();
+	}
+	if(gfxGameState == GfxGameState::GSGame)
+	{
+		if(!controller->process())
+		{
+			gfxGameState = GfxGameState::GSMenu;
+			primaryRenderer = &playRenderer;
+			controller->unfocus();
+			clearKeys();
+		}
+		else
 		{
 			playRenderer.clear();
 			controller->draw(this->playRenderer, false);
@@ -1864,83 +1929,13 @@ restart:
 			singleScreenRenderer.clear();
 			controller->draw(this->singleScreenRenderer, true);
 
-			int selection = menuLoop();
+			++gfx.menuCycles;
 
-			if(selection == MainMenu::MaNewGame)
-			{
-				std::unique_ptr<Controller> newController(new LocalController(common, settings));
-
-				Level* oldLevel = controller->currentLevel();
-
-				if(oldLevel
-				&& !settings->regenerateLevel
-				&& settings->randomLevel == oldLevel->oldRandomLevel
-				&& settings->levelFile == oldLevel->oldLevelFile)
-				{
-					// Take level and palette from old game
-					newController->swapLevel(*oldLevel);
-				}
-				else
-				{
-					Level newLevel(*common);
-					newLevel.generateFromSettings(*common, *settings, rand);
-					newController->swapLevel(newLevel);
-				}
-
-				controller = std::move(newController);
-				state = GfxGameState::GSGame;
-			}
-			else if(selection == MainMenu::MaResumeGame)
-			{
-				if (controller->isReplay())
-				{
-					primaryRenderer = &singleScreenRenderer;
-				}
-				state = GfxGameState::GSGame;
-			}
-			else if(selection == MainMenu::MaQuit) // QUIT TO OS
-			{
-				break;
-			}
-			else if(selection == MainMenu::MaReplay)
-			{
-				if (settings->singleScreenReplay)
-				{
-					primaryRenderer = &singleScreenRenderer;
-				}
-				state = GfxGameState::GSGame;
-			}
-			else if (selection == MainMenu::MaTc)
-			{
-				goto restart;
-			}
-			controller->focus();
-		}
-		if(state == GfxGameState::GSGame)
-		{
-			if(!controller->process())
-			{
-				state = GfxGameState::GSMenu;
-				primaryRenderer = &playRenderer;
-				controller->unfocus();
-				clearKeys();
-			}
-			else
-			{
-				playRenderer.clear();
-				controller->draw(this->playRenderer, false);
-
-				singleScreenRenderer.clear();
-				controller->draw(this->singleScreenRenderer, true);
-
-				++gfx.menuCycles;
-
-				flip();
-				process(controller.get());
-			}
+			flip();
+			process(controller.get());
 		}
 	}
-	controller.reset();
+	return true;
 }
 
 void Gfx::saveSettings(FsNode node)

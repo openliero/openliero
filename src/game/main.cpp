@@ -141,7 +141,7 @@ try
 	gfx.setVideoMode();
 	sfx.init();
 
-	gfx.mainLoop();
+	while(gfx.mainLoop())
 
 	gfx.settings->save(configNode / "Setups" / "liero.cfg", gfx.rand);
 

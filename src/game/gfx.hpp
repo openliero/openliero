@@ -196,7 +196,7 @@ struct Gfx
 	void processEvent(SDL_Event& ev, Controller* controller = 0);
 
 	int menuLoop();
-	void mainLoop();
+	bool mainLoop();
 	void drawBasicMenu(/*int curSel*/);
 	void drawSpectatorInfo();
 	void playerSettings(int player);
@@ -249,6 +249,10 @@ struct Gfx
 	SettingsMenu settingsMenu;
 	PlayerMenu playerMenu;
 	HiddenMenu hiddenMenu;
+
+	enum GfxGameState { GSInitialize, GSMenu, GSGame };
+
+	GfxGameState gfxGameState;
 
 	Menu* curMenu;
 	std::string prevSelectedReplayPath;
