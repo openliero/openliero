@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"[cpp]": {
+			"editor.formatOnSave": false
+		}
+	}
+}
