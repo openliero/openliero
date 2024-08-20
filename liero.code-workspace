@@ -6,7 +6,10 @@
 	],
 	"settings": {
 		"[cpp]": {
-			"editor.formatOnSave": false
-		}
+				"editor.formatOnSave": false,
+		},
+		"cmake.debugConfig": {
+			"cwd": "${workspaceFolder}"
+		},
 	}
 }

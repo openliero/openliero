@@ -1,0 +1,23 @@
+{
+  "version": 6,
+  "configurePresets": [{
+    "name": "windows-x64",
+    "displayName": "Windows x64 Debug",
+    "description": "Windows x64 Debug",
+    "generator": "Visual Studio 17 2022",
+    "binaryDir": "${sourceDir}/build/${presetName}",
+    "architecture": {
+      "value": "x64",
+      "strategy": "external"
+    },
+    "cacheVariables": {
+      "CMAKE_BUILD_TYPE": "Debug",
+      "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+    },
+    "vendor": {
+      "microsoft.com/VisualStudioSettings/CMake/1.0": {
+        "hostOS": [ "Windows" ]
+      }
+    }
+  }]
+}
