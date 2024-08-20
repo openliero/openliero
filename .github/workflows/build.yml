@@ -81,10 +81,9 @@ jobs:
         with:
           name: ubuntu-build
           path: |
-            icon.png
             openliero
-            spectator_icon.png
             tctool
+            Resources
             Setups
             Profiles
             TC
@@ -120,10 +119,9 @@ jobs:
         with:
           name: windows-build
           path: |
-            icon.png
             openliero.exe
-            spectator_icon.png
             tctool.exe
+            Resources
             Setups
             Profiles
             TC
