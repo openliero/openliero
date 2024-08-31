@@ -112,7 +112,7 @@ if(APPLE)
 elseif(WIN32)
   add_executable(openliero WIN32 src/game/sdlmain.cpp pkg/win32_icon.rc)
 else()
-  add_executable(openliero src/game/main.cpp)
+  add_executable(openliero src/game/sdlmain.cpp)
 endif()
 
 target_link_libraries(openliero PRIVATE game)
