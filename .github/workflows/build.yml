@@ -89,7 +89,7 @@ jobs:
   release:
     if: github.ref_name == 'master'
     runs-on: ubuntu-latest
-    needs: [linux, windows]
+    needs: [build]
 
     steps:
       - uses: actions/download-artifact@v4
