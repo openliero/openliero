@@ -96,29 +96,22 @@ set(GAME_SOURCES ${SOURCES}
   src/game/menu/timeBehavior.cpp
 )
 
-if(APPLE)
-  set(GAME_SOURCES ${GAME_SOURCES} src/game/SDLmain.m)
-
-  # Populate RESOURCE_FILES with files to copy into the .app Resources/ directory.
-  file(GLOB_RECURSE RESOURCE_FILES pkg/*.cfg pkg/TC/* pkg/*.icns)
 else()
-  set(GAME_SOURCES ${GAME_SOURCES} src/game/sdlmain.cpp)
 endif()
 
-# game
-add_library(game ${GAME_SOURCES})
 target_link_libraries(game
   SDL2::SDL2
   SDL2_image::SDL2_image
   miniz
 )
 if(APPLE)
-  add_executable(openliero MACOSX_BUNDLE src/game/main.cpp)
+  add_executable(openliero src/game/sdlmain.cpp)
 elseif(WIN32)
   add_executable(openliero WIN32 src/game/sdlmain.cpp pkg/win32_icon.rc)
 else()
   add_executable(openliero src/game/main.cpp)
 endif()
+
 target_link_libraries(openliero PRIVATE game)
 
 if(OPENLIERO_BUILD_TCTOOL)
@@ -168,18 +161,4 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   )
   add_executable(videotool ${VIDEO_TOOL_SOURCES})
   target_link_libraries(videotool PRIVATE vt)
-endif()
-
-if(APPLE)
-  set_target_properties(openliero PROPERTIES MACOSX_BUNDLE TRUE)
-  set_target_properties(openliero PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in")
-  set(MACOSX_BUNDLE_ICON_FILE liero)
-
-  # Preserve directory structure when copying contents of pkg/ to the .app Resources/ directory.
-  foreach(absolute_path ${RESOURCE_FILES})
-    file(RELATIVE_PATH relative_path "${CMAKE_CURRENT_SOURCE_DIR}/pkg" ${absolute_path})
-    get_filename_component(relative_path ${relative_path} DIRECTORY)
-    set_source_files_properties(${absolute_path}
-      PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${relative_path}")
-  endforeach(absolute_path)
 endif()
