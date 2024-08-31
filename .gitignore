@@ -1,4 +1,5 @@
 # build files
+tmp
 /_bin/
 /out/
 *.build/
