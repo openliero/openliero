@@ -11,17 +11,9 @@ option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
 
 # sane CMake defaults
-if(NOT DEFINED CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 11)
-endif()
-
-if(NOT DEFINED CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
-
-if(NOT DEFINED CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_BUILD_TYPE Release)
 
 # find dependencies
 find_package(SDL2 REQUIRED)
