@@ -1555,7 +1555,18 @@ void Gfx::weaponOptions()
 
 		weaponMenu.draw(common, playRenderer, false);
 
-		if(testSDLKeyOnce(SDL_SCANCODE_UP))
+		Worm::Control control;
+		auto worms = controller->currentGame()->worms;
+		auto isWormUp = false;
+		for(const auto w : worms)
+		{
+			if (testKeyOnce(w->settings->controlsEx[WormSettingsExtensions::Up]))
+			{
+				isWormUp = true;
+				break;
+			}
+		}
+		if(isWormUp || testSDLKeyOnce(SDL_SCANCODE_UP))
 		{
 			sfx.play(common, 26);
 			weaponMenu.movement(-1);
@@ -1593,7 +1604,7 @@ void Gfx::weaponOptions()
 			}
 		}
 
-		weaponMenu.onKeys(gfx.keyBuf, gfx.keyBufPtr);
+		//weaponMenu.onKeys(gfx.keyBuf, gfx.keyBufPtr);
 
 		menuFlip();
 		process();
