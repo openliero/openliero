@@ -9,6 +9,7 @@ project(openliero
 # options at top so they're easy to find
 option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
+option(OPENLIERO_VENDORED_DEPS "Use vendored dependencies" OFF)
 
 # sane CMake defaults
 set(CMAKE_CXX_STANDARD 11)
@@ -88,14 +89,24 @@ set(GAME_SOURCES ${SOURCES}
   src/game/menu/timeBehavior.cpp
 )
 
+# game
+add_library(game ${GAME_SOURCES})
+if(OPENLIERO_VENDORED_DEPS)
+  target_link_libraries(game
+    SDL2::SDL2-static
+    SDL2_image::SDL2_image-static
+  )
 else()
+  target_link_libraries(game
+    SDL2::SDL2
+    SDL2_image::SDL2_image
+  )
 endif()
 
 target_link_libraries(game
-  SDL2::SDL2
-  SDL2_image::SDL2_image
   miniz
 )
+
 if(APPLE)
   add_executable(openliero src/game/sdlmain.cpp)
 elseif(WIN32)
@@ -114,10 +125,21 @@ if(OPENLIERO_BUILD_TCTOOL)
   )
 
   add_library(tc ${TC_TOOL_SOURCES})
+
+  if(OPENLIERO_VENDORED_DEPS)
+    target_link_libraries(tc
+      SDL2::SDL2-static
+    )
+  else()
+    target_link_libraries(tc
+      SDL2::SDL2
+    )
+  endif()
+
   target_link_libraries(tc
-    SDL2::SDL2
     miniz
   )
+
   add_executable(tctool ${TC_TOOL_SOURCES})
   target_link_libraries(tctool PRIVATE tc)
 endif()
@@ -130,8 +152,18 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
     src/video_tool/video_recorder.c
   )
   add_library(vt ${VIDEO_TOOL_SOURCES})
+
+  if(OPENLIERO_VENDORED_DEPS)
+  target_link_libraries(vt
+    SDL2::SDL2-static
+  )
+  else()
   target_link_libraries(vt
     SDL2::SDL2
+  )
+  endif()
+
+  target_link_libraries(vt
     miniz
     avcodec
     avformat
