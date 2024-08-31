@@ -17,7 +17,7 @@ set(CMAKE_BUILD_TYPE Release)
 
 # find dependencies
 find_package(SDL2 REQUIRED)
-find_package(SDL2_Image REQUIRED)
+find_package(SDL2_image REQUIRED)
 add_subdirectory(libs/miniz)
 
 # TODO get rid of this kludgy hack
