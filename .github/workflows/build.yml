@@ -42,7 +42,7 @@ jobs:
           &&
           sudo apt-get install
           libsdl2-dev
-          libsd2-image-dev
+          libsdl2-image-dev
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
