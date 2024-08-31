@@ -15,137 +15,101 @@ permissions:
   contents: write
 
 jobs:
-  # disabled, since MacOS builds are broken at the moment
-  # build-macos:
-  #  runs-on: macos-latest
-  #  steps:
-  #    - name: Checkout repository
-  #      uses: actions/checkout@v4
-  #    #- uses: libsdl-org/setup-sdl@main
-  #    #  id: sdl
-  #    #  with:
-  #    #    build-type: Release
-  #    #    install-linux-dependencies: true
-  #    #    version: 2-latest
-  #    #    version-sdl-image: 2-latest
-  #    - name: Setup SDL2 frameworks
-  #      uses: BrettDong/setup-sdl2-frameworks@main
-  #      with:
-  #        sdl2: latest
-  #        sdl2-ttf: none
-  #        sdl2-image: latest
-  #        sdl2-mixer: none
-  #        sdl2-net: none
-  #    - name: Prepare build
-  #      run: cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
-  #    - name: Build
-  #      run: make
-  #    - name: Archive build
-  #      run: zip -r ubuntu-build.zip openliero tctool TC
-  #    - name: Upload build
-  #      uses: actions/upload-artifact@v4
-  #      with:
-  #        name: macos-build
-  #        path: |
-  #          openliero
-  #          tctool
-  #          TC
-  build-ubuntu:
-    # this is later than ubuntu-latest
-    runs-on: ubuntu-24.04
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+          - name: windows
+            os: windows-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      # does not work, see: https://github.com/libsdl-org/setup-sdl/issues/23
-      # - uses: libsdl-org/setup-sdl@main
-      #  id: sdl
-      #  with:
-      #    build-type: Release
-      #    install-linux-dependencies: true
-      #    version: 2-latest
-      #    version-sdl-image: 2-latest
-      - name: Install dependencies
-        run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
-      - name: Prepare build
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: >
-          cmake
-          -DCMAKE_BUILD_TYPE=Release
-          -G "Unix Makefiles"
-          -DOPENLIERO_BUILD_TCTOOL=ON
-      - name: Build
-        run: cmake --build . --config Release
-      - name: Upload build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ubuntu-build
-          path: |
-            openliero
-            tctool
-            Resources
-            Setups
-            Profiles
-            TC
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: libsdl-org/setup-sdl@main
+          sudo apt-get update
+          &&
+          sudo apt-get install
+          libsdl2-dev
+          libsd2-image-dev
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        uses: libsdl-org/setup-sdl@main
         id: sdl
         with:
           build-type: Release
           install-linux-dependencies: true
           version: 2-latest
           version-sdl-image: 2-latest
-      - name: Prepare build
+
+      - name: Configure CMake
         run: >
           cmake
-          -DCMAKE_BUILD_TYPE=Release
-          -G "Visual Studio 17 2022"
-          -A X64
-          -DOPENLIERO_BUILD_TCTOOL=ON
+          -D CMAKE_BUILD_TYPE=Release
+          -D OPENLIERO_BUILD_TCTOOL=ON
+
       - name: Build
-        run: cmake --build . --config Release
-      - name: Move executables
+        run: >
+          cmake
+          --build .
+          --config Release
+          --parallel 4
+
+      - name: Move executable (Windows)
+        if: runner.os == 'Windows'
         run: >
           Move-Item
           -Path Release/openliero.exe,Release/tctool.exe
           -Destination .
+
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
+          name: ${{ matrix.name }}-build
           path: |
-            openliero.exe
-            tctool.exe
+            openliero*
+            tctool*
             Resources
             Setups
             Profiles
             TC
+
   release:
-    runs-on: ubuntu-latest
-    needs: [build-ubuntu, build-windows]
     if: github.ref_name == 'master'
+    runs-on: ubuntu-latest
+    needs: [linux, windows]
+
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: ubuntu-build
-          path: ubuntu-build
+          name: linux-build
+          path: linux-build
+
       - uses: actions/download-artifact@v4
         with:
           name: windows-build
           path: windows-build
-      - name: Create ubuntu tarball
+
+      - name: Create archive (Linux)
         run: |
-          chmod +x ubuntu-build/openliero ubuntu-build/tctool
-          cd ubuntu-build
-          tar cfJ liero-ubuntu-x64-${{ github.sha }}.tar.xz *
+          chmod +x linux-build/openliero linux-build/tctool
+          cd linux-build
+          tar cfJ liero-linux-x64-${{ github.sha }}.tar.xz *
           cd ..
-      - name: Create windows zip file
+
+      - name: Create archive (Windows)
         run: |
           curl -L \
           -o windows-build/sdl2-win-x64.zip \
@@ -161,10 +125,11 @@ jobs:
           mv README.txt README-SDL_image.txt
           zip -r liero-windows-x64-${{ github.sha }}.zip .
           cd ..
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}-${{ github.sha }}
           files: |
-            ubuntu-build/liero-ubuntu-x64-${{ github.sha }}.tar.xz
+            linux-build/liero-linux-x64-${{ github.sha }}.tar.xz
             windows-build/liero-windows-x64-${{ github.sha }}.zip
