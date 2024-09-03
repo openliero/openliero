@@ -6,7 +6,7 @@ cmake --build tmp/SDL --parallel 4
 DESTDIR=$(pwd)/tmp cmake --install tmp/SDL
 
 # build SDL2_image
-cmake -S libs/SDL_image -B tmp/SDL_image -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" -D CMAKE_BUILD_TYPE= -D SDL2IMAGE_VENDORED=ON -D BUILD_SHARED_LIBS=OFF -D CMAKE_POSITION_INDEPENDENT_CODE=ON -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
+cmake -S libs/SDL_image -B tmp/SDL_image -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" -D CMAKE_BUILD_TYPE=Release -D SDL2IMAGE_VENDORED=ON -D BUILD_SHARED_LIBS=OFF -D CMAKE_POSITION_INDEPENDENT_CODE=ON -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
 cmake --build tmp/SDL_image --parallel 4
 DESTDIR=$(pwd)/tmp cmake --install tmp/SDL_image
 
