@@ -35,15 +35,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: >
-          sudo apt-get update
-          &&
-          sudo apt-get install
-          libsdl2-dev
-          libsdl2-image-dev
-
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         uses: libsdl-org/setup-sdl@main
@@ -54,13 +45,61 @@ jobs:
           version: 2-latest
           version-sdl-image: 2-latest
 
-      - name: Configure CMake
+      - name: Build vendored dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          cmake \
+            -S libs/SDL \
+            -B tmp/SDL \
+            -D BUILD_SHARED_LIBS=OFF \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -D SDL_TEST=OFF
+          cmake \
+            --build tmp/SDL \
+            --parallel 4
+          DESTDIR=$(pwd)/tmp cmake \
+            --install tmp/SDL
+          cmake \
+            -S libs/SDL_image \
+            -B tmp/SDL_image \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D SDL2IMAGE_VENDORED=ON \
+            -D BUILD_SHARED_LIBS=OFF \
+            -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
+          cmake \
+            --build tmp/SDL_image \
+            --parallel 4
+          DESTDIR=$(pwd)/tmp cmake \
+            --install tmp/SDL_image
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
         run: >
           cmake
           -D CMAKE_BUILD_TYPE=Release
           -D OPENLIERO_BUILD_TCTOOL=ON
 
-      - name: Build
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          cmake
+          -D CMAKE_BUILD_TYPE=Release
+          -D OPENLIERO_BUILD_TCTOOL=ON
+          -D OPENLIERO_VENDORED_DEPS=ON
+          -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          cmake
+          --build .
+          --config Release
+          --parallel 4
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
         run: >
           cmake
           --build .
