@@ -97,8 +97,8 @@ jobs:
           cmake
           -D CMAKE_BUILD_TYPE=Release
           -D OPENLIERO_BUILD_TCTOOL=ON
-            -D CMAKE_C_COMPILER_LAUNCHER=sccache
-            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -D CMAKE_C_COMPILER_LAUNCHER=sccache
+          -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Configure CMake (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
