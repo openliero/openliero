@@ -45,6 +45,10 @@ jobs:
           version: 2-latest
           version-sdl-image: 2-latest
 
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
+
       - name: Build vendored dependencies (Linux)
         if: runner.os == 'Linux'
         run: >
