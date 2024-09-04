@@ -28,6 +28,9 @@ jobs:
             os: ubuntu-latest
           - name: windows
             os: windows-latest
+          - name: macos
+            os: macos-latest
+            extra-flags: -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
     steps:
       - name: Checkout repository
@@ -49,8 +52,12 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
 
-      - name: Build vendored dependencies (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake
+
+      - name: Build vendored dependencies (Linux/macOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         run: >
           cmake \
             -S libs/SDL \
@@ -58,7 +65,7 @@ jobs:
             -D BUILD_SHARED_LIBS=OFF \
             -D CMAKE_BUILD_TYPE=Release \
             -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -D SDL_TEST=OFF
+            -D SDL_TEST=OFF ${{ matrix.extra-flags }}
           cmake \
             --build tmp/SDL \
             --parallel 4
@@ -71,7 +78,7 @@ jobs:
             -D SDL2IMAGE_VENDORED=ON \
             -D BUILD_SHARED_LIBS=OFF \
             -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
+            -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local ${{ matrix.extra-flags }}
           cmake \
             --build tmp/SDL_image \
             --parallel 4
@@ -85,14 +92,15 @@ jobs:
           -D CMAKE_BUILD_TYPE=Release
           -D OPENLIERO_BUILD_TCTOOL=ON
 
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
+      - name: Configure CMake (Linux/macOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         run: >
           cmake
           -D CMAKE_BUILD_TYPE=Release
           -D OPENLIERO_BUILD_TCTOOL=ON
           -D OPENLIERO_VENDORED_DEPS=ON
           -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
+          ${{ matrix.extra-flags }}
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
@@ -102,8 +110,8 @@ jobs:
           --config Release
           --parallel 4
 
-      - name: Build (Linux)
-        if: runner.os == 'Linux'
+      - name: Build (Linux/macOS)
+        if: runner.os == 'Linux' || runner.os == 'macOS'
         run: >
           cmake
           --build .
@@ -145,11 +153,23 @@ jobs:
           name: windows-build
           path: windows-build
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+          path: macos-build
+
       - name: Create archive (Linux)
         run: |
           chmod +x linux-build/openliero linux-build/tctool
           cd linux-build
           tar cfJ liero-linux-x64-${{ github.sha }}.tar.xz *
+          cd ..
+
+      - name: Create archive (macOS)
+        run: |
+          chmod +x macos-build/openliero macos-build/tctool
+          cd macos-build
+          tar cfJ liero-macos-universal-${{ github.sha }}.tar.xz *
           cd ..
 
       - name: Create archive (Windows)
@@ -176,3 +196,4 @@ jobs:
           files: |
             linux-build/liero-linux-x64-${{ github.sha }}.tar.xz
             windows-build/liero-windows-x64-${{ github.sha }}.zip
+            macos-build/liero-macos-universal-${{ github.sha }}.tar.xz
