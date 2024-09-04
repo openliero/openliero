@@ -58,10 +58,6 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
 
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: brew install cmake
-
       - name: Build vendored dependencies (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
         run: >
