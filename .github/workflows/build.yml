@@ -30,7 +30,7 @@ jobs:
             os: windows-latest
           - name: macos
             os: macos-latest
-            extra-flags: -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+            extra-flags: -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" -D CMAKE_OSX_DEPLOYMENT_TARGET="10.13"
 
     steps:
       - name: Checkout repository
