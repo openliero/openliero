@@ -14,6 +14,9 @@ on:  # yamllint disable-line rule:truthy
 permissions:
   contents: write
 
+env:
+  SCCACHE_GHA_ENABLED: true
+
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -37,6 +40,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Cache the build
+        uses: mozilla-actions/sccache-action@v0.0.5
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
@@ -65,6 +71,8 @@ jobs:
             -D BUILD_SHARED_LIBS=OFF \
             -D CMAKE_BUILD_TYPE=Release \
             -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -D SDL_TEST=OFF ${{ matrix.extra-flags }}
           cmake \
             --build tmp/SDL \
@@ -78,6 +86,8 @@ jobs:
             -D SDL2IMAGE_VENDORED=ON \
             -D BUILD_SHARED_LIBS=OFF \
             -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local ${{ matrix.extra-flags }}
           cmake \
             --build tmp/SDL_image \
@@ -91,6 +101,8 @@ jobs:
           cmake
           -D CMAKE_BUILD_TYPE=Release
           -D OPENLIERO_BUILD_TCTOOL=ON
+            -D CMAKE_C_COMPILER_LAUNCHER=sccache
+            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Configure CMake (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -100,6 +112,8 @@ jobs:
           -D OPENLIERO_BUILD_TCTOOL=ON
           -D OPENLIERO_VENDORED_DEPS=ON
           -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
+          -D CMAKE_C_COMPILER_LAUNCHER=sccache
+          -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
           ${{ matrix.extra-flags }}
 
       - name: Build (Windows)
