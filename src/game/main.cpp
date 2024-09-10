@@ -20,10 +20,6 @@
 #include <exception>
 #include <gvl/math/cmwc.hpp>
 
-#if __APPLE__
-#define gameEntry SDL_main
-#endif
-
 void benchAll();
 
 int gameEntry(int argc, char* argv[])

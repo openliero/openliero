@@ -9,23 +9,16 @@ project(openliero
 # options at top so they're easy to find
 option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
+option(OPENLIERO_VENDORED_DEPS "Use vendored dependencies" OFF)
 
 # sane CMake defaults
-if(NOT DEFINED CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 11)
-endif()
-
-if(NOT DEFINED CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
-
-if(NOT DEFINED CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_BUILD_TYPE Release)
 
 # find dependencies
 find_package(SDL2 REQUIRED)
-find_package(SDL2_Image REQUIRED)
+find_package(SDL2_image REQUIRED)
 add_subdirectory(libs/miniz)
 
 # TODO get rid of this kludgy hack
@@ -96,29 +89,60 @@ set(GAME_SOURCES ${SOURCES}
   src/game/menu/timeBehavior.cpp
 )
 
-if(APPLE)
-  set(GAME_SOURCES ${GAME_SOURCES} src/game/SDLmain.m)
-
-  # Populate RESOURCE_FILES with files to copy into the .app Resources/ directory.
-  file(GLOB_RECURSE RESOURCE_FILES pkg/*.cfg pkg/TC/* pkg/*.icns)
-else()
-  set(GAME_SOURCES ${GAME_SOURCES} src/game/sdlmain.cpp)
-endif()
-
 # game
 add_library(game ${GAME_SOURCES})
+if(OPENLIERO_VENDORED_DEPS)
+  target_link_libraries(game
+    SDL2::SDL2-static
+    SDL2_image::SDL2_image-static
+  )
+else()
+  target_link_libraries(game
+    SDL2::SDL2
+    SDL2_image::SDL2_image
+  )
+endif()
+
 target_link_libraries(game
-  SDL2::SDL2
-  SDL2_image::SDL2_image
   miniz
 )
+
 if(APPLE)
-  add_executable(openliero MACOSX_BUNDLE src/game/main.cpp)
+  add_executable(openliero src/game/sdlmain.cpp)
+# Commented out code creates a proper bundle, but the app does not run for ... unknown reasons?
+# Anyway, enjoy your weird CLI app, macOS users. :(
+#  # https://stackoverflow.com/questions/41121000/cmake-os-x-bundle-recursively-copy-directory-to-resources/65519828#65519828
+#  # CC-BY-SA-4.0
+#  function(resource VAR SOURCE_PATH DESTINATION PATTERN)
+#    file(GLOB_RECURSE _LIST CONFIGURE_DEPENDS ${SOURCE_PATH}/${PATTERN})
+#    foreach (RESOURCE ${_LIST})
+#      get_filename_component(_PARENT ${RESOURCE} DIRECTORY)
+#      if (${_PARENT} STREQUAL ${SOURCE_PATH})
+#        set(_DESTINATION ${DESTINATION})
+#      else ()
+#        file(RELATIVE_PATH _DESTINATION ${SOURCE_PATH} ${_PARENT})
+#        set(_DESTINATION ${DESTINATION}/${_DESTINATION})
+#      endif ()
+#      set_property(SOURCE ${RESOURCE} PROPERTY MACOSX_PACKAGE_LOCATION ${_DESTINATION})
+#    endforeach (RESOURCE)
+#    set(${VAR} ${_LIST} PARENT_SCOPE)
+#  endfunction()
+#
+#  resource(PROFILES "${CMAKE_CURRENT_SOURCE_DIR}/Profiles" Resources/Profiles *.lpf)
+#  resource(RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/Resources" Resources/Resources *.png)
+#  resource(SETUPS "${CMAKE_CURRENT_SOURCE_DIR}/Setups" Resources/Setups *.cfg)
+#  resource(TC "${CMAKE_CURRENT_SOURCE_DIR}/TC" Resources/TC *)
+#  resource(ICON "${CMAKE_CURRENT_SOURCE_DIR}/pkg" Resources liero.icns)
+#
+#  set(RESOURCE_FILES ${PROFILES} ${RESOURCES} ${SETUPS} ${TC} ${ICON})
+#
+#  add_executable(openliero MACOSX_BUNDLE src/game/sdlmain.cpp "${RESOURCE_FILES}")
 elseif(WIN32)
   add_executable(openliero WIN32 src/game/sdlmain.cpp pkg/win32_icon.rc)
 else()
-  add_executable(openliero src/game/main.cpp)
+  add_executable(openliero src/game/sdlmain.cpp)
 endif()
+
 target_link_libraries(openliero PRIVATE game)
 
 if(OPENLIERO_BUILD_TCTOOL)
@@ -129,10 +153,21 @@ if(OPENLIERO_BUILD_TCTOOL)
   )
 
   add_library(tc ${TC_TOOL_SOURCES})
+
+  if(OPENLIERO_VENDORED_DEPS)
+    target_link_libraries(tc
+      SDL2::SDL2-static
+    )
+  else()
+    target_link_libraries(tc
+      SDL2::SDL2
+    )
+  endif()
+
   target_link_libraries(tc
-    SDL2::SDL2
     miniz
   )
+
   add_executable(tctool ${TC_TOOL_SOURCES})
   target_link_libraries(tctool PRIVATE tc)
 endif()
@@ -145,8 +180,18 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
     src/video_tool/video_recorder.c
   )
   add_library(vt ${VIDEO_TOOL_SOURCES})
+
+  if(OPENLIERO_VENDORED_DEPS)
+  target_link_libraries(vt
+    SDL2::SDL2-static
+  )
+  else()
   target_link_libraries(vt
     SDL2::SDL2
+  )
+  endif()
+
+  target_link_libraries(vt
     miniz
     avcodec
     avformat
@@ -168,18 +213,4 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   )
   add_executable(videotool ${VIDEO_TOOL_SOURCES})
   target_link_libraries(videotool PRIVATE vt)
-endif()
-
-if(APPLE)
-  set_target_properties(openliero PROPERTIES MACOSX_BUNDLE TRUE)
-  set_target_properties(openliero PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in")
-  set(MACOSX_BUNDLE_ICON_FILE liero)
-
-  # Preserve directory structure when copying contents of pkg/ to the .app Resources/ directory.
-  foreach(absolute_path ${RESOURCE_FILES})
-    file(RELATIVE_PATH relative_path "${CMAKE_CURRENT_SOURCE_DIR}/pkg" ${absolute_path})
-    get_filename_component(relative_path ${relative_path} DIRECTORY)
-    set_source_files_properties(${absolute_path}
-      PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${relative_path}")
-  endforeach(absolute_path)
 endif()
