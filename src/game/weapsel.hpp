@@ -1,5 +1,4 @@
-#ifndef LIERO_WEAPSEL_HPP
-#define LIERO_WEAPSEL_HPP
+#pragma once
 
 #include "game.hpp"
 #include "menu/menu.hpp"
@@ -31,5 +30,3 @@ struct WeaponSelection
 };
 
 //void selectWeapons(Game& game);
-
-#endif // LIERO_WEAPSEL_HPP

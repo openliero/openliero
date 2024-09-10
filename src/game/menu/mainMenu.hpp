@@ -1,5 +1,4 @@
-#ifndef LIERO_MENU_MAINMENU_HPP
-#define LIERO_MENU_MAINMENU_HPP
+#pragma once
 
 #include "menu.hpp"
 
@@ -29,5 +28,3 @@ struct MainMenu : Menu
 
 	virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item);
 };
-
-#endif // LIERO_MENU_MAINMENU_HPP

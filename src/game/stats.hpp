@@ -1,5 +1,4 @@
-#ifndef LIERO_STATS_HPP
-#define LIERO_STATS_HPP
+#pragma once
 
 #include <vector>
 #include <type_traits>
@@ -109,5 +108,3 @@ vector<T> zip(vector<T>& src, vector<T> const& other, Op op)
 
 	return std::move(n);
 }
-
-#endif // LIERO_STATS_HPP

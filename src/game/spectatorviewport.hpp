@@ -1,5 +1,4 @@
-#ifndef LIERO_SPECTATORVIEWPORT_HPP
-#define LIERO_SPECTATORVIEWPORT_HPP
+#pragma once
 
 #include "game.hpp"
 #include "worm.hpp"
@@ -20,5 +19,3 @@ struct SpectatorViewport : Viewport
 	void draw(Game& game, Renderer& renderer, GameState state, bool isReplay);
 	void process(Game& game);
 };
-
-#endif // LIERO_SPECTATORVIEWPORT_HPP

@@ -1,5 +1,4 @@
-#ifndef LIERO_CONTROLLER_COMMON_CONTROLLER_HPP
-#define LIERO_CONTROLLER_COMMON_CONTROLLER_HPP
+#pragma once
 
 #include "controller.hpp"
 
@@ -12,5 +11,3 @@ struct CommonController : Controller
 	bool inverseFrameSkip;
 	int cycles;
 };
-
-#endif // LIERO_CONTROLLER_COMMON_CONTROLLER_HPP

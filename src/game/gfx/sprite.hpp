@@ -1,5 +1,4 @@
-#ifndef UUID_FB823C685B8D47570B89508CD25CC4A6
-#define UUID_FB823C685B8D47570B89508CD25CC4A6
+#pragma once
 
 #include <vector>
 #include <cstdio>
@@ -40,5 +39,3 @@ struct SpriteSet
 
 	void allocate(int width, int height, int count);
 };
-
-#endif // UUID_FB823C685B8D47570B89508CD25CC4A6

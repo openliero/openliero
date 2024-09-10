@@ -1,5 +1,4 @@
-#ifndef LIERO_GFX_RENDERER_HPP
-#define LIERO_GFX_RENDERER_HPP
+#pragma once
 
 #include "../common.hpp"
 #include "../rand.hpp"
@@ -26,5 +25,3 @@ struct Renderer
 	int renderResX = 320;
 	int renderResY = 200;
 };
-
-#endif // LIERO_GFX_RENDERER_HPP

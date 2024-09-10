@@ -1,5 +1,4 @@
-#ifndef LIERO_SETTINGS_HPP
-#define LIERO_SETTINGS_HPP
+#pragma once
 
 #include "worm.hpp"
 #include <string>
@@ -415,5 +414,3 @@ void archive_text(Settings& settings, Archive& ar)
 
 	#undef S
 }
-
-#endif // LIERO_SETTINGS_HPP

@@ -1,5 +1,4 @@
-#ifndef LIERO_PREDICTIVE_AI_HPP
-#define LIERO_PREDICTIVE_AI_HPP
+#pragma once
 
 #include <SDL.h>
 
@@ -436,5 +435,3 @@ struct FollowAI : WormAI, AiContext
 	Weights weights;
 
 };
-
-#endif // LIERO_PREDICTIVE_AI_HPP

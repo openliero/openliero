@@ -1,5 +1,4 @@
-#ifndef LIERO_GFX_BITMAP_HPP
-#define LIERO_GFX_BITMAP_HPP
+#pragma once
 
 #include "color.hpp"
 #include <cstring>
@@ -63,5 +62,3 @@ struct Bitmap : gvl::noncopyable
 		pixels = 0;
 	}
 };
-
-#endif // LIERO_GFX_BITMAP_HPP

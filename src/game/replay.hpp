@@ -1,5 +1,4 @@
-#ifndef UUID_4CF92C398C724F883A02E8A68FE1584F
-#define UUID_4CF92C398C724F883A02E8A68FE1584F
+#pragma once
 
 #include <gvl/io2/stream.hpp>
 #include <gvl/serialization/context.hpp>
@@ -96,5 +95,3 @@ struct ReplayReader : Replay
 
 	gvl::octet_reader reader;
 };
-
-#endif // UUID_4CF92C398C724F883A02E8A68FE1584F

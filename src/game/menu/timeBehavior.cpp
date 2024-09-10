@@ -1,4 +1,3 @@
-
 #include "timeBehavior.hpp"
 
 #include "menu.hpp"

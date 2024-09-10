@@ -1,5 +1,4 @@
-#ifndef LIERO_WORK_QUEUE_HPP
-#define LIERO_WORK_QUEUE_HPP
+#pragma once
 
 #include <SDL.h>
 #include <SDL_atomic.h>
@@ -161,5 +160,3 @@ struct WorkQueue
 
 	SDL_Thread* threads[8];
 };
-
-#endif // LIERO_WORK_QUEUE_HPP

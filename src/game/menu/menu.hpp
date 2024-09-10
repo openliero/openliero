@@ -1,5 +1,4 @@
-#ifndef UUID_3DC24B15AD67494EEAB541B4AE253D0F
-#define UUID_3DC24B15AD67494EEAB541B4AE253D0F
+#pragma once
 
 #include <SDL.h>
 #include <cstddef>
@@ -206,5 +205,3 @@ struct Menu
 private:
 	int selection_; // Global index
 };
-
-#endif // UUID_3DC24B15AD67494EEAB541B4AE253D0F

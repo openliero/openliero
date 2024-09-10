@@ -1,5 +1,4 @@
-#ifndef UUID_96141CB1E20547016970B28195515A14
-#define UUID_96141CB1E20547016970B28195515A14
+#pragma once
 
 #include <SDL.h>
 
@@ -27,5 +26,3 @@ inline bool isExtendedKey( uint32_t k ) {
 }
 
 const int JoyAxisThreshold = 10000;
-
-#endif // UUID_96141CB1E20547016970B28195515A14

@@ -1,5 +1,4 @@
-#ifndef LIERO_CONTROLLER_LOCAL_CONTROLLER_HPP
-#define LIERO_CONTROLLER_LOCAL_CONTROLLER_HPP
+#pragma once
 
 #include "commonController.hpp"
 
@@ -41,5 +40,3 @@ struct LocalController : CommonController
 	bool goingToMenu;
 	std::unique_ptr<ReplayWriter> replay;
 };
-
-#endif // LIERO_CONTROLLER_LOCAL_CONTROLLER_HPP

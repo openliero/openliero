@@ -1,5 +1,4 @@
-#ifndef LIERO_FILESYSTEM_HPP
-#define LIERO_FILESYSTEM_HPP
+#pragma once
 
 #include <string>
 #include <cstdio>
@@ -156,5 +155,3 @@ struct FsNode
 		return s;
 	}
 };
-
-#endif // LIERO_FILESYSTEM_HPP

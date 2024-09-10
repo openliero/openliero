@@ -1,5 +1,4 @@
-#ifndef LIERO_MATERIAL_HPP
-#define LIERO_MATERIAL_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -29,5 +28,3 @@ struct Material
 
 	uint8_t flags;
 };
-
-#endif // LIERO_MATERIAL_HPP

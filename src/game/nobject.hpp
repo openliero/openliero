@@ -1,5 +1,4 @@
-#ifndef LIERO_NOBJECT_HPP
-#define LIERO_NOBJECT_HPP
+#pragma once
 
 #include "math.hpp"
 #include "exactObjectList.hpp"
@@ -64,5 +63,3 @@ struct NObject : ExactObjectListBase
 	WormWeapon* firedBy;
 	bool hasHit;
 };
-
-#endif // LIERO_NOBJECT_HPP

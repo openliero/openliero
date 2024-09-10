@@ -1,5 +1,4 @@
-#ifndef LIERO_SFX_HPP
-#define LIERO_SFX_HPP
+#pragma once
 
 #if !DISABLE_SOUND
 #include "mixer/mixer.hpp"
@@ -69,7 +68,3 @@ struct DefaultSoundPlayer : SoundPlayer
 		sfx.stop(id);
 	}
 };
-
-
-
-#endif // LIERO_SFX_HPP

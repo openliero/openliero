@@ -1,5 +1,4 @@
-#ifndef LIERO_CONSOLE_HPP
-#define LIERO_CONSOLE_HPP
+#pragma once
 
 #include <string>
 
@@ -11,5 +10,3 @@ void writeLine(std::string const& str);
 void writeWarning(std::string const& str);
 
 }
-
-#endif // LIERO_CONSOLE_HPP

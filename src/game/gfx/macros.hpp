@@ -1,5 +1,4 @@
-#ifndef UUID_16A8D91C6BEA4174A45E11A5F85FB93C
-#define UUID_16A8D91C6BEA4174A45E11A5F85FB93C
+#pragma once
 
 inline uint8_t choose(uint8_t this_, uint8_t if_this, uint8_t is_different_from_this, uint8_t otherwise_this)
 {
@@ -168,5 +167,3 @@ inline uint8_t choose(uint8_t this_, uint8_t if_this, uint8_t is_different_from_
 	if(right > 0) width -= right; \
 	if(width <= 0 || height <= 0) return; \
 }
-
-#endif // UUID_16A8D91C6BEA4174A45E11A5F85FB93C

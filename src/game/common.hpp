@@ -1,5 +1,4 @@
-#ifndef UUID_9E238CFB9F074A3A432E22AE5B8EE5FB
-#define UUID_9E238CFB9F074A3A432E22AE5B8EE5FB
+#pragma once
 
 #include "gfx/font.hpp"
 #include "weapon.hpp"
@@ -178,5 +177,3 @@ struct Common
 	bool writeTrace;
 #endif
 };
-
-#endif // UUID_9E238CFB9F074A3A432E22AE5B8EE5FB

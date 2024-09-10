@@ -1,5 +1,4 @@
-#ifndef UUID_C2D646F783444E7630AA27BB8F6C0B15
-#define UUID_C2D646F783444E7630AA27BB8F6C0B15
+#pragma once
 
 #include "menu.hpp"
 
@@ -42,5 +41,3 @@ struct HiddenMenu : Menu
 
 	int paletteColor;
 };
-
-#endif // UUID_C2D646F783444E7630AA27BB8F6C0B15

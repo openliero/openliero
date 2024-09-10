@@ -1,6 +1,3 @@
-#ifndef UUID_DC1D9513CDD34960AB8A648004DA149D
-#define UUID_DC1D9513CDD34960AB8A648004DA149D
-
 #include <SDL.h>
 
 #include "gfx.hpp"
@@ -153,5 +150,3 @@ catch(std::exception&)
 	SDL_Quit();
 	throw;
 }
-
-#endif // UUID_DC1D9513CDD34960AB8A648004DA149D

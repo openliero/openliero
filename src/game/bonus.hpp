@@ -1,5 +1,4 @@
-#ifndef LIERO_BONUS_HPP
-#define LIERO_BONUS_HPP
+#pragma once
 
 #include "math.hpp"
 #include "exactObjectList.hpp"
@@ -22,5 +21,3 @@ struct Bonus : ExactObjectListBase
 
 	void process(Game& game);
 };
-
-#endif // LIERO_BONUS_HPP

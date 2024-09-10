@@ -1,5 +1,4 @@
-#ifndef UUID_5BD6F9D1EBD64180EE632D8970906BDA
-#define UUID_5BD6F9D1EBD64180EE632D8970906BDA
+#pragma once
 
 #include <cstdint>
 
@@ -11,5 +10,3 @@ typedef struct Color {
 	uint8_t b;
 	uint8_t unused;
 } Color;
-
-#endif // UUID_5BD6F9D1EBD64180EE632D8970906BDA

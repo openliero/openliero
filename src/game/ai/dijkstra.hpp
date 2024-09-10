@@ -1,5 +1,4 @@
-#ifndef LIERO_AI_DIJKSTRA_HPP
-#define LIERO_AI_DIJKSTRA_HPP
+#pragma once
 
 #include <gvl/containers/pairing_heap.hpp>
 #include <gvl/math/vec.hpp>
@@ -279,5 +278,3 @@ struct dijkstra_level : dijkstra_state<level_cell*, dijkstra_level>
 			c.reset();
 	}
 };
-
-#endif // LIERO_AI_DIJKSTRA_HPP

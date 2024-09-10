@@ -1,4 +1,3 @@
-
 #include "booleanSwitchBehavior.hpp"
 
 #include "menu.hpp"

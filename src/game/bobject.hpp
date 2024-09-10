@@ -1,5 +1,4 @@
-#ifndef LIERO_BOBJECT_HPP
-#define LIERO_BOBJECT_HPP
+#pragma once
 
 #include "math.hpp"
 #include "fastObjectList.hpp"
@@ -13,5 +12,3 @@ struct BObject
 	fixedvec pos, vel;
 	int color;
 };
-
-#endif // LIERO_BOBJECT_HPP
