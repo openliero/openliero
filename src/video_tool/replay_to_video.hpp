@@ -1,5 +1,4 @@
-#ifndef REPLAY_TO_VIDEO_HPP
-#define REPLAY_TO_VIDEO_HPP
+#pragma once
 
 #include <memory>
 #include <string>
@@ -10,5 +9,3 @@ void replayToVideo(
     bool spectator,
 	std::string const& fullPath,
 	std::string const& replayVideoName);
-
-#endif // REPLAY_TO_VIDEO_HPP

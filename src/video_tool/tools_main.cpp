@@ -1,6 +1,3 @@
-#ifndef UUID_8615289728154E2FB9B179C2745D5FA9
-#define UUID_8615289728154E2FB9B179C2745D5FA9
-
 #include "game/reader.hpp"
 #include "game/filesystem.hpp"
 #include "game/text.hpp"
@@ -113,5 +110,3 @@ catch(std::exception& ex)
 	//Console::waitForAnyKey();
 	return 1;
 }
-
-#endif // UUID_8615289728154E2FB9B179C2745D5FA9
