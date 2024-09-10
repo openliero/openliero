@@ -20,6 +20,7 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 add_subdirectory(libs/miniz)
+add_subdirectory(src/gvl)
 
 # TODO get rid of this kludgy hack
 include_directories(
@@ -57,14 +58,6 @@ set(SOURCES
   src/game/gfx/sprite.cpp
   src/game/mixer/mixer.cpp
   src/game/mixer/player.cpp
-  src/gvl/system/system.c
-  src/gvl/support/bits.c
-  src/gvl/support/debug.cpp
-  src/gvl/support/platform.cpp
-  src/gvl/support/profile.cpp
-  src/gvl/io2/stream.cpp
-  src/gvl/io2/convert.cpp
-  src/gvl/containers/list.cpp
 )
 
 set(GAME_SOURCES ${SOURCES}
@@ -105,6 +98,7 @@ endif()
 
 target_link_libraries(game
   miniz
+  gvl
 )
 
 if(APPLE)
@@ -166,6 +160,7 @@ if(OPENLIERO_BUILD_TCTOOL)
 
   target_link_libraries(tc
     miniz
+    gvl
   )
 
   add_executable(tctool ${TC_TOOL_SOURCES})
@@ -193,6 +188,7 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
 
   target_link_libraries(vt
     miniz
+    gvl
     avcodec
     avformat
     avutil
