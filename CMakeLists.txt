@@ -109,6 +109,34 @@ target_link_libraries(game
 
 if(APPLE)
   add_executable(openliero src/game/sdlmain.cpp)
+# Commented out code creates a proper bundle, but the app does not run for ... unknown reasons?
+# Anyway, enjoy your weird CLI app, macOS users. :(
+#  # https://stackoverflow.com/questions/41121000/cmake-os-x-bundle-recursively-copy-directory-to-resources/65519828#65519828
+#  # CC-BY-SA-4.0
+#  function(resource VAR SOURCE_PATH DESTINATION PATTERN)
+#    file(GLOB_RECURSE _LIST CONFIGURE_DEPENDS ${SOURCE_PATH}/${PATTERN})
+#    foreach (RESOURCE ${_LIST})
+#      get_filename_component(_PARENT ${RESOURCE} DIRECTORY)
+#      if (${_PARENT} STREQUAL ${SOURCE_PATH})
+#        set(_DESTINATION ${DESTINATION})
+#      else ()
+#        file(RELATIVE_PATH _DESTINATION ${SOURCE_PATH} ${_PARENT})
+#        set(_DESTINATION ${DESTINATION}/${_DESTINATION})
+#      endif ()
+#      set_property(SOURCE ${RESOURCE} PROPERTY MACOSX_PACKAGE_LOCATION ${_DESTINATION})
+#    endforeach (RESOURCE)
+#    set(${VAR} ${_LIST} PARENT_SCOPE)
+#  endfunction()
+#
+#  resource(PROFILES "${CMAKE_CURRENT_SOURCE_DIR}/Profiles" Resources/Profiles *.lpf)
+#  resource(RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/Resources" Resources/Resources *.png)
+#  resource(SETUPS "${CMAKE_CURRENT_SOURCE_DIR}/Setups" Resources/Setups *.cfg)
+#  resource(TC "${CMAKE_CURRENT_SOURCE_DIR}/TC" Resources/TC *)
+#  resource(ICON "${CMAKE_CURRENT_SOURCE_DIR}/pkg" Resources liero.icns)
+#
+#  set(RESOURCE_FILES ${PROFILES} ${RESOURCES} ${SETUPS} ${TC} ${ICON})
+#
+#  add_executable(openliero MACOSX_BUNDLE src/game/sdlmain.cpp "${RESOURCE_FILES}")
 elseif(WIN32)
   add_executable(openliero WIN32 src/game/sdlmain.cpp pkg/win32_icon.rc)
 else()
