@@ -1,5 +1,4 @@
-#ifndef GVL_IO2_FSTREAM_HPP
-#define GVL_IO2_FSTREAM_HPP
+#pragma once
 
 #include <cstdio>
 #include <stdexcept>
@@ -85,6 +84,3 @@ struct file_bucket_pipe : bucket_pipe
 };
 
 }
-
-
-#endif // GVL_IO2_FSTREAM_HPP

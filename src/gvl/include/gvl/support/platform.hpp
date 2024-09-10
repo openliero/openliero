@@ -1,5 +1,4 @@
-#ifndef UUID_E256FC00B8C44EBE85C8738284C064F6
-#define UUID_E256FC00B8C44EBE85C8738284C064F6
+# pragma once
 
 #include "gvl/support/platform.h"
 
@@ -28,5 +27,3 @@ private:
 }
 
 #endif
-
-#endif // UUID_E256FC00B8C44EBE85C8738284C064F6

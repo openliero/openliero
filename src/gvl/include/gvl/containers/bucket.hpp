@@ -1,5 +1,4 @@
-#ifndef GVL_BUCKET_HPP
-#define GVL_BUCKET_HPP
+# pragma once
 
 #include <new>
 #include <cstddef>
@@ -266,5 +265,3 @@ uint8_t const* bucket::get_ptr()
 }
 
 }
-
-#endif // GVL_BUCKET_HPP

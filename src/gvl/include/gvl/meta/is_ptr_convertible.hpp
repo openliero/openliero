@@ -1,5 +1,4 @@
-#ifndef GVL_META_IS_PTR_CONVERTIBLE_HPP
-#define GVL_META_IS_PTR_CONVERTIBLE_HPP
+#pragma once
 
 #include "gvl/meta/meta.hpp"
 
@@ -27,5 +26,3 @@ struct is_ptr_convertible
 };
 
 };
-
-#endif // GVL_META_IS_PTR_CONVERTIBLE_HPP

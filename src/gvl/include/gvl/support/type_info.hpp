@@ -2,8 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
-#ifndef UUID_6513633745E64712FFA04FBF1EB80401
-#define UUID_6513633745E64712FFA04FBF1EB80401
+#pragma once
 
 # include <typeinfo>
 # include <cstring>
@@ -99,5 +98,3 @@ inline char const* type_info::name() const
 }
 
 } // namespace gvl
-
-#endif // UUID_6513633745E64712FFA04FBF1EB80401

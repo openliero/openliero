@@ -1,5 +1,4 @@
-#ifndef UUID_63536246013C464DDB1F129027E54907
-#define UUID_63536246013C464DDB1F129027E54907
+#pragma once
 
 #include <algorithm> // For std::min, std::max
 
@@ -340,5 +339,3 @@ typedef basic_rect<int> rect;
 typedef basic_rect<float> frect;
 
 } // namespace gvl
-
-#endif // UUID_63536246013C464DDB1F129027E54907

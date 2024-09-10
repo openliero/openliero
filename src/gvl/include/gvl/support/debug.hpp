@@ -1,5 +1,4 @@
-#ifndef UUID_B28D1ACCA789486008A1FF8B92CF00C5
-#define UUID_B28D1ACCA789486008A1FF8B92CF00C5
+#pragma once
 
 #include <stdexcept>
 
@@ -51,5 +50,3 @@ void passert_fail(char const* cond, char const* file, int line, char const* msg)
 #define GVL_UNUSED(var) ((void)var)
 
 }
-
-#endif // UUID_B28D1ACCA789486008A1FF8B92CF00C5

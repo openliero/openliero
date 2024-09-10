@@ -1,5 +1,4 @@
-#ifndef UUID_DFBC6E7713BD45652D22AB8D4A57781B
-#define UUID_DFBC6E7713BD45652D22AB8D4A57781B
+#pragma once
 
 #define FOREACH(t_, i_, c_) for(t_::iterator i_ = (c_).begin(); i_ != (c_).end(); ++i_)
 #define CONST_FOREACH(t_, i_, c_) for(t_::const_iterator i_ = (c_).begin(); i_ != (c_).end(); ++i_)
@@ -10,5 +9,3 @@
 #define GVL_CONCAT(a, b) GVL_CONCAT_I(a, b)
 #define GVL_CONCAT_I(a, b) GVL_CONCAT_II(a ## b)
 #define GVL_CONCAT_II(res) res
-
-#endif // UUID_DFBC6E7713BD45652D22AB8D4A57781B

@@ -1,5 +1,4 @@
-#ifndef UUID_380EA8845AF747FA66DCB5B9DA57C409
-#define UUID_380EA8845AF747FA66DCB5B9DA57C409
+#pragma once
 
 namespace gvl
 {
@@ -14,5 +13,3 @@ struct archive_check_error : std::runtime_error
 
 
 } // namespace gvl
-
-#endif // UUID_380EA8845AF747FA66DCB5B9DA57C409

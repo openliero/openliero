@@ -1,5 +1,4 @@
-#ifndef UUID_BBDA02831ADD413B1A3552A8997B8324
-#define UUID_BBDA02831ADD413B1A3552A8997B8324
+#pragma once
 
 #include <cstddef>
 
@@ -240,5 +239,3 @@ typedef cmwc<4, 987654978> cmwc987654978;
 typedef xorshift<2, 9, 15> default_xorshift;
 
 } // namespace gvl
-
-#endif // UUID_BBDA02831ADD413B1A3552A8997B8324

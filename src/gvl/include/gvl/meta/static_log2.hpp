@@ -1,5 +1,4 @@
-#ifndef UUID_B1A45C6C76DE4AE4E7817095BE18B516
-#define UUID_B1A45C6C76DE4AE4E7817095BE18B516
+#pragma once
 
 #include "gvl/support/cstdint.hpp"
 
@@ -30,5 +29,3 @@ struct static_log2<0>
 
 
 }
-
-#endif // UUID_B1A45C6C76DE4AE4E7817095BE18B516

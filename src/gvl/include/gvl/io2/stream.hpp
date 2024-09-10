@@ -1,5 +1,4 @@
-#ifndef GVL_IO2_STREAM_HPP
-#define GVL_IO2_STREAM_HPP
+#pragma once
 
 #include <memory>
 
@@ -547,6 +546,3 @@ private:
 #endif
 
 }
-
-#endif // GVL_IO2_STREAM_HPP
-

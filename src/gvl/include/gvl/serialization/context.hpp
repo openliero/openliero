@@ -1,5 +1,4 @@
-#ifndef GVL_SERIALIZATION_CONTEXT_HPP
-#define GVL_SERIALIZATION_CONTEXT_HPP
+#pragma once
 
 #include <map>
 #include <vector>
@@ -178,5 +177,3 @@ struct default_serialization_context : serialization_context<default_serializati
 };
 
 } // namespace gvl
-
-#endif // GVL_SERIALIZATION_CONTEXT_HPP

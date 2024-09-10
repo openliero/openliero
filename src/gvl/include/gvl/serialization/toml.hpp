@@ -1,5 +1,4 @@
-#ifndef GVL_SERIALIZATION_TOML_HPP
-#define GVL_SERIALIZATION_TOML_HPP
+#pragma once
 
 #include <map>
 #include <string>
@@ -828,5 +827,3 @@ struct reader
 }
 
 }
-
-#endif // GVL_SERIALIZATION_TOML_HPP

@@ -1,5 +1,4 @@
-#ifndef UUID_D006EF6EB7A24020D1926ABC53D805D6
-#define UUID_D006EF6EB7A24020D1926ABC53D805D6
+#pragma once
 
 #include "gvl/support/cstdint.hpp"
 #include "gvl/support/platform.hpp"
@@ -278,5 +277,3 @@ GVL_INLINE bool is_power_of_two(uint32_t x) { return gvl_is_power_of_two(x) != 0
 
 }
 #endif
-
-#endif /* UUID_D006EF6EB7A24020D1926ABC53D805D6 */

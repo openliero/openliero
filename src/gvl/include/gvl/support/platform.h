@@ -1,6 +1,4 @@
-#ifndef UUID_7D332649F1E24EAC587F0386AD08B2CC
-#define UUID_7D332649F1E24EAC587F0386AD08B2CC
-
+# pragma once
 /* NOTE: Keep this usable from C */
 
 #include <stddef.h>
@@ -155,5 +153,3 @@
 /* This function checks whether the above inferred
 ** characteristics are correct. It will throw gvl::assert_failure if not. */
 void gvl_test_platform();
-
-#endif // UUID_7D332649F1E24EAC587F0386AD08B2CC

@@ -1,5 +1,4 @@
-#ifndef UUID_0B359775B44F45D98A1A938A7401BAD6
-#define UUID_0B359775B44F45D98A1A938A7401BAD6
+#pragma once
 
 #include <stdexcept>
 #include <utility>
@@ -130,5 +129,3 @@ struct prepared_division
 #endif
 
 }
-
-#endif // UUID_0B359775B44F45D98A1A938A7401BAD6

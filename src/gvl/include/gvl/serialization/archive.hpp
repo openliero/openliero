@@ -1,5 +1,4 @@
-#ifndef UUID_8FD050E2BE0F4345A60D1A8646927047
-#define UUID_8FD050E2BE0F4345A60D1A8646927047
+#pragma once
 
 #include <stdexcept>
 
@@ -582,5 +581,3 @@ struct hash_archive
 };*/
 
 } // namespace gvl
-
-#endif // UUID_8FD050E2BE0F4345A60D1A8646927047

@@ -1,5 +1,4 @@
-#ifndef UUID_EA9A2A74DD9448CF4ABAC285FDC42F3A
-#define UUID_EA9A2A74DD9448CF4ABAC285FDC42F3A
+#pragma once
 
 #include <vector>
 #include <string>
@@ -293,5 +292,3 @@ inline D& operator<<(basic_text_writer<D>& self_, cell& c)
 }
 
 }
-
-#endif // UUID_EA9A2A74DD9448CF4ABAC285FDC42F3A

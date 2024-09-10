@@ -1,5 +1,4 @@
-#ifndef GVL_META_HPP
-#define GVL_META_HPP
+#pragma once
 
 namespace gvl
 {
@@ -12,5 +11,3 @@ struct no_type
 
 
 }
-
-#endif // GVL_META_HPP

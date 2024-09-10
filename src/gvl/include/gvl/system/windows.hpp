@@ -1,5 +1,4 @@
-#ifndef UUID_DD46BBAEDAEE4CE00CF509AB923A7B46
-#define UUID_DD46BBAEDAEE4CE00CF509AB923A7B46
+#pragma once
 
 #include "gvl/support/platform.hpp"
 
@@ -29,5 +28,3 @@
 #include <windows.h>
 
 #endif
-
-#endif // UUID_DD46BBAEDAEE4CE00CF509AB923A7B46

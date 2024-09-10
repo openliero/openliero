@@ -1,5 +1,4 @@
-#ifndef UUID_604BD56BB2F2436A4CC319ACA78603F3
-#define UUID_604BD56BB2F2436A4CC319ACA78603F3
+#pragma once
 
 #include <cmath>
 
@@ -206,5 +205,3 @@ typedef basic_vec<float, 2> fvec2;
 typedef basic_vec<int, 2> ivec2;
 
 } // namespace gvl
-
-#endif // UUID_604BD56BB2F2436A4CC319ACA78603F3

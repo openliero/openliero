@@ -1,5 +1,4 @@
-#ifndef GVL_IO2_DEFLATE_FILTER_HPP
-#define GVL_IO2_DEFLATE_FILTER_HPP
+#pragma once
 
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include <miniz.h>
@@ -207,5 +206,3 @@ struct deflate_source : bucket_pipe, octet_reader
 };
 
 }
-
-#endif // GVL_IO2_DEFLATE_FILTER_HPP

@@ -1,5 +1,4 @@
-#ifndef UUID_D5923885C48B49588EAD94A276B131F0
-#define UUID_D5923885C48B49588EAD94A276B131F0
+#pragma once
 
 #include <iterator>
 #include <cstddef>
@@ -955,5 +954,3 @@ struct weak_list : list<T, Tag, dummy_delete>
 };
 
 } // namespace gvl
-
-#endif // UUID_D5923885C48B49588EAD94A276B131F0

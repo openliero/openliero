@@ -1,5 +1,4 @@
-#ifndef UUID_A0E64B040F4F41B4EC933B89A48C42C7
-#define UUID_A0E64B040F4F41B4EC933B89A48C42C7
+#pragma once
 
 #include "gvl/support/cstdint.hpp"
 
@@ -43,6 +42,3 @@ GVL_INLINE void sleep(uint32_t ms) { return gvl_sleep(ms); }
 
 }
 #endif
-
-#endif // UUID_A0E64B040F4F41B4EC933B89A48C42C7
-

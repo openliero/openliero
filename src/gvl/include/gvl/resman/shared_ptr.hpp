@@ -1,5 +1,4 @@
-#ifndef UUID_038DE51568F04236FF21B1A4AFF43D3C
-#define UUID_038DE51568F04236FF21B1A4AFF43D3C
+#pragma once
 
 #include <cassert>
 #include <algorithm>
@@ -463,6 +462,3 @@ shared_ptr<T> make_shared(T* ptr)
 }
 
 } // namespace gvl
-
-
-#endif // UUID_038DE51568F04236FF21B1A4AFF43D3C

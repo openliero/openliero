@@ -1,5 +1,4 @@
-#ifndef UUID_8F2AAEBF84EF4C73603D7DA6D0FD36F1
-#define UUID_8F2AAEBF84EF4C73603D7DA6D0FD36F1
+# pragma once
 
 #include <cstddef>
 #include <ostream>
@@ -78,5 +77,3 @@ void present_profile(std::ostream& str);
 #endif
 
 } // namespace gvl
-
-#endif // UUID_8F2AAEBF84EF4C73603D7DA6D0FD36F1

@@ -1,5 +1,4 @@
-#ifndef UUID_5F7548A068F9485B6759368B5BAE8157
-#define UUID_5F7548A068F9485B6759368B5BAE8157
+#pragma once
 
 #include <algorithm>
 
@@ -90,5 +89,3 @@ private:
 };
 
 } // namespace gvl
-
-#endif // UUID_5F7548A068F9485B6759368B5BAE8157

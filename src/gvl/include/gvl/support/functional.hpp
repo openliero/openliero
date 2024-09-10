@@ -1,5 +1,4 @@
-#ifndef UUID_64B1EAC4E4F545FA3B131FA346621126
-#define UUID_64B1EAC4E4F545FA3B131FA346621126
+#pragma once
 
 namespace gvl
 {
@@ -64,5 +63,3 @@ struct functor_wrapper
 #endif
 
 } // namespace gvl
-
-#endif // UUID_64B1EAC4E4F545FA3B131FA346621126

@@ -1,6 +1,4 @@
-#ifndef UUID_54B4E13DC6CC41B073E60A941244DFBB
-#define UUID_54B4E13DC6CC41B073E60A941244DFBB
-
+# pragma once
 // Adapted from PortAudio
 
 #if defined(__APPLE__)
@@ -68,5 +66,3 @@
 #      error Memory barriers are not defined on this system. You can still compile by defining ALLOW_SMP_DANGERS, but SMP safety will not be guaranteed.
 #   endif
 #endif
-
-#endif // UUID_54B4E13DC6CC41B073E60A941244DFBB

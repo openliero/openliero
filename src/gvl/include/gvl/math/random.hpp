@@ -1,5 +1,4 @@
-#ifndef UUID_F29926F3240844A09DCFB9B1828C7DC8
-#define UUID_F29926F3240844A09DCFB9B1828C7DC8
+#pragma once
 
 #include "gvl/support/debug.hpp"
 
@@ -70,6 +69,3 @@ struct prng_common
 };
 
 } // namespace gvl
-
-#endif // UUID_F29926F3240844A09DCFB9B1828C7DC8
-

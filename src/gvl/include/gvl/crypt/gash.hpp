@@ -1,5 +1,4 @@
-#ifndef GVL_GASH_HPP
-#define GVL_GASH_HPP
+#pragma once
 
 #include <utility>
 
@@ -230,5 +229,3 @@ struct hash_accumulator
 };
 
 }
-
-#endif // GVL_GASH_HPP

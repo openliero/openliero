@@ -1,5 +1,4 @@
-#ifndef UUID_BFFA58059B0C49630DD657937FF53E6C
-#define UUID_BFFA58059B0C49630DD657937FF53E6C
+#pragma once
 
 #include "gvl/support/platform.hpp"
 
@@ -53,5 +52,3 @@ GVL_INLINE void gvl_list_unlink(gvl_list_node* self)
 #ifdef __cplusplus
 }
 #endif
-
-#endif // UUID_BFFA58059B0C49630DD657937FF53E6C

@@ -1,5 +1,4 @@
-#ifndef UUID_EA12C28D969947BF0340D69440AE5D30
-#define UUID_EA12C28D969947BF0340D69440AE5D30
+#pragma once
 
 // NOTE: Keep this useable from C
 
@@ -96,5 +95,3 @@ typedef ptrdiff_t intptr_t;
 #define GVL_BITS_IN(t) (sizeof(t)*CHAR_BIT)
 
 #endif /* !GVL_GCC */
-
-#endif /* UUID_EA12C28D969947BF0340D69440AE5D30 */

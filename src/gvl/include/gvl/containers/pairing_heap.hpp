@@ -1,5 +1,4 @@
-#ifndef UUID_332507506BA94073DD795F88B83DFD8B
-#define UUID_332507506BA94073DD795F88B83DFD8B
+#pragma once
 
 #include <cstddef>
 #include <algorithm>
@@ -523,5 +522,3 @@ private:
 };
 
 }
-
-#endif // UUID_332507506BA94073DD795F88B83DFD8B

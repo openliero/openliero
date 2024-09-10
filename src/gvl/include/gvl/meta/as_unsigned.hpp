@@ -1,5 +1,4 @@
-#ifndef GVL_AS_UNSIGNED_HPP
-#define GVL_AS_UNSIGNED_HPP
+#pragma once
 
 namespace gvl
 {
@@ -24,5 +23,3 @@ AS_UNSIGNED_MAP(long, unsigned long)
 AS_UNSIGNED_MAP(long long, unsigned long long)
 
 }
-
-#endif // GVL_AS_UNSIGNED_HPP

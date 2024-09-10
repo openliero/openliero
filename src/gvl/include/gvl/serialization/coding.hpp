@@ -1,5 +1,4 @@
-#ifndef GVL_SERIALIZATION_CODING_HPP
-#define GVL_SERIALIZATION_CODING_HPP
+#pragma once
 
 #include <string>
 #include <stdexcept>
@@ -217,5 +216,3 @@ void read_string16(Reader& reader, std::string& dest)
 }*/
 
 }
-
-#endif // GVL_SERIALIZATION_CODING_HPP
