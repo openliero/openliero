@@ -1,5 +1,4 @@
-#ifndef LIERO_MIXER_PLAYER_HPP
-#define LIERO_MIXER_PLAYER_HPP
+#pragma once
 
 #include <gvl/resman/shared.hpp>
 
@@ -53,5 +52,3 @@ struct NullSoundPlayer : SoundPlayer
 	{
 	}
 };
-
-#endif // LIERO_MIXER_PLAYER_HPP

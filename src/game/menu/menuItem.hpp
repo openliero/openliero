@@ -1,5 +1,4 @@
-#ifndef UUID_68BF27AE54944A5A75C91BBAD19D89F9
-#define UUID_68BF27AE54944A5A75C91BBAD19D89F9
+#pragma once
 
 #include <string>
 #include "../gfx/color.hpp"
@@ -42,5 +41,3 @@ struct MenuItem
 	bool visible, selectable;
 	int id;
 };
-
-#endif // UUID_68BF27AE54944A5A75C91BBAD19D89F9

@@ -1,5 +1,4 @@
-#ifndef LIERO_TEXT_HPP
-#define LIERO_TEXT_HPP
+#pragma once
 
 #include <string>
 #include <cstring>
@@ -44,5 +43,3 @@ bool ciCompare(std::string const& a, std::string const& b);
 bool ciLess(std::string const& a, std::string const& b);
 // converts an extremely limited subset of UTF-8 to extended ASCII
 char utf8ToDOS(char* str);
-
-#endif // LIERO_TEXT_HPP

@@ -1,5 +1,4 @@
-#ifndef LIERO_LEVEL_HPP
-#define LIERO_LEVEL_HPP
+#pragma once
 
 #include <vector>
 #include <string>
@@ -132,5 +131,3 @@ struct Level
 	Palette origpal;
 	Material zeroMaterial;
 };
-
-#endif // LIERO_LEVEL_HPP

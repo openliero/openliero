@@ -1,5 +1,4 @@
-#ifndef UUID_3B614A27F8FE4D5D7E0254BE877C9E5F
-#define UUID_3B614A27F8FE4D5D7E0254BE877C9E5F
+#pragma once
 
 #include "integerBehavior.hpp"
 
@@ -19,6 +18,3 @@ struct TimeBehavior : IntegerBehavior
 
 	bool frames;
 };
-
-
-#endif // UUID_3B614A27F8FE4D5D7E0254BE877C9E5F

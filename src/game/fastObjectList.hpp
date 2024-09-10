@@ -1,5 +1,4 @@
-#ifndef UUID_A25E9863C68345C3B8E281AB7DFE5401
-#define UUID_A25E9863C68345C3B8E281AB7DFE5401
+#pragma once
 
 #include <cstddef>
 #include <cassert>
@@ -115,5 +114,3 @@ struct FastObjectList
 	std::vector<T> arr;
 	std::size_t count;
 };
-
-#endif // UUID_A25E9863C68345C3B8E281AB7DFE5401

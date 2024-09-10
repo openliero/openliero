@@ -1,5 +1,4 @@
-#ifndef LIERO_MATH_HPP
-#define LIERO_MATH_HPP
+#pragma once
 
 #include <gvl/math/vec.hpp>
 
@@ -37,5 +36,3 @@ inline int distanceTo(int x1, int y1, int x2, int y2)
 }
 
 void precomputeTables();
-
-#endif // LIERO_MATH_HPP

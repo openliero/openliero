@@ -1,5 +1,4 @@
-#ifndef UUID_0F083A4D564C4D79CA6387B1D0F1901E
-#define UUID_0F083A4D564C4D79CA6387B1D0F1901E
+#pragma once
 
 #include "itemBehavior.hpp"
 #include <functional>
@@ -30,5 +29,3 @@ struct BooleanSwitchBehavior : ItemBehavior
 	Common& common;
 	bool& v;
 };
-
-#endif // UUID_0F083A4D564C4D79CA6387B1D0F1901E

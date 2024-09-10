@@ -1,5 +1,4 @@
-#ifndef UUID_9059AB0F9EA54E1EDF52E7BF41433D0B
-#define UUID_9059AB0F9EA54E1EDF52E7BF41433D0B
+#pragma once
 
 #include "color.hpp"
 #include "sprite.hpp"
@@ -108,5 +107,3 @@ struct Heatmap
 };
 
 void drawHeatmap(Bitmap& scr, int x, int y, Heatmap& hm);
-
-#endif // UUID_9059AB0F9EA54E1EDF52E7BF41433D0B

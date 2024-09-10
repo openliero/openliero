@@ -1,5 +1,4 @@
-#ifndef UUID_171F520E38DF4A036E1AA3901EEA4801
-#define UUID_171F520E38DF4A036E1AA3901EEA4801
+#pragma once
 
 #include "itemBehavior.hpp"
 
@@ -28,5 +27,3 @@ struct EnumBehavior : ItemBehavior
 	uint32_t min, max;
 	bool brokenLeftRight;
 };
-
-#endif // UUID_171F520E38DF4A036E1AA3901EEA4801

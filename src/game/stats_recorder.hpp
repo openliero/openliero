@@ -1,5 +1,4 @@
-#ifndef STATS_RECORDER_HPP
-#define STATS_RECORDER_HPP
+#pragma once
 
 #include <chrono>
 #include "worm.hpp"
@@ -151,5 +150,3 @@ struct NormalStatsRecorder : StatsRecorder
 
 	//void write(Common& common, gvl::stream_ptr sink);
 };
-
-#endif // STATS_RECORDER_HPP

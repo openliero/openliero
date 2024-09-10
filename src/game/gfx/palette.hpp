@@ -1,5 +1,4 @@
-#ifndef UUID_74C8EE76D5564F2D8C7BBC9B26C16192
-#define UUID_74C8EE76D5564F2D8C7BBC9B26C16192
+#pragma once
 
 #include <cstdint>
 #include <gvl/support/debug.hpp>
@@ -56,5 +55,3 @@ struct Palette
 
 	void clear();
 };
-
-#endif // UUID_74C8EE76D5564F2D8C7BBC9B26C16192

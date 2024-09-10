@@ -1,5 +1,4 @@
-#ifndef LIERO_WORM_HPP
-#define LIERO_WORM_HPP
+#pragma once
 
 #include "math.hpp"
 #include "rand.hpp"
@@ -402,6 +401,3 @@ struct Worm : gvl::shared
 bool checkForWormHit(Game& game, int x, int y, int dist, Worm* ownWorm);
 bool checkForSpecWormHit(Game& game, int x, int y, int dist, Worm& w);
 int sqrVectorLength(int x, int y);
-
-
-#endif // LIERO_WORM_HPP

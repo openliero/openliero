@@ -1,5 +1,4 @@
-#ifndef VIDEOTEST_H
-#define VIDEOTEST_H
+#pragma once
 
 #include "libavformat/avformat.h"
 #include "libswscale/swscale.h"
@@ -21,5 +20,3 @@ int  vidrec_init(video_recorder* self, char const* filename, int width, int heig
 int  vidrec_write_audio_frame(video_recorder* self, int16_t* samples, int audio_input_frame_size);
 int  vidrec_write_video_frame(video_recorder* self, AVFrame* pic);
 int  vidrec_finalize(video_recorder* self);
-
-#endif // VIDEOTEST_H

@@ -1,5 +1,4 @@
-#ifndef LIERO_GFX_HPP
-#define LIERO_GFX_HPP
+#pragma once
 
 #include <SDL.h>
 #include <gvl/math/rect.hpp>
@@ -299,5 +298,3 @@ struct Gfx
 };
 
 extern Gfx gfx;
-
-#endif // LIERO_GFX_HPP

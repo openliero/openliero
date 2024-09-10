@@ -1,4 +1,3 @@
-
 #include "integerBehavior.hpp"
 
 #include "menu.hpp"

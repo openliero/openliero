@@ -1,5 +1,4 @@
-#ifndef UUID_9CD8C22BC14D4832AE2A859530FE6339
-#define UUID_9CD8C22BC14D4832AE2A859530FE6339
+#pragma once
 
 struct Level;
 struct Game;
@@ -37,7 +36,3 @@ struct Controller
 
 	virtual void swapLevel(Level& newLevel) = 0;
 };
-
-
-
-#endif // UUID_9CD8C22BC14D4832AE2A859530FE6339

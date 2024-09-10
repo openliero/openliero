@@ -1,5 +1,4 @@
-#ifndef LIERO_OBJECTLIST_HPP
-#define LIERO_OBJECTLIST_HPP
+#pragma once
 
 #include <cstddef>
 #include <cassert>
@@ -163,5 +162,3 @@ struct ObjectList
 	//ObjectListBase sentinel;
 	std::size_t count;
 };
-
-#endif // LIERO_OBJECTLIST_HPP

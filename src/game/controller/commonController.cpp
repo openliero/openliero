@@ -1,4 +1,3 @@
-
 #include "commonController.hpp"
 
 #include "../gfx.hpp"

@@ -1,5 +1,4 @@
-#ifndef UUID_3B31F81A4DBD4530E2E6F5ACC61DDDAB
-#define UUID_3B31F81A4DBD4530E2E6F5ACC61DDDAB
+#pragma once
 
 #include <cstdint>
 #include <vector>
@@ -27,5 +26,3 @@ std::vector<int16_t>& sfx_sound_data(sfx_sound* snd);
 
 void sfx_mixer_mix(sfx_mixer* self, void* output, unsigned long frame_count);
 //void sfx_mixer_fill(sfx_stream* str, uint32_t start, uint32_t frames);
-
-#endif // UUID_3B31F81A4DBD4530E2E6F5ACC61DDDAB

@@ -1,5 +1,4 @@
-#ifndef UUID_C5F17B0F3E6B43526CD95D90435B7596
-#define UUID_C5F17B0F3E6B43526CD95D90435B7596
+#pragma once
 
 #include "itemBehavior.hpp"
 
@@ -28,5 +27,3 @@ struct IntegerBehavior : ItemBehavior
 	bool percentage;
 	bool allowEntry;
 };
-
-#endif // UUID_C5F17B0F3E6B43526CD95D90435B7596

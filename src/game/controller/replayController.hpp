@@ -1,5 +1,4 @@
-#ifndef LIERO_CONTROLLER_REPLAY_CONTROLLER_HPP
-#define LIERO_CONTROLLER_REPLAY_CONTROLLER_HPP
+#pragma once
 
 #include "commonController.hpp"
 
@@ -49,5 +48,3 @@ struct ReplayController : CommonController
 	std::shared_ptr<Common> common;
 
 };
-
-#endif // LIERO_CONTROLLER_REPLAY_CONTROLLER_HPP

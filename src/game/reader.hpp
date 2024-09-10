@@ -1,5 +1,4 @@
-#ifndef LIERO_READER_HPP
-#define LIERO_READER_HPP
+#pragma once
 
 #include <cstdint>
 #include <cstdio>
@@ -85,5 +84,3 @@ struct ReaderFile : gvl::noncopyable
 		pos += l;
 	}
 };
-
-#endif // LIERO_READER_HPP

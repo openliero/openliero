@@ -1,3 +1,5 @@
+#pragma once
+
 #include <gvl/containers/pairing_heap.hpp>
 
 #include "../level.hpp"

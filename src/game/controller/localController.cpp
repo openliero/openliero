@@ -1,4 +1,3 @@
-
 #include "localController.hpp"
 
 #include <chrono>

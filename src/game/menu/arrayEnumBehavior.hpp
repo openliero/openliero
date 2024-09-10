@@ -1,5 +1,4 @@
-#ifndef UUID_CCCDF474CB704A62DC6F0AB0CBBD2EFD
-#define UUID_CCCDF474CB704A62DC6F0AB0CBBD2EFD
+#pragma once
 
 #include "enumBehavior.hpp"
 
@@ -25,5 +24,3 @@ struct ArrayEnumBehavior : EnumBehavior
 
 	std::string const* arr;
 };
-
-#endif // UUID_CCCDF474CB704A62DC6F0AB0CBBD2EFD

@@ -1,5 +1,4 @@
-#ifndef LIERO_CONSTANTS_HPP
-#define LIERO_CONSTANTS_HPP
+#pragma once
 
 #include <string>
 
@@ -163,6 +162,3 @@ enum
 
 
 // TODO: Move these to Common
-
-
-#endif // LIERO_CONSTANTS_HPP

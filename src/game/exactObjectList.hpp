@@ -1,5 +1,4 @@
-#ifndef LIERO_EXACTOBJECTLIST_HPP
-#define LIERO_EXACTOBJECTLIST_HPP
+#pragma once
 
 #include <cstddef>
 #include <cassert>
@@ -197,5 +196,3 @@ struct ExactObjectList
 
 	std::size_t count;
 };
-
-#endif // LIERO_EXACTOBJECTLIST_HPP

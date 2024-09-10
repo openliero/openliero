@@ -1,5 +1,4 @@
-#ifndef LIERO_LFS_HPP
-#define LIERO_LFS_HPP
+#pragma once
 
 // Tausworte 1965
 template<class UIntType, int w, int k, int q, int s, UIntType val>
@@ -73,6 +72,3 @@ struct LFS
 	UIntType wordmask; // avoid "left shift count >= width of type" warnings
 	UIntType value;
 };
-
-
-#endif // BOOST_RANDOM_LINEAR_FEEDBACK_SHIFT_HPP

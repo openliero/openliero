@@ -76,7 +76,6 @@ set(GAME_SOURCES ${SOURCES}
   src/game/menu/enumBehavior.cpp
   src/game/menu/hiddenMenu.cpp
   src/game/menu/integerBehavior.cpp
-  src/game/menu/itemBehavior.cpp
   src/game/menu/mainMenu.cpp
   src/game/menu/menu.cpp
   src/game/menu/menuItem.cpp

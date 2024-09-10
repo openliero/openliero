@@ -1,5 +1,4 @@
-#ifndef LIERO_SOBJECT_HPP
-#define LIERO_SOBJECT_HPP
+#pragma once
 
 #include "math.hpp"
 #include "exactObjectList.hpp"
@@ -40,5 +39,3 @@ struct SObject : ExactObjectListBase
 	int curFrame;
 	int animDelay;
 };
-
-#endif // LIERO_SOBJECT_HPP

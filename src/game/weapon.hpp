@@ -1,5 +1,4 @@
-#ifndef LIERO_WEAPON_HPP
-#define LIERO_WEAPON_HPP
+#pragma once
 
 #include "math.hpp"
 #include "exactObjectList.hpp"
@@ -96,6 +95,3 @@ struct WObject : ExactObjectListBase
 	WormWeapon* firedBy;
 	bool hasHit;
 };
-
-
-#endif // LIERO_WEAPON_HPP

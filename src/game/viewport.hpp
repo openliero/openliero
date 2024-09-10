@@ -1,5 +1,4 @@
-#ifndef LIERO_VIEWPORT_HPP
-#define LIERO_VIEWPORT_HPP
+#pragma once
 
 #include "game.hpp"
 #include "worm.hpp"
@@ -62,5 +61,3 @@ struct Viewport
 	virtual void draw(Game& game, Renderer& renderer, GameState state, bool isReplay);
 	virtual void process(Game& game);
 };
-
-#endif // LIERO_VIEWPORT_HPP

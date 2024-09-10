@@ -1,5 +1,4 @@
-#ifndef LIERO_MENU_FILESELECTOR_HPP
-#define LIERO_MENU_FILESELECTOR_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -327,5 +326,3 @@ struct FileSelector
 
 	//Menu menu;
 };
-
-#endif // LIERO_MENU_FILESELECTOR_HPP

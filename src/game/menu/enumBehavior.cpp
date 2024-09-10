@@ -1,4 +1,3 @@
-
 #include "enumBehavior.hpp"
 
 #include "menu.hpp"

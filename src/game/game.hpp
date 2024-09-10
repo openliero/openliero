@@ -1,5 +1,4 @@
-#ifndef LIERO_GAME_HPP
-#define LIERO_GAME_HPP
+#pragma once
 
 #include <vector>
 #include "level.hpp"
@@ -130,6 +129,3 @@ struct Game
 };
 
 bool checkRespawnPosition(Game& game, int x2, int y2, int oldX, int oldY, int x, int y);
-
-#endif // LIERO_GAME_HPP
-
