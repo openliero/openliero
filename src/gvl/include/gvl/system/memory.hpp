@@ -1,4 +1,4 @@
-# pragma once
+#pragma once
 // Adapted from PortAudio
 
 #if defined(__APPLE__)
