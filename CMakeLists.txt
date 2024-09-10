@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 
+# sane CMake defaults
+# these variables get set if they are not already defined
+set(CMAKE_C_STANDARD 99 CACHE STRING "The C standard to use" FORCE)
+set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use" FORCE)
+set(CMAKE_BUILD_TYPE Release CACHE STRING "The type of build to use" FORCE)
+
 project(openliero
   DESCRIPTION "A brutal subterranean shooter game"
   HOMEPAGE_URL https://github.com/openliero/openliero
@@ -10,11 +16,6 @@ project(openliero
 option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
 option(OPENLIERO_VENDORED_DEPS "Use vendored dependencies" OFF)
-
-# sane CMake defaults
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_BUILD_TYPE Release)
 
 # find dependencies
 find_package(SDL2 REQUIRED)
