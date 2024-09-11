@@ -29,6 +29,7 @@ Makefile
 build.ninja
 cmake_install.cmake
 *.xcodeproj/
+src/game/metadata.cpp
 
 # created by running Liero
 /Replays/

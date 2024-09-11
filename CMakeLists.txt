@@ -6,10 +6,15 @@ set(CMAKE_C_STANDARD 99 CACHE STRING "The C standard to use" FORCE)
 set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use" FORCE)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "The type of build to use" FORCE)
 
+# tell cmake we have goodies in the cmake/ directory
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(GenerateVersion)
+
 project(openliero
   DESCRIPTION "A brutal subterranean shooter game"
   HOMEPAGE_URL https://github.com/openliero/openliero
   LANGUAGES C CXX
+  VERSION "${VERSION_GIT_TAG}"
 )
 
 # options at top so they're easy to find
@@ -27,6 +32,12 @@ add_subdirectory(src/gvl)
 include_directories(
   src
   src/game
+)
+
+# embed version metadata in the code
+configure_file(
+  "${PROJECT_SOURCE_DIR}/pkg/metadata.cpp.in"
+  "${PROJECT_SOURCE_DIR}/src/game/metadata.cpp"
 )
 
 set(SOURCES
@@ -59,6 +70,7 @@ set(SOURCES
   src/game/gfx/sprite.cpp
   src/game/mixer/mixer.cpp
   src/game/mixer/player.cpp
+  src/game/metadata.cpp
 )
 
 set(GAME_SOURCES ${SOURCES}

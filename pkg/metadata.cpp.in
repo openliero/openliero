@@ -1,0 +1,22 @@
+#include "game/metadata.hpp"
+
+#define VERSION_GIT_TAG "@VERSION_GIT_TAG@"
+#define VERSION_GIT_HASH "@VERSION_GIT_HASH@"
+#define VERSION_GIT_DATE "@VERSION_GIT_DATE@"
+#define VERSION_GIT_TIME "@VERSION_GIT_TIME@"
+
+const char* build_version(void) {
+  return VERSION_GIT_TAG;
+}
+
+const char* build_hash(void) {
+  return VERSION_GIT_HASH;
+}
+
+const char* build_date(void) {
+  return VERSION_GIT_DATE;
+}
+
+const char* build_time(void) {
+  return VERSION_GIT_TIME;
+}
