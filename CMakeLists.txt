@@ -51,7 +51,6 @@ set(SOURCES
   src/game/math.cpp
   src/game/ninjarope.cpp
   src/game/nobject.cpp
-  src/game/rand.cpp
   src/game/settings.cpp
   src/game/sobject.cpp
   src/game/spectatorviewport.cpp
