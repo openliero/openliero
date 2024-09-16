@@ -74,7 +74,7 @@ set(SOURCES
 set(GAME_SOURCES ${SOURCES}
   src/game/gfx.cpp
   src/game/keys.cpp
-  src/game/main.cpp
+  src/game/gameEntry.cpp
   src/game/replay.cpp
   src/game/sfx.cpp
   src/game/weapsel.cpp
@@ -112,7 +112,7 @@ target_link_libraries(game
 )
 
 if(APPLE)
-  add_executable(openliero src/game/sdlmain.cpp)
+  add_executable(openliero src/game/main.cpp)
 # Commented out code creates a proper bundle, but the app does not run for ... unknown reasons?
 # Anyway, enjoy your weird CLI app, macOS users. :(
 #  # https://stackoverflow.com/questions/41121000/cmake-os-x-bundle-recursively-copy-directory-to-resources/65519828#65519828
@@ -140,11 +140,11 @@ if(APPLE)
 #
 #  set(RESOURCE_FILES ${PROFILES} ${RESOURCES} ${SETUPS} ${TC} ${ICON})
 #
-#  add_executable(openliero MACOSX_BUNDLE src/game/sdlmain.cpp "${RESOURCE_FILES}")
+#  add_executable(openliero MACOSX_BUNDLE src/game/main.cpp "${RESOURCE_FILES}")
 elseif(WIN32)
-  add_executable(openliero WIN32 src/game/sdlmain.cpp pkg/win32_icon.rc)
+  add_executable(openliero WIN32 src/game/main.cpp pkg/win32_icon.rc)
 else()
-  add_executable(openliero src/game/sdlmain.cpp)
+  add_executable(openliero src/game/main.cpp)
 endif()
 
 target_link_libraries(openliero PRIVATE game)
