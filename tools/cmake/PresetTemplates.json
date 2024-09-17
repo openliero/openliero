@@ -1,0 +1,52 @@
+{
+	"version": 4,
+	"configurePresets": [
+		{
+			"name": "default",
+			"hidden": true,
+			"generator": "Ninja Multi-Config",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"installDir": "${sourceDir}/install/${presetName}",
+			"cacheVariables": {
+				"CMAKE_C_STANDARD": "99",
+				"CMAKE_CXX_STANDARD": "11"
+			}
+		},
+		{
+			"name": "arm64",
+			"hidden": true,
+			"architecture": {
+				"value": "arm64",
+				"strategy": "external"
+			}
+		},
+		{
+			"name": "x64",
+			"hidden": true,
+			"architecture": {
+				"value": "x64",
+				"strategy": "external"
+			}
+		},
+		{
+			"name": "ci",
+			"hidden": true,
+			"inherits": "default",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_C_COMPILER_LAUNCHER": "sccache",
+				"CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
+				"OPENLIERO_USE_VCPKG": "ON",
+				"OPENLIERO_BUILD_TCTOOL": "ON"
+			}
+		},
+		{
+			"name": "macos",
+			"hidden": true,
+			"inherits": "default",
+			"cacheVariables": {
+				"CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
+			}
+		}
+	]
+}

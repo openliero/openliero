@@ -1,23 +1,312 @@
 {
-  "version": 6,
-  "configurePresets": [{
-    "name": "windows-x64",
-    "displayName": "Windows x64 Debug",
-    "description": "Windows x64 Debug",
-    "generator": "Visual Studio 17 2022",
-    "binaryDir": "${sourceDir}/build/${presetName}",
-    "architecture": {
-      "value": "x64",
-      "strategy": "external"
-    },
-    "cacheVariables": {
-      "CMAKE_BUILD_TYPE": "Debug",
-      "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
-    },
-    "vendor": {
-      "microsoft.com/VisualStudioSettings/CMake/1.0": {
-        "hostOS": [ "Windows" ]
-      }
-    }
-  }]
+	"version": 6,
+	"cmakeMinimumRequired": {
+		"major": 3,
+		"minor": 25,
+		"patch": 0
+	},
+	"include": [
+		"tools/cmake/PresetTemplates.json"
+	],
+	"configurePresets": [
+		{
+			"name": "macos-x64-ci",
+			"inherits": [
+				"macos",
+				"x64",
+				"ci"
+			],
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Darwin"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
+			}
+		},
+		{
+			"name": "macos-arm64-ci",
+			"displayName": "macOS (arm64) - CI",
+			"inherits": [
+				"macos",
+				"arm64",
+				"ci"
+			],
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Darwin"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
+			}
+		},
+		{
+			"name": "macos-x64",
+			"displayName": "macOS (x86_64)",
+			"inherits": [
+				"macos",
+				"x64"
+			],
+			"cacheVariables": {
+				"CMAKE_OSX_ARCHITECTURES": "x86_64",
+				"VCPKG_TARGET_TRIPLET": "x64-osx"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Darwin"
+			}
+		},
+		{
+			"name": "macos-arm64",
+			"displayName": "macOS (arm64)",
+			"inherits": [
+				"macos",
+				"arm64"
+			],
+			"cacheVariables": {
+				"CMAKE_OSX_ARCHITECTURES": "arm64",
+				"VCPKG_TARGET_TRIPLET": "arm64-osx"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Darwin"
+			}
+		},
+		{
+			"name": "linux-x64",
+			"displayName": "Linux (x86_64)",
+			"inherits": [
+				"default",
+				"x64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-linux"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			}
+		},
+		{
+			"name": "linux-arm64",
+			"displayName": "Linux (arm64)",
+			"inherits": [
+				"default",
+				"arm64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-linux"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			}
+		},
+		{
+			"name": "windows-x64",
+			"displayName": "Windows (x86_64)",
+			"inherits": [
+				"default",
+				"x64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-windows"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		},
+		{
+			"name": "windows-arm64",
+			"displayName": "Windows (arm64)",
+			"inherits": [
+				"default",
+				"arm64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-windows"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "macos-x64",
+			"displayName": "macOS (x86_64)",
+			"configurePreset": "macos-x64",
+			"configuration": "Release",
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Darwin"
+			}
+		},
+		{
+			"name": "macos-arm64",
+			"displayName": "macOS (arm64)",
+			"configurePreset": "macos-arm64",
+			"configuration": "Release",
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Darwin"
+			}
+		},
+		{
+			"name": "linux-x64",
+			"displayName": "Linux (x86_64)",
+			"configurePreset": "linux-x64",
+			"configuration": "Release",
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			}
+		},
+		{
+			"name": "linux-arm64",
+			"displayName": "Linux (arm64)",
+			"configurePreset": "linux-arm64",
+			"configuration": "Release",
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			}
+		},
+		{
+			"name": "windows-x64",
+			"displayName": "Windows (x86_64)",
+			"configurePreset": "windows-x64",
+			"configuration": "Release",
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		},
+		{
+			"name": "windows-arm64",
+			"displayName": "Windows (arm64)",
+			"configurePreset": "windows-arm64",
+			"configuration": "Release",
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		}
+	],
+	"workflowPresets": [
+		{
+			"name": "macos-x64",
+			"displayName": "macOS (x86_64)",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "macos-x64"
+				},
+				{
+					"type": "build",
+					"name": "macos-x64"
+				}
+			]
+		},
+		{
+			"name": "macos-arm64",
+			"displayName": "macOS (arm64)",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "macos-arm64"
+				},
+				{
+					"type": "build",
+					"name": "macos-arm64"
+				}
+			]
+		},
+		{
+			"name": "linux-x64",
+			"displayName": "Linux (x86_64)",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "linux-x64"
+				},
+				{
+					"type": "build",
+					"name": "linux-x64"
+				}
+			]
+		},
+		{
+			"name": "linux-arm64",
+			"displayName": "Linux (arm64)",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "linux-arm64"
+				},
+				{
+					"type": "build",
+					"name": "linux-arm64"
+				}
+			]
+		},
+		{
+			"name": "windows-x64",
+			"displayName": "Windows (x86_64)",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "windows-x64"
+				},
+				{
+					"type": "build",
+					"name": "windows-x64"
+				}
+			]
+		},
+		{
+			"name": "windows-arm64",
+			"displayName": "Windows (arm64)",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "windows-arm64"
+				},
+				{
+					"type": "build",
+					"name": "windows-arm64"
+				}
+			]
+		}
+	]
 }
