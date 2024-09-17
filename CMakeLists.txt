@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use" FORCE)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "The type of build to use" FORCE)
 
 # tell cmake we have goodies in the cmake/ directory
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 include(GenerateVersion)
 
 project(openliero
@@ -35,7 +35,7 @@ include_directories(
 
 # embed version metadata in the code
 configure_file(
-  "${PROJECT_SOURCE_DIR}/pkg/metadata.cpp.in"
+  "${PROJECT_SOURCE_DIR}/tools/cmake/metadata.cpp.in"
   "${PROJECT_SOURCE_DIR}/src/game/metadata.cpp"
 )
 
