@@ -1,10 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
 
-# sane CMake defaults
-# these variables get set if they are not already defined
-set(CMAKE_C_STANDARD 99 CACHE STRING "The C standard to use" FORCE)
-set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use" FORCE)
-set(CMAKE_BUILD_TYPE Release CACHE STRING "The type of build to use" FORCE)
 
 # tell cmake we have goodies in the cmake/ directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
