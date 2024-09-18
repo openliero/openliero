@@ -7,7 +7,8 @@ option(OPENLIERO_USE_VCPKG "Use vcpkg to manage dependencies" ON)
 
 # tell cmake we have goodies in the cmake/ directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
-include(GenerateVersion)
+
+include(GenerateVersion) # generate version metadata from git
 
 # configure vcpkg
 if(OPENLIERO_USE_VCPKG)
@@ -215,3 +216,18 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   add_executable(videotool ${VIDEO_TOOL_SOURCES})
   target_link_libraries(videotool PRIVATE vt)
 endif()
+
+# binaries
+install(TARGETS openliero CONFIGURATIONS Release DESTINATION .)
+if(OPENLIERO_BUILD_TCTOOL)
+  install(TARGETS tctool CONFIGURATIONS Release DESTINATION .)
+endif()
+if(OPENLIERO_BUILD_VIDEOTOOL)
+  install(TARGETS videotool CONFIGURATIONS Release DESTINATION .)
+endif()
+
+# assets
+install(DIRECTORY data/Profiles DESTINATION .)
+install(DIRECTORY data/Resources DESTINATION .)
+install(DIRECTORY data/Setups DESTINATION .)
+install(DIRECTORY data/TC DESTINATION .)
