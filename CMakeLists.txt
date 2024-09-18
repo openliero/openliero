@@ -1,9 +1,40 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.25..3.30)
 
+# options at top so they're easy to find
+option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
+option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
+option(OPENLIERO_USE_VCPKG "Use vcpkg to manage dependencies" ON)
 
 # tell cmake we have goodies in the cmake/ directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 include(GenerateVersion)
+
+# configure vcpkg
+if(OPENLIERO_USE_VCPKG)
+  # use local vcpkg
+  if(EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+    message(STATUS "Using local vcpkg")
+    set(CMAKE_TOOLCHAIN_FILE
+      "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "vcpkg toolchain file"
+    )
+  else()
+    message(STATUS "Bootstrapping vcpkg")
+    set(X_VCPKG_CLONE_DIR "${CMAKE_SOURCE_DIR}/tools/vcpkg/vcpkg"
+      CACHE PATH "vcpkg clone directory"
+    )
+    set(CMAKE_TOOLCHAIN_FILE
+      "${X_VCPKG_CLONE_DIR}/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "vcpkg toolchain file"
+    )
+    include(BootstrapVcpkg)
+  endif()
+
+  set(VCPKG_BOOTSTRAP_OPTIONS "-disableMetrics")
+  set(VCPKG_INSTALL_OPTIONS "--no-print-usage")
+  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
+endif()
 
 project(openliero
   DESCRIPTION "A brutal subterranean shooter game"
@@ -11,15 +42,12 @@ project(openliero
   LANGUAGES C CXX
 )
 
-# options at top so they're easy to find
-option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
-option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
-option(OPENLIERO_VENDORED_DEPS "Use vendored dependencies" OFF)
-
 # find dependencies
-find_package(SDL2 REQUIRED)
-find_package(SDL2_image REQUIRED)
-add_subdirectory(libs/miniz)
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_image CONFIG REQUIRED)
+find_package(miniz CONFIG REQUIRED)
+
+# local dependencies
 add_subdirectory(src/gvl)
 
 # TODO get rid of this kludgy hack
@@ -89,21 +117,11 @@ set(GAME_SOURCES ${SOURCES}
 
 # game
 add_library(game ${GAME_SOURCES})
-if(OPENLIERO_VENDORED_DEPS)
-  target_link_libraries(game
-    SDL2::SDL2-static
-    SDL2_image::SDL2_image-static
-  )
-else()
-  target_link_libraries(game
-    SDL2::SDL2
-    SDL2_image::SDL2_image
-  )
-endif()
-
 target_link_libraries(game
-  miniz
+  miniz::miniz
   gvl
+  $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+  $<IF:$<TARGET_EXISTS:SDL2_image::SDL2_image>,SDL2_image::SDL2_image,SDL2_image::SDL2_image-static>
 )
 
 if(APPLE)
@@ -153,19 +171,10 @@ if(OPENLIERO_BUILD_TCTOOL)
 
   add_library(tc ${TC_TOOL_SOURCES})
 
-  if(OPENLIERO_VENDORED_DEPS)
-    target_link_libraries(tc
-      SDL2::SDL2-static
-    )
-  else()
-    target_link_libraries(tc
-      SDL2::SDL2
-    )
-  endif()
-
   target_link_libraries(tc
-    miniz
+    miniz::miniz
     gvl
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   )
 
   add_executable(tctool ${TC_TOOL_SOURCES})
@@ -181,19 +190,10 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   )
   add_library(vt ${VIDEO_TOOL_SOURCES})
 
-  if(OPENLIERO_VENDORED_DEPS)
-  target_link_libraries(vt
-    SDL2::SDL2-static
-  )
-  else()
-  target_link_libraries(vt
-    SDL2::SDL2
-  )
-  endif()
-
   target_link_libraries(vt
     miniz
     gvl
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
     avcodec
     avformat
     avutil
