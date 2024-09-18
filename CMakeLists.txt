@@ -14,7 +14,6 @@ project(openliero
   DESCRIPTION "A brutal subterranean shooter game"
   HOMEPAGE_URL https://github.com/openliero/openliero
   LANGUAGES C CXX
-  VERSION "${VERSION_GIT_TAG}"
 )
 
 # options at top so they're easy to find

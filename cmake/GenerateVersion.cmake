@@ -2,7 +2,7 @@ find_package(Git)
 
 if(Git_FOUND)
   execute_process(
-    COMMAND git describe --exact-match --tags
+    COMMAND git describe --tags --dirty=-dev
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     OUTPUT_VARIABLE VERSION_GIT_TAG
     OUTPUT_STRIP_TRAILING_WHITESPACE
