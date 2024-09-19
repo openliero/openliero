@@ -241,3 +241,6 @@ install(DIRECTORY data/Profiles DESTINATION .)
 install(DIRECTORY data/Resources DESTINATION .)
 install(DIRECTORY data/Setups DESTINATION .)
 install(DIRECTORY data/TC DESTINATION .)
+
+# documentation
+install(FILES README.md LICENSE DESTINATION .)
