@@ -17,39 +17,6 @@ namespace gvl
 struct default_list_tag
 {};
 
-/*
-struct gvl_list_node : gvl_list_node
-{
-	gvl_list_node()
-	{
-		next = this;
-		prev = this;
-	}
-
-
-	void unlink()
-	{
-		gvl_list_unlink(this);
-	}
-
-	// NOTE: The behaviour of relink is only defined if the
-	// nodes that were immediately left and right of this node when
-	// it was unlinked are now consecutive (and in the same order).
-	// This is (of course) the case right after the unlink.
-	void relink()
-	{
-		passert(
-			prev->next == next && next->prev == prev,
-			"Adjacent nodes must be consecutive");
-		prev->next = this;
-		next->prev = this;
-	}
-
-	template<typename ListT>
-	void move_to(ListT& dest);
-};
-*/
-
 template<typename ListT>
 inline void move_to(gvl_list_node* self, ListT& dest);
 
@@ -89,17 +56,6 @@ inline void relink_after(gvl_list_node* x, gvl_list_node* p)
 	gvl_list_link_after(x, p);
 }
 
-/*
-template<typename T, typename Op>
-bool do_list_compare(void* comparer, gvl_list_node* a, gvl_list_node* b)
-{
-	Op& real_comparer = *static_cast<Op*>(comparer);
-	return real_comparer(*static_cast<T*>(a), *static_cast<T*>(b));
-}
-
-typedef bool (*do_list_compare_func)(void*, gvl_list_node*, gvl_list_node*);
-*/
-
 template<typename Tag = default_list_tag>
 struct list_node : gvl_list_node
 {
@@ -120,39 +76,6 @@ struct list_node : gvl_list_node
 	{
 		return static_cast<list_node<Tag>*>(p);
 	}
-
-/*
-	void relink(T* p)
-	{
-		gvl_list_link_before(this, upcast(p));
-	}
-
-	void relink_before(T* p)
-	{
-		gvl_list_link_before(this, upcast(p));
-	}
-
-	void relink_after(T* p)
-	{
-		gvl_list_link_after(this, upcast(p));
-	}
-
-	template<typename ListT>
-	void move_to(ListT& dest)
-	{
-		gvl::move_to(this, dest);
-	}*/
-
-	/*
-	T* next()
-	{
-		return static_cast<T*>(gvl_list_node::next);
-	}
-
-	T* prev()
-	{
-		return static_cast<T*>(gvl_list_node::prev);
-	}*/
 };
 
 // NOTE: Be very careful with these! They assume the list you insert
@@ -258,13 +181,7 @@ struct list_common
 
 	void integrity_check();
 
-/*
-	gvl_list_node* raw_first() const { return sentinel_.next; }
-	gvl_list_node* raw_last() const { return sentinel_.prev; }
-*/
 	gvl_list_node* sentinel() { return &sentinel_; }
-
-	//void sort(void* comparer, do_list_compare_func do_compare);
 
 	gvl_list_node* first() const { return static_cast<gvl_list_node*>(sentinel_.next); }
 	gvl_list_node* last() const { return static_cast<gvl_list_node*>(sentinel_.prev); }
@@ -286,13 +203,6 @@ struct default_ownership
 	{
 		return p; // Verbatim
 	}
-
-/*
-	template<typename T>
-	T* release(T* p)
-	{
-		return p;
-	}*/
 };
 
 template<
@@ -480,21 +390,10 @@ struct list : list_common, protected Deleter, protected Ownership
 		gvl_list_node* end_;
 	};
 
-	list(/*Deleter const& deleter = Deleter(), */Ownership const& ownership = Ownership())
-	: /*Deleter(deleter)
-	, */Ownership(ownership)
+	list(Ownership const& ownership = Ownership())
+	: Ownership(ownership)
 	{
 	}
-
-	/*
-	list(list const& b)
-	{
-		// TODO: Add proper cloning semantics
-		for(gvl_list_node* f = b.first(); f != &b.sentinel_; f = f->next)
-		{
-			push_back(new T(*downcast(f)));
-		}
-	}*/
 
 	~list()
 	{
@@ -610,12 +509,6 @@ struct list : list_common, protected Deleter, protected Ownership
 	{
 		return upcast(p) == &sentinel_;
 	}
-
-	/*
-	size_t size()
-	{
-		return list_common::size();
-	}*/
 
 	iterator unlink(T* i)
 	{
@@ -742,13 +635,6 @@ struct list : list_common, protected Deleter, protected Ownership
 		new_last->next = &sentinel_;
 	}
 
-/*
-	template<class Op>
-	void sort(Op op)
-	{
-		list_common::sort(&op, do_list_compare<T, Op>);
-	}*/
-
 	template<typename Op>
 	void merge(list& b, Op op)
 	{
@@ -810,17 +696,8 @@ struct list : list_common, protected Deleter, protected Ownership
 	}
 
 
-	/* Cross events are a too specific functionality
-	struct dummy_cross_event
-	{
-		void operator()(T const&, T const&) const
-		{
-			// Do nothing
-		}
-	};*/
-
-	template<typename Op/*, typename CrossEvent*/>
-	void insertion_sort(Op op/*, CrossEvent cross_event = dummy_cross_event()*/)
+	template<typename Op>
+	void insertion_sort(Op op)
 	{
 		gvl_list_node* sent = &sentinel_;
 		gvl_list_node* lprev = sent;
@@ -833,8 +710,6 @@ struct list : list_common, protected Deleter, protected Ownership
 			if(lprev != sent
 			&& op(*curt, *downcast(lprev)))
 			{
-				//cross_event(*downcast(prev), *downcast(cur));
-
 				// Unlink
 				lprev->next = lnext;
 				lnext->prev = lprev;
@@ -845,7 +720,6 @@ struct list : list_common, protected Deleter, protected Ownership
 				while(before != sent
 				&& op(*curt, *downcast(before)))
 				{
-					//cross_event(*downcast(before), *downcast(cur));
 					after = before;
 					before = after->prev;
 				}
