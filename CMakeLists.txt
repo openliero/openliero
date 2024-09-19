@@ -12,20 +12,25 @@ include(GenerateVersion) # generate version metadata from git
 
 # configure vcpkg
 if(OPENLIERO_USE_VCPKG)
+  set(VCPKG_TOOLCHAIN_PATH
+    "scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "General path to vcpkg toolchain file"
+  )
+
   # use local vcpkg
-  if(EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-    message(STATUS "Using local vcpkg")
+  if(EXISTS "$ENV{VCPKG_ROOT}/${VCPKG_TOOLCHAIN_PATH}")
+    message(STATUS "Using system-provided vcpkg to manage dependencies")
     set(CMAKE_TOOLCHAIN_FILE
-      "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      "$ENV{VCPKG_ROOT}/${VCPKG_TOOLCHAIN_PATH}"
       CACHE STRING "vcpkg toolchain file"
     )
   else()
-    message(STATUS "Bootstrapping vcpkg")
+    message(STATUS "Using bootstrapped vcpkg to manage dependencies")
     set(X_VCPKG_CLONE_DIR "${CMAKE_SOURCE_DIR}/tools/vcpkg/vcpkg"
       CACHE PATH "vcpkg clone directory"
     )
     set(CMAKE_TOOLCHAIN_FILE
-      "${X_VCPKG_CLONE_DIR}/scripts/buildsystems/vcpkg.cmake"
+      "${X_VCPKG_CLONE_DIR}/${VCPKG_TOOLCHAIN_PATH}"
       CACHE STRING "vcpkg toolchain file"
     )
     include(BootstrapVcpkg)
@@ -35,6 +40,8 @@ if(OPENLIERO_USE_VCPKG)
   set(VCPKG_INSTALL_OPTIONS "--no-print-usage")
   set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
   set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
+else()
+  message(STATUS "Using system-provided dependencies")
 endif()
 
 project(openliero
@@ -119,6 +126,7 @@ set(GAME_SOURCES ${SOURCES}
 # game
 add_library(game ${GAME_SOURCES})
 target_link_libraries(game
+  PUBLIC
   miniz::miniz
   gvl
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
@@ -173,6 +181,7 @@ if(OPENLIERO_BUILD_TCTOOL)
   add_library(tc ${TC_TOOL_SOURCES})
 
   target_link_libraries(tc
+    PUBLIC
     miniz::miniz
     gvl
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
@@ -192,6 +201,7 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   add_library(vt ${VIDEO_TOOL_SOURCES})
 
   target_link_libraries(vt
+    PUBLIC
     miniz
     gvl
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
