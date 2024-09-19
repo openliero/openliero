@@ -156,27 +156,6 @@ struct hash_accumulator
 		}
 	}
 
-#if 0 // Untested
-	void ui32(uint32_t v)
-	{
-		if(bit_n >= 32)
-		{
-			bit_n -= 32;
-			cur |= (uint64_t(v) << bit_n);
-			if(bit_n == 0)
-				dump_cur();
-		}
-		else
-		{
-			int left = bit_n;
-			cur |= v >> (32 - left);
-			dump_cur();
-			bit_n = 64 - (32 - left);
-			cur = uint64_t(v) << bit_n;
-		}
-	}
-#endif
-
 	void flush()
 	{
 		// Pad with one followed by zeroes

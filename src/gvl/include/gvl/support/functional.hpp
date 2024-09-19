@@ -34,32 +34,4 @@ struct default_compare
 			return 0;
 	}
 };
-
-#if 0
-
-template<typename T>
-void caller(void* p)
-{
-	static_cast<T*>(p)->operator()();
-}
-
-struct functor_wrapper
-{
-	template<typename T>
-	functor_wrapper(T& t)
-	: f(&caller<T>)
-	, p(&t)
-	{
-
-	}
-
-	void call()
-	{ f(p); }
-
-	void(*f)(void* p);
-	void* p;
-};
-
-#endif
-
 } // namespace gvl

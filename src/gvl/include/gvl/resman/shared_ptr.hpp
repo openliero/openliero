@@ -17,10 +17,6 @@ struct shared_ownership {};
 template<typename T>
 struct deferred_ptr;
 
-/*
-template<typename T>
-struct unsafe_weak_ptr;*/
-
 template<typename T>
 struct shared_ptr // : shared_ptr_common
 {
@@ -366,78 +362,6 @@ private:
 template<typename T>
 deferred_ptr<T> share_ownership(T* ptr)
 { return deferred_ptr<T>(ptr, shared_ownership()); }
-
-/*
-// Like a normal pointer, but ownership is assumed to belong
-// to something else.
-template<typename T>
-struct unsafe_weak_ptr : shared_ptr_common
-{
-	unsafe_weak_ptr()
-	{ }
-
-	// Does not take ownership
-	explicit unsafe_weak_ptr(T* v)
-	: shared_ptr_common(v)
-	{ }
-
-	template<typename SrcT>
-	unsafe_weak_ptr(shared_ptr<SrcT> const& b)
-	: shared_ptr_common(b.get())
-	{ }
-
-	template<typename SrcT>
-	unsafe_weak_ptr(unsafe_weak_ptr<SrcT> const& b)
-	: shared_ptr_common(b.get())
-	{ }
-
-	unsafe_weak_ptr(unsafe_weak_ptr const& b)
-	{
-		v = b.get();
-	}
-
-	template<typename SrcT>
-	unsafe_weak_ptr& operator=(shared_ptr<SrcT> const& b)
-	{
-		v = b.get();
-		return *this;
-	}
-
-	template<typename SrcT>
-	unsafe_weak_ptr& operator=(unsafe_weak_ptr<SrcT> const& b)
-	{
-		v = b.get();
-		return *this;
-	}
-
-	unsafe_weak_ptr& operator=(unsafe_weak_ptr const& b)
-	{
-		v = b.get();
-		return *this;
-	}
-
-	operator void*() const
-	{ return v;	}
-
-	T* operator->() const
-	{ sassert(v); return v; }
-
-	T& operator*() const
-	{ assert(v); return *v;	}
-
-	void reset()
-	{ v = 0; }
-
-	void swap(unsafe_weak_ptr& b)
-	{ std::swap(v, b.v); }
-
-	template<typename DestT>
-	unsafe_weak_ptr<DestT> cast()
-	{ return dynamic_cast<DestT*>(get()); }
-
-	T* get() const
-	{ return static_cast<T*>(v); }
-};*/
 
 template<typename T>
 shared_ptr<T>::shared_ptr(deferred_ptr<T> const& b)

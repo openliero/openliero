@@ -50,55 +50,6 @@ struct cmwc // : prng_common<cmwc<R, A>, uint32_t>
 		}
 	}
 
-#if 0
-	void fill()
-	{
-		uint32_t local_c = c;
-
-		for(std::size_t i = 0; i < R; ++i)
-		{
-			uint64_t t = uint64_t(Q[i])*A + local_c;
-
-			local_c = uint32_t(t >> 32);
-			uint64_t x = (t & 0xffffffff) + local_c;
-
-			uint32_t overflow = uint32_t(x >> 32);
-
-			local_c += overflow;
-
-			Q[i] = 0xfffffffe - uint32_t(x & 0xffffffff) - overflow;
-		}
-
-#if 0
-		uint64_t t1 = uint64_t(Q[i])*A + local_c1;
-		uint64_t t2 = uint64_t(Q[i+1])*A;
-
-		uint32_t local_c2 = uint32_t(t >> 32);
-
-		uint64_t x1 = (t1 & 0xffffffff) + local_c2;
-
-		uint32_t overflow1 = uint32_t(x1 >> 32);
-
-		local_c2 += overflow1;
-
-		t2 += local_c2;
-
-		local_c2 = uint32_t(t2 >> 32);
-
-		uint64_t x2 = (t2 & 0xffffffff) + local_c2;
-
-		uint32_t overflow2 = uint32_t(x2 >> 32);
-
-		local_c2 += overflow2;
-
-		Q[i] = 0xfffffffe - uint32_t(x1 & 0xffffffff) - overflow1;
-		Q[i+1] = 0xfffffffe - uint32_t(x2 & 0xffffffff) - overflow2;
-#endif
-
-		c = local_c;
-	}
-#endif
-
 	uint32_t operator()()
 	{
 		p = (p+1) & (R - 1);
@@ -214,17 +165,6 @@ struct countergen
 		c += d; b ^= c; b = ROT32(b, 12);
 		a += b; d ^= a; d = ROT32(d, 8);
 		c += d; b ^= c; b = ROT32(b, 7);
-
-		/*
-		a2 = a + b; d2 = d ^ a2; d3 = ROT32(d2, 16);
-		c2 = c + d; b2 = b ^ c2; b3 = ROT32(b2, 12);
-		a3 = a2 + b3; d4 = d3 ^ a3; d5 = ROT32(d4, 8);
-		c3 = c2 + d5; b4 = b3 ^ c3; b5 = ROT32(b4, 7);
-
-		a3 = (a + b) + ROT32(b ^ (c + d), 12)
-		b5 = ROT32(ROT32(b ^ (c + d), 12) ^ (c + d + ROT32(ROT32(d ^ (a + b), 16) ^ a3, 8)), 7)
-		d5 = ROT32(ROT32(d ^ (a + b), 16) ^ a3, 8)
-		*/
 
 		skip();
 

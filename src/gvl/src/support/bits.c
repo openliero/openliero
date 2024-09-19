@@ -98,29 +98,3 @@ int gvl_bottom_bit(uint32_t v)
 	return MultiplyDeBruijnBitPosition[((uint32_t)((v & -v) * 0x077CB531UL)) >> 27];
 }
 #endif
-
-#if 0
-void write_uint32(uint8_t* ptr, uint32_t v)
-{
-	ptr[0] = (uint8_t)(v >> 24);
-	ptr[1] = (uint8_t)(v >> 16);
-	ptr[2] = (uint8_t)(v >> 8);
-	ptr[3] = (uint8_t)(v);
-}
-
-uint32_t read_uint32(uint8_t const* ptr)
-{
-	return (ptr[0] << 24) + (ptr[1] << 16) + (ptr[2] << 8) + ptr[3];
-}
-
-void write_uint16(uint8_t* ptr, uint32_t v)
-{
-	ptr[0] = (uint8_t)(v >> 8);
-	ptr[1] = (uint8_t)(v);
-}
-
-uint32_t read_uint16(uint8_t const* ptr)
-{
-	return (ptr[0] << 8) + ptr[1];
-}
-#endif

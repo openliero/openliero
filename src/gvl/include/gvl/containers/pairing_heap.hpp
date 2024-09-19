@@ -205,27 +205,6 @@ struct pairing_heap : Compare, Deleter
 		return downcast(ret);
 	}
 
-#if 0
-	void print_tree()
-	{
-		print_siblings_(0, root);
-	}
-
-
-	// TEMP
-	void print_siblings_(int indent, pairing_node_common* el)
-	{
-		if(!el)
-			return;
-
-		for(; el; el = el->right_sibling)
-		{
-			std::cout << std::string(indent, ' ') << static_cast<T*>(el)->v << std::endl;
-			print_siblings_(indent + 1, el->left_child);
-		}
-	}
-#endif
-
 	T* unlink(T* el_)
 	{
 		pairing_node_common* el = upcast(el_);

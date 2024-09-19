@@ -204,15 +204,4 @@ inline int read_sint32(Reader& reader)
 {
 	return read_uint32(reader) - 0x80000000;
 }
-/*
-template<typename Reader>
-void read_string16(Reader& reader, std::string& dest)
-{
-	unsigned int len = read_uint16(reader);
-	std::vector<char> buf(len + 1); // + 1 to avoid zero-length buf that would make buf[0] undefined
-	reader.get(reinterpret_cast<uint8_t*>(&buf[0]), len);
-
-	dest.assign(&buf[0], len);
-}*/
-
 }

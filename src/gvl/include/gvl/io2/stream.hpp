@@ -309,20 +309,6 @@ struct octet_reader
 		return len;
 	}
 
-#if 0
-	bool at_eos()
-	{
-		if(cur_ != end_)
-			return false;
-
-		auto status = next_piece_();
-		if(status != source_result::ok)
-			return true;
-
-		return false; // TODO: Does erroring count as eos?
-	}
-#endif
-
 	shared_ptr<stream_piece> detach();
 
 	void close();
@@ -364,10 +350,6 @@ protected:
 	shared_ptr<stream_piece> head_;
 	shared_ptr<bucket_data_mem> cur_data;
 };
-
-//
-
-#if 1
 
 struct octet_writer : basic_text_writer<octet_writer>
 {
@@ -498,18 +480,6 @@ struct octet_writer : basic_text_writer<octet_writer>
 		buffer_.swap(b.buffer_);
 	}
 
-	/*
-	void reserve(std::size_t size)
-	{
-		ensure_cap_(size);
-	}
-
-	// Make the growth of the current bucket unlimited
-	void set_unlimited_bucket()
-	{
-		max_bucket_size = std::size_t(0) - 1;
-	}*/
-
 private:
 	sink_result flush_buffer(bucket_size new_buffer_size = 0);
 
@@ -542,7 +512,4 @@ private:
 	uint8_t* end_; // End of capacity in buffer_
 	std::unique_ptr<bucket_data_mem> buffer_;
 };
-
-#endif
-
 }
