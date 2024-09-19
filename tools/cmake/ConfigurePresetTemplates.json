@@ -1,0 +1,198 @@
+{
+	"version": 4,
+	"configurePresets": [
+		{
+			"name": "default",
+			"hidden": true,
+			"generator": "Ninja Multi-Config",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"installDir": "${sourceDir}/install/${presetName}",
+			"cacheVariables": {
+				"CMAKE_C_STANDARD": "99",
+				"CMAKE_CXX_STANDARD": "11",
+				"OPENLIERO_USE_VCPKG": "ON",
+				"OPENLIERO_BUILD_TCTOOL": "ON"
+			}
+		},
+		{
+			"name": "arm64",
+			"hidden": true,
+			"architecture": {
+				"value": "arm64",
+				"strategy": "external"
+			}
+		},
+		{
+			"name": "x64",
+			"hidden": true,
+			"architecture": {
+				"value": "x64",
+				"strategy": "external"
+			}
+		},
+		{
+			"name": "arch-arm64-macos",
+			"hidden": true,
+			"inherits": [
+				"arm64",
+				"macos"
+			],
+			"cacheVariables": {
+				"CMAKE_OSX_ARCHITECTURES": "arm64",
+				"VCPKG_TARGET_TRIPLET": "arm64-osx"
+			}
+		},
+		{
+			"name": "arch-x64-macos",
+			"hidden": true,
+			"inherits": [
+				"x64",
+				"macos"
+			],
+			"cacheVariables": {
+				"CMAKE_OSX_ARCHITECTURES": "x86_64",
+				"VCPKG_TARGET_TRIPLET": "x64-osx"
+			}
+		},
+		{
+			"name": "arch-arm64-linux",
+			"hidden": true,
+			"inherits": [
+				"arm64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-linux"
+			}
+		},
+		{
+			"name": "arch-x64-linux",
+			"hidden": true,
+			"inherits": [
+				"x64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-linux"
+			}
+		},
+		{
+			"name": "arch-arm64-windows",
+			"hidden": true,
+			"inherits": [
+				"arm64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-windows"
+			}
+		},
+		{
+			"name": "arch-x64-windows",
+			"hidden": true,
+			"inherits": [
+				"x64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-windows"
+			}
+		},
+		{
+			"name": "ci",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_C_COMPILER_LAUNCHER": "sccache",
+				"CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
+				"CMAKE_BUILD_PARALLEL_LEVEL": "3"
+			}
+		},
+		{
+			"name": "macos",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_OSX_DEPLOYMENT_TARGET": "12.0"
+			}
+		},
+		{
+			"name": "condition-macos",
+			"hidden": true,
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Darwin"
+			}
+		},
+		{
+			"name": "condition-macos-ci",
+			"hidden": true,
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Darwin"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
+			}
+		},
+		{
+			"name": "condition-linux",
+			"hidden": true,
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			}
+		},
+		{
+			"name": "condition-linux-ci",
+			"hidden": true,
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Linux"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
+			}
+		},
+		{
+			"name": "condition-windows",
+			"hidden": true,
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		},
+		{
+			"name": "condition-windows-ci",
+			"hidden": true,
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Windows"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
+			}
+		}
+	]
+}
