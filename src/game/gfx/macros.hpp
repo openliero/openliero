@@ -1,14 +1,7 @@
 #pragma once
 
-inline uint8_t choose(uint8_t this_, uint8_t if_this, uint8_t is_different_from_this, uint8_t otherwise_this)
-{
-	int32_t mask = (int32_t(if_this^is_different_from_this) - 1) >> 31;
-	return this_ ^ ((this_^otherwise_this) & mask);
-}
-
 #define SCALE2X_DECL uint32_t R1, R2, R3, R4
 
-#if 1
 #define SCALE2X() do { \
     if(B != H && F != D) { \
         R1 = D == B ? B : E; \
@@ -22,24 +15,6 @@ inline uint8_t choose(uint8_t this_, uint8_t if_this, uint8_t is_different_from_
         R3 = E; \
     } \
 } while(0)
-#else
-
-
-
-#define SCALE2X() do { \
-	if(B != H && F != D) { \
-        R1 = choose(E, D, B, B); \
-        R2 = choose(E, B, F, F); \
-        R4 = choose(E, F, H, H); \
-        R3 = choose(E, H, D, D); \
-    } else { \
-        R1 = E; \
-        R2 = E; \
-        R4 = E; \
-        R3 = E; \
-    } \
-} while(0)
-#endif
 
 #define WRITER_2X_8(dest) do { \
     uint8_t* pix_2x_dest_ = (dest); \

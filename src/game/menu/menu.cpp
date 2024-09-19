@@ -263,10 +263,6 @@ void Menu::setVisibility(int id, bool state)
 	int realTopItem = itemFromVisibleIndex(topItem);
 
 	items[item].visible = state;
-#if 0 // We can't do this at every change, because it can unselect items that are hidden and then shown again
-	if(!items[selection()].visible)
-		movement(1);
-#endif
 
 	setTop(visibleItemIndex(realTopItem));
 	ensureInView(selection());

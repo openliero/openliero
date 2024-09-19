@@ -13,50 +13,6 @@ struct ExactObjectListBase
 template<typename T, int Limit>
 struct ExactObjectList
 {
-#if 0
-	struct iterator
-	{
-		iterator(T* cur_)
-		: cur(cur_)
-		{
-			while(!cur->used)
-			{
-				++cur;
-			}
-		}
-
-		iterator& operator++()
-		{
-			do
-			{
-				++cur;
-			}
-			while(!cur->used);
-
-			return *this;
-		}
-
-		T& operator*()
-		{
-			assert(cur->used);
-			return *cur;
-		}
-
-		T* operator->()
-		{
-			assert(cur->used);
-			return cur;
-		}
-
-		bool operator!=(iterator b)
-		{
-			return cur != b.cur;
-		}
-
-		T* cur;
-	};
-#endif
-
 	struct range
 	{
 		range(T* cur, T* end)
@@ -130,24 +86,11 @@ struct ExactObjectList
 		return ret;
 	}
 
-#if 0
-	iterator begin()
-	{
-		return iterator(&arr[0]);
-	}
-
-	iterator end()
-	{
-		return iterator(&arr[Limit]);
-	}
-#endif
-
 	range all()
 	{
 		return range(&arr[0], &arr[Limit]);
 	}
 
-#if 1
 	void free(T* ptr)
 	{
 		assert(ptr->used);
@@ -162,7 +105,6 @@ struct ExactObjectList
 			--count;
 		}
 	}
-#endif
 
 	void free(range& r)
 	{

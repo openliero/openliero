@@ -2190,7 +2190,6 @@ int Gfx::menuLoop()
 			curMenu = &settingsMenu; // Go into settings menu
 		}
 
-#if 1
 		if (testSDLKeyOnce(SDL_SCANCODE_F8))
 		{
 			uint32_t s = 14;
@@ -2311,7 +2310,6 @@ int Gfx::menuLoop()
 				s.numSounds = 1;
 			}
 		}
-#endif
 
 		if(testSDLKey(SDL_SCANCODE_LEFT))
 		{

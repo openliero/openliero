@@ -220,7 +220,6 @@ void archive(Archive ar, Palette& pal)
 typedef gvl::octet_reader reader_t;
 
 typedef gvl::in_archive<reader_t, GameSerializationContext> in_archive_t;
-//typedef gvl::out_archive<gvl::octet_stream_reader, GameSerializationContext> out_archive_t;
 
 void archive(in_archive_t ar, Level& level)
 {
@@ -233,24 +232,11 @@ void archive(in_archive_t ar, Level& level)
 
 	Common& common = *ar.context.game->common;
 
-#if 1
 	for(unsigned int y = 0; y < h; ++y)
 	for(unsigned int x = 0; x < w; ++x)
 	{
 		level.setPixel(x, y, ar.reader.get(), common);
 	}
-#else
-	mtf level_mtf;
-	for(unsigned int y = 0; y < h; ++y)
-	for(unsigned int x = 0; x < w; ++x)
-	{
-		uint8_t rank = ar.reader.get();
-		uint8_t pix = level_mtf.rank_to_byte(rank);
-		level.data[y*w + x] = pix;
-		level_mtf.promote_rank(rank);
-	}
-#endif
-
 	for(unsigned int i = 0; i < 256; ++i)
 	{
 		level.origpal.entries[i].r = ar.reader.get();
@@ -270,20 +256,7 @@ void archive(gvl::out_archive<Writer, GameSerializationContext> ar, Level& level
 	if(ar.context.replayVersion > 1)
 		archive(ar, level.origpal);
 
-#if 1
 	ar.writer.put(&level.data[0], w * h);
-#else
-	mtf level_mtf;
-
-	for(unsigned int y = 0; y < h; ++y)
-	for(unsigned int x = 0; x < w; ++x)
-	{
-		uint8_t pix = level.data[y*w + x];
-		uint8_t rank = level_mtf.byte_to_rank(pix);
-		ar.writer.put(rank);
-		level_mtf.promote_rank(rank);
-	}
-#endif
 
 	for(unsigned int i = 0; i < 256; ++i)
 	{
@@ -298,17 +271,10 @@ void archive_worms(in_archive_t ar, Game& game)
 	uint8_t cont;
 	while(ar.ui8(cont), cont)
 	{
-		//int wormId = ar.context.nextWormId++;
-
 		Worm* worm;
 		ar.obj(worm, WormCreator());
 
-		//printf("Worm ID %d: %s\n", wormId, worm->settings->name.c_str());
-
-		//GameSerializationContext::WormData& data = ar.context.wormData[worm];
-
 		game.addWorm(worm);
-		//ar.context.idToWorm[wormId] = worm;
 	}
 
 	while(ar.ui8(cont), cont)
@@ -323,28 +289,13 @@ void archive_worms(in_archive_t ar, Game& game)
 template<typename Writer>
 void archive_worms(gvl::out_archive<Writer, GameSerializationContext> ar, Game& game)
 {
-/*
-	for(std::size_t i = 0; i < game.worms.size(); ++i)
-	{
-		Worm& worm = *game.worms[i];
-
-		int wormId = ar.context.nextWormId++;
-
-		//printf("Worm from game, ID %d: %s\n", wormId, worm.settings->name.c_str());
-		ar.context.idToWorm[wormId] = &worm;
-	}*/
-
-	//for(GameSerializationContext::IdToWormMap::iterator i = ar.context.idToWorm.begin(); i != ar.context.idToWorm.end(); ++i)
 	for (auto* worm : game.worms)
 	{
 		ar.writer.put(1);
 
-		//Worm* worm = i->second;
 		GameSerializationContext::WormData& data = ar.context.wormData[worm];
 
 		ar.obj(worm, WormCreator());
-
-		//printf("Worm ID %d: %s\n", i->first, worm->settings->name.c_str());
 
 		data.settingsExpired = false; // We just serialized them, so they have to be up to date
 
@@ -389,35 +340,6 @@ void write(Writer& writer, GameSerializationContext& context, T& x)
 {
 	archive(gvl::out_archive<Writer, GameSerializationContext>(writer, context), x);
 }
-
-/*
-template<typename T>
-gvl::gash::value_type hash(T& x)
-{
-	GameSerializationContext context;
-	gvl::hash_accumulator<gvl::gash> ha;
-
-	archive(gvl::out_archive<GameSerializationContext, gvl::hash_accumulator<gvl::gash> >(ha, context), x);
-
-	ha.flush();
-	return ha.final();
-}
- */
-
-/*
-template<typename Archive>
-void archive(Archive ar, gvl::gash::value_type& x)
-{
-	for(int i = 0; i < gvl::gash::value_type::size; ++i)
-	{
-		uint32_t h = uint32_t(x.value[i] >> 32);
-		uint32_t l = uint32_t(x.value[i] & 0xffffffff);
-		ar.ui32(l);
-		ar.ui32(h);
-		x.value[i] = (uint64_t(h) << 32) | l;
-	}
-}
-*/
 
 ReplayWriter::ReplayWriter(gvl::sink str_init)
 : settingsExpired(true)
@@ -544,12 +466,9 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 		else if(first == 0x82)
 		{
 			uint32_t wormId = gvl::read_uint32(reader);
-			//GameSerializationContext::IdToWormMap::iterator i = context.idToWorm.find(wormId);
 			Worm* w = game.wormByIdx(wormId);
-			//if(i != context.idToWorm.end())
 			if (w)
 			{
-				//read(reader, context, *i->second->settings);
 				read(reader, context, *w->settings);
 				settingsChanged = true;
 			}

@@ -47,20 +47,6 @@ LocalController::LocalController(std::shared_ptr<Common> common, std::shared_ptr
 	worm2->statsX = 218;
 	worm2->ai = createAi(worm2->settings->controller, *worm2, *settings);
 
-#if 0
-	for(int i = 0; i < 10; ++i)
-	{
-		Worm* worm2 = new Worm(*this);
-		worm2->settings = settings->wormSettings[1];
-		worm2->health = worm2->settings->health;
-		worm2->index = 1;
-		if(worm2->settings->controller == 1)
-			worm2->ai.reset(new DumbLieroAI(*worm2));
-
-		addWorm(worm2);
-	}
-#endif
-
 	game.addViewport(new Viewport(gvl::rect(0, 0, 158, 158), worm1->index, 504, 350));
 	game.addViewport(new Viewport(gvl::rect(160, 0, 158+160, 158), worm2->index, 504, 350));
 
@@ -289,14 +275,11 @@ void LocalController::changeState(GameState newState)
 				std::string prefix = "-  Trace";
 				std::string buf = ".lrp";
 #endif
-				//std::string path = joinPath(joinPath(configRoot, "Replays"), prefix + buf);
-				//create_directories(path);
 
 				auto node = gfx.getConfigNode() / "Replays" / (buf + playerNames + ".lrp");
 
 				replay.reset(new ReplayWriter(node.toSink()));
 
-				//replay.reset(new ReplayWriter(gvl::sink(new gvl::file_bucket_pipe(path.c_str(), "wb"))));
 				replay->beginRecord(game);
 			}
 			catch(std::runtime_error& e)

@@ -60,8 +60,7 @@ struct InputState
 	{
 		int pa, pb, pc;
 		auto type = decompose(pa, pb, pc);
-		return type == ChangeWeapon
-		    /*|| (type == MoveJumpFire && pc == 0)*/;
+		return type == ChangeWeapon;
 	}
 
 	bool isFiring() const
@@ -158,13 +157,6 @@ inline T select(int n, T first, T a, T b, T c)
 	if (n == 0) return first;
 	return select(n - 1, a, b, c);
 }
-/*
-template<typename T>
-inline T select(int n, T first, T a, T b, T c, T d)
-{
-	if (n == 0) return first;
-	return select(n - 1, a, b, c, d);
-}*/
 
 struct AiContext;
 
@@ -234,13 +226,6 @@ struct Model
 
 		return FreeStates - 1;
 	}
-	/*
-	void update(int context, int result)
-	{
-		assert(context < States);
-		assert(result < FreeStates);
-		trans[context][result] += 0.05f;
-	}*/
 };
 
 struct Weights
@@ -265,12 +250,10 @@ struct TransModel : Model<InputContext::Size, 56>
 
 	TransModel(Weights& weights, bool testing);
 
-#if 1
 	void update(InputContext context, InputState v)
 	{
 		trans[context.pack()][v.idx] += 0.005;
 	}
-#endif
 
 	InputState random(InputContext context, Rand& rand)
 	{
