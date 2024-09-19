@@ -229,8 +229,6 @@ bool WeaponSelection::processFrame()
 
 		if(!isReady[i])
 		{
-			//menus[i].draw(common, ws.selWeapX - 2, 28, false, curSel[i]);
-
 			if(weapID >= 0 && weapID < Settings::selectableWeapons)
 			{
 				if(worm.pressed(Worm::Left))
@@ -275,19 +273,12 @@ bool WeaponSelection::processFrame()
 			if(worm.pressedOnce(Worm::Up))
 			{
 				game.soundPlayer->play(26);
-				/*
-				int s = int(menus[i].items.size());
-				curSel[i] = (curSel[i] - 1 + s) % s;*/
 				menus[i].movement(-1);
 			}
 
 			if(worm.pressedOnce(Worm::Down))
 			{
 				game.soundPlayer->play(25);
-				/*
-				int s = int(menus[i].items.size());
-				curSel[i] = (curSel[i] + 1 + s) % s;
-				*/
 				menus[i].movement(1);
 			}
 
@@ -316,8 +307,6 @@ bool WeaponSelection::processFrame()
 
 						weapUsed[w] = true;
 
-						//WormWeapon& ww = worm.weapons[j];
-
 						menus[i].items[j + 1].string = common.weapons[w].name;
 					}
 				}
@@ -344,11 +333,6 @@ void WeaponSelection::finalize()
 		Worm& worm = *game.worms[i];
 
 		worm.initWeapons(game);
-		/*
-		for(int j = 0; j < 6; ++j)
-		{
-			gfx.releaseKey(worm.settings->controls[j]);
-		}*/
 	}
 	game.releaseControls();
 
@@ -364,20 +348,3 @@ void WeaponSelection::unfocus()
 {
 	focused = false;
 }
-
-#if 0
-void selectWeapons(Game& game)
-{
-	WeaponSelection ws(game);
-
-	while(!ws.processFrame())
-	{
-		ws.draw();
-		gfx.flip();
-		gfx.process(&game);
-	}
-
-	ws.finalize();
-	// Important that escape isn't released here
-}
-#endif

@@ -341,17 +341,6 @@ double evaluateState(
 		{
 			optimalDist = 50.0;
 		}
-		else
-		{
-			/*
-			double ratio = (1 + targetNormHealth) / (1 + meNormHealth);
-
-			if (game.settings->gameMode != Settings::GMHoldazone)
-			{
-				optimalDist = std::max(std::min(15.0 * ratio, 60.0), 10.0);
-			}
-			*/
-		}
 
 		double d = std::max(std::abs(wormCell->g / 256.0 - optimalDist) - 10.0, 0.0) * weights.distanceWeight;
 		len *= psigmoid(d / 100.0);
@@ -424,33 +413,7 @@ double evaluateState(
 	}
 	else if (me->visible)
 	{
-#if 0
-		double dx = (me->x - target->x) / 65536.0;
-		double dy = (me->y - target->y) / 65536.0;
-
-		double px = -dy;
-		double py = dx;
-
-		double vx = (me->velX / 65536.0);
-		double vy = (me->velY / 65536.0);
-
-		double d = std::sqrt(dx*dx + dy*dy);
-
-		double s = (vx*px + vy*py) / d;
-
-		score += std::min(std::abs(s), 5.0);
-#endif
 	}
-
-
-
-#if 0
-	auto& c = ai.cell(me->x, me->y);
-	if (ai.maxPresence > 0.1)
-		score -= (c.presence * 4.0) / ai.maxPresence;
-	if (ai.maxDamage > 0.1)
-			score -= (c.damage * 10.0) / ai.maxDamage;
-#endif
 
 	if (game.settings->gameMode == Settings::GMHoldazone)
 	{
@@ -509,19 +472,6 @@ void SimpleAI::process(Game& game, Worm& worm)
 		bool fire = aimDiff >= -tolerance
 			&& aimDiff <= tolerance
 			&& obstacles(game, &worm, target) < 4;
-
-#if 0
-		if (fire && worm.weapons[worm.currentWeapon].loadingLeft > 0)
-		{
-			cs.set(Worm::Change, true);
-			cs.set(Worm::Up, false);
-			cs.set(Worm::Down, false);
-			cs.set(Worm::Fire, false);
-			cs.set(Worm::Left, true);
-			cs.set(Worm::Right, false);
-		}
-		else
-#endif
 		{
 			cs = initial;
 			cs.set(Worm::Down, aimDiff < -tolerance);
@@ -563,10 +513,6 @@ void evaluate(
 	Worm* targetCopy = copy.wormByIdx(target->index);
 
 	FollowAI* targetAi = 0;
-
-#if 0
-	targetAi = dynamic_cast<FollowAI*>(target->ai.get());
-#endif
 
 	auto context = ai.currentContext;
 	InputContext targetContext;
@@ -655,17 +601,6 @@ void evaluate(
 
 			}
 		}
-		/*
-		else if (ms.type == 2)
-		{
-			if (i >= ms.start && i < ms.stop)
-			{
-				auto old = plan[i];
-				do
-					plan[i] = generate(ai, ai.rand, context);
-				while (plan[i].idx == old.idx);
-			}
-		}*/
 
 		meCopy->controlStates = context.update(plan[i], copy, meCopy, ai);
 
@@ -735,8 +670,6 @@ void mutate(
 
 void FollowAI::drawDebug(Game& game, Worm const& worm, Renderer& renderer, int offsX, int offsY)
 {
-
-#if 1
 	for (auto& p : evaluatePositions)
 	{
 		gvl::ivec2 v;
@@ -744,78 +677,6 @@ void FollowAI::drawDebug(Game& game, Worm const& worm, Renderer& renderer, int o
 		std::tie(v, t) = p;
 		renderer.bmp.setPixel(ftoi(v.x) + offsX, ftoi(v.y) + offsY, t);
 	}
-#endif
-
-#if 0
-	auto* cell = pathFind(ftoi(worm.x), ftoi(worm.y));
-#endif
-
-#if 0
-	{
-		AiContext& context = *this;
-		Worm const* from = &worm;
-		if (!cell || !cell->parent)
-			return;
-
-		auto orgl = context.dlevel.coords_level(cell);
-
-		double dirx = 0, diry = 0;
-		auto* c = cell;
-
-		//if (from->index == 0)
-		{
-			dirx = 1;
-			while (c->parent)
-			{
-				c = (level_cell*)c->parent;
-				auto path = context.dlevel.coords_level(c);
-
-				if (obstacles(game, orgl, path) > 4)
-					break;
-
-				dirx = std::abs(path.x - orgl.x);
-				diry = path.y - orgl.y;
-			}
-		}
-
-		int aim = normalizedLangle(from->aimingAngle);
-		double currentAim = langleToRadians(aim);
-
-		double angleToTarget = std::atan2(diry, dirx);
-
-		double tolerance = pi / 8;
-		double aimDiff = std::abs(radianDiff(angleToTarget, currentAim));
-
-		//double d = std::floor(aimDiff / tolerance) / 6.0;
-		double d = std::max(aimDiff - tolerance, 0.0) / 6.0;
-
-		std::ostringstream s; s << d;
-
-		game.common->font.drawFramedText(renderer.bmp, s.str(), 10, 10, 7);
-
-		drawLine(renderer.bmp,
-			ftoi(worm.x) + offsX, ftoi(worm.y) + offsY,
-			ftoi(worm.x) + offsX + (int)(std::cos(angleToTarget) * 20.0),
-			ftoi(worm.y) + offsY + (int)(std::sin(angleToTarget) * 20.0),
-			7);
-	}
-#endif
-
-#if 0
-	//auto* cell = aiContext.dlevel.cell_from_px(ftoi(worm.x), ftoi(worm.y));
-
-	while (cell)
-	{
-		auto coords = dlevel.coords(cell);
-		fillRect(renderer.bmp,
-			coords.first * dlevel.factor + offsX,
-			coords.second * dlevel.factor + offsY,
-			dlevel.factor,
-			dlevel.factor,
-			3);
-		cell = (level_cell*)cell->parent;
-	}
-#endif
 }
 
 #if AI_THREADS
@@ -871,22 +732,7 @@ void FollowAI::process(Game& game, Worm& worm)
 		dlevel.set_origin(targetCell);
 	}
 
-#if 0
-	aiContext.dlevel.run(
-		aiContext.dlevel.cell_from_px(ftoi(worm.x), ftoi(worm.y)),
-		level_cell_succ());
-
-	if ((game.cycles % 70) == 0)
-	{
-		printf("%d\n", aiContext.dlevel.cell_from_px(ftoi(worm.x), ftoi(worm.y))->g);
-	}
-#endif
-
 	update(*this, worm);
-	/*
-	if (targetAi)
-		targetAi->update(*targetAi, *target);
-		*/
 
 	double bestScore = -std::numeric_limits<double>::infinity();
 	evaluatePositions.clear();
@@ -975,19 +821,7 @@ void FollowAI::process(Game& game, Worm& worm)
 		++p.prevResultAge;
 	}
 
-	/* TEMP
-	if (targetAi)
-	{
-		targetAi->currentContext.update(targetAi->plan[0], game, target, *targetAi);
-		targetAi->plan.erase(targetAi->plan.begin());
-	}
-	*/
-
 	++frame;
-	/*
-	if (targetAi)
-		++targetAi->frame;
-	*/
 }
 
 
@@ -1058,8 +892,6 @@ void transToM(Weights& weights, double& p,
 	int pa, int pb, int pc, int facingEnemy, int ninjaropeOut,
 	int pa2, int pb2, int pc2)
 {
-	// P(pa -> pa2) P(pb -> pb2) P(pc -> pc2)
-
 	assert(pa < 3 && pb < 4 && pc < 4);
 	assert(pa2 < 3 && pb2 < 4 && pc2 < 4);
 	assert(facingEnemy < 2 && ninjaropeOut < 2);
@@ -1113,17 +945,6 @@ TransModel::TransModel(Weights& weights, bool testing)
 
 				c += 0.03;
 				m -= 0.03;
-
-#if 0 // Doesn't seem to help
-				if (testing)
-				{
-					if (pc & 2) // Firing, larger chance of changing weapon
-					{
-						c += 0.07;
-						m -= 0.07;
-					}
-				}
-#endif
 
 				if (type2 == InputState::MoveJumpFire)
 				{
@@ -1195,12 +1016,10 @@ TransModel::TransModel(Weights& weights, bool testing)
 
 void AiContext::update(FollowAI& ai, Worm& worm)
 {
-	//auto& p = cell(ai.worm.x, ai.worm.y);
 	double presence = 0, damage = 0;
 
 	if (worm.visible)
 	{
-		//p.presence = std::min(p.presence + 4.0/(70.0 * 5.0), 4.0);
 		presence = 4.0/(70.0 * 5.0);
 	}
 
@@ -1208,18 +1027,14 @@ void AiContext::update(FollowAI& ai, Worm& worm)
 
 	if (hp < prevHp)
 	{
-		//p.damage += std::min((prevHp - hp) / 10.0, 10.0);
-
 		damage = (prevHp - hp);
 	}
 
 	incArea(worm.pos.x, worm.pos.y, presence, damage);
 
-#if 1
 	for (int y = 0; y < height; ++y)
 	for (int x = 0; x < width; ++x)
 	{
 		state[x][y].presence = std::max(state[x][y].presence - 0.5/(70.0 * 5.0), 0.0);
 	}
-#endif
 }

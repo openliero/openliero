@@ -36,15 +36,8 @@ void WormSettings::saveProfile(FsNode node)
 {
 	try
 	{
-		//auto const& fullPath = path + ".lpf";
-		//create_directories(fullPath);
-		//gvl::sink str(new gvl::file_bucket_pipe(fullPath.c_str(), "wb"));
-
-		//gvl::octet_writer writer(str);
-
 		auto writer = node.toOctetWriter();
 
-		//profilePath = path;
 		profileNode = node;
 		GameSerializationContext context;
 		archive(gvl::out_archive<gvl::octet_writer, GameSerializationContext>(writer, context), *this);
@@ -60,10 +53,6 @@ void WormSettings::loadProfile(FsNode node)
 	int oldColor = color;
 	try
 	{
-		//gvl::source str(gvl::to_source(new gvl::file_bucket_pipe(path.c_str(), "rb")));
-
-		//gvl::octet_reader reader(str);
-
 		auto reader = node.toOctetReader();
 
 		profileNode = node;
@@ -538,20 +527,6 @@ int sqrVectorLength(int x, int y)
 void DumbLieroAI::process(Game& game, Worm& worm)
 {
 	Common& common = *game.common;
-
-#if 0
-	// TEMP TEST
-
-	for(int i = 0; i < Worm::MaxControl; ++i)
-	{
-		worm.setControlState((Worm::Control)i, rand(3) == 0);
-	}
-	/*
-	if(!worm.ready)
-		worm.setControlState(Worm::Fire, true);
-	*/
-	return;
-#endif
 
 	Worm* target = 0;
 	int minLen = 0;
