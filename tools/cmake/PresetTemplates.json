@@ -1,0 +1,7 @@
+{
+	"version": 4,
+	"include": [
+		"ConfigurePresetTemplates.json",
+		"BuildPresetTemplates.json"
+	]
+}

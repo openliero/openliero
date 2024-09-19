@@ -1,8 +1,7 @@
-openliero
-=========
+# Open Liero
 
 This is a continuation of the openliero project, originally located at
-https://github.com/gliptic/liero, also known as Liero 1.36.
+[github.com/gliptic/liero][0], also known as Liero 1.36.
 
 The main ambition is to keep Liero running as faithfully as possible on
 modern machines, although we are not opposed to making careful changes
@@ -10,72 +9,34 @@ and improvements to the original game (especially if they are optional).
 
 Patches are welcome!
 
-Setting up submodules
-======================
+## Building
+
+### Prerequisites
+
+* git
+* cmake
+* ninja
+
 ```bash
-git submodule update --init --recursive
+PRESET=$OS-$ARCH
+# where OS is one of the following: macos, linux, windows
+# and ARCH is one of the following: x64, arm64
+
+# configure & build all in one command
+cmake --workflow --preset $PRESET
+
+# copy binaries and game data to a predefined directory (install/$PRESET)
+cmake --install build/$PRESET
+
+# play
+cd install/$PRESET
+./openliero
 ```
 
-How to build (Windows)
-======================
+Note: This only builds `openliero` & `tctool`, not `videotool`. That one needs
+some work due to ffmpeg updates.
 
-Building on Windows
------------------------
-* Install Visual Studio 2022
-* Install SDL 2
-  * Go to https://github.com/libsdl-org/SDL/releases
-  * Download e.g. SDL2-devel-2.26.1-VC.zip
-  * Extract the contents to somewhere on your file system
-  * Set the SDL2_DIR environment variable to the directory you extracted the files to
-* Install SDL2_image
-  * Go to https://github.com/libsdl-org/SDL_image/releases
-  * Download e.g. SDL2_image-devel-2.6.2-VC.zip
-  * Extract the contents to somewhere on your file system
-  * Set the SDL2_image_DIR environment variable to the directory you extracted the files to
-* Download SDL 2
-  * Go to https://github.com/libsdl-org/SDL/releases
-  * Download e.g. SDL2-2.26.1-win32-x64.zip
-  * Put SDL2.dll either in your system32 folder or in the root folder of this project
-* Download SDL2_image
-  * Go to https://github.com/libsdl-org/SDL_image/releases
-  * Download e.g. SDL2_image-2.6.2-win32-x64.zip
-  * Put SDL2_image.dll either in your system32 folder or in the root folder of this project
-
-(Optional) Dependencies for building the video tool
------------------------
-* Follow the instructions for installing dependencies needed to build ffmpeg. At the time of writing, the MSYS2 route worked best for me https://trac.ffmpeg.org/wiki/CompilationGuide/MinGW
-* Download latest libx264: git clone https://code.videolan.org/videolan/x264.git
-* Build it: cd x264; ./configure --enable-shared --enable-pic && make -j8
-* Download latest ffmpeg: git clone git://source.ffmpeg.org/ffmpeg.git ffmpeg
-* Build it: cd ffmpeg; ./configure --enable-shared --enable-pic --enable-gpl --enable-libx264 --disable-programs --extra-ldflags=-L../x264 --extra-cflags=-I../x264 && make -j8
-
-How to build (Linux and Mac)
-============================
-
-Building on Linux and Mac
--------------------------
-* Make sure you have CMake, SDL2, SDL2_image and gcc installed
-* Run cmake:
-* $ cmake -G "Unix Makefiles"
-* Run "make"
-* Copy everything from the pkg directory to the root directory used for the build
-
-(Optional) Enabling and building the video tool
--------------------------------
-* Download latest libx264: git clone https://code.videolan.org/videolan/x264.git
-* Build it: cd x264; ./configure --enable-shared --enable-pic && make -j8
-* Download latest ffmpeg: git clone git://source.ffmpeg.org/ffmpeg.git ffmpeg
-* Build it: cd ffmpeg; ./configure --enable-shared --enable-pic --enable-gpl --enable-libx264 --disable-programs --extra-ldflags=-L../x264 --extra-cflags=-I../x264 --extra-libs=-ldl && make -j8
-* Run: make -j8 videotool
-
-Building a release build
----------------------
-* Run cmake:
-* $ cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles"
-* Run "make"
-
-Extracting game data for total conversions
-======================
+### Extracting game data for total conversions
 
 For copyright reasons, this repository does not contain the original Liero sound
 files. Included instead is the original ruleset together with the lierolibre
@@ -84,21 +45,20 @@ sound effects.
 In order to use the original data, or any total conversion, you need to run
 the tctool on the game data. Example on how to do this is included below:
 
-Windows
----------------------
+#### Windows
+
 ```powershell
 Invoke-WebRequest https://www.liero.be/download/liero-1.36-bundle.zip -OutFile liero-1.36-bundle.zip
 Expand-Archive -LiteralPath .\liero-1.36-bundle.zip .
-.\out/build/x64-Release/tctool.exe liero-1.36-bundle
+.\tctool.exe liero-1.36-bundle
 Move-Item .\TC\liero-1.36-bundle .\TC\"Liero v1.33"
 Remove-Item .\liero-1.36-bundle.zip
 Remove-Item -Recurse .\liero-1.36-bundle
-Copy-Item -Recurse .\TC .\out\build\x64-Debug
-Copy-Item -Recurse .\TC .\out\build\x64-Release
+Copy-Item -Recurse .\TC .\build\windows-x64
 ```
 
-Linux/Mac
----------------------
+#### Linux/macOS
+
 ```bash
 curl https://www.liero.be/download/liero-1.36-bundle.zip -O
 unzip liero-1.36-bundle.zip
@@ -107,3 +67,19 @@ mv TC/liero-1.36-bundle TC/"Liero v1.33"
 rm liero-1.36-bundle.zip
 rm -rf liero-1.36-bundle
 ```
+
+## License
+
+Open Liero is licensed with the [BSD-2-Clause](LICENSE).
+
+This project depends on various other open source libraries which are licensed
+under their own respective licenses:
+
+* [SDL + SDL_image][1] ([zlib][3])
+* [miniz][2] ([MIT][4])
+
+[0]: https://github.com/gliptic/liero
+[1]: https://www.libsdl.org
+[2]: https://github.com/richgel999/miniz
+[3]: https://www.libsdl.org/license.php
+[4]: https://github.com/richgel999/miniz/blob/master/LICENSE

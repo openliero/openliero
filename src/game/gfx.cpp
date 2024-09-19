@@ -19,6 +19,7 @@
 #include "text.hpp"
 #include "keys.hpp"
 #include "filesystem.hpp"
+#include "metadata.hpp"
 
 #include <gvl/io2/fstream.hpp>
 
@@ -325,7 +326,8 @@ void Gfx::setVideoMode()
 		}
 		if (!sdlSpectatorWindow)
 		{
-			sdlSpectatorWindow = SDL_CreateWindow("Liero Spectator Window",
+      std::string spectatorWindowTitle = std::string("Liero Spectator Window - ") + build_version();
+			sdlSpectatorWindow = SDL_CreateWindow(spectatorWindowTitle.c_str(),
 				SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowW, windowH, flags);
 		}
 		else
@@ -377,7 +379,8 @@ void Gfx::setVideoMode()
 		{
 			SDL_GetWindowPosition(sdlSpectatorWindow, &x, &y);
 		}
-		sdlWindow = SDL_CreateWindow("Liero 1.39", x + 100, y + 50, windowW, windowH, flags);
+    std::string windowTitle = std::string("Liero ") + build_version();
+		sdlWindow = SDL_CreateWindow(windowTitle.c_str(), x + 100, y + 50, windowW, windowH, flags);
 
 		// The Mac app will automatically use the .icns icon file located in the
 		// .app bundle, so don't override that here.

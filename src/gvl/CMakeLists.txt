@@ -9,7 +9,6 @@ set(GVL_SOURCES
   src/containers/list.cpp
   src/io2/convert.cpp
   src/io2/stream.cpp
-  src/resman/shared.cpp
   src/support/bits.c
   src/support/debug.cpp
   src/support/platform.cpp

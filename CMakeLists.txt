@@ -1,10 +1,48 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.25..3.30)
 
-# sane CMake defaults
-# these variables get set if they are not already defined
-set(CMAKE_C_STANDARD 99 CACHE STRING "The C standard to use" FORCE)
-set(CMAKE_CXX_STANDARD 11 CACHE STRING "The C++ standard to use" FORCE)
-set(CMAKE_BUILD_TYPE Release CACHE STRING "The type of build to use" FORCE)
+# options at top so they're easy to find
+option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
+option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
+option(OPENLIERO_USE_VCPKG "Use vcpkg to manage dependencies" ON)
+
+# tell cmake we have goodies in the cmake/ directory
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
+
+include(GenerateVersion) # generate version metadata from git
+
+# configure vcpkg
+if(OPENLIERO_USE_VCPKG)
+  set(VCPKG_TOOLCHAIN_PATH
+    "scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "General path to vcpkg toolchain file"
+  )
+
+  # use local vcpkg
+  if(EXISTS "$ENV{VCPKG_ROOT}/${VCPKG_TOOLCHAIN_PATH}")
+    message(STATUS "Using system-provided vcpkg to manage dependencies")
+    set(CMAKE_TOOLCHAIN_FILE
+      "$ENV{VCPKG_ROOT}/${VCPKG_TOOLCHAIN_PATH}"
+      CACHE STRING "vcpkg toolchain file"
+    )
+  else()
+    message(STATUS "Using bootstrapped vcpkg to manage dependencies")
+    set(X_VCPKG_CLONE_DIR "${CMAKE_SOURCE_DIR}/tools/vcpkg/vcpkg"
+      CACHE PATH "vcpkg clone directory"
+    )
+    set(CMAKE_TOOLCHAIN_FILE
+      "${X_VCPKG_CLONE_DIR}/${VCPKG_TOOLCHAIN_PATH}"
+      CACHE STRING "vcpkg toolchain file"
+    )
+    include(BootstrapVcpkg)
+  endif()
+
+  set(VCPKG_BOOTSTRAP_OPTIONS "-disableMetrics")
+  set(VCPKG_INSTALL_OPTIONS "--no-print-usage")
+  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
+else()
+  message(STATUS "Using system-provided dependencies")
+endif()
 
 project(openliero
   DESCRIPTION "A brutal subterranean shooter game"
@@ -12,21 +50,24 @@ project(openliero
   LANGUAGES C CXX
 )
 
-# options at top so they're easy to find
-option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
-option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
-option(OPENLIERO_VENDORED_DEPS "Use vendored dependencies" OFF)
-
 # find dependencies
-find_package(SDL2 REQUIRED)
-find_package(SDL2_image REQUIRED)
-add_subdirectory(libs/miniz)
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_image CONFIG REQUIRED)
+find_package(miniz CONFIG REQUIRED)
+
+# local dependencies
 add_subdirectory(src/gvl)
 
 # TODO get rid of this kludgy hack
 include_directories(
   src
   src/game
+)
+
+# embed version metadata in the code
+configure_file(
+  "${PROJECT_SOURCE_DIR}/tools/cmake/metadata.cpp.in"
+  "${PROJECT_SOURCE_DIR}/src/game/metadata.cpp"
 )
 
 set(SOURCES
@@ -41,7 +82,6 @@ set(SOURCES
   src/game/math.cpp
   src/game/ninjarope.cpp
   src/game/nobject.cpp
-  src/game/rand.cpp
   src/game/settings.cpp
   src/game/sobject.cpp
   src/game/spectatorviewport.cpp
@@ -59,12 +99,13 @@ set(SOURCES
   src/game/gfx/sprite.cpp
   src/game/mixer/mixer.cpp
   src/game/mixer/player.cpp
+  src/game/metadata.cpp
 )
 
 set(GAME_SOURCES ${SOURCES}
   src/game/gfx.cpp
   src/game/keys.cpp
-  src/game/main.cpp
+  src/game/gameEntry.cpp
   src/game/replay.cpp
   src/game/sfx.cpp
   src/game/weapsel.cpp
@@ -84,25 +125,16 @@ set(GAME_SOURCES ${SOURCES}
 
 # game
 add_library(game ${GAME_SOURCES})
-if(OPENLIERO_VENDORED_DEPS)
-  target_link_libraries(game
-    SDL2::SDL2-static
-    SDL2_image::SDL2_image-static
-  )
-else()
-  target_link_libraries(game
-    SDL2::SDL2
-    SDL2_image::SDL2_image
-  )
-endif()
-
 target_link_libraries(game
-  miniz
+  PUBLIC
+  miniz::miniz
   gvl
+  $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+  $<IF:$<TARGET_EXISTS:SDL2_image::SDL2_image>,SDL2_image::SDL2_image,SDL2_image::SDL2_image-static>
 )
 
 if(APPLE)
-  add_executable(openliero src/game/sdlmain.cpp)
+  add_executable(openliero src/game/main.cpp)
 # Commented out code creates a proper bundle, but the app does not run for ... unknown reasons?
 # Anyway, enjoy your weird CLI app, macOS users. :(
 #  # https://stackoverflow.com/questions/41121000/cmake-os-x-bundle-recursively-copy-directory-to-resources/65519828#65519828
@@ -122,19 +154,19 @@ if(APPLE)
 #    set(${VAR} ${_LIST} PARENT_SCOPE)
 #  endfunction()
 #
-#  resource(PROFILES "${CMAKE_CURRENT_SOURCE_DIR}/Profiles" Resources/Profiles *.lpf)
-#  resource(RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/Resources" Resources/Resources *.png)
-#  resource(SETUPS "${CMAKE_CURRENT_SOURCE_DIR}/Setups" Resources/Setups *.cfg)
-#  resource(TC "${CMAKE_CURRENT_SOURCE_DIR}/TC" Resources/TC *)
-#  resource(ICON "${CMAKE_CURRENT_SOURCE_DIR}/pkg" Resources liero.icns)
+#  resource(PROFILES "${CMAKE_CURRENT_SOURCE_DIR}/data/Profiles" Resources/Profiles *.lpf)
+#  resource(RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/data/Resources" Resources/Resources *.png)
+#  resource(SETUPS "${CMAKE_CURRENT_SOURCE_DIR}/data/Setups" Resources/Setups *.cfg)
+#  resource(TC "${CMAKE_CURRENT_SOURCE_DIR}/data/TC" Resources/TC *)
+#  resource(ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons" Resources openliero.icns)
 #
 #  set(RESOURCE_FILES ${PROFILES} ${RESOURCES} ${SETUPS} ${TC} ${ICON})
 #
-#  add_executable(openliero MACOSX_BUNDLE src/game/sdlmain.cpp "${RESOURCE_FILES}")
+#  add_executable(openliero MACOSX_BUNDLE src/game/main.cpp "${RESOURCE_FILES}")
 elseif(WIN32)
-  add_executable(openliero WIN32 src/game/sdlmain.cpp pkg/win32_icon.rc)
+  add_executable(openliero WIN32 src/game/main.cpp packaging/icons/openliero.rc)
 else()
-  add_executable(openliero src/game/sdlmain.cpp)
+  add_executable(openliero src/game/main.cpp)
 endif()
 
 target_link_libraries(openliero PRIVATE game)
@@ -148,19 +180,11 @@ if(OPENLIERO_BUILD_TCTOOL)
 
   add_library(tc ${TC_TOOL_SOURCES})
 
-  if(OPENLIERO_VENDORED_DEPS)
-    target_link_libraries(tc
-      SDL2::SDL2-static
-    )
-  else()
-    target_link_libraries(tc
-      SDL2::SDL2
-    )
-  endif()
-
   target_link_libraries(tc
-    miniz
+    PUBLIC
+    miniz::miniz
     gvl
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
   )
 
   add_executable(tctool ${TC_TOOL_SOURCES})
@@ -176,19 +200,11 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   )
   add_library(vt ${VIDEO_TOOL_SOURCES})
 
-  if(OPENLIERO_VENDORED_DEPS)
   target_link_libraries(vt
-    SDL2::SDL2-static
-  )
-  else()
-  target_link_libraries(vt
-    SDL2::SDL2
-  )
-  endif()
-
-  target_link_libraries(vt
+    PUBLIC
     miniz
     gvl
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
     avcodec
     avformat
     avutil
@@ -210,3 +226,21 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   add_executable(videotool ${VIDEO_TOOL_SOURCES})
   target_link_libraries(videotool PRIVATE vt)
 endif()
+
+# binaries
+install(TARGETS openliero CONFIGURATIONS Release DESTINATION .)
+if(OPENLIERO_BUILD_TCTOOL)
+  install(TARGETS tctool CONFIGURATIONS Release DESTINATION .)
+endif()
+if(OPENLIERO_BUILD_VIDEOTOOL)
+  install(TARGETS videotool CONFIGURATIONS Release DESTINATION .)
+endif()
+
+# assets
+install(DIRECTORY data/Profiles DESTINATION .)
+install(DIRECTORY data/Resources DESTINATION .)
+install(DIRECTORY data/Setups DESTINATION .)
+install(DIRECTORY data/TC DESTINATION .)
+
+# documentation
+install(FILES README.md LICENSE DESTINATION .)
