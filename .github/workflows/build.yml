@@ -33,177 +33,97 @@ jobs:
             os: windows-latest
           - name: macos
             os: macos-latest
-            extra-flags: -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Cache the build
+      - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.5
-
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        uses: libsdl-org/setup-sdl@main
-        id: sdl
-        with:
-          build-type: Release
-          install-linux-dependencies: true
-          version: 2-latest
-          version-sdl-image: 2-latest
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y libsdl2-dev libsdl2-image-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev \
+            libxft-dev \
+            libxext-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libegl1-mesa-dev \
+            libibus-1.0-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libaudio-dev \
+            libjack-dev \
+            libsndio-dev
 
-      - name: Build vendored dependencies (Linux/macOS)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: >
-          cmake \
-            -S libs/SDL \
-            -B tmp/SDL \
-            -D BUILD_SHARED_LIBS=OFF \
-            -D CMAKE_BUILD_TYPE=Release \
-            -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
-            -D SDL_TEST=OFF ${{ matrix.extra-flags }}
-          cmake \
-            --build tmp/SDL \
-            --parallel 4
-          DESTDIR=$(pwd)/tmp cmake \
-            --install tmp/SDL
-          cmake \
-            -S libs/SDL_image \
-            -B tmp/SDL_image \
-            -D CMAKE_BUILD_TYPE=Release \
-            -D SDL2IMAGE_VENDORED=ON \
-            -D BUILD_SHARED_LIBS=OFF \
-            -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -D CMAKE_C_COMPILER_LAUNCHER=sccache \
-            -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
-            -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local ${{ matrix.extra-flags }}
-          cmake \
-            --build tmp/SDL_image \
-            --parallel 4
-          DESTDIR=$(pwd)/tmp cmake \
-            --install tmp/SDL_image
+      - name: Get cmake/ninja
+        uses: lukka/get-cmake@latest
 
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: >
-          cmake
-          -D CMAKE_BUILD_TYPE=Release
-          -D OPENLIERO_BUILD_TCTOOL=ON
-          -D CMAKE_C_COMPILER_LAUNCHER=sccache
-          -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg/vcpkg'
+          vcpkgConfigurationJsonGlob: 'vcpkg-configuration.json'
 
-      - name: Configure CMake (Linux/macOS)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: >
-          cmake
-          -D CMAKE_BUILD_TYPE=Release
-          -D OPENLIERO_BUILD_TCTOOL=ON
-          -D OPENLIERO_VENDORED_DEPS=ON
-          -D CMAKE_PREFIX_PATH=$(pwd)/tmp/usr/local
-          -D CMAKE_C_COMPILER_LAUNCHER=sccache
-          -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
-          ${{ matrix.extra-flags }}
+      - name: Run cmake
+        if: runner.os != 'macos'
+        uses: lukka/run-cmake@v10
+        with:
+          workflowPreset: '${{ matrix.name }}-x64-ci'
 
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: >
-          cmake
-          --build .
-          --config Release
-          --parallel 4
+      - name: Run cmake (macos-arm64)
+        if: runner.os == 'macos'
+        uses: lukka/run-cmake@v10
+        with:
+          workflowPreset: 'macos-arm64-ci'
 
-      - name: Build (Linux/macOS)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: >
-          cmake
-          --build .
-          --config Release
-          --parallel 4
+      - name: Run cmake (macos-x64)
+        if: runner.os == 'macos'
+        uses: lukka/run-cmake@v10
+        with:
+          workflowPreset: 'macos-x64-ci'
 
-      - name: Move executable (Windows)
-        if: runner.os == 'Windows'
-        run: >
-          Move-Item
-          -Path Release/openliero.exe,Release/tctool.exe
-          -Destination .
+      - name: Create build artifact (Linux)
+        if: runner.os == 'linux'
+        run: |
+          cmake --install build/linux-x64-ci
+          cd install/linux-x64-ci
+          tar cvf ../openliero-linux-x64.tar.gz .
 
-      - name: Upload build
+      - name: Create build artifact (macOS)
+        if: runner.os == 'macos'
+        run: |
+          cmake --install build/macos-arm64-ci
+          cmake --install build/macos-x64-ci
+          lipo -create \
+            -output install/openliero \
+            install/macos-arm64-ci/openliero \
+            install/macos-x64-ci/openliero
+          lipo -create \
+            -output install/tctool \
+            install/macos-arm64-ci/tctool \
+            install/macos-x64-ci/tctool
+          rm install/macos-arm64-ci/{openliero,tctool}
+          mv install/{openliero,tctool} install/macos-arm64-ci
+          cd install/macos-arm64-ci
+          tar cvf ../openliero-macos.tar.gz .
+
+      - name: Create build artifact (Windows)
+        if: runner.os == 'windows'
+        run: |
+          cmake --install build/windows-x64-ci
+          Compress-Archive `
+           -Path install/windows-x64-ci/* `
+           -DestinationPath install/openliero-windows-x64.zip
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-build
-          path: |
-            openliero*
-            tctool*
-            Resources
-            Setups
-            Profiles
-            TC
-
-  release:
-    if: github.ref_name == 'master'
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-build
-          path: linux-build
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: windows-build
-          path: windows-build
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: macos-build
-          path: macos-build
-
-      - name: Create archive (Linux)
-        run: |
-          chmod +x linux-build/openliero linux-build/tctool
-          cd linux-build
-          tar cfJ liero-linux-x64-${{ github.sha }}.tar.xz *
-          cd ..
-
-      - name: Create archive (macOS)
-        run: |
-          chmod +x macos-build/openliero macos-build/tctool
-          cd macos-build
-          tar cfJ liero-macos-universal-${{ github.sha }}.tar.xz *
-          cd ..
-
-      - name: Create archive (Windows)
-        run: |
-          curl -L \
-          -o windows-build/sdl2-win-x64.zip \
-          https://github.com/libsdl-org/SDL/releases/download/release-2.30.6/SDL2-2.30.6-win32-x64.zip
-          curl -L \
-          -o windows-build/sdl2_image-win-x64.zip \
-          https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2-win32-x64.zip
-          cd windows-build
-          unzip sdl2-win-x64.zip
-          rm -rf sdl2-win-x64.zip
-          unzip sdl2_image-win-x64.zip
-          rm -rf sdl2_image-win-x64.zip optional
-          mv README.txt README-SDL_image.txt
-          zip -r liero-windows-x64-${{ github.sha }}.zip .
-          cd ..
-
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}-${{ github.sha }}
-          files: |
-            linux-build/liero-linux-x64-${{ github.sha }}.tar.xz
-            windows-build/liero-windows-x64-${{ github.sha }}.zip
-            macos-build/liero-macos-universal-${{ github.sha }}.tar.xz
+          path: install/openliero*
