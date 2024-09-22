@@ -1,0 +1,8 @@
+﻿---
+BasedOnStyle: Chromium
+AlignAfterOpenBracket: AlwaysBreak
+FixNamespaceComments: 'false'
+NamespaceIndentation: All
+UseTab: Never
+
+...
