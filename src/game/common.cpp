@@ -10,7 +10,7 @@
 #include <string>
 #include "common_model.hpp"
 
-int Common::fireConeOffset[2][7][2] =
+int Common::fireConeOffset[FIRE_CONE_OFFSET_DIRECTION][FIRE_CONE_OFFSET_ANGLE_FRAME][FIRE_CONE_OFFSET_XY] =
 {
 	{{-3, 1}, {-4, 0}, {-4, -2}, {-4, -4}, {-3, -5}, {-2, -6}, {0, -6}},
 	{{3, 1}, {4, 0}, {4, -2}, {4, -4}, {3, -5}, {2, -6}, {0, -6}},
