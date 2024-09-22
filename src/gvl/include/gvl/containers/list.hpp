@@ -827,4 +827,4 @@ struct weak_list : list<T, Tag, dummy_delete>
 	}
 };
 
-} // namespace gvl
+}

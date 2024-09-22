@@ -12,4 +12,4 @@ struct archive_check_error : std::runtime_error
 };
 
 
-} // namespace gvl
+}

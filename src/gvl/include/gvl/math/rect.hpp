@@ -338,4 +338,4 @@ public:
 typedef basic_rect<int> rect;
 typedef basic_rect<float> frect;
 
-} // namespace gvl
+}

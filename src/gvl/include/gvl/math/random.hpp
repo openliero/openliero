@@ -47,4 +47,4 @@ struct prng_common
 	}
 };
 
-} // namespace gvl
+}

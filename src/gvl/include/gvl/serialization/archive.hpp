@@ -460,4 +460,4 @@ versioned_archive<Archive> enable_when(Archive const& ar, bool enable)
 	return versioned_archive<Archive>(ar, enable);
 }
 
-} // namespace gvl
+}

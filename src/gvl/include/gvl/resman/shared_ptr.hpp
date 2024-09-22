@@ -385,4 +385,4 @@ shared_ptr<T> make_shared(T* ptr)
 	return shared_ptr<T>(ptr);
 }
 
-} // namespace gvl
+}

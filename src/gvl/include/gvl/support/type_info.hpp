@@ -97,4 +97,4 @@ inline char const* type_info::name() const
     return raw_name;
 }
 
-} // namespace gvl
+}

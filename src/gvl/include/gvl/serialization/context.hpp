@@ -176,4 +176,4 @@ struct default_serialization_context : serialization_context<default_serializati
 {
 };
 
-} // namespace gvl
+}
