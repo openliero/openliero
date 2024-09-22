@@ -5,6 +5,9 @@
 
 struct Game;
 
+/*
+ * Blood Object
+*/
 struct BObject
 {
 	bool process(Game& game);
