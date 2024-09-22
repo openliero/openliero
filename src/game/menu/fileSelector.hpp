@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include "text.hpp"
+#include "../text.hpp"
 #include "menu.hpp"
-#include "common.hpp"
+#include "../common.hpp"
 
 using std::string;
 using std::vector;

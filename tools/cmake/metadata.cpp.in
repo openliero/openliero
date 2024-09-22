@@ -1,4 +1,4 @@
-#include "game/metadata.hpp"
+#include "metadata.hpp"
 
 #define VERSION_GIT_TAG "@VERSION_GIT_TAG@"
 #define VERSION_GIT_HASH "@VERSION_GIT_HASH@"

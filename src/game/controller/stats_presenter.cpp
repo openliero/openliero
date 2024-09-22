@@ -4,10 +4,10 @@
 #include <chrono>
 #include <type_traits>
 #include <gvl/io2/convert.hpp>
-#include "game/text.hpp"
-#include "game/stats.hpp"
-#include "game/game.hpp"
-#include "game/gfx.hpp"
+#include "../text.hpp"
+#include "../stats.hpp"
+#include "../game.hpp"
+#include "../gfx.hpp"
 
 using gvl::cell;
 using std::vector;
