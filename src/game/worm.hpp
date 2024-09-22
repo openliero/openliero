@@ -35,13 +35,6 @@ struct Ninjarope
 	void process(Worm& owner, Game& game);
 };
 
-/*
-struct Controls
-{
-	bool up, down, left, right;
-	bool fire, change, jump;
-};*/
-
 struct WormWeapon
 {
 	WormWeapon()
@@ -350,7 +343,6 @@ struct Worm : gvl::shared
 	int hotspotX, hotspotY;      //Hotspots for laser, laser sight, etc.
 	fixed aimingAngle, aimingSpeed;
 
-	//Controls controls;
 	bool ableToJump, ableToDig;   //The previous state of some keys
 	bool keyChangePressed;
 	bool movable;
