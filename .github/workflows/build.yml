@@ -29,10 +29,13 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
+            workflow_preset: linux-x64-ci
           - name: windows
             os: windows-latest
+            workflow_preset: windows-x64-ci
           - name: macos
             os: macos-latest
+            workflow_preset: windows-arm64-ci
 
     steps:
       - name: Checkout repository
@@ -72,17 +75,12 @@ jobs:
           vcpkgConfigurationJsonGlob: 'vcpkg-configuration.json'
 
       - name: Run cmake
-        if: runner.os != 'macos'
         uses: lukka/run-cmake@v10
         with:
-          workflowPreset: '${{ matrix.name }}-x64-ci'
+          workflowPreset: '${{ matrix.workflow_preset }}'
 
-      - name: Run cmake (macos-arm64)
-        if: runner.os == 'macos'
-        uses: lukka/run-cmake@v10
-        with:
-          workflowPreset: 'macos-arm64-ci'
-
+        # build x86_64 binaries so we can create
+        # universal binaries for macOS
       - name: Run cmake (macos-x64)
         if: runner.os == 'macos'
         uses: lukka/run-cmake@v10
@@ -109,8 +107,7 @@ jobs:
             -output install/tctool \
             install/macos-arm64-ci/tctool \
             install/macos-x64-ci/tctool
-          rm install/macos-arm64-ci/{openliero,tctool}
-          mv install/{openliero,tctool} install/macos-arm64-ci
+          mv -f install/{openliero,tctool} install/macos-arm64-ci
           cd install/macos-arm64-ci
           tar cvf ../openliero-macos.tar.gz .
 
