@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <memory>
 
 #include "gvl/resman/shared_ptr.hpp"
 #include "gvl/serialization/context.hpp"
