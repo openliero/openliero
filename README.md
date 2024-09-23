@@ -70,7 +70,10 @@ rm -rf liero-1.36-bundle
 
 ## License
 
-Open Liero is licensed with the [BSD-2-Clause](LICENSE).
+Open Liero is licensed with the [BSD-2-Clause](LICENSE). Since the copyright
+for the default sounds in Liero 1.33 is unknown, this project uses the sound
+pack from LibreLiero, which is licensed with the
+[WTFPL](data/TC/openliero/sounds/LICENSE).
 
 This project depends on various other open source libraries which are licensed
 under their own respective licenses:

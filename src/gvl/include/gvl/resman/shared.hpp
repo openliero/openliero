@@ -88,4 +88,4 @@ private:
 	weak_ptr_common* _first;
 };
 
-} // namespace gvl
+}

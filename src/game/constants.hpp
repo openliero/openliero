@@ -2,6 +2,7 @@
 
 #include <string>
 
+// Variables sourced from [constants] in tc.cfg
 #define LIERO_CDEFS(_) \
 	_(NRInitialLength) \
 	_(NRAttachLength) \
@@ -76,6 +77,7 @@
 	_(BonusSpawnRectH) \
 	_(RemExpObject)
 
+// Text strings sourced from [texts] in tc.cfg
 #define LIERO_SDEFS(_) \
 	_(InitSound) \
 	_(LoadingSounds) \
@@ -118,6 +120,7 @@
 	_(Availability) \
 	_(NoWeaps) \
 
+// Boolean values describing which hacks are enabled. Sourced from [hacks] in tc.cfg
 #define LIERO_HDEFS(_) \
 	_(FallDamage) \
 	_(BonusReloadOnly) \
@@ -135,21 +138,24 @@
 #define DEFENUMC(x) C##x,
 #define DEFENUMH(x) H##x,
 
-enum
+enum CONST_DEF_T
 {
 	LIERO_CDEFS(DEFENUMC)
+	/* Maximum quantity of constants in CONST_DEF_T. */
 	MaxC
 };
 
-enum
+enum STRING_DEF_T
 {
 	LIERO_SDEFS(DEFENUMS)
+	/* Maximum quantity of strings in STRING_DEF_T. */
 	MaxS
 };
 
-enum
+enum HACK_DEF_T
 {
 	LIERO_HDEFS(DEFENUMH)
+	/* Maximum quantity of hacks in HACK_DEF_T. */
 	MaxH
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <memory>
 
 #include "gvl/resman/shared_ptr.hpp"
 #include "gvl/serialization/context.hpp"
@@ -459,4 +460,4 @@ versioned_archive<Archive> enable_when(Archive const& ar, bool enable)
 	return versioned_archive<Archive>(ar, enable);
 }
 
-} // namespace gvl
+}

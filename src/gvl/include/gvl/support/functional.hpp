@@ -34,4 +34,4 @@ struct default_compare
 			return 0;
 	}
 };
-} // namespace gvl
+}

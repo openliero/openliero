@@ -204,4 +204,4 @@ inline basic_vec<T, 2> normal_accurate(basic_vec<T, 2> self)
 typedef basic_vec<float, 2> fvec2;
 typedef basic_vec<int, 2> ivec2;
 
-} // namespace gvl
+}

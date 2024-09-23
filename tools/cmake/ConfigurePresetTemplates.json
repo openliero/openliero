@@ -99,8 +99,7 @@
 			"hidden": true,
 			"cacheVariables": {
 				"CMAKE_C_COMPILER_LAUNCHER": "sccache",
-				"CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
-				"CMAKE_BUILD_PARALLEL_LEVEL": "3"
+				"CMAKE_CXX_COMPILER_LAUNCHER": "sccache"
 			}
 		},
 		{

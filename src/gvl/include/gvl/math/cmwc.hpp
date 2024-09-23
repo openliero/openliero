@@ -178,4 +178,4 @@ typedef cmwc<4096, 18782> cmwc18782;
 typedef cmwc<4, 987654978> cmwc987654978;
 typedef xorshift<2, 9, 15> default_xorshift;
 
-} // namespace gvl
+}

@@ -1,7 +1,7 @@
 #include "mainMenu.hpp"
 
-#include "game/sfx.hpp"
-#include "game/gfx.hpp"
+#include "../sfx.hpp"
+#include "../gfx.hpp"
 
 struct ReplaySelectBehavior : ItemBehavior
 {
