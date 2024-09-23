@@ -35,7 +35,7 @@ jobs:
             workflow_preset: windows-x64-ci
           - name: macos
             os: macos-latest
-            workflow_preset: windows-arm64-ci
+            workflow_preset: macos-arm64-ci
 
     steps:
       - name: Checkout repository
