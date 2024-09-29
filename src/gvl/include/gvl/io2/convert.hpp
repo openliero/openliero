@@ -3,9 +3,10 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <climits>
+#include <cstdint>
 
 #include "gvl/support/debug.hpp"
-#include "gvl/support/opt.hpp"
 #include "gvl/meta/as_unsigned.hpp"
 
 namespace gvl
