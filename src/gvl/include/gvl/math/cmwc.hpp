@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
-#include "gvl/support/cstdint.hpp"
 #include "gvl/math/random.hpp"
 
 namespace gvl

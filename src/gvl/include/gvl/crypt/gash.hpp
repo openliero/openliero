@@ -1,8 +1,7 @@
 #pragma once
 
 #include <utility>
-
-#include "gvl/support/cstdint.hpp"
+#include <cstdint>
 
 namespace gvl
 {
