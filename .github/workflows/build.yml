@@ -28,7 +28,7 @@ jobs:
       matrix:
         include:
           - name: linux
-            os: ubuntu-latest
+            os: ubuntu-22.04
             workflow_preset: linux-x64-ci
           - name: windows
             os: windows-latest
