@@ -9,12 +9,10 @@ namespace gvl
 
 struct noncopyable
 {
-protected:
 	noncopyable() {}
-    ~noncopyable() {}
-private:
-	noncopyable(const noncopyable&);
-	noncopyable& operator=(const noncopyable&);
+	~noncopyable() {}
+	noncopyable(const noncopyable&) = delete;
+	noncopyable& operator=(const noncopyable&) = delete;
 };
 
 }
