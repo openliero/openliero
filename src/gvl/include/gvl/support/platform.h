@@ -39,22 +39,6 @@
 # endif
 #endif
 
-#if !defined(GVL_GCC)
-# if defined(__GNUC__)
-#  define GVL_GCC 1
-# else
-#  define GVL_GCC 0
-# endif
-#endif
-
-#if !defined(GVL_LINUX)
-# if defined(__linux__) || defined(linux)
-#  define GVL_LINUX 1
-# else
-#  define GVL_LINUX 0
-# endif
-#endif
-
 #if !GVL_X86 && !GVL_X86_64
 # if defined(_M_X64) || defined(__x86_64__) || GVL_WIN64
 #  define GVL_X86_64 1
@@ -96,17 +80,6 @@
 # endif
 #endif
 
-/* Whether or not the compiler may generate x87 code for floating point calculations.
-** GVL_X87 == 1 means the gvl IEEE support functions will take measures to work-around
-** x87 issues that make results non-reproducible. */
-#if !defined(GVL_X87)
-# if GVL_X86
-#  define GVL_X87 1 // Assume the compiler generates x87 code on x86 unless otherwise stated
-# elif GVL_X86_64
-#  define GVL_X87 0 // SSE2 is typically used on GVL_X86_64
-# endif
-#endif
-
 /* Whether or not types can be read from unaligned addresses */
 #if !defined(GVL_UNALIGNED_ACCESS)
 # if GVL_X86 || GVL_X86_64
@@ -114,19 +87,6 @@
 # else
 #  define GVL_UNALIGNED_ACCESS 0
 # endif
-#endif
-
-/* At least x86 and x86_64 provide efficient masked shift counts in shifts */
-#if !defined(GVL_MASKED_SHIFT_COUNT)
-# if GVL_X86 || GVL_X86_64
-#  define GVL_MASKED_SHIFT_COUNT 1
-# else
-#  define GVL_MASKED_SHIFT_COUNT 0
-# endif
-#endif
-
-#ifndef GVL_DIV_ROUNDS_TOWARD_ZERO
-#define GVL_DIV_ROUNDS_TOWARD_ZERO ((-1/2)==0)
 #endif
 
 #ifndef GVL_SIGN_EXTENDING_RIGHT_SHIFT
@@ -140,14 +100,6 @@
 
 #if !defined(GVL_WINDOWS)
 #define GVL_WINDOWS (GVL_WIN64 || GVL_WIN32)
-#endif
-
-#if !defined(GVL_PTR64)
-#if GVL_WIN64
-#define GVL_PTR64 1
-#else
-#define GVL_PTR64 0
-#endif
 #endif
 
 /* This function checks whether the above inferred
