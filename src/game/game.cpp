@@ -28,11 +28,14 @@ Game::Game(
 , quickSim(false)
 {
 
-#if ENABLE_TRACING
-	rand.seed(1);
-#else
-	rand.seed(uint32_t(std::time(0)));
-#endif
+// https://stackoverflow.com/questions/76745282/c-mt19937-getting-the-same-sequence-multiple-times
+// for deterministic values, the value passed to mt19937 needs to be constant
+// TODO stuff the random value somewhere we can access it for replays/etc
+//#if ENABLE_TRACING
+//	rand.seed(1);
+//#else
+//	rand.seed(uint32_t(std::time(0)));
+//#endif
 
 	cycles = 0;
 }
@@ -216,8 +219,8 @@ void Game::createBonus()
 
 	for(std::size_t i = 0; i < 50000; ++i)
 	{
-		int ix = rand(LC(BonusSpawnRectW));
-		int iy = rand(LC(BonusSpawnRectH));
+		int ix = std::uniform_int_distribution<int>(0, LC(BonusSpawnRectW) - 1)(rand);
+		int iy = std::uniform_int_distribution<int>(0, LC(BonusSpawnRectH) - 1)(rand);
 
 		if(common.H[HBonusSpawnRect])
 		{
@@ -234,7 +237,7 @@ void Game::createBonus()
 			else if(common.H[HBonusOnlyWeapon])
 				frame = 0;
 			else
-				frame = rand(2);
+				frame = std::uniform_int_distribution<int>(0, 2 - 1)(rand);
 
 			Bonus* bonus = bonuses.newObject();
 			if(!bonus)
@@ -244,13 +247,13 @@ void Game::createBonus()
 			bonus->y = itof(iy);
 			bonus->velY = 0;
 			bonus->frame = frame;
-			bonus->timer = rand(common.bonusRandTimer[frame][1]) + common.bonusRandTimer[frame][0];
+			bonus->timer = std::uniform_int_distribution<int>(0, common.bonusRandTimer[frame][1] - 1)(rand) + common.bonusRandTimer[frame][0];
 
 			if(frame == 0)
 			{
 				do
 				{
-					bonus->weapon = rand((uint32_t)common.weapons.size());
+					bonus->weapon = std::uniform_int_distribution<int>(0, common.weapons.size() - 1)(rand);
 				}
 				while(settings->weapTable[bonus->weapon] == 2);
 			}
@@ -382,7 +385,7 @@ void Game::processFrame()
 
 	if(!common->H[HBonusDisable]
 	&& settings->maxBonuses > 0
-	&& rand(common->C[CBonusDropChance]) == 0)
+	&& std::uniform_int_distribution<int>(0, common->C[CBonusDropChance] - 1)(rand) == 0)
 	{
 		createBonus();
 	}

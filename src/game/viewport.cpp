@@ -58,8 +58,8 @@ void Viewport::process(Game& game)
 
 	if(realShake > 0)
 	{
-		x += rand(realShake * 2) - realShake;
-		y += rand(realShake * 2) - realShake;
+		x += std::uniform_int_distribution<int>(0, (realShake * 2) - 1)(rand) - realShake;
+		y += std::uniform_int_distribution<int>(0, (realShake * 2) - 1)(rand) - realShake;;
 	}
 
 	if(x < 0) x = 0;

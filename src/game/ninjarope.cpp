@@ -55,7 +55,7 @@ void Ninjarope::process(Worm& owner, Game& game)
 						{
 							common.nobjectTypes[2].create2(
 								game,
-								game.rand(128),
+								std::uniform_int_distribution<int>(0, 128 - 1)(game.rand),
 								fixedvec(),
 								pos,
 								pix,

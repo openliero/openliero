@@ -2,7 +2,7 @@
 
 #include "game.hpp"
 #include "worm.hpp"
-#include "rand.hpp"
+#include <random>
 #include <gvl/math/rect.hpp>
 #include <ctime>
 
@@ -36,7 +36,7 @@ struct Viewport
 	int wormIdx;
 	int bannerY;
 	gvl::rect rect;
-	Rand rand;
+  std::mt19937 rand;
 
 
 	void setCenter(int x, int y)

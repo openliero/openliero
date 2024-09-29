@@ -9,7 +9,7 @@
 #include <string>
 #include "filesystem.hpp"
 #include "math.hpp"
-#include "rand.hpp"
+#include <random>
 #include "version.hpp"
 
 #define NUM_WEAPONS 5
@@ -142,7 +142,7 @@ struct WormAI : gvl::shared {
 struct DumbLieroAI : WormAI {
   void process(Game& game, Worm& worm);
 
-  Rand rand;
+  std::mt19937 rand;
 };
 
 struct Worm : gvl::shared {

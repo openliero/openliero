@@ -4,7 +4,7 @@
 
 #include "../worm.hpp"
 #include "../math.hpp"
-#include "../rand.hpp"
+#include <random>
 #include <gvl/math/vec.hpp>
 #include <numeric>
 #include <functional>
@@ -209,13 +209,13 @@ struct Model
 	static int const freeStates = FreeStates;
 	double trans[States][FreeStates];
 
-	int random(int context, Rand& rand)
+	int random(int context, std::mt19937& rand)
 	{
 		assert(context < States);
 		auto& v = trans[context];
 
 		double max = std::accumulate(v, v + FreeStates, 0.0);
-		double el = rand.get_double(max);
+    double el = std::uniform_real_distribution<double>(0.0, max)(rand);
 
 		for (int i = 0; i < FreeStates; ++i)
 		{
@@ -255,7 +255,7 @@ struct TransModel : Model<InputContext::Size, 56>
 		trans[context.pack()][v.idx] += 0.005;
 	}
 
-	InputState random(InputContext context, Rand& rand)
+	InputState random(InputContext context, std::mt19937& rand)
 	{
 		return InputState(Model<InputContext::Size, 56>::random(context.pack(), rand));
 	}
@@ -393,7 +393,7 @@ struct FollowAI : WormAI, AiContext
 
 	void drawDebug(Game& game, Worm const& worm, Renderer& renderer, int offsX, int offsY);
 
-	Rand rand;
+  std::mt19937 rand;
 	int frame;
 	InputContext currentContext;
 	TransModel model;

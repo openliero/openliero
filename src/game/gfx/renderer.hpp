@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../common.hpp"
-#include "../rand.hpp"
 #include "bitmap.hpp"
 
 struct Renderer

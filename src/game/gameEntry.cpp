@@ -15,13 +15,16 @@
 
 #include <ctime>
 #include <exception>
-#include <gvl/math/cmwc.hpp>
+#include <random>
 
 int gameEntry(int argc, char* argv[])
 try
 {
-	// TODO: Better PRNG seeding
-	gfx.rand.seed(Uint32(std::time(0)));
+	// TODO: Validate PRNG seeding
+  // why do we have *two* PRNGs (gfx & game)?
+	std::random_device r;
+	auto rand = std::mt19937(r());
+	gfx.rand = rand;
 
 	bool tcSet = false;
 
@@ -87,7 +90,7 @@ try
 
 	gfx.mainLoop();
 
-	gfx.settings->save(configNode / "Setups" / "liero.cfg", gfx.rand);
+	gfx.settings->save(configNode / "Setups" / "liero.cfg");
 
 	sfx.deinit();
 	SDL_Quit();

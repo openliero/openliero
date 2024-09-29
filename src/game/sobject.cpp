@@ -16,14 +16,14 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 	Common& common = *game.common;
 	SObject& obj = *game.sobjects.newObjectReuse();
 
-	LTRACE(rand, 0, sobj, game.rand.x);
+	//LTRACE(rand, 0, sobj, game.rand.x);
 	LTRACE(sobj, &obj - game.sobjects.arr, cxpo, x);
 	LTRACE(sobj, &obj - game.sobjects.arr, cypo, y);
 
 	assert(numSounds < 10);
 
 	if(startSound >= 0)
-		game.soundPlayer->play(game.rand(numSounds) + startSound);
+		game.soundPlayer->play(std::uniform_int_distribution<int>(0, numSounds - 1)(game.rand) + startSound);
 
 	for(std::size_t i = 0; i < game.viewports.size(); ++i)
 	{
@@ -113,7 +113,7 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 					{
 						for(int i = 0; i < bloodAmount; ++i)
 						{
-							int angle = game.rand(128);
+							int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
 							common.nobjectTypes[6].create2(
 								game,
 								angle,
@@ -125,9 +125,9 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 						}
 					}
 
-					if(game.rand(3) == 0)
+					if(std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0)
 					{
-						int snd = 18 + game.rand(3); // NOTE: MUST be outside the unpredictable branch below
+						int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand); // NOTE: MUST be outside the unpredictable branch below
 						if(!game.soundPlayer->isPlaying(&w))
 						{
 							game.soundPlayer->play(snd, &w);
@@ -234,10 +234,10 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 			for(int x = rect.x1; x < rect.x2; ++x)
 			{
 				if(game.level.mat(x, y).anyDirt()
-				&& game.rand(8) == 0)
+				&& std::uniform_int_distribution<int>(0, 8 - 1)(game.rand) == 0)
 				{
 					PalIdx pix = game.level.pixel(x, y);
-					int angle = game.rand(128);
+					int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
 					common.nobjectTypes[2].create2(
 						game,
 						angle,

@@ -103,10 +103,6 @@ struct WormNameBehavior : ItemBehavior
 
 		gfx.inputString(ws.name, 20, x, y);
 
-		if(ws.name.empty())
-		{
-			Settings::generateName(ws, gfx.rand);
-		}
 		sfx.play(common, 27);
 		onUpdate(menu, item);
 		return -1;
@@ -1941,20 +1937,20 @@ restart:
 void Gfx::saveSettings(FsNode node)
 {
 	settingsNode = node;
-	settings->save(node, rand);
+	settings->save(node);
 }
 
 bool Gfx::loadSettings(FsNode node)
 {
 	settingsNode = node;
 	settings.reset(new Settings);
-	return settings->load(node, rand);
+	return settings->load(node);
 }
 
 bool Gfx::loadSettingsLegacy(FsNode node)
 {
 	settings.reset(new Settings);
-	return settings->loadLegacy(node, rand);
+	return settings->loadLegacy(node);
 }
 
 void Gfx::drawBasicMenu(/*int curSel*/)
@@ -2194,8 +2190,9 @@ int Gfx::menuLoop()
 		{
 			uint32_t s = 14;
 
-			Rand r;
-			r.seed(s);
+      // TODO ensure this is deterministic
+			std::random_device rd;
+			std::mt19937 g(rd());
 
 			Common& common = *this->common;
 
@@ -2205,108 +2202,106 @@ int Gfx::menuLoop()
 			{
 				nobjMap.push_back(i);
 			}
-			std::random_device rd;
-			std::mt19937 g(rd());
 			std::shuffle(nobjMap.begin(), nobjMap.end(), g);
 
 			for (auto& w : common.weapons)
 			{
-				w.addSpeed = r(30) - 5;
-				w.affectByExplosions = r(2) == 0;
-				w.affectByWorm = r(3) == 0;
-				w.ammo = r(20) + 1;
-				w.bloodOnHit = r(50);
-				w.blowAway = r(10);
-				w.bounce = r(90);
-				w.collideWithObjects = r(10) == 0;
-				w.colorBullets = 3 + r(250);
-				w.createOnExp = r(common.sobjectTypes.size());
-				w.delay = r(70);
-				w.detectDistance = r(20);
-				w.dirtEffect = r(9);
-				w.distribution = r(5000) - 2500;
-				w.explGround = r(2) == 0;
-				w.exploSound = r(common.sounds.size());
-				w.fireCone = r(10);
-				w.gravity = r(2000) - 1000;
-				w.hitDamage = r(20);
-				w.laserSight = r(5) == 0;
-				w.launchSound = r(common.sounds.size());
-				w.leaveShellDelay = r(30);
-				w.leaveShells = r(1) == 0;
-				w.loadingTime = r(70 * 3);
-				w.loopAnim = r(10) == 0;
+				w.addSpeed = std::uniform_int_distribution<int>(0, 30 - 1)(g) - 5;
+				w.affectByExplosions = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0;
+				w.affectByWorm = std::uniform_int_distribution<int>(0, 3 - 1)(g) == 0;
+				w.ammo = std::uniform_int_distribution<int>(0, 20 - 1)(g) + 1;
+				w.bloodOnHit = std::uniform_int_distribution<int>(0, 50 - 1)(g);
+				w.blowAway = std::uniform_int_distribution<int>(0, 10 - 1)(g);
+				w.bounce = std::uniform_int_distribution<int>(0, 90 - 1)(g);
+				w.collideWithObjects = std::uniform_int_distribution<int>(0, 10 - 1)(g) == 0;
+				w.colorBullets = 3 + std::uniform_int_distribution<int>(0, 250 - 1)(g);
+				w.createOnExp = std::uniform_int_distribution<int>(0, common.sobjectTypes.size() - 1)(g);
+				w.delay = std::uniform_int_distribution<int>(0, 70 - 1)(g);
+				w.detectDistance = std::uniform_int_distribution<int>(0, 20 - 1)(g);
+				w.dirtEffect = std::uniform_int_distribution<int>(0, 9 - 1)(g);
+				w.distribution = std::uniform_int_distribution<int>(0, 5000 - 1)(g) - 2500;
+				w.explGround = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0;
+				w.exploSound = std::uniform_int_distribution<int>(0, common.sounds.size() - 1)(g);
+				w.fireCone = std::uniform_int_distribution<int>(0, 10 - 1)(g);
+				w.gravity = std::uniform_int_distribution<int>(0, 2000 - 1)(g) - 1000;
+				w.hitDamage = std::uniform_int_distribution<int>(0, 20 - 1)(g);
+				w.laserSight = std::uniform_int_distribution<int>(0, 5 - 1)(g) == 0;
+				w.launchSound = std::uniform_int_distribution<int>(0, common.sounds.size() - 1)(g);
+				w.leaveShellDelay = std::uniform_int_distribution<int>(0, 30 - 1)(g);
+				w.leaveShells = std::uniform_int_distribution<int>(0, 1)(g) == 0;
+				w.loadingTime = std::uniform_int_distribution<int>(0, (70 * 3) - 1)(g);
+				w.loopAnim = std::uniform_int_distribution<int>(0, 10 - 1)(g) == 0;
 				w.loopSound = false;
-				w.multSpeed = r(2) ? 100 : 99 + r(5);
-				w.objTrailDelay = 10 + r(70);
-				w.objTrailType = r(4) == 0 ? r(common.sobjectTypes.size()) : -1;
-				w.parts = r(2) == 0 ? r(10) : 1;
-				w.partTrailDelay = 10 + r(70);
-				w.partTrailObj = r(4) == 0 ? r(common.nobjectTypes.size()) : -1;
-				w.partTrailType = r(2);
-				w.playReloadSound = r(2) == 0;
-				w.recoil = r(20);
-				w.shadow = r(2) == 0;
-				w.shotType = r(5);
-				w.speed = r(200);
-				w.splinterAmount = r(5) == 0 ? r(10) : 0;
-				w.splinterColour = r(256);
-				w.splinterScatter = r(2);
-				w.splinterType = r(common.nobjectTypes.size());
-				w.startFrame = r((uint32_t)common.smallSprites.count - 13);
-				w.numFrames = r(5);
-				w.timeToExplo = 50 + r(200);
-				w.timeToExploV = 10 + r(50);
-				w.wormCollide = r(3) > 0;
-				w.wormExplode = r(3) > 0;
+				w.multSpeed = std::uniform_int_distribution<int>(0, 2 - 1)(g) ? 100 : 99 + std::uniform_int_distribution<int>(0, 5 - 1)(g);
+				w.objTrailDelay = 10 + std::uniform_int_distribution<int>(0, 70 - 1)(g);
+				w.objTrailType = std::uniform_int_distribution<int>(0, 4 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, common.sobjectTypes.size() - 1)(g) : -1;
+				w.parts = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, 10 - 1)(g) : 1;
+				w.partTrailDelay = 10 + std::uniform_int_distribution<int>(0, 70 - 1)(g);
+				w.partTrailObj = std::uniform_int_distribution<int>(0, 4 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, common.nobjectTypes.size() - 1)(g) : -1;
+				w.partTrailType = std::uniform_int_distribution<int>(0, 2 - 1)(g);
+				w.playReloadSound = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0;
+				w.recoil = std::uniform_int_distribution<int>(0, 20 - 1)(g);
+				w.shadow = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0;
+				w.shotType = std::uniform_int_distribution<int>(0, 5 - 1)(g);
+				w.speed = std::uniform_int_distribution<int>(0, 200 - 1)(g);
+				w.splinterAmount = std::uniform_int_distribution<int>(0, 5 -1)(g) == 0 ? std::uniform_int_distribution<int>(0, 10 - 1)(g) : 0;
+				w.splinterColour = std::uniform_int_distribution<int>(0, 256 - 1)(g);
+				w.splinterScatter = std::uniform_int_distribution<int>(0, 2 - 1)(g);
+				w.splinterType = std::uniform_int_distribution<int>(0, common.nobjectTypes.size() - 1)(g);
+				w.startFrame = std::uniform_int_distribution<int>(0, (uint32_t)common.smallSprites.count - 13 - 1)(g);
+				w.numFrames = std::uniform_int_distribution<int>(0, 5 - 1)(g);
+				w.timeToExplo = 50 + std::uniform_int_distribution<int>(0, 200 - 1)(g);
+				w.timeToExploV = 10 + std::uniform_int_distribution<int>(0, 50 - 1)(g);
+				w.wormCollide = std::uniform_int_distribution<int>(0, 3 - 1)(g) > 0;
+				w.wormExplode = std::uniform_int_distribution<int>(0, 3 - 1)(g) > 0;
 			}
 
 			//for (auto& n : common.nobjectTypes)
 			for (std::size_t idx = 0; idx < common.nobjectTypes.size(); ++idx)
 			{
 				auto& n = common.nobjectTypes[nobjMap[idx]];
-				n.affectByExplosions = r(5) == 0;
-				n.bloodOnHit = r(5);
-				n.bloodTrail = r(10) == 0;
-				n.bloodTrailDelay = r(20) + 3;
-				n.blowAway = r(10);
-				n.bounce = r(90);
-				n.colorBullets = 3 + r(250);
-				n.createOnExp = r(3) == 0 ? r(common.sobjectTypes.size()) : -1;
-				n.detectDistance = r(20);
-				n.dirtEffect = r(9);
-				n.distribution = r(5000) - 2500;
-				n.drawOnMap = r(20) == 0;
-				n.explGround = r(4) > 0;
-				n.gravity = r(2000) - 1000;
-				n.hitDamage = r(10);
-				n.leaveObj = r(5) == 0 ? r(common.sobjectTypes.size()) : -1;
-				n.leaveObjDelay = 10 + r(80);
-				n.startFrame = r((uint32_t)common.smallSprites.count - 13);
-				n.numFrames = r(5);
-				n.speed = r(150);
-				n.splinterAmount = idx > 0 && r(5) == 0 ? r(10) : 0;
-				n.splinterColour = r(256);
-				n.splinterType = idx > 0 ? nobjMap[r(idx)] : 0;
-				n.timeToExplo = 50 + r(70 * 3);
-				n.timeToExploV = r(30);
-				n.wormDestroy = r(3) == 0;
-				n.wormExplode = r(2) == 0;
+				n.affectByExplosions = std::uniform_int_distribution<int>(0, 5 - 1)(g) == 0;
+				n.bloodOnHit = std::uniform_int_distribution<int>(0, 5 - 1)(g);
+				n.bloodTrail = std::uniform_int_distribution<int>(0, 10 - 1)(g) == 0;
+				n.bloodTrailDelay = std::uniform_int_distribution<int>(0, 20 - 1)(g) + 3;
+				n.blowAway = std::uniform_int_distribution<int>(0, 10 - 1)(g);
+				n.bounce = std::uniform_int_distribution<int>(0, 90 - 1)(g);
+				n.colorBullets = 3 + std::uniform_int_distribution<int>(0, 250 - 1)(g);
+				n.createOnExp = std::uniform_int_distribution<int>(0, 3 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, common.sobjectTypes.size() - 1)(g) : -1;
+				n.detectDistance = std::uniform_int_distribution<int>(0, 20 - 1)(g);
+				n.dirtEffect = std::uniform_int_distribution<int>(0, 9 - 1)(g);
+				n.distribution = std::uniform_int_distribution<int>(0, 5000 - 1)(g) - 2500;
+				n.drawOnMap = std::uniform_int_distribution<int>(0, 20 - 1)(g) == 0;
+				n.explGround = std::uniform_int_distribution<int>(0, 4 - 1)(g) > 0;
+				n.gravity = std::uniform_int_distribution<int>(0, 2000 - 1)(g) - 1000;
+				n.hitDamage = std::uniform_int_distribution<int>(0, 10 - 1)(g);
+				n.leaveObj = std::uniform_int_distribution<int>(0, 5 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, common.sobjectTypes.size() - 1)(g) : -1;
+				n.leaveObjDelay = 10 + std::uniform_int_distribution<int>(0, 80 - 1)(g);
+				n.startFrame = std::uniform_int_distribution<int>(0, (uint32_t)common.smallSprites.count - 13 - 1)(g);
+				n.numFrames = std::uniform_int_distribution<int>(0, 5 - 1)(g);
+				n.speed = std::uniform_int_distribution<int>(0, 150 - 1)(g);
+				n.splinterAmount = idx > 0 && std::uniform_int_distribution<int>(0, 5 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, 10 - 1)(g) : 0;
+				n.splinterColour = std::uniform_int_distribution<int>(0, 256 - 1)(g);
+				n.splinterType = idx > 0 ? nobjMap[std::uniform_int_distribution<int>(0, idx - 1)(g)] : 0;
+				n.timeToExplo = 50 + std::uniform_int_distribution<int>(0, (70 * 3) - 1)(g);
+				n.timeToExploV = std::uniform_int_distribution<int>(0, 30 - 1)(g);
+				n.wormDestroy = std::uniform_int_distribution<int>(0, 3 - 1)(g) == 0;
+				n.wormExplode = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0;
 			}
 
 			for (auto& s : common.sobjectTypes)
 			{
-				s.animDelay = 1 + r(10);
-				s.blowAway = r(2) == 0 ? r(10000) : 0;
-				s.damage = r(30);
-				s.detectRange = r(20);
-				s.dirtEffect = r(9);
-				s.flash = r(5);
-				s.startFrame = r((uint32_t)common.largeSprites.count - 7);
-				s.numFrames = r(7);
-				s.startSound = r(common.sounds.size());
-				s.shake = r(10);
-				s.shadow = r(2);
+				s.animDelay = 1 + std::uniform_int_distribution<int>(0, 10 - 1)(g);
+				s.blowAway = std::uniform_int_distribution<int>(0, 2 - 1)(g) == 0 ? std::uniform_int_distribution<int>(0, 10000 - 1)(g) : 0;
+				s.damage = std::uniform_int_distribution<int>(0, 30 - 1)(g);
+				s.detectRange = std::uniform_int_distribution<int>(0, 20 - 1)(g);
+				s.dirtEffect = std::uniform_int_distribution<int>(0, 9 - 1)(g);
+				s.flash = std::uniform_int_distribution<int>(0, 5 - 1)(g);
+				s.startFrame = std::uniform_int_distribution<int>(0, (uint32_t)common.largeSprites.count - 7 - 1)(g);
+				s.numFrames = std::uniform_int_distribution<int>(0, 7 - 1)(g);
+				s.startSound = std::uniform_int_distribution<int>(0, common.sounds.size() - 1)(g);
+				s.shake = std::uniform_int_distribution<int>(0, 10 - 1)(g);
+				s.shadow = std::uniform_int_distribution<int>(0, 2 - 1)(g);
 				s.numSounds = 1;
 			}
 		}

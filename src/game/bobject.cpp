@@ -10,7 +10,15 @@ void Game::createBObject(fixedvec pos, fixedvec vel)
 
 	BObject& obj = *bobjects.newObjectReuse();
 
-	obj.color = rand(LC(NumBloodColours)) + LC(FirstBloodColour);
+  // handle negative number + singular colour
+  if(LC(NumBloodColours) < 2) {
+    obj.color = LC(FirstBloodColour);
+  } else {
+    int range_end = LC(FirstBloodColour) + LC(NumBloodColours) - 1;
+
+    obj.color = std::uniform_int_distribution<int>(LC(FirstBloodColour), range_end)(rand);
+  }
+
 	obj.pos = pos;
 	obj.vel = vel;
 }
@@ -41,17 +49,20 @@ bool BObject::process(Game& game)
 		if((c >= 1 && c <= 2)
 		|| (c >= 77 && c <= 79)) // TODO: Read from EXE
 		{
-			game.level.setPixel(ipos, 77 + game.rand(3), common);
+      // 77-79
+			game.level.setPixel(ipos, 77 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand), common);
 			return false;
 		}
 		else if(m.anyDirt())
 		{
-			game.level.setPixel(ipos, 82 + game.rand(3), common);
+      // 82-84
+			game.level.setPixel(ipos, 82 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand), common);
 			return false;
 		}
 		else if(m.rock())
 		{
-			game.level.setPixel(ipos, 85 + game.rand(3), common);
+      // 85-87
+			game.level.setPixel(ipos, 85 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand), common);
 			return false;
 		}
 	}

@@ -7,7 +7,6 @@
 #include "common_model.hpp"
 #include "filesystem.hpp"
 #include "gfx/blit.hpp"
-#include "rand.hpp"
 #include "worm.hpp"
 
 int Common::fireConeOffset

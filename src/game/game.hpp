@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include <vector>
 #include "level.hpp"
 #include "settings.hpp"
@@ -7,7 +8,6 @@
 #include "sobject.hpp"
 #include "nobject.hpp"
 #include "bobject.hpp"
-#include "rand.hpp"
 #include "mixer/player.hpp"
 #include "bonus.hpp"
 #include "constants.hpp"
@@ -106,7 +106,7 @@ struct Game
 	int lastKilledIdx;
 	bool paused;
 	int cycles;
-	Rand rand;
+  std::mt19937 rand;
 
 	Holdazone holdazone;
 

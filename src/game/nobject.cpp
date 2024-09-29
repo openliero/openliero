@@ -23,7 +23,7 @@ NObject& NObjectType::create(Game& game, fixedvec vel, fixedvec pos, int color, 
 
 	if(startFrame > 0)
 	{
-		obj.curFrame = game.rand(numFrames + 1);
+		obj.curFrame = std::uniform_int_distribution<int>(0, numFrames)(game.rand);
 	}
 	else if(color != 0)
 	{
@@ -37,7 +37,7 @@ NObject& NObjectType::create(Game& game, fixedvec vel, fixedvec pos, int color, 
 	obj.timeLeft = timeToExplo;
 
 	if(timeToExploV)
-		obj.timeLeft -= game.rand(timeToExploV);
+		obj.timeLeft -= std::uniform_int_distribution<int>(0, timeToExploV - 1)(game.rand);
 
 	return obj;
 }
@@ -46,8 +46,8 @@ NObject& NObjectType::create1(Game& game, fixedvec vel, fixedvec pos, int color,
 {
 	if(distribution)
 	{
-		vel.x += distribution - game.rand(distribution * 2);
-		vel.y += distribution - game.rand(distribution * 2);
+		vel.x += distribution - std::uniform_int_distribution<int>(0, (distribution * 2) - 1)(game.rand);
+		vel.y += distribution - std::uniform_int_distribution<int>(0, (distribution * 2) - 1)(game.rand);
 	}
 
 	return create(game, vel, pos, color, ownerIdx, firedBy);
@@ -55,15 +55,15 @@ NObject& NObjectType::create1(Game& game, fixedvec vel, fixedvec pos, int color,
 
 void NObjectType::create2(Game& game, int angle, fixedvec vel, fixedvec pos, int color, int ownerIdx, WormWeapon* firedBy)
 {
-	int realSpeed = speed - game.rand(speedV);
+	int realSpeed = speed - std::uniform_int_distribution<int>(0, speedV - 1)(game.rand);
 
 	vel += cossinTable[angle] * realSpeed / 100;
 
 	// TODO: !REPLAYS Make the distributions use the same code
 	if(distribution)
 	{
-		vel.x += game.rand(distribution * 2) - distribution;
-		vel.y += game.rand(distribution * 2) - distribution;
+		vel.x += std::uniform_int_distribution<int>(0, (distribution * 2) - 1)(game.rand) - distribution;
+		vel.y += std::uniform_int_distribution<int>(0, (distribution * 2) - 1)(game.rand) - distribution;
 	}
 
 	auto& obj = create(game,
@@ -82,7 +82,7 @@ void NObject::process(Game& game)
 
 	pos += vel;
 
-	LTRACE(rand, 0, nopr, game.rand.x);
+	//LTRACE(rand, 0, nopr, game.rand.x);
 	LTRACE(nobj, this - game.nobjects.arr, moxp, pos.x);
 	LTRACE(nobj, this - game.nobjects.arr, moyp, pos.y);
 
@@ -209,9 +209,9 @@ void NObject::process(Game& game)
 
 					if(t.hitDamage > 0
 					&& w.health > 0
-					&& game.rand(3) == 0)
+					&& std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0)
 					{
-						int snd = 18 + game.rand(3); // NOTE: MUST be outside the unpredictable branch below
+						int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand); // NOTE: MUST be outside the unpredictable branch below
 						if(!game.soundPlayer->isPlaying(&w))
 						{
 							game.soundPlayer->play(snd, &w);
@@ -222,7 +222,7 @@ void NObject::process(Game& game)
 
 					for(int i = 0; i < blood; ++i)
 					{
-						int angle = game.rand(128);
+						int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
 						common.nobjectTypes[6].create2(
 							game,
 							angle,
@@ -262,8 +262,8 @@ void NObject::process(Game& game)
 		{
 			for(int i = 0; i < t.splinterAmount; ++i)
 			{
-				int angle = game.rand(128);
-				int colorSub = game.rand(2);
+        int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
+				int colorSub = std::uniform_int_distribution<int>(0, 2 - 1)(game.rand);
 				common.nobjectTypes[t.splinterType].create2(
 					game,
 					angle,

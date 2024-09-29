@@ -4,6 +4,7 @@
 #include "math.hpp"
 #include "gfx/renderer.hpp"
 #include "constants.hpp"
+#include <random>
 
 int Weapon::computedLoadingTime(Settings& settings) const
 {
@@ -26,7 +27,8 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 	obj->firedBy = ww;
 	obj->hasHit = false;
 
-	LTRACE(rand, 0, wobj, game.rand.x);
+  // TODO remove this
+	//LTRACE(rand, 0, wobj, game.rand.x);
 	LTRACE(fire, obj - game.wobjects.arr, cxpo, pos.x);
 	LTRACE(fire, obj - game.wobjects.arr, cypo, pos.y);
 
@@ -38,8 +40,8 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 
 	if(distribution)
 	{
-		obj->vel.x += game.rand(distribution * 2) - distribution;
-		obj->vel.y += game.rand(distribution * 2) - distribution;
+		obj->vel.x += std::uniform_int_distribution<int>(0, (distribution * 2) - 1)(game.rand) - distribution;
+		obj->vel.y += std::uniform_int_distribution<int>(0, (distribution * 2) - 1)(game.rand) - distribution;
 	}
 
 	if(startFrame >= 0)
@@ -49,12 +51,18 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 			if(loopAnim)
 			{
 				if(numFrames)
-					obj->curFrame = game.rand(numFrames + 1);
+        {
+					obj->curFrame = std::uniform_int_distribution<int>(0, numFrames)(game.rand);;
+        }
 				else
-					obj->curFrame = game.rand(2);
+        {
+					obj->curFrame = std::uniform_int_distribution<int>(0, 1)(game.rand);;
+        }
 			}
 			else
+      {
 				obj->curFrame = 0;
+      }
 		}
 		else if(shotType == STDType1)
 		{
@@ -63,9 +71,13 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 
 			int curFrame = (angle - 12) >> 3;
 			if(curFrame < 0)
+      {
 				curFrame = 0;
+      }
 			else if(curFrame > 12)
+      {
 				curFrame = 12;
+      }
 			obj->curFrame = curFrame;
 		}
 		else if(shotType == STDType2 || shotType == STSteerable)
@@ -73,17 +85,21 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 			obj->curFrame = angle;
 		}
 		else
+    {
 			obj->curFrame = 0;
+    }
 	}
 	else
 	{
-		obj->curFrame = colorBullets - game.rand(2);
+		obj->curFrame = colorBullets - std::uniform_int_distribution<int>(0, 1)(game.rand);
 	}
 
 	obj->timeLeft = timeToExplo;
 
 	if(timeToExploV)
-		obj->timeLeft -= game.rand(timeToExploV);
+  {
+		obj->timeLeft -= std::uniform_int_distribution<int>(0, timeToExploV - 1)(game.rand);
+  }
 }
 
 void WObject::blowUpObject(Game& game, int causeIdx)
@@ -116,8 +132,8 @@ void WObject::blowUpObject(Game& game, int causeIdx)
 		{
 			for(int i = 0; i < splinters; ++i)
 			{
-				int angle = game.rand(128);
-				int colorSub = game.rand(2);
+				int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
+				int colorSub = std::uniform_int_distribution<int>(0, 1)(game.rand);
 				common.nobjectTypes[w.splinterType].create2(
 					game,
 					angle,
@@ -132,7 +148,7 @@ void WObject::blowUpObject(Game& game, int causeIdx)
 		{
 			for(int i = 0; i < splinters; ++i)
 			{
-				int colorSub = game.rand(2);
+				int colorSub = std::uniform_int_distribution<int>(0, 1)(game.rand);
 				common.nobjectTypes[w.splinterType].create1(
 					game,
 					fixedvec(velX, velY),
@@ -202,8 +218,8 @@ void WObject::process(Game& game)
 
 			if(w.distribution)
 			{
-				vel.x += game.rand(w.distribution * 2) - w.distribution;
-				vel.y += game.rand(w.distribution * 2) - w.distribution;
+				vel.x += std::uniform_int_distribution<int>(0, (w.distribution * 2) - 1)(game.rand) - w.distribution;
+				vel.y += std::uniform_int_distribution<int>(0, (w.distribution * 2) - 1)(game.rand) - w.distribution;
 			}
 		}
 
@@ -262,7 +278,7 @@ void WObject::process(Game& game)
 			}
 			else
 			{
-				int angle = game.rand(128);
+				int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
 				common.nobjectTypes[w.partTrailObj].create2(
 					game,
 					angle,
@@ -388,15 +404,15 @@ void WObject::process(Game& game)
 
 				for(int i = 0; i < bloodAmount; ++i)
 				{
-					int angle = game.rand(128);
+				  int angle = std::uniform_int_distribution<int>(0, 128 - 1)(game.rand);
 					common.nobjectTypes[6].create2(game, angle, vel / 3, pos, 0, worm.index, firedBy);
 				}
 
 				if(w.hitDamage > 0
 				&& worm.health > 0
-				&& game.rand(3) == 0)
+				&& std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0)
 				{
-					int snd = game.rand(3) + 18; // NOTE: MUST be outside the unpredictable branch below
+					int snd = std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) + 18; // NOTE: MUST be outside the unpredictable branch below
 					if(!game.soundPlayer->isPlaying(&worm))
 					{
 						game.soundPlayer->play(snd, &worm);
@@ -405,7 +421,7 @@ void WObject::process(Game& game)
 
 				if(w.wormCollide)
 				{
-					if(game.rand(w.wormCollide) == 0)
+					if(std::uniform_int_distribution<int>(0, w.wormCollide - 1)(game.rand) == 0)
 					{
 						if(w.wormExplode)
 							doExplode = true;

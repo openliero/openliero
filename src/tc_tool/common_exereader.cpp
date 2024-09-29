@@ -4,7 +4,7 @@
 #include <gvl/io2/fstream.hpp>
 #include <cctype>
 #include "game/reader.hpp"
-#include "game/rand.hpp"
+#include <random>
 #include "game/filesystem.hpp"
 
 int CSint32desc[][3] =
@@ -791,20 +791,21 @@ void loadGfx(Common& common, ReaderFile& exe, ReaderFile& gfx)
 	// Cropping the worm sprites here to match the original behavior.
 	cropSprites(common.largeSprites, 16, 21, 2, 0, 10, 9);
 
-	Rand rand;
+  std::random_device rd;
+  std::mt19937 rand(rd());
 
 	for(int y = 0; y < 16; ++y)
 	for(int x = 0; x < 16; ++x)
 	{
 		int idx = y * 16 + x;
-		common.largeSprites.spritePtr(73)[idx] = rand(4) + 160;
-		common.largeSprites.spritePtr(74)[idx] = rand(4) + 160;
+		common.largeSprites.spritePtr(73)[idx] = std::uniform_int_distribution<int>(0, 4 - 1)(rand) + 160;
+		common.largeSprites.spritePtr(74)[idx] = std::uniform_int_distribution<int>(0, 4 - 1)(rand) + 160;
 
-		common.largeSprites.spritePtr(87)[idx] = rand(4) + 12;
-		common.largeSprites.spritePtr(88)[idx] = rand(4) + 12;
+		common.largeSprites.spritePtr(87)[idx] = std::uniform_int_distribution<int>(0, 4 - 1)(rand) + 12;
+		common.largeSprites.spritePtr(88)[idx] = std::uniform_int_distribution<int>(0, 4 - 1)(rand) + 12;
 
-		common.largeSprites.spritePtr(82)[idx] = rand(4) + 94;
-		common.largeSprites.spritePtr(83)[idx] = rand(4) + 94;
+		common.largeSprites.spritePtr(82)[idx] = std::uniform_int_distribution<int>(0, 4 - 1)(rand) + 94;
+		common.largeSprites.spritePtr(83)[idx] = std::uniform_int_distribution<int>(0, 4 - 1)(rand) + 94;
 	}
 }
 

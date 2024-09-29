@@ -2,7 +2,6 @@
 
 #include "game.hpp"
 #include "worm.hpp"
-#include "rand.hpp"
 #include "viewport.hpp"
 #include <gvl/math/rect.hpp>
 #include <ctime>

@@ -288,7 +288,7 @@ struct MutationStrategy
 	uint32_t stop;
 };
 
-InputState generate(FollowAI& ai, Rand& rand, InputContext& prev)
+InputState generate(FollowAI& ai, std::mt19937& rand, InputContext& prev)
 {
 	return ai.model.random(prev, rand);
 }
@@ -653,15 +653,15 @@ void mutate(
 			}
 		}
 
-		if (ai.rand(8) < 7)
+		if (std::uniform_int_distribution<int>(0, 8 - 1)(ai.rand) < 7)
 		{
-			ms.stop = ai.rand(minj);
-			ms.start = ai.rand(std::max(ms.stop, uint32_t(10)) - 10, ms.stop);
+			ms.stop = std::uniform_int_distribution<int>(0, minj - 1)(ai.rand);
+			ms.start = std::uniform_int_distribution<int>(std::max(ms.stop, uint32_t(10)) - 10, ms.stop - 1)(ai.rand);
 		}
 		else
 		{
-			ms.start = ai.rand(0, (uint32_t)candidate.size());
-			ms.stop = ai.rand(ms.start, std::min(ms.start + 10, (uint32_t)candidate.size()));
+			ms.start = std::uniform_int_distribution<int>(0, (uint32_t)candidate.size() - 1)(ai.rand);
+			ms.stop = std::uniform_int_distribution<int>(ms.start, std::min(ms.start + 10, (uint32_t)candidate.size()) - 1)(ai.rand);
 		}
 	}
 

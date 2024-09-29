@@ -3,7 +3,6 @@
 #include "../constants.hpp"
 #include "../level.hpp"
 #include "../common.hpp"
-#include "../rand.hpp"
 #include "../settings.hpp"
 #include "bitmap.hpp"
 #include "macros.hpp"
@@ -13,6 +12,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <map>
+#include <random>
 
 void fillRect(Bitmap& scr, int x, int y, int w, int h, int color)
 {
@@ -423,11 +423,12 @@ void blitStone(Common& common, Level& level, bool p1, PalIdx* mem, int x, int y)
 	}
 }
 
-void drawDirtEffect(Common& common, Rand& rand, Level& level, int dirtEffect, int x, int y)
+void drawDirtEffect(Common& common, std::mt19937& rand, Level& level, int dirtEffect, int x, int y)
 {
 	assert(dirtEffect >= 0 && dirtEffect < 9);
 	Texture& tex = common.textures[dirtEffect];
-	PalIdx* tFrame = common.largeSprites.spritePtr(tex.sFrame + rand(tex.rFrame));
+  std::uniform_int_distribution<int> distTexrFrame(0, tex.rFrame - 1);
+	PalIdx* tFrame = common.largeSprites.spritePtr(tex.sFrame + distTexrFrame(rand));
 	PalIdx* mFrame = common.largeSprites.spritePtr(tex.mFrame);
 
 	LTRACE(draw, dirtEffect, xpos, x);
@@ -582,7 +583,7 @@ void drawNinjarope(Common& common, Bitmap& scr, int fromX, int fromY, int toX, i
 	});
 }
 
-void drawLaserSight(Bitmap& scr, Rand& rand, int fromX, int fromY, int toX, int toY)
+void drawLaserSight(Bitmap& scr, std::mt19937& rand, int fromX, int fromY, int toX, int toY)
 {
 	gvl::rect& clip = scr.clip_rect;
 	PalIdx* ptr = scr.pixels;
@@ -591,10 +592,10 @@ void drawLaserSight(Bitmap& scr, Rand& rand, int fromX, int fromY, int toX, int 
 
 	DO_LINE({
 
-		if(rand(5) == 0)
+		if(std::uniform_int_distribution<int>(0, 5 - 1)(rand) == 0)
 		{
 			if(clip.inside(cx, cy))
-				ptr[cy*pitch + cx] = rand(2) + 83;
+				ptr[cy*pitch + cx] = std::uniform_int_distribution<int>(83, 84)(rand);
 		}
 	});
 }

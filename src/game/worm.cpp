@@ -6,6 +6,7 @@
 #include "console.hpp"
 #include "filesystem.hpp" // For joinPath
 #include <cstdlib>
+#include <random>
 
 #include <gvl/serialization/context.hpp>
 #include <gvl/serialization/archive.hpp>
@@ -302,13 +303,13 @@ void Worm::process(Game& game)
 						{
 							game.bonuses.free(br);
 
-							game.doHealing(*this, (game.rand(LC(BonusHealthVar)) + LC(BonusMinHealth)) * settings->health / 100);
+							game.doHealing(*this, (std::uniform_int_distribution<int>(0, LC(BonusHealthVar) - 1)(game.rand) + LC(BonusMinHealth)) * settings->health / 100);
 
 						}
 					}
 					else if(i->frame == 0)
 					{
-						if(game.rand(LC(BonusExplodeRisk)) > 1)
+						if(std::uniform_int_distribution<int>(0, LC(BonusExplodeRisk) - 1)(game.rand) > 1)
 						{
 							WormWeapon& ww = weapons[currentWeapon];
 
@@ -376,11 +377,12 @@ void Worm::process(Game& game)
 
 			if(health < settings->health / 4)
 			{
-				if(game.rand(health + 6) == 0)
+        if(std::uniform_int_distribution<int>(0, health + 6 - 1)(game.rand) == 0)
 				{
-					if(game.rand(3) == 0)
+          if(std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0)
 					{
-						int snd = 18 + game.rand(3); // NOTE: MUST be outside the unpredictable branch below
+            // NOTE: MUST be outside the unpredictable branch below
+            int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand);
 						if(!game.soundPlayer->isPlaying(this))
 						{
 							game.soundPlayer->play(snd, this);
@@ -402,7 +404,7 @@ void Worm::process(Game& game)
 					game.soundPlayer->stop(&weapons[currentWeapon]);
 				}
 
-				int deathSnd = 15 + game.rand(3);
+				int deathSnd = 15 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand);
 				game.soundPlayer->play(deathSnd, this);
 
 				fireCone = 0;
@@ -450,7 +452,7 @@ void Worm::process(Game& game)
 					{
 						common.nobjectTypes[6].create2(
 							game,
-							game.rand(128),
+              std::uniform_int_distribution<int>(0, 128 - 1)(game.rand),
 							vel / 3,
 							pos,
 							0,
@@ -462,7 +464,7 @@ void Worm::process(Game& game)
 				{
 					common.nobjectTypes[index].create2(
 						game,
-						i + game.rand(14),
+						i + std::uniform_int_distribution<int>(0, 14 - 1)(game.rand),
 						vel / 3,
 						pos,
 						0,
@@ -570,7 +572,7 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 	{
 		// The other worm is close enough
 		bool fire = worm.pressed(Worm::Fire);
-		if(rand(common.aiParams.k[fire][WormSettings::Fire]) == 0)
+    if(std::uniform_int_distribution<int>(0, common.aiParams.k[fire][WormSettings::Fire] - 1)(game.rand) == 0)
 		{
 			worm.setControlState(Worm::Fire, !fire);
 		} // 4DE7
@@ -582,13 +584,13 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 
 	// In Liero this is a loop with two iterations, that's better maybe
 	bool jump = worm.pressed(Worm::Jump);
-	if(rand(common.aiParams.k[jump][WormSettings::Jump]) == 0)
+	if(std::uniform_int_distribution<int>(0, common.aiParams.k[jump][WormSettings::Jump] - 1)(game.rand) == 0)
 	{
 		worm.toggleControlState(Worm::Jump);
 	}
 
 	bool change = worm.pressed(Worm::Change);
-	if(rand(common.aiParams.k[change][WormSettings::Change]) == 0)
+	if(std::uniform_int_distribution<int>(0, common.aiParams.k[change][WormSettings::Change] - 1)(game.rand) == 0)
 	{
 		worm.toggleControlState(Worm::Change);
 	}
@@ -625,16 +627,16 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 			if(delta.y < 0)
 			{
 				if(adeltaY > adeltaX)
-					dir = 64 + rand(16);
+					dir = 64 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
 				else if(adeltaX > adeltaY)
-					dir = 80 + rand(16);
+					dir = 80 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
 				else
 					dir = 80;
 			}
 			else // deltaY >= 0
 			{
 				if(adeltaX > adeltaY)
-					dir = 96 + rand(16);
+					dir = 96 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
 				else
 					dir = 116;
 			}
@@ -645,16 +647,16 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 			{
 
 				if(adeltaY > adeltaX)
-					dir = 48 + rand(16);
+					dir = 48 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
 				else if(adeltaX > adeltaY)
-					dir = 32 + rand(16);
+					dir = 32 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
 				else
 					dir = 48; // This was 56, but that seems wrong
 			}
 			else // deltaX <= 0 && deltaY >= 0
 			{
 				if(adeltaX > adeltaY)
-					dir = 12 + rand(16);
+					dir = 12 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
 				else
 					dir = 12;
 			}
@@ -693,12 +695,12 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 
 	if(change)
 	{
-		if(rand(common.aiParams.k[worm.pressed(Worm::Left)][WormSettings::Left]) == 0)
+		if(std::uniform_int_distribution<int>(0, common.aiParams.k[worm.pressed(Worm::Left)][WormSettings::Left] - 1)(game.rand) == 0)
 		{
 			worm.toggleControlState(Worm::Left);
 		}
 
-		if(rand(common.aiParams.k[worm.pressed(Worm::Right)][WormSettings::Right]) == 0)
+		if(std::uniform_int_distribution<int>(0, common.aiParams.k[worm.pressed(Worm::Right)][WormSettings::Right] - 1)(game.rand) == 0)
 		{
 			worm.toggleControlState(Worm::Right);
 		}
@@ -708,13 +710,13 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 // l_525F:
 			bool up = worm.pressed(Worm::Up);
 
-			if(rand(common.aiParams.k[up][WormSettings::Up]) == 0)
+			if(std::uniform_int_distribution<int>(0, common.aiParams.k[up][WormSettings::Up] - 1)(game.rand) == 0)
 			{
 				worm.toggleControlState(Worm::Up);
 			}
 
 			bool down = worm.pressed(Worm::Down);
-			if(rand(common.aiParams.k[down][WormSettings::Down]) == 0)
+			if(std::uniform_int_distribution<int>(0, common.aiParams.k[down][WormSettings::Down] - 1)(game.rand) == 0)
 			{
 				worm.toggleControlState(Worm::Down);
 			}
@@ -813,8 +815,8 @@ void Worm::beginRespawn(Game& game)
 	int trials = 0;
 	do
 	{
-		pos.x = itof(LC(WormSpawnRectX) + game.rand(LC(WormSpawnRectW)));
-		pos.y = itof(LC(WormSpawnRectY) + game.rand(LC(WormSpawnRectH)));
+		pos.x = itof(LC(WormSpawnRectX) + std::uniform_int_distribution<int>(0, LC(WormSpawnRectW) - 1)(game.rand));
+		pos.y = itof(LC(WormSpawnRectY) + std::uniform_int_distribution<int>(0, LC(WormSpawnRectH) - 1)(game.rand));
 
 		// The original didn't have + 4 in both, which seems
 		// to be done in the exe and makes sense.
@@ -885,7 +887,7 @@ void Worm::doRespawning(Game& game)
 			health = settings->health;
 
 		// NOTE: This was done at death before, but doing it here seems to make more sense
-		if(game.rand() & 1)
+    if(std::uniform_int_distribution<int>(0, 1)(game.rand) & 1)
 		{
 			aimingAngle = itof(32);
 			direction = 0;
@@ -903,6 +905,8 @@ void Worm::doRespawning(Game& game)
 void Worm::processWeapons(Game& game)
 {
 	Common& common = *game.common;
+	std::uniform_int_distribution<int> dist0ToNeg19999(0, -19999);
+	std::uniform_int_distribution<int> dist8000To15999(8000, 15999);
 
 	for(int i = 0; i < Settings::selectableWeapons; ++i)
 	{
@@ -938,8 +942,8 @@ void Worm::processWeapons(Game& game)
 	{
 		if(--leaveShellTimer <= 0)
 		{
-			auto velY = -int(game.rand(20000));
-			auto velX = game.rand(16000) - 8000;
+			auto velY = std::uniform_int_distribution<int>(-19999, 0)(game.rand);
+			auto velX = std::uniform_int_distribution<int>(8000, 15999)(game.rand);
 			common.nobjectTypes[7].create1(game, fixedvec(velX, velY), pos, 0, index, 0);
 		}
 	}
@@ -1243,7 +1247,7 @@ void Worm::fire(Game& game)
 
 	if(w.leaveShells > 0)
 	{
-		if(game.rand(w.leaveShells) == 0)
+    if(std::uniform_int_distribution<int>(0, w.leaveShells - 1)(game.rand) == 0)
 		{
 			leaveShellTimer = w.leaveShellDelay;
 		}

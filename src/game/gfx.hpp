@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <cassert>
+#include <random>
 
 #include "gfx/font.hpp"
 #include "gfx/blit.hpp"
@@ -14,7 +15,6 @@
 #include "menu/menu.hpp"
 #include "menu/hiddenMenu.hpp"
 #include "menu/mainMenu.hpp"
-#include "rand.hpp"
 #include "keys.hpp"
 #include "settings.hpp"
 #include "common.hpp"
@@ -229,7 +229,7 @@ struct Gfx
 	}
 
 	// PRNG for things that don't affect the game
-	Rand rand;
+  std::mt19937 rand;
 
 	// renders everything for actual play
 	Renderer playRenderer;
