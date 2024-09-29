@@ -63,7 +63,11 @@ jobs:
             libpulse-dev \
             libaudio-dev \
             libjack-dev \
-            libsndio-dev
+            libsndio-dev \
+            libtool \
+            autoconf \
+            automake \
+            pkg-config
 
       - name: Get cmake/ninja
         uses: lukka/get-cmake@latest
