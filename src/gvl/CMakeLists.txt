@@ -12,7 +12,6 @@ set(GVL_SOURCES
   src/support/bits.c
   src/support/debug.cpp
   src/support/platform.cpp
-  src/system/system.c
 )
 
 add_library(${PROJECT_NAME} ${GVL_SOURCES})
