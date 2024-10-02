@@ -10,42 +10,37 @@
 
 void Level::generateDirtPattern(Common& common, std::mt19937& rand)
 {
-  // TODO double check ranges of distribution: [a, b) or [a, b]
-  std::uniform_int_distribution<int> dist0To14(0, 14);
-	std::uniform_int_distribution<int> dist0To99(0, 99);
-	std::uniform_int_distribution<int> dist12To18(12, 18);
-	std::uniform_int_distribution<int> dist12To19(12, 19);
-	std::uniform_int_distribution<int> dist56To59(56, 59);
-	std::uniform_int_distribution<int> dist69To72(69, 72);
+	resize(504, 350);
+
+  // segfault occurs when these are placed before resize() call above,
+  // because at that point, both height/width are zero.
 	std::uniform_int_distribution<int> distHeight(0, height - 1);
 	std::uniform_int_distribution<int> distWidth(0, width - 1);
 
-	resize(504, 350);
-
-  setPixel(0, 0, dist12To18(rand), common);
+  setPixel(0, 0, std::uniform_int_distribution<int>(12, 18)(rand), common);
 
 	for(int y = 1; y < height; ++y)
-		setPixel(0, y, (dist12To18(rand) + pixel(0, y - 1)) >> 1, common);
+		setPixel(0, y, (std::uniform_int_distribution<int>(12, 18)(rand) + pixel(0, y - 1)) >> 1, common);
 
 	for(int x = 1; x < width; ++x)
-		setPixel(x, 0, (dist12To18(rand) + pixel(x - 1, 0)) >> 1, common);
+		setPixel(x, 0, (std::uniform_int_distribution<int>(12, 18)(rand) + pixel(x - 1, 0)) >> 1, common);
 
 	for(int y = 1; y < height; ++y)
 	for(int x = 1; x < width; ++x)
 	{
-		setPixel(x, y, (pixel(x - 1, y) + pixel(x, y - 1) + dist12To19(rand)) / 3, common);
+		setPixel(x, y, (pixel(x - 1, y) + pixel(x, y - 1) + std::uniform_int_distribution<int>(12, 19)(rand)) / 3, common);
 	}
 
 	// TODO: Optimize the following
 
-	int count = dist0To99(rand);
+	int count = std::uniform_int_distribution<int>(0, 99)(rand);
 
 	for(int i = 0; i < count; ++i)
 	{
 		int x = distWidth(rand) - 8;
 		int y = distHeight(rand) - 8;
 
-		int temp = dist69To72(rand);
+		int temp = std::uniform_int_distribution<int>(69, 72)(rand);
 
 		PalIdx* image = common.largeSprites.spritePtr(temp);
 
@@ -80,14 +75,14 @@ void Level::generateDirtPattern(Common& common, std::mt19937& rand)
 		}
 	}
 
-	count = dist0To14(rand);
+	count = std::uniform_int_distribution<int>(0, 14)(rand);
 
 	for(int i = 0; i < count; ++i)
 	{
 		int x = distWidth(rand) - 8;
 		int y = distHeight(rand) - 8;
 
-		int which = dist56To59(rand);
+		int which = std::uniform_int_distribution<int>(56, 59)(rand);
 
 		blitStone(common, *this, false, common.largeSprites.spritePtr(which), x, y);
 	}
@@ -111,42 +106,28 @@ bool isNoRock(Common& common, Level& level, int size, int x, int y)
 
 void Level::generateRandom(Common& common, Settings const& settings, std::mt19937& rand)
 {
-  std::uniform_int_distribution<int> distNeg2To2(-2, 2);
-	std::uniform_int_distribution<int> distNeg3To3(-3, 3);
-	std::uniform_int_distribution<int> distNeg5To5(-5, 5);
-	std::uniform_int_distribution<int> distNeg7To7(-7, 7);
-	std::uniform_int_distribution<int> dist0To2(0, 2);
-	std::uniform_int_distribution<int> dist0To3(0, 3);
-	std::uniform_int_distribution<int> dist0To4(0, 4);
-	std::uniform_int_distribution<int> dist0To11(0, 11);
-	std::uniform_int_distribution<int> dist0To12(0, 12);
-	std::uniform_int_distribution<int> dist0To19(0, 19);
-	std::uniform_int_distribution<int> dist3To8(3, 8);
-	std::uniform_int_distribution<int> dist5To19(5, 19);
-	std::uniform_int_distribution<int> dist5To29(5, 29);
-	std::uniform_int_distribution<int> dist5To49(5, 49);
-	std::uniform_int_distribution<int> distHeight(0, height - 1);
-	std::uniform_int_distribution<int> distWidth(0, width - 1);
-
 	origpal.resetPalette(common.exepal, settings);
 
 	generateDirtPattern(common, rand);
 
-	int count = dist5To49(rand);
+	std::uniform_int_distribution<int> distHeight(0, height - 1);
+	std::uniform_int_distribution<int> distWidth(0, width - 1);
+
+	int count = std::uniform_int_distribution<int>(5, 49)(rand);
 
 	for(int i = 0; i < count; ++i)
 	{
 		int cx = distWidth(rand) - 8;
 		int cy = distHeight(rand) - 8;
 
-		int dx = distNeg5To5(rand);
-		int dy = distNeg2To2(rand);
+		int dx = std::uniform_int_distribution<int>(-5, 5)(rand);
+		int dy = std::uniform_int_distribution<int>(-2, 2)(rand);
 
-		int count2 = dist0To11(rand);
+		int count2 = std::uniform_int_distribution<int>(0, 11)(rand);
 
 		for(int j = 0; j < count2; ++j)
 		{
-			int count3 = dist0To4(rand);
+			int count3 = std::uniform_int_distribution<int>(0, 4)(rand);
 
 			for(int k = 0; k < count3; ++k)
 			{
@@ -158,12 +139,12 @@ void Level::generateRandom(Common& common, Settings const& settings, std::mt1993
 			cx -= (count3 + 1) * dx; // TODO: Check if it really should be (count3 + 1)
 			cy -= (count3 + 1) * dy; // TODO: Check if it really should be (count3 + 1)
 
-			cx += distNeg3To3(rand);
-			cy += distNeg7To7(rand);
+			cx += std::uniform_int_distribution<int>(-3, 3)(rand);
+			cy += std::uniform_int_distribution<int>(-7, 7)(rand);
 		}
 	}
 
-	count = dist5To19(rand);
+	count = std::uniform_int_distribution<int>(5, 19)(rand);
 	for(int i = 0; i < count; ++i)
 	{
 		int cx, cy;
@@ -171,14 +152,14 @@ void Level::generateRandom(Common& common, Settings const& settings, std::mt1993
 		{
 			cx = distWidth(rand) - 16;
 
-			if(dist0To3(rand) == 0)
-				cy = height - 1 - dist0To19(rand);
+			if(std::uniform_int_distribution<int>(0, 3)(rand) == 0)
+				cy = height - 1 - std::uniform_int_distribution<int>(0, 19)(rand);
 			else
 				cy = distHeight(rand) - 16;
 		}
 		while(!isNoRock(common, *this, 32, cx, cy));
 
-		int rock = dist0To2(rand);
+		int rock = std::uniform_int_distribution<int>(0, 2)(rand);
 
 		blitStone(common, *this, false, common.largeSprites.spritePtr(stoneTab[rock][0]), cx, cy);
 		blitStone(common, *this, false, common.largeSprites.spritePtr(stoneTab[rock][1]), cx + 16, cy);
@@ -186,7 +167,7 @@ void Level::generateRandom(Common& common, Settings const& settings, std::mt1993
 		blitStone(common, *this, false, common.largeSprites.spritePtr(stoneTab[rock][3]), cx + 16, cy + 16);
 	}
 
-	count = dist5To29(rand);
+	count = std::uniform_int_distribution<int>(5, 29)(rand);
 
 	for(int i = 0; i < count; ++i)
 	{
@@ -195,14 +176,14 @@ void Level::generateRandom(Common& common, Settings const& settings, std::mt1993
 		{
 			cx = distWidth(rand) - 8;
 
-			if(dist0To4(rand) == 0)
-				cy = height - 1 - dist0To12(rand);
+			if(std::uniform_int_distribution<int>(0, 4)(rand) == 0)
+				cy = height - 1 - std::uniform_int_distribution<int>(0, 12)(rand);
 			else
 				cy = distHeight(rand) - 8;
 		}
 		while(!isNoRock(common, *this, 15, cx, cy));
 
-		blitStone(common, *this, false, common.largeSprites.spritePtr(dist3To8(rand)), cx, cy);
+		blitStone(common, *this, false, common.largeSprites.spritePtr(std::uniform_int_distribution<int>(3, 8)(rand)), cx, cy);
 	}
 }
 
