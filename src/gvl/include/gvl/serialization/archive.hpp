@@ -2,11 +2,11 @@
 
 #include <stdexcept>
 #include <memory>
+#include <cstdint>
 
 #include "gvl/resman/shared_ptr.hpp"
 #include "gvl/serialization/context.hpp"
 #include "gvl/serialization/coding.hpp"
-#include "gvl/support/cstdint.hpp"
 #include "gvl/support/bits.hpp"
 #include "gvl/serialization/except.hpp"
 

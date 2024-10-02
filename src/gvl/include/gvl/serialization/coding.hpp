@@ -2,8 +2,7 @@
 
 #include <string>
 #include <stdexcept>
-
-#include "gvl/support/cstdint.hpp"
+#include <cstdint>
 
 namespace gvl
 {

@@ -33,20 +33,4 @@ void passert_fail(char const* cond, char const* file, int line, char const* msg)
 
 #define GVL_STATIC_ASSERT(cond) static_assert((cond), "static_assert failed")
 
-#if GVL_MSVCPP
-# if _MSC_FULL_VER >= 140050320
-#  define GVL_DEPRECATED(TEXT) __declspec(deprecated(TEXT))
-# else
-#  define GVL_DEPRECATED(TEXT) __declspec(deprecated)
-# endif
-#elif GVL_GCC
-# define GVL_DEPRECATED(TEXT) __attribute__ ((deprecated(TEXT)));
-#endif
-
-#ifndef GVL_DEPRECATED
-# define GVL_DEPRECATED(TEXT)
-#endif
-
-#define GVL_UNUSED(var) ((void)var)
-
 }

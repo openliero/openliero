@@ -28,7 +28,7 @@ jobs:
       matrix:
         include:
           - name: linux
-            os: ubuntu-latest
+            os: ubuntu-22.04
             workflow_preset: linux-x64-ci
           - name: windows
             os: windows-latest
@@ -63,7 +63,11 @@ jobs:
             libpulse-dev \
             libaudio-dev \
             libjack-dev \
-            libsndio-dev
+            libsndio-dev \
+            libtool \
+            autoconf \
+            automake \
+            pkg-config
 
       - name: Get cmake/ninja
         uses: lukka/get-cmake@latest

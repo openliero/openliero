@@ -3,10 +3,10 @@
 #include <new>
 #include <cstddef>
 #include <cstring>
+#include <cstdint>
 
 #include "gvl/containers/list.hpp"
 #include "gvl/resman/shared_ptr.hpp"
-#include "gvl/support/cstdint.hpp"
 
 namespace gvl
 {
