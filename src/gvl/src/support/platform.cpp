@@ -1,6 +1,7 @@
-#include "gvl/support/platform.hpp"
+#include <climits>
+#include <cstdint>
 
-#include "gvl/support/cstdint.hpp"
+#include "gvl/support/platform.hpp"
 #include "gvl/support/debug.hpp"
 
 void gvl_test_platform()

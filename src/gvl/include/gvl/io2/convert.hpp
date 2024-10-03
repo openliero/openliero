@@ -3,9 +3,10 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <climits>
+#include <cstdint>
 
 #include "gvl/support/debug.hpp"
-#include "gvl/support/opt.hpp"
 #include "gvl/meta/as_unsigned.hpp"
 
 namespace gvl
@@ -21,8 +22,8 @@ struct basic_text_writer
 	{ return *static_cast<DerivedT const*>(this); }
 };
 
-extern uint8_t const no_caps[];
-extern uint8_t const caps[];
+uint8_t const no_caps[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+uint8_t const caps[]    = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 template<uint32_t Base, typename Writer, typename T>
 int uint_to_ascii_base(Writer& writer, T x, int min_digits = 1, bool uppercase = false)

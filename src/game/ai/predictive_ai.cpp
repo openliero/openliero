@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include "predictive_ai.hpp"
 
 #include "../game.hpp"
@@ -88,13 +90,11 @@ inline int normalizedLangle(int langle)
 	return langle;
 }
 
-double const pi = 3.141592653589793;
-
 inline double radianDiff(double a, double b)
 {
 	double aimDiff = b - a;
-	while (aimDiff < -pi) aimDiff += 2 * pi;
-	while (aimDiff > pi) aimDiff -= 2 * pi;
+	while (aimDiff < -M_PI) aimDiff += 2 * M_PI;
+	while (aimDiff > M_PI) aimDiff -= 2 * M_PI;
 	return aimDiff;
 }
 
@@ -109,7 +109,7 @@ double aimingDiff(Worm* from, Worm* to)
 
 	double currentAim = langleToRadians(aim);
 
-	double tolerance = pi / 8;
+	double tolerance = M_PI / 8;
 	double aimDiff = std::abs(radianDiff(angleToTarget, currentAim));
 
 	return std::max(aimDiff - tolerance, 0.0) / 6.0;
@@ -244,7 +244,7 @@ double aimingDiff(AiContext& context, Game& game, Worm* from, level_cell* cell)
 
 	double angleToTarget = std::atan2(diry, dirx);
 
-	double tolerance = pi / 8;
+	double tolerance = M_PI / 8;
 	double aimDiff = std::abs(radianDiff(angleToTarget, currentAim));
 
 	return std::max(aimDiff - tolerance, 0.0) / 6.0;
@@ -465,7 +465,7 @@ void SimpleAI::process(Game& game, Worm& worm)
 		double diry = target->pos.y - worm.pos.y;
 		double angleToTarget = std::atan2(diry, dirx);
 
-		double tolerance = 2 * pi / 32.0;
+		double tolerance = 2 * M_PI / 32.0;
 
 		double aimDiff = radianDiff(angleToTarget, currentAim);
 

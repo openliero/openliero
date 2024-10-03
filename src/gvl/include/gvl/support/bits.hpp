@@ -1,6 +1,7 @@
 #pragma once
 
-#include "gvl/support/cstdint.hpp"
+#include <cstdint>
+
 #include "gvl/support/platform.hpp"
 
 #if GVL_MSVCPP
