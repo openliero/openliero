@@ -214,8 +214,12 @@ struct Model
 		assert(context < States);
 		auto& v = trans[context];
 
-		double max = std::accumulate(v, v + FreeStates, 0.0);
-    double el = std::uniform_real_distribution<double>(0.0, max)(rand);
+		double max, el = 0.0;
+
+		max = std::accumulate(v, v + FreeStates, 0.0);
+		if(max != 0.0) {
+			el = std::uniform_real_distribution<double>(0.0, max)(rand);
+		}
 
 		for (int i = 0; i < FreeStates; ++i)
 		{
@@ -393,7 +397,7 @@ struct FollowAI : WormAI, AiContext
 
 	void drawDebug(Game& game, Worm const& worm, Renderer& renderer, int offsX, int offsY);
 
-  std::mt19937 rand;
+	std::mt19937 rand;
 	int frame;
 	InputContext currentContext;
 	TransModel model;
