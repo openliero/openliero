@@ -421,7 +421,8 @@ void WObject::process(Game& game)
 
 				if(w.wormCollide)
 				{
-					if(std::uniform_int_distribution<int>(0, w.wormCollide - 1)(game.rand) == 0)
+					// TODO wormCollide is a boolean, why is it being shoved in a PRNG
+					if(std::uniform_int_distribution<int>(0, 1)(game.rand) == 0)
 					{
 						if(w.wormExplode)
 							doExplode = true;
