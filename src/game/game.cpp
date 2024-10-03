@@ -31,11 +31,11 @@ Game::Game(
 // https://stackoverflow.com/questions/76745282/c-mt19937-getting-the-same-sequence-multiple-times
 // for deterministic values, the value passed to mt19937 needs to be constant
 // TODO stuff the random value somewhere we can access it for replays/etc
-//#if ENABLE_TRACING
-//	rand.seed(1);
-//#else
-//	rand.seed(uint32_t(std::time(0)));
-//#endif
+#if ENABLE_TRACING
+	rand = std::mt19937(1);
+#else
+	rand = std::mt19937(uint32_t(std::time(0)));
+#endif
 
 	cycles = 0;
 }
