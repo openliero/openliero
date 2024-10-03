@@ -375,14 +375,19 @@ void Worm::process(Game& game)
 			}
 
 
+			// what exactly does this code do?
 			if(health < settings->health / 4)
 			{
-        if(std::uniform_int_distribution<int>(0, health + 6 - 1)(game.rand) == 0)
+				// if health is negative, uniform_int_distribution(a, b) blows up because b > a
+				if(health < 0) {
+					// skip
+				}
+				else if(std::uniform_int_distribution<int>(0, health + 6 - 1)(game.rand) == 0)
 				{
-          if(std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0)
+					if(std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0)
 					{
-            // NOTE: MUST be outside the unpredictable branch below
-            int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand);
+						// NOTE: MUST be outside the unpredictable branch below
+						int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand);
 						if(!game.soundPlayer->isPlaying(this))
 						{
 							game.soundPlayer->play(snd, this);
@@ -905,8 +910,6 @@ void Worm::doRespawning(Game& game)
 void Worm::processWeapons(Game& game)
 {
 	Common& common = *game.common;
-	std::uniform_int_distribution<int> dist0ToNeg19999(0, -19999);
-	std::uniform_int_distribution<int> dist8000To15999(8000, 15999);
 
 	for(int i = 0; i < Settings::selectableWeapons; ++i)
 	{
