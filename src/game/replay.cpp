@@ -322,7 +322,9 @@ void archive(Archive ar, Game& game)
 	.b(game.gotChanged)
 	.template obj<Worm>(game.lastKilledIdx, WormCreator(), WormIdxRefCreator())
 	.i32(game.screenFlash);
-	archive(ar, game.rand);
+
+	// PRNG seed
+	ar.ui32(game.rand_seed);
 
 	archive_worms(ar, game);
 

@@ -32,9 +32,11 @@ Game::Game(
 // for deterministic values, the value passed to mt19937 needs to be constant
 // TODO stuff the random value somewhere we can access it for replays/etc
 #if ENABLE_TRACING
-	rand = std::mt19937(1);
+	rand_seed = 1;
+	rand = std::mt19937(rand_seed);
 #else
-	rand = std::mt19937(uint32_t(std::time(0)));
+	rand_seed = uint32_t(std::time(0));
+	rand = std::mt19937(rand_seed);
 #endif
 
 	cycles = 0;

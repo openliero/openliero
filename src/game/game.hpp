@@ -106,7 +106,8 @@ struct Game
 	int lastKilledIdx;
 	bool paused;
 	int cycles;
-  std::mt19937 rand;
+	std::mt19937 rand;
+	uint32_t rand_seed;
 
 	Holdazone holdazone;
 
