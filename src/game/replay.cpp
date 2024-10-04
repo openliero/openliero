@@ -435,11 +435,7 @@ void ReplayWriter::endRecord()
 uint32_t fastGameChecksum(Game& game)
 {
 	// game.rand is like a golden thread
-  // TODO: figure out what rand.x is. seed?
-  // gvl/math/cmwc.hpp -> struct mwc uint32_t
-  // x is either set to 0x1337 or seed_new
-	//uint32_t checksum = game.rand.x;
-	uint32_t checksum = 0;
+	uint32_t checksum = game.rand_seed;
 	for(std::size_t i = 0; i < game.worms.size(); ++i)
 	{
 		Worm& worm = *game.worms[i];
