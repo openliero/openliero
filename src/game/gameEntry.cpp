@@ -21,9 +21,9 @@ int gameEntry(int argc, char* argv[])
 try
 {
 	// TODO: Validate PRNG seeding
-  // why do we have *two* PRNGs (gfx & game)?
+	// why do we have *two* PRNGs (gfx & game)?
 	std::random_device r;
-	auto rand = std::mt19937(r());
+	std::mt19937 rand(r());
 	gfx.rand = rand;
 
 	bool tcSet = false;
