@@ -5,7 +5,7 @@ option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
 option(OPENLIERO_USE_VCPKG "Use vcpkg to manage dependencies" ON)
 
-# tell cmake we have goodies in the cmake/ directory
+# tell cmake we have goodies in the tools/cmake directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 
 include(GenerateVersion) # generate version metadata from git
@@ -57,84 +57,13 @@ find_package(miniz CONFIG REQUIRED)
 
 # local dependencies
 add_subdirectory(src/gvl)
-
-# TODO get rid of this kludgy hack
-include_directories(
-  src
-  src/game
-)
-
-# embed version metadata in the code
-configure_file(
-  "${PROJECT_SOURCE_DIR}/tools/cmake/metadata.cpp.in"
-  "${PROJECT_SOURCE_DIR}/src/game/metadata.cpp"
-)
-
-set(SOURCES
-  src/game/bobject.cpp
-  src/game/bonus.cpp
-  src/game/common.cpp
-  src/game/console.cpp
-  src/game/constants.cpp
-  src/game/filesystem.cpp
-  src/game/game.cpp
-  src/game/level.cpp
-  src/game/math.cpp
-  src/game/ninjarope.cpp
-  src/game/nobject.cpp
-  src/game/settings.cpp
-  src/game/sobject.cpp
-  src/game/spectatorviewport.cpp
-  src/game/stats_recorder.cpp
-  src/game/text.cpp
-  src/game/viewport.cpp
-  src/game/weapon.cpp
-  src/game/worm.cpp
-  src/game/ai/dijkstra.cpp
-  src/game/ai/predictive_ai.cpp
-  src/game/gfx/blit.cpp
-  src/game/gfx/font.cpp
-  src/game/gfx/palette.cpp
-  src/game/gfx/renderer.cpp
-  src/game/gfx/sprite.cpp
-  src/game/mixer/mixer.cpp
-  src/game/mixer/player.cpp
-  src/game/metadata.cpp
-)
-
-set(GAME_SOURCES ${SOURCES}
-  src/game/gfx.cpp
-  src/game/keys.cpp
-  src/game/gameEntry.cpp
-  src/game/replay.cpp
-  src/game/sfx.cpp
-  src/game/weapsel.cpp
-  src/game/controller/commonController.cpp
-  src/game/controller/localController.cpp
-  src/game/controller/replayController.cpp
-  src/game/controller/stats_presenter.cpp
-  src/game/menu/booleanSwitchBehavior.cpp
-  src/game/menu/enumBehavior.cpp
-  src/game/menu/hiddenMenu.cpp
-  src/game/menu/integerBehavior.cpp
-  src/game/menu/mainMenu.cpp
-  src/game/menu/menu.cpp
-  src/game/menu/menuItem.cpp
-  src/game/menu/timeBehavior.cpp
-)
-
-# game
-add_library(game ${GAME_SOURCES})
-target_link_libraries(game
-  PUBLIC
-  miniz::miniz
-  gvl
-  $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-  $<IF:$<TARGET_EXISTS:SDL2_image::SDL2_image>,SDL2_image::SDL2_image,SDL2_image::SDL2_image-static>
-)
+add_subdirectory(src/game)
 
 if(APPLE)
-  add_executable(openliero src/game/main.cpp)
+  add_executable(openliero
+    src/game/gameEntry.cpp
+    src/game/main.cpp
+  )
 # Commented out code creates a proper bundle, but the app does not run for ... unknown reasons?
 # Anyway, enjoy your weird CLI app, macOS users. :(
 #  # https://stackoverflow.com/questions/41121000/cmake-os-x-bundle-recursively-copy-directory-to-resources/65519828#65519828
@@ -164,15 +93,23 @@ if(APPLE)
 #
 #  add_executable(openliero MACOSX_BUNDLE src/game/main.cpp "${RESOURCE_FILES}")
 elseif(WIN32)
-  add_executable(openliero WIN32 src/game/main.cpp packaging/icons/openliero.rc)
+  add_executable(openliero
+    WIN32
+    src/game/gameEntry.cpp
+    src/game/main.cpp
+    packaging/icons/openliero.rc
+  )
 else()
-  add_executable(openliero src/game/main.cpp)
+  add_executable(openliero
+    src/game/gameEntry.cpp
+    src/game/main.cpp
+  )
 endif()
 
 target_link_libraries(openliero PRIVATE game)
 
 if(OPENLIERO_BUILD_TCTOOL)
-  set(TC_TOOL_SOURCES ${SOURCES}
+  set(TC_TOOL_SOURCES
     src/tc_tool/common_exereader.cpp
     src/tc_tool/common_writer.cpp
     src/tc_tool/tc_tool_main.cpp
@@ -182,9 +119,7 @@ if(OPENLIERO_BUILD_TCTOOL)
 
   target_link_libraries(tc
     PUBLIC
-    miniz::miniz
-    gvl
-    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+    game
   )
 
   add_executable(tctool ${TC_TOOL_SOURCES})
@@ -192,7 +127,7 @@ if(OPENLIERO_BUILD_TCTOOL)
 endif()
 
 if(OPENLIERO_BUILD_VIDEOTOOL)
-  set(VIDEO_TOOL_SOURCES ${SOURCES}
+  set(VIDEO_TOOL_SOURCES
     src/game/replay.cpp
     src/video_tool/replay_to_video.cpp
     src/video_tool/tools_main.cpp
@@ -202,9 +137,7 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
 
   target_link_libraries(vt
     PUBLIC
-    miniz
-    gvl
-    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+    game
     avcodec
     avformat
     avutil
