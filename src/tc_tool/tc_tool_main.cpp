@@ -1,7 +1,7 @@
 #include "common_writer.hpp"
 #include "common_exereader.hpp"
-#include "game/filesystem.hpp"
-#include "game/reader.hpp"
+#include "filesystem.hpp"
+#include "reader.hpp"
 
 int main(int argc, char *argv[])
 {

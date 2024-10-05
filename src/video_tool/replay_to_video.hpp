@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <string>
-#include "game/common.hpp"
+#include "common.hpp"
 
 void replayToVideo(
 	std::shared_ptr<Common> const& common,

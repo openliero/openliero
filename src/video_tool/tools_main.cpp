@@ -1,9 +1,9 @@
-#include "game/reader.hpp"
-#include "game/filesystem.hpp"
-#include "game/text.hpp"
-#include "game/constants.hpp"
-#include "game/math.hpp"
-#include "game/console.hpp"
+#include "reader.hpp"
+#include "filesystem.hpp"
+#include "text.hpp"
+#include "constants.hpp"
+#include "math.hpp"
+#include "console.hpp"
 #include <gvl/support/platform.hpp>
 
 #include <ctime>

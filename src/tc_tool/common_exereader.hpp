@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/common.hpp"
+#include "common.hpp"
 
 struct ReaderFile;
 
