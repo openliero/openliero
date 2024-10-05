@@ -109,55 +109,11 @@ endif()
 target_link_libraries(openliero PRIVATE game)
 
 if(OPENLIERO_BUILD_TCTOOL)
-  set(TC_TOOL_SOURCES
-    src/tc_tool/common_exereader.cpp
-    src/tc_tool/common_writer.cpp
-    src/tc_tool/tc_tool_main.cpp
-  )
-
-  add_library(tc ${TC_TOOL_SOURCES})
-
-  target_link_libraries(tc
-    PUBLIC
-    game
-  )
-
-  add_executable(tctool ${TC_TOOL_SOURCES})
-  target_link_libraries(tctool PRIVATE tc)
+  add_subdirectory(src/tc_tool)
 endif()
 
 if(OPENLIERO_BUILD_VIDEOTOOL)
-  set(VIDEO_TOOL_SOURCES
-    src/game/replay.cpp
-    src/video_tool/replay_to_video.cpp
-    src/video_tool/tools_main.cpp
-    src/video_tool/video_recorder.c
-  )
-  add_library(vt ${VIDEO_TOOL_SOURCES})
-
-  target_link_libraries(vt
-    PUBLIC
-    game
-    avcodec
-    avformat
-    avutil
-    dl
-    pthread
-    swresample
-    swscale
-    x264
-  )
-  target_include_directories(vt ffmpeg)
-  target_link_directories(vt
-    ffmpeg/libavcodec
-    ffmpeg/libavformat
-    ffmpeg/libavutil
-    ffmpeg/libswresample
-    ffmpeg/libswscale
-    x264
-  )
-  add_executable(videotool ${VIDEO_TOOL_SOURCES})
-  target_link_libraries(videotool PRIVATE vt)
+  add_subdirectory(src/video_tool)
 endif()
 
 # binaries
