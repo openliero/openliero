@@ -30,5 +30,5 @@ target_link_directories(vt
   x264
 )
 
-add_executable(videotool tools_main.cpp)
+add_executable(videotool main.cpp)
 target_link_libraries(videotool vt)

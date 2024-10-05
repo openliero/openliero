@@ -11,5 +11,5 @@ target_link_libraries(tc
   game
 )
 
-add_executable(tctool tc_tool_main.cpp)
+add_executable(tctool main.cpp)
 target_link_libraries(tctool tc)
