@@ -82,10 +82,6 @@ void NObject::process(Game& game)
 
 	pos += vel;
 
-	//LTRACE(rand, 0, nopr, game.rand.x);
-	LTRACE(nobj, this - game.nobjects.arr, moxp, pos.x);
-	LTRACE(nobj, this - game.nobjects.arr, moyp, pos.y);
-
 	auto inewPos = ftoi(pos + vel);
 	auto ipos = ftoi(pos);
 

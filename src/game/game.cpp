@@ -31,13 +31,8 @@ Game::Game(
 // https://stackoverflow.com/questions/76745282/c-mt19937-getting-the-same-sequence-multiple-times
 // for deterministic values, the value passed to mt19937 needs to be constant
 // TODO stuff the random value somewhere we can access it for replays/etc
-#if ENABLE_TRACING
-	rand_seed = 1;
-	rand = std::mt19937(rand_seed);
-#else
 	rand_seed = uint32_t(std::time(0));
 	rand = std::mt19937(rand_seed);
-#endif
 
 	cycles = 0;
 }
@@ -265,24 +260,6 @@ void Game::createBonus()
 		}
 	} // 234F
 }
-
-#if ENABLE_TRACING
-
-void checkMap(Game& game) {
-	Common& common = *game.common;
-	uint32 h = 1;
-	for (std::size_t i = 0; i < 504*350; ++i) {
-		h = h * 33 ^ game.level.data[i];
-	}
-	LTRACE(maph, 0, pixl, h);
-	h = 1;
-	for (std::size_t i = 0; i < 504*350; ++i) {
-		h = h * 33 ^ game.level.materials[i].flags;
-	}
-	LTRACE(maph, 0, matr, h);
-}
-
-#endif
 
 void Game::processFrame()
 {

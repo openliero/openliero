@@ -184,10 +184,8 @@ void ReplayController::changeState(GameState newState)
 			game->addViewport(new Viewport(gvl::rect(160, 0, 158+160, 158), game->worms[1]->index, 504, 350));
 		}
 		game->startGame();
-#if !ENABLE_TRACING
 		initialGame.reset(new Game(*game));
 		initialGame->postClone(*game, true);
-#endif
 		initialReader = replay->reader;
 	}
 	else if(newState == StateGameEnded)

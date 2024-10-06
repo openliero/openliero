@@ -16,10 +16,6 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 	Common& common = *game.common;
 	SObject& obj = *game.sobjects.newObjectReuse();
 
-	//LTRACE(rand, 0, sobj, game.rand.x);
-	LTRACE(sobj, &obj - game.sobjects.arr, cxpo, x);
-	LTRACE(sobj, &obj - game.sobjects.arr, cypo, y);
-
 	assert(numSounds < 10);
 
 	if(startSound >= 0)
@@ -214,11 +210,6 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 						else if(delta < 0)
 							i->vel.y -= objBlowAway * power;
 					}
-
-					IF_ENABLE_TRACING(Common& common = *game.common);
-
-					LTRACE(nobj, &*i - game.nobjects.arr, puxp, i->vel.x);
-					LTRACE(nobj, &*i - game.nobjects.arr, puyp, i->vel.y);
 				}
 			}
 		}

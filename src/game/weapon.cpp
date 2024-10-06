@@ -17,7 +17,6 @@ int Weapon::computedLoadingTime(Settings& settings) const
 void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, int ownerIdx, WormWeapon* ww) const
 {
 	WObject* obj = game.wobjects.newObjectReuse();
-	IF_ENABLE_TRACING(Common& common = *game.common);
 
 	obj->type = this;
 	obj->pos = pos;
@@ -26,11 +25,6 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 	// STATS
 	obj->firedBy = ww;
 	obj->hasHit = false;
-
-  // TODO remove this
-	//LTRACE(rand, 0, wobj, game.rand.x);
-	LTRACE(fire, obj - game.wobjects.arr, cxpo, pos.x);
-	LTRACE(fire, obj - game.wobjects.arr, cypo, pos.y);
 
 	Worm* owner = game.wormByIdx(ownerIdx);
 	game.statsRecorder->damagePotential(owner, ww, hitDamage);
