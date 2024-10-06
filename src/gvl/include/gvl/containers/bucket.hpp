@@ -260,7 +260,6 @@ protected:
 uint8_t const* bucket::get_ptr()
 {
 	uint8_t const* ptr = data_->get_ptr(*this, begin_);
-	//passert(dynamic_cast<bucket_data_mem*>(data_.get()), "get_ptr must replace the bucket_data with bucket_data_mem");
 	return ptr;
 }
 

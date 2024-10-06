@@ -371,10 +371,10 @@ std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common
 {
 	uint32_t readMagic = gvl::read_uint32(reader);
 	if(readMagic != replayMagic)
-		throw gvl::archive_check_error("File does not appear to be a replay");
+		throw std::runtime_error("File does not appear to be a replay");
 	context.replayVersion = reader.get();
 	if(context.replayVersion > myReplayVersion)
-		throw gvl::archive_check_error("Replay version is too recent");
+		throw std::runtime_error("Replay version is too recent");
 
 	std::shared_ptr<Settings> settings(new Settings);
 
@@ -477,7 +477,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 			break; // Read frame
 		}
 		else
-			throw gvl::archive_check_error("Unexpected header byte");
+			throw std::runtime_error("Unexpected header byte");
 	}
 
 	if(settingsChanged)
@@ -490,7 +490,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 		uint32_t expected = gvl::read_uint32(reader);
 		uint32_t actual = fastGameChecksum(game);
 		if(actual != expected)
-			throw gvl::archive_check_error("Replay has desynced");
+			throw std::runtime_error("Replay has desynced");
 	}
 
 #ifdef DEBUG_REPLAYS
@@ -501,11 +501,11 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 	{
 		std::cout << "Expected: " << expected << ", was: " << (uint32_t)actual.value[0] << std::endl;
 		std::cout << "Frame: " << game.cycles << std::endl;
-		throw gvl::archive_check_error("Desynced state");
+		throw std::runtime_error("Desynced state");
 	}
 	if(expected2 != game.cycles)
 	{
-		throw gvl::archive_check_error("Descyned stream");
+		throw std::runtime_error("Descyned stream");
 	}
 #endif
 

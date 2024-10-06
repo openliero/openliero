@@ -20,45 +20,18 @@ struct shared
 	// const to allow shared_ptr<T const>
 	void add_ref() const
 	{
-#if GVL_THREADSAFE
-		#error "Not finished"
-		// TODO: Interlocked increment
-#else
 		++_ref_count;
-#endif
 	}
 
 	// const to allow shared_ptr<T const>
 	void release() const
 	{
-#if GVL_THREADSAFE
-		#error "Not finished"
-		if(_ref_count == 1) // 1 means it has to become 0, nobody can increment it after this read
-			_delete();
-		else
-		{
-			// TODO: Implement CAS
-			int read_ref_count;
-			do
-			{
-				read_ref_count = _ref_count;
-			}
-			while(!cas(&_ref_count, read_ref_count, read_ref_count - 1));
-
-			if(read_ref_count - 1 == 0)
-			{
-				_clear_weak_ptrs();
-				_delete();
-			}
-		}
-#else
 		--_ref_count;
 		if(_ref_count == 0)
 		{
 			_clear_weak_ptrs();
 			_delete();
 		}
-#endif
 	}
 
 	void swap(shared& b)

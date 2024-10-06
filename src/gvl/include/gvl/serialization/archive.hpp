@@ -8,7 +8,6 @@
 #include "gvl/serialization/context.hpp"
 #include "gvl/serialization/coding.hpp"
 #include "gvl/support/bits.hpp"
-#include "gvl/serialization/except.hpp"
 
 namespace gvl
 {
@@ -207,7 +206,7 @@ struct in_archive
 	{
 		uint32_t v = gvl::read_uint32(reader);
 		if(v != 0x12345678)
-			throw archive_check_error("Expected checkpoint here");
+			throw std::runtime_error("Expected checkpoint here");
 		return *this;
 	}
 

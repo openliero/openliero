@@ -22,26 +22,6 @@ struct noncopyable
 #endif
 #endif
 
-#if !defined(GVL_WIN64)
-# if defined(WIN64) || defined(_WIN64) /* TODO: Check for Cygwin */
-#  define GVL_WIN64 1
-# else
-#  define GVL_WIN64 0
-# endif
-#endif
-
-#if !defined(GVL_WIN32)
-# if defined(WIN32) || defined(_WIN32) /* TODO: Check for Cygwin */
-#  define GVL_WIN32 1
-# else
-#  define GVL_WIN32 0
-# endif
-#endif
-
-#if !defined(GVL_WINDOWS)
-# define GVL_WINDOWS (GVL_WIN32 || GVL_WIN64)
-#endif
-
 #if !defined(GVL_MSVCPP)
 # if defined(_MSC_VER)
 #  define GVL_MSVCPP _MSC_VER
@@ -51,16 +31,8 @@ struct noncopyable
 #endif
 
 #if !defined(GVL_X86_64)
-# if defined(_M_X64) || defined(__x86_64__) || GVL_WIN64
+# if defined(_M_X64) || defined(__x86_64__)
 #  define GVL_X86_64 1
-# endif
-#endif
-
-#if !GVL_LITTLE_ENDIAN && !GVL_BIG_ENDIAN
-# if GVL_X86_64
-#  define GVL_LITTLE_ENDIAN 1
-# else
-#  define GVL_BIG_ENDIAN 1
 # endif
 #endif
 
@@ -82,30 +54,3 @@ struct noncopyable
 #  define GVL_CPP0X 0
 # endif
 #endif
-
-/* Whether or not types can be read from unaligned addresses */
-#if !defined(GVL_UNALIGNED_ACCESS)
-# if GVL_X86_64
-#  define GVL_UNALIGNED_ACCESS 1
-# else
-#  define GVL_UNALIGNED_ACCESS 0
-# endif
-#endif
-
-#ifndef GVL_SIGN_EXTENDING_RIGHT_SHIFT
-#define GVL_SIGN_EXTENDING_RIGHT_SHIFT (((-1)>>15)==-1)
-#endif
-
-#ifndef GVL_TWOS_COMPLEMENT
-#define GVL_TWOS_COMPLEMENT (~(-1)==0)
-#endif
-
-
-#if !defined(GVL_WINDOWS)
-#define GVL_WINDOWS (GVL_WIN64 || GVL_WIN32)
-#endif
-
-/* This function checks whether the above inferred
-** characteristics are correct. It will throw gvl::assert_failure if not. */
-void gvl_test_platform();
-

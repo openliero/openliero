@@ -91,7 +91,7 @@ bool ReplayController::process()
 					changeState(StateGameEnded);
 					replay.reset();
 				}
-				catch(gvl::archive_check_error& e)
+				catch(std::runtime_error& e)
 				{
 					gfx.infoBox(std::string("Archive error in replay: ") + e.what());
 					changeState(StateGameEnded);

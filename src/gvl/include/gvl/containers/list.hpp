@@ -9,8 +9,6 @@
 #include "gvl/support/debug.hpp"
 #include "gvl/support/platform.hpp"
 
-// BIG TODO: Exception safety
-
 namespace gvl
 {
 
