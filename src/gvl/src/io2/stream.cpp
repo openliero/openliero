@@ -74,9 +74,6 @@ source_result::status octet_reader::next_piece_(uint32_t amount)
 	return source_result::ok;
 }
 
-//
-
-#if 1
 sink_result octet_writer::flush()
 {
 	auto res = flush_buffer(default_initial_bucket_size);
@@ -162,6 +159,4 @@ sink_result octet_writer::overflow_put_(uint8_t const* p, std::size_t len)
 	cur_ += len;
 	return ret;
 }
-#endif
-
 }
