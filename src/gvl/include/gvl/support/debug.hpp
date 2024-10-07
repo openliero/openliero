@@ -19,7 +19,4 @@ void passert_fail(char const* cond, char const* file, int line, char const* msg)
 
 #define passert(cond, msg) GVL_PASSERT(cond, msg)
 #define sassert(cond) GVL_SASSERT(cond)
-
-#define GVL_STATIC_ASSERT(cond) static_assert((cond), "static_assert failed")
-
 }
