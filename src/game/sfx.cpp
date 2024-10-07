@@ -4,9 +4,7 @@
 #include "common.hpp"
 #include <vector>
 #include <cassert>
-#if !DISABLE_SOUND
-#	include <SDL.h>
-#endif
+#include <SDL.h>
 
 Sfx sfx;
 
@@ -19,7 +17,6 @@ extern "C" void SDLCALL Sfx_callback(void *userdata, Uint8 *stream, int len)
 
 void Sfx::init()
 {
-#if !DISABLE_SOUND
 	if(initialized)
 		return;
 
@@ -47,51 +44,40 @@ void Sfx::init()
 	{
 		Console::writeWarning(std::string("SDL_OpenAudio returned error: ") + SDL_GetError());
 	}
-#endif
 }
 
 void Sfx::deinit()
 {
-#if !DISABLE_SOUND
 	if(!initialized)
 		return;
 	initialized = false;
 
 	SDL_CloseAudio();
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-#endif
 }
 
 void Sfx::play(Common& common, int sound, void* id, int loops)
 {
-#if !DISABLE_SOUND
 	if(!initialized)
 		return;
 
 	sfx_mixer_add(mixer, common.sounds[sound].sound, sfx_mixer_now(mixer), id, loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
-#endif
 }
 
 void Sfx::stop(void* id)
 {
-#if !DISABLE_SOUND
 	if(!initialized)
 		return;
 
 	sfx_mixer_stop(mixer, id);
-#endif
 }
 
 bool Sfx::isPlaying(void* id)
 {
-#if !DISABLE_SOUND
 	if(!initialized)
 		return false;
 
 	return sfx_is_playing(mixer, id) != 0;
-#else
-	return false;
-#endif
 }
 
 Sfx::~Sfx()
