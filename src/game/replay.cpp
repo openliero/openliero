@@ -3,7 +3,6 @@
 #include "game.hpp"
 #include "worm.hpp"
 #include "viewport.hpp"
-#include <gvl/support/type_info.hpp>
 #include <gvl/serialization/archive.hpp>
 #include <gvl/io2/deflate_filter.hpp>
 
