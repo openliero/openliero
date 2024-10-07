@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <algorithm>
 #include <list>
+#include <memory>
 
 #include "gvl/support/functional.hpp"
 #include "gvl/support/debug.hpp"
@@ -246,7 +247,7 @@ struct default_ownership
 template<
 	typename T,
 	typename Tag = default_list_tag,
-	typename Deleter = default_delete,
+	typename Deleter = std::default_delete<T>,
 	typename Ownership = default_ownership>
 struct list : list_common, protected Deleter, protected Ownership
 {

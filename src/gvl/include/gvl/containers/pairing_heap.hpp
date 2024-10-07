@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 #include "gvl/support/functional.hpp"
 #include "gvl/support/debug.hpp"
@@ -25,7 +26,7 @@ struct pairing_node : pairing_node_common
 
 };
 
-template<typename T, typename TagT = default_pairing_tag, typename Compare = std::less<T>, typename Deleter = default_delete>
+template<typename T, typename TagT = default_pairing_tag, typename Compare = std::less<T>, typename Deleter = std::default_delete<T>>
 struct pairing_heap : Compare, Deleter
 {
 	typedef pairing_node<TagT> node_t;
