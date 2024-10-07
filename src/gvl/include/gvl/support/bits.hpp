@@ -4,22 +4,20 @@
 
 #include "gvl/support/platform.hpp"
 
-#if GVL_MSVCPP
+#if _MSC_VER
 # include <stdlib.h>
 # include <intrin.h>
 # include <limits.h>
 # pragma intrinsic(_BitScanReverse)
 # pragma intrinsic(_BitScanForward)
-# if GVL_X86_64
-#  pragma intrinsic(_BitScanReverse64)
-# endif
+# pragma intrinsic(_BitScanReverse64)
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if GVL_MSVCPP
+#if _MSC_VER
 inline int gvl_bottom_bit(uint32_t v)
 {
 	unsigned long r;
@@ -28,7 +26,20 @@ inline int gvl_bottom_bit(uint32_t v)
 	return r;
 }
 #else
-int gvl_bottom_bit(uint32_t v);
+/* Taken mostly from http://graphics.stanford.edu/~seander/bithacks.html */
+inline int gvl_bottom_bit(uint32_t v)
+{
+	if(!v)
+		return -1;
+
+	static const int MultiplyDeBruijnBitPosition[32] =
+	{
+		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+	};
+
+	return MultiplyDeBruijnBitPosition[((uint32_t)((v & -v) * 0x077CB531UL)) >> 27];
+}
 #endif
 
 inline int32_t gvl_uint32_as_int32(uint32_t x)

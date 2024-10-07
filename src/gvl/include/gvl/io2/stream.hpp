@@ -411,7 +411,6 @@ struct octet_writer : basic_text_writer<octet_writer>
 		// inlining of the common case
 		if(left() >= len)
 		{
-#if GVL_X86 || GVL_X86_64 // TODO: A define that says whether unaligned access is allowed
 			if(len < 64) // TODO: Tweak this limit
 			{
 				while(len > 4)
@@ -426,7 +425,6 @@ struct octet_writer : basic_text_writer<octet_writer>
 
 				return sink_result(sink_result::ok);
 			}
-#endif
 			std::memcpy(cur_, p, len);
 			cur_ += len;
 			return sink_result(sink_result::ok);
