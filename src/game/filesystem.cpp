@@ -108,23 +108,15 @@ std::size_t fileLength(FILE* f)
 }
 
 #if _WIN32
-#  include "windows.h"
-
-#  if defined(__BORLANDC__) || defined(__MWERKS__)
-#     if defined(__BORLANDC__)
-        using std::time_t;
-#     endif
-#     include "utime.h"
-#   else
-#     include "sys/utime.h"
-#   endif
-# else
-#   include "dirent.h"
-#   include "unistd.h"
-#   include "fcntl.h"
-#   include "utime.h"
-#   include <errno.h>
-# endif
+# include "windows.h"
+# include "sys/utime.h"
+#else
+# include "dirent.h"
+# include "unistd.h"
+# include "fcntl.h"
+# include "utime.h"
+# include <errno.h>
+#endif
 
 namespace
 {
