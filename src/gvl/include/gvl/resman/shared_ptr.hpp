@@ -53,7 +53,6 @@ struct shared_ptr // : shared_ptr_common
 		_set(p);
 	}
 
-#if GVL_CPP0X
 	shared_ptr(shared_ptr&& b)
 	{
 		v = b.get();
@@ -70,7 +69,6 @@ struct shared_ptr // : shared_ptr_common
 		v = p;
 		b.v = 0;
 	}
-#endif
 
 	// These two take over reference from b
 	shared_ptr(deferred_ptr<T> const& b);
@@ -90,7 +88,6 @@ struct shared_ptr // : shared_ptr_common
 		return *this;
 	}
 
-#if GVL_CPP0X
 	shared_ptr& operator=(shared_ptr&& b)
 	{
 		_reset_shared(b.get());
@@ -106,7 +103,6 @@ struct shared_ptr // : shared_ptr_common
 		b.v = 0;
 		return *this;
 	}
-#endif
 
 	operator void const*() const
 	{ return v; }

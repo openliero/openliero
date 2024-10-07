@@ -23,7 +23,7 @@ typedef struct gvl_list_
 	gvl_list_node sentinel;
 } gvl_list;
 
-GVL_INLINE void gvl_list_link_after(gvl_list_node* self, gvl_list_node* new_node)
+inline void gvl_list_link_after(gvl_list_node* self, gvl_list_node* new_node)
 {
 	gvl_list_node* old_self_next = self->next;
 
@@ -33,7 +33,7 @@ GVL_INLINE void gvl_list_link_after(gvl_list_node* self, gvl_list_node* new_node
 	self->next = new_node;
 }
 
-GVL_INLINE void gvl_list_link_before(gvl_list_node* self, gvl_list_node* new_node)
+inline void gvl_list_link_before(gvl_list_node* self, gvl_list_node* new_node)
 {
 	gvl_list_node* old_self_prev = self->prev;
 
@@ -43,7 +43,7 @@ GVL_INLINE void gvl_list_link_before(gvl_list_node* self, gvl_list_node* new_nod
 	self->prev = new_node;
 }
 
-GVL_INLINE void gvl_list_unlink(gvl_list_node* self)
+inline void gvl_list_unlink(gvl_list_node* self)
 {
 	gvl_list_node* self_next = self->next;
 	gvl_list_node* self_prev = self->prev;
