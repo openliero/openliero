@@ -7,10 +7,25 @@
 #include "gvl/resman/shared_ptr.hpp"
 #include "gvl/serialization/context.hpp"
 #include "gvl/serialization/coding.hpp"
-#include "gvl/support/bits.hpp"
 
 namespace gvl
 {
+
+inline int32_t uint32_as_int32(uint32_t x)
+{
+	if(x >= 0x80000000)
+		return (int32_t)(x - 0x80000000u) - 0x80000000;
+	else
+		return (int32_t)(x);
+}
+
+inline uint32_t int32_as_uint32(int32_t x)
+{
+	if(x < 0)
+		return (uint32_t)(x + 0x80000000) + 0x80000000u;
+	else
+		return (uint32_t)(x);
+}
 
 template<typename Reader, typename Context = default_serialization_context>
 struct in_archive

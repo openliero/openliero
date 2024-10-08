@@ -1,140 +1,130 @@
 #pragma once
 
-#include <cstddef>
 #include <cassert>
-#include <gvl/support/bits.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 
-struct ExactObjectListBase
-{
-	bool used;
+struct ExactObjectListBase {
+  bool used;
 };
 
-template<typename T, int Limit>
-struct ExactObjectList
-{
-	struct range
-	{
-		range(T* cur, T* end)
-		: cur(cur), end(end)
-		{
-		}
+/*
+ * Taken mostly from http://graphics.stanford.edu/~seander/bithacks.html
+ * Returns the Count of Trailing Zeroes in v (the index of the least significant
+ * set bit). Returns -1 when v == 0.
+ */
+inline int ctz(uint32_t v) {
+  if (!v)
+    return -1;
 
-		T* next()
-		{
-			while (!cur->used)
-				++cur;
+  static const int MultiplyDeBruijnBitPosition[32] = {
+      0,  1,  28, 2,  29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4,  8,
+      31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6,  11, 5,  10, 9};
 
-			T* ret = cur;
-			++cur;
+  return MultiplyDeBruijnBitPosition
+      [((uint32_t)((v & -v) * 0x077CB531UL)) >> 27];
+}
 
-			return ret == end ? 0 : ret;
-		}
+template <typename T, int Limit>
+struct ExactObjectList {
+  struct range {
+    range(T* cur, T* end) : cur(cur), end(end) {}
 
-		T* cur;
-		T* end;
-	};
+    T* next() {
+      while (!cur->used)
+        ++cur;
 
-	ExactObjectList()
-	{
-		clear();
-	}
+      T* ret = cur;
+      ++cur;
 
-	T* getFreeObject()
-	{
-		assert(count < Limit);
-		++count;
+      return ret == end ? 0 : ret;
+    }
 
-		T* ptr = 0;
-		for (uint32_t i = 0; i < FreeListSize; ++i)
-		{
-			if (freeList[i] != 0)
-			{
-				int bit = gvl_bottom_bit(freeList[i]);
-				uint32_t index = (i << 5) + bit;
-				ptr = arr + index;
-				freeList[i] &= ~(uint32_t(1) << bit);
-				break;
-			}
-		}
+    T* cur;
+    T* end;
+  };
 
-		assert(ptr && !ptr->used && ptr >= arr && ptr < arr + Limit);
-		ptr->used = true;
+  ExactObjectList() { clear(); }
 
-		return ptr;
-	}
+  T* getFreeObject() {
+    assert(count < Limit);
+    ++count;
 
-	T* newObjectReuse()
-	{
-		T* ret;
-		if(count >= Limit)
-			ret = &arr[Limit - 1];
-		else
-			ret = getFreeObject();
+    T* ptr = 0;
+    for (uint32_t i = 0; i < FreeListSize; ++i) {
+      if (freeList[i] != 0) {
+        int bit = ctz(freeList[i]);
+        uint32_t index = (i << 5) + bit;
+        ptr = arr + index;
+        freeList[i] &= ~(uint32_t(1) << bit);
+        break;
+      }
+    }
 
-		assert(ret->used && ret >= arr && ret < arr + Limit);
-		return ret;
-	}
+    assert(ptr && !ptr->used && ptr >= arr && ptr < arr + Limit);
+    ptr->used = true;
 
-	T* newObject()
-	{
-		if(count >= Limit)
-			return 0;
+    return ptr;
+  }
 
-		T* ret = getFreeObject();
-		assert(ret->used && ret >= arr && ret < arr + Limit);
-		return ret;
-	}
+  T* newObjectReuse() {
+    T* ret;
+    if (count >= Limit)
+      ret = &arr[Limit - 1];
+    else
+      ret = getFreeObject();
 
-	range all()
-	{
-		return range(&arr[0], &arr[Limit]);
-	}
+    assert(ret->used && ret >= arr && ret < arr + Limit);
+    return ret;
+  }
 
-	void free(T* ptr)
-	{
-		assert(ptr->used);
-		if(ptr->used)
-		{
-			uint32_t index = uint32_t(ptr - arr);
-			freeList[index >> 5] |= (uint32_t(1) << (index & 31));
+  T* newObject() {
+    if (count >= Limit)
+      return 0;
 
-			ptr->used = false;
+    T* ret = getFreeObject();
+    assert(ret->used && ret >= arr && ret < arr + Limit);
+    return ret;
+  }
 
-			assert(count > 0);
-			--count;
-		}
-	}
+  range all() { return range(&arr[0], &arr[Limit]); }
 
-	void free(range& r)
-	{
-		free(r.cur - 1);
-	}
+  void free(T* ptr) {
+    assert(ptr->used);
+    if (ptr->used) {
+      uint32_t index = uint32_t(ptr - arr);
+      freeList[index >> 5] |= (uint32_t(1) << (index & 31));
 
-	void clear()
-	{
-		std::memset(freeList, 0xff, FreeListSize * sizeof(uint32_t));
-		count = 0;
+      ptr->used = false;
 
-		for(std::size_t i = 0; i < Limit; ++i)
-			arr[i].used = false;
+      assert(count > 0);
+      --count;
+    }
+  }
 
-		arr[Limit].used = true;
+  void free(range& r) { free(r.cur - 1); }
 
-		// Mark padding as used
-		for(uint32_t index = Limit; index < FreeListSize * 32; ++index)
-			freeList[index >> 5] &= ~(uint32_t(1) << (index & 31));
-	}
+  void clear() {
+    std::memset(freeList, 0xff, FreeListSize * sizeof(uint32_t));
+    count = 0;
 
-	std::size_t size() const
-	{
-		return count;
-	}
+    for (std::size_t i = 0; i < Limit; ++i)
+      arr[i].used = false;
 
-	T arr[Limit + 1]; // Sentinel
+    arr[Limit].used = true;
 
-	static uint32_t const FreeListSize = (Limit + 31) / 32;
-	uint32_t freeList[FreeListSize];
+    // Mark padding as used
+    for (uint32_t index = Limit; index < FreeListSize * 32; ++index)
+      freeList[index >> 5] &= ~(uint32_t(1) << (index & 31));
+  }
 
-	std::size_t count;
+  std::size_t size() const { return count; }
+
+  T arr[Limit + 1];  // Sentinel
+
+  static uint32_t const FreeListSize = (Limit + 31) / 32;
+  uint32_t freeList[FreeListSize];
+
+  std::size_t count;
 };
