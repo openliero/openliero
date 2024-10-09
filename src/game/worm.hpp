@@ -6,10 +6,10 @@
 #include <gvl/serialization/archive.hpp>  // For gvl::enable_when
 #include <memory>
 #include <numeric>
+#include <random>
 #include <string>
 #include "filesystem.hpp"
 #include "math.hpp"
-#include <random>
 #include "version.hpp"
 
 #define NUM_WEAPONS 5
