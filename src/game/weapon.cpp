@@ -40,7 +40,7 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 
 	if(startFrame >= 0)
 	{
-		if(shotType == STNormal)
+		if(shotType == Weapon::ShotType::Normal)
 		{
 			if(loopAnim)
 			{
@@ -58,7 +58,7 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 				obj->curFrame = 0;
       }
 		}
-		else if(shotType == STDType1)
+		else if(shotType == Weapon::ShotType::DType1)
 		{
 			if(angle > 64)
 				--angle;
@@ -74,7 +74,7 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
       }
 			obj->curFrame = curFrame;
 		}
-		else if(shotType == STDType2 || shotType == STSteerable)
+		else if(shotType == Weapon::ShotType::DType2 || shotType == Weapon::ShotType::Steerable)
 		{
 			obj->curFrame = angle;
 		}
@@ -438,7 +438,7 @@ void WObject::process(Game& game)
 			break;
 		}
 	}
-	while(w.shotType == Weapon::STLaser
+	while(w.shotType == Weapon::ShotType::Laser
 	&& used // TEMP
 	&& (iter < 8 || w.id == 28));
 }

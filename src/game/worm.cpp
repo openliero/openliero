@@ -1384,7 +1384,7 @@ void Worm::processSteerables(Game& game)
 	steerableSumY = 0;
 
 	WormWeapon& ww = weapons[currentWeapon];
-	if(ww.type->shotType == Weapon::STSteerable)
+	if(ww.type->shotType == Weapon::ShotType::Steerable)
 	{
 		auto wr = game.wobjects.all();
 		for (WObject* i; (i = wr.next()); )

@@ -19,13 +19,13 @@ struct Weapon
 	  * Type2 (3)
 	  * Laser (4)
 	*/
-	enum
+	enum ShotType
 	{
-		STNormal,
-		STDType1,
-		STSteerable,
-		STDType2,
-		STLaser
+		Normal,
+		DType1,
+		Steerable,
+		DType2,
+		Laser
 	};
 
 	void fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, int ownerIdx, WormWeapon* ww) const;
