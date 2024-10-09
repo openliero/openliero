@@ -2,34 +2,6 @@
 	"version": 4,
 	"buildPresets": [
 		{
-			"name": "condition-macos",
-			"hidden": true,
-			"condition": {
-				"type": "equals",
-				"lhs": "${hostSystemName}",
-				"rhs": "Darwin"
-			}
-		},
-		{
-			"name": "condition-macos-ci",
-			"hidden": true,
-			"condition": {
-				"type": "allOf",
-				"conditions": [
-					{
-						"type": "equals",
-						"lhs": "${hostSystemName}",
-						"rhs": "Darwin"
-					},
-					{
-						"type": "equals",
-						"lhs": "$penv{CI}",
-						"rhs": "true"
-					}
-				]
-			}
-		},
-		{
 			"name": "condition-linux",
 			"hidden": true,
 			"condition": {
@@ -48,6 +20,34 @@
 						"type": "equals",
 						"lhs": "${hostSystemName}",
 						"rhs": "Linux"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
+			}
+		},
+		{
+			"name": "condition-macos",
+			"hidden": true,
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Darwin"
+			}
+		},
+		{
+			"name": "condition-macos-ci",
+			"hidden": true,
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Darwin"
 					},
 					{
 						"type": "equals",
