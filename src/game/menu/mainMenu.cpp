@@ -1,60 +1,47 @@
 #include "mainMenu.hpp"
 
-#include "../sfx.hpp"
 #include "../gfx.hpp"
+#include "../sfx.hpp"
 
-struct ReplaySelectBehavior : ItemBehavior
-{
-	ReplaySelectBehavior(Common& common)
-	: common(common)
-	{
-	}
+struct ReplaySelectBehavior : ItemBehavior {
+  ReplaySelectBehavior(Common& common) : common(common) {}
 
-	int onEnter(Menu& menu, MenuItem& item)
-	{
-		sfx.play(common, 27);
-		int ret = gfx.selectReplay();
-		sfx.play(common, 27);
-		return ret;
-	}
+  int onEnter(Menu& menu, MenuItem& item) {
+    sfx.play(common, 27);
+    int ret = gfx.selectReplay();
+    sfx.play(common, 27);
+    return ret;
+  }
 
-	Common& common;
+  Common& common;
 };
 
-struct TcSelectBehavior : ItemBehavior
-{
-	TcSelectBehavior(Common& common)
-	: common(common)
-	{
-	}
+struct TcSelectBehavior : ItemBehavior {
+  TcSelectBehavior(Common& common) : common(common) {}
 
-	int onEnter(Menu& menu, MenuItem& item)
-	{
-		sfx.play(common, 27);
-		auto newCommon = gfx.selectTc();
-		if (newCommon)
-		{
-			// TODO: mixer may still be using sounds from the old common
-			gfx.common.reset(newCommon.release());
-			return MainMenu::MaTc;
-		}
-		return -1;
-	}
+  int onEnter(Menu& menu, MenuItem& item) {
+    sfx.play(common, 27);
+    auto newCommon = gfx.selectTc();
+    if (newCommon) {
+      // TODO: mixer may still be using sounds from the old common
+      gfx.common.reset(newCommon.release());
+      return MainMenu::MaTc;
+    }
+    return -1;
+  }
 
-	Common& common;
+  Common& common;
 };
 
-ItemBehavior* MainMenu::getItemBehavior(Common& common, MenuItem& item)
-{
-	switch(item.id)
-	{
-		case MaReplays:
-			return new ReplaySelectBehavior(common);
+ItemBehavior* MainMenu::getItemBehavior(Common& common, MenuItem& item) {
+  switch (item.id) {
+    case MaReplays:
+      return new ReplaySelectBehavior(common);
 
-		case MaTc:
-			return new TcSelectBehavior(common);
+    case MaTc:
+      return new TcSelectBehavior(common);
 
-		default:
-			return Menu::getItemBehavior(common, item);
-	}
+    default:
+      return Menu::getItemBehavior(common, item);
+  }
 }

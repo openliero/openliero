@@ -12,11 +12,6 @@
 #include "sobject.hpp"
 #include "weapon.hpp"
 
-#if ENABLE_TRACING
-#include <gvl/io2/fstream.hpp>
-#include <gvl/serialization/archive.hpp>
-#endif
-
 #define NUM_AIPARAMS_KEYS 7
 #define NUM_AIPARAMS_VALUES 2
 #define MAX_MATERIALS 256
@@ -109,15 +104,6 @@ struct FsNode;
 
 using std::vector;
 
-#if ENABLE_TRACING
-#define LTRACE(category, object, attribute, value) \
-  common.ltrace(#category, (uint32)(object), #attribute, value)
-#define IF_ENABLE_TRACING(...) __VA_ARGS__
-#else
-#define LTRACE(category, object, attribute, value) ((void)0)
-#define IF_ENABLE_TRACING(x) ((void)0)
-#endif
-
 struct Common {
   Common();
 
@@ -179,17 +165,4 @@ struct Common {
   int32_t C[CONST_DEF_T::MaxC];
   std::string S[STRING_DEF_T::MaxS];
   bool H[HACK_DEF_T::MaxH];
-
-#if ENABLE_TRACING
-  void ltrace(
-      char const* category,
-      uint32 object,
-      char const* attribute,
-      uint32 value);
-
-  gvl::octet_writer trace_writer;
-  gvl::octet_reader trace_reader;
-
-  bool writeTrace;
-#endif
 };

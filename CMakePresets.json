@@ -10,41 +10,12 @@
 	],
 	"configurePresets": [
 		{
-			"name": "macos-x64-ci",
-			"displayName": "macOS (x86_64) - CI",
+			"name": "linux-x64",
+			"displayName": "Linux (x86_64)",
 			"inherits": [
 				"default",
-				"arch-x64-macos",
-				"ci",
-				"condition-macos-ci"
-			]
-		},
-		{
-			"name": "macos-arm64-ci",
-			"displayName": "macOS (arm64) - CI",
-			"inherits": [
-				"default",
-				"arch-arm64-macos",
-				"ci",
-				"condition-macos-ci"
-			]
-		},
-		{
-			"name": "macos-x64",
-			"displayName": "macOS (x86_64)",
-			"inherits": [
-				"default",
-				"arch-x64-macos",
-				"condition-macos"
-			]
-		},
-		{
-			"name": "macos-arm64",
-			"displayName": "macOS (arm64)",
-			"inherits": [
-				"default",
-				"arch-arm64-macos",
-				"condition-macos"
+				"arch-x64-linux",
+				"condition-linux"
 			]
 		},
 		{
@@ -58,6 +29,15 @@
 			]
 		},
 		{
+			"name": "linux-arm64",
+			"displayName": "Linux (arm64)",
+			"inherits": [
+				"default",
+				"arch-arm64-linux",
+				"condition-linux"
+			]
+		},
+		{
 			"name": "linux-arm64-ci",
 			"displayName": "Linux (arm64) - CI",
 			"inherits": [
@@ -68,21 +48,50 @@
 			]
 		},
 		{
-			"name": "linux-x64",
-			"displayName": "Linux (x86_64)",
+			"name": "macos-x64",
+			"displayName": "macOS (x86_64)",
 			"inherits": [
 				"default",
-				"arch-x64-linux",
-				"condition-linux"
+				"arch-x64-macos",
+				"condition-macos"
 			]
 		},
 		{
-			"name": "linux-arm64",
-			"displayName": "Linux (arm64)",
+			"name": "macos-x64-ci",
+			"displayName": "macOS (x86_64) - CI",
 			"inherits": [
 				"default",
-				"arch-arm64-linux",
-				"condition-linux"
+				"arch-x64-macos",
+				"ci",
+				"condition-macos-ci"
+			]
+		},
+		{
+			"name": "macos-arm64",
+			"displayName": "macOS (arm64)",
+			"inherits": [
+				"default",
+				"arch-arm64-macos",
+				"condition-macos"
+			]
+		},
+		{
+			"name": "macos-arm64-ci",
+			"displayName": "macOS (arm64) - CI",
+			"inherits": [
+				"default",
+				"arch-arm64-macos",
+				"ci",
+				"condition-macos-ci"
+			]
+		},
+		{
+			"name": "windows-x64",
+			"displayName": "Windows (x86_64)",
+			"inherits": [
+				"default",
+				"arch-x64-windows",
+				"condition-windows"
 			]
 		},
 		{
@@ -96,6 +105,15 @@
 			]
 		},
 		{
+			"name": "windows-arm64",
+			"displayName": "Windows (arm64)",
+			"inherits": [
+				"default",
+				"arch-arm64-windows",
+				"condition-windows"
+			]
+		},
+		{
 			"name": "windows-arm64-ci",
 			"displayName": "Windows (arm64) - CI",
 			"inherits": [
@@ -104,79 +122,25 @@
 				"ci",
 				"condition-windows-ci"
 			]
-		},
-		{
-			"name": "windows-x64",
-			"displayName": "Windows (x86_64)",
-			"inherits": [
-				"default",
-				"arch-x64-windows",
-				"condition-windows"
-			]
-		},
-		{
-			"name": "windows-arm64",
-			"displayName": "Windows (arm64)",
-			"inherits": [
-				"default",
-				"arch-arm64-windows",
-				"condition-windows"
-			]
 		}
 	],
 	"buildPresets": [
 		{
-			"name": "macos-x64-ci",
-			"displayName": "macOS (x86_64) - CI",
+			"name": "linux-x64",
+			"displayName": "Linux (x86_64) - Release",
 			"inherits": [
-				"condition-macos-ci"
+				"condition-linux"
 			],
-			"configurePreset": "macos-x64-ci",
+			"configurePreset": "linux-x64",
 			"configuration": "Release"
 		},
 		{
-			"name": "macos-arm64-ci",
-			"displayName": "macOS (arm64) - CI",
+			"name": "linux-x64-debug",
+			"displayName": "Linux (x86_64) - Debug",
 			"inherits": [
-				"condition-macos-ci"
+				"condition-linux"
 			],
-			"configurePreset": "macos-arm64-ci",
-			"configuration": "Release"
-		},
-		{
-			"name": "macos-x64",
-			"displayName": "macOS (x86_64)",
-			"inherits": [
-				"condition-macos"
-			],
-			"configurePreset": "macos-x64",
-			"configuration": "Release"
-		},
-		{
-			"name": "macos-arm64",
-			"displayName": "macOS (arm64)",
-			"inherits": [
-				"condition-macos"
-			],
-			"configurePreset": "macos-arm64",
-			"configuration": "Release"
-		},
-		{
-			"name": "macos-x64-debug",
-			"displayName": "macOS (x86_64)",
-			"inherits": [
-				"condition-macos"
-			],
-			"configurePreset": "macos-x64",
-			"configuration": "Debug"
-		},
-		{
-			"name": "macos-arm64-debug",
-			"displayName": "macOS (arm64)",
-			"inherits": [
-				"condition-macos"
-			],
-			"configurePreset": "macos-arm64",
+			"configurePreset": "linux-x64",
 			"configuration": "Debug"
 		},
 		{
@@ -189,6 +153,24 @@
 			"configuration": "Release"
 		},
 		{
+			"name": "linux-arm64",
+			"displayName": "Linux (arm64) - Release",
+			"inherits": [
+				"condition-linux"
+			],
+			"configurePreset": "linux-arm64",
+			"configuration": "Release"
+		},
+		{
+			"name": "linux-arm64-debug",
+			"displayName": "Linux (arm64) - Debug",
+			"inherits": [
+				"condition-linux"
+			],
+			"configurePreset": "linux-arm64",
+			"configuration": "Debug"
+		},
+		{
 			"name": "linux-arm64-ci",
 			"displayName": "Linux (arm64) - CI",
 			"inherits": [
@@ -198,39 +180,75 @@
 			"configuration": "Release"
 		},
 		{
-			"name": "linux-x64",
-			"displayName": "Linux (x86_64)",
+			"name": "macos-x64",
+			"displayName": "macOS (x86_64) - Release",
 			"inherits": [
-				"condition-linux"
+				"condition-macos"
 			],
-			"configurePreset": "linux-x64",
+			"configurePreset": "macos-x64",
 			"configuration": "Release"
 		},
 		{
-			"name": "linux-arm64",
-			"displayName": "Linux (arm64)",
+			"name": "macos-x64-debug",
+			"displayName": "macOS (x86_64) - Debug",
 			"inherits": [
-				"condition-linux"
+				"condition-macos"
 			],
-			"configurePreset": "linux-arm64",
-			"configuration": "Release"
-		},
-		{
-			"name": "linux-x64-debug",
-			"displayName": "Linux (x86_64)",
-			"inherits": [
-				"condition-linux"
-			],
-			"configurePreset": "linux-x64",
+			"configurePreset": "macos-x64",
 			"configuration": "Debug"
 		},
 		{
-			"name": "linux-arm64-debug",
-			"displayName": "Linux (arm64)",
+			"name": "macos-x64-ci",
+			"displayName": "macOS (x86_64) - CI",
 			"inherits": [
-				"condition-linux"
+				"condition-macos-ci"
 			],
-			"configurePreset": "linux-arm64",
+			"configurePreset": "macos-x64-ci",
+			"configuration": "Release"
+		},
+		{
+			"name": "macos-arm64",
+			"displayName": "macOS (arm64) - Release",
+			"inherits": [
+				"condition-macos"
+			],
+			"configurePreset": "macos-arm64",
+			"configuration": "Release"
+		},
+		{
+			"name": "macos-arm64-debug",
+			"displayName": "macOS (arm64) - Debug",
+			"inherits": [
+				"condition-macos"
+			],
+			"configurePreset": "macos-arm64",
+			"configuration": "Debug"
+		},
+		{
+			"name": "macos-arm64-ci",
+			"displayName": "macOS (arm64) - CI",
+			"inherits": [
+				"condition-macos-ci"
+			],
+			"configurePreset": "macos-arm64-ci",
+			"configuration": "Release"
+		},
+		{
+			"name": "windows-x64",
+			"displayName": "Windows (x86_64) - Release",
+			"inherits": [
+				"condition-windows"
+			],
+			"configurePreset": "windows-x64",
+			"configuration": "Release"
+		},
+		{
+			"name": "windows-x64-debug",
+			"displayName": "Windows (x86_64) - Debug",
+			"inherits": [
+				"condition-windows"
+			],
+			"configurePreset": "windows-x64",
 			"configuration": "Debug"
 		},
 		{
@@ -243,6 +261,24 @@
 			"configuration": "Release"
 		},
 		{
+			"name": "windows-arm64",
+			"displayName": "Windows (arm64) - Release",
+			"inherits": [
+				"condition-windows"
+			],
+			"configurePreset": "windows-arm64",
+			"configuration": "Release"
+		},
+		{
+			"name": "windows-arm64-debug",
+			"displayName": "Windows (arm64) - Debug",
+			"inherits": [
+				"condition-windows"
+			],
+			"configurePreset": "windows-arm64",
+			"configuration": "Debug"
+		},
+		{
 			"name": "windows-arm64-ci",
 			"displayName": "Windows (arm64) - CI",
 			"inherits": [
@@ -250,126 +286,34 @@
 			],
 			"configurePreset": "windows-arm64-ci",
 			"configuration": "Release"
-		},
-		{
-			"name": "windows-x64",
-			"displayName": "Windows (x86_64)",
-			"inherits": [
-				"condition-windows"
-			],
-			"configurePreset": "windows-x64",
-			"configuration": "Release"
-		},
-		{
-			"name": "windows-arm64",
-			"displayName": "Windows (arm64)",
-			"inherits": [
-				"condition-windows"
-			],
-			"configurePreset": "windows-arm64",
-			"configuration": "Release"
-		},
-		{
-			"name": "windows-x64-debug",
-			"displayName": "Windows (x86_64)",
-			"inherits": [
-				"condition-windows"
-			],
-			"configurePreset": "windows-x64",
-			"configuration": "Debug"
-		},
-		{
-			"name": "windows-arm64-debug",
-			"displayName": "Windows (arm64)",
-			"inherits": [
-				"condition-windows"
-			],
-			"configurePreset": "windows-arm64",
-			"configuration": "Debug"
 		}
 	],
 	"workflowPresets": [
 		{
-			"name": "macos-x64-ci",
-			"displayName": "macOS (x86_64) - CI",
+			"name": "linux-x64",
+			"displayName": "Linux (x86_64) - Release",
 			"steps": [
 				{
 					"type": "configure",
-					"name": "macos-x64-ci"
+					"name": "linux-x64"
 				},
 				{
 					"type": "build",
-					"name": "macos-x64-ci"
+					"name": "linux-x64"
 				}
 			]
 		},
 		{
-			"name": "macos-arm64-ci",
-			"displayName": "macOS (arm64) - CI",
+			"name": "linux-x64-debug",
+			"displayName": "Linux (x86_64) - Debug",
 			"steps": [
 				{
 					"type": "configure",
-					"name": "macos-arm64-ci"
+					"name": "linux-x64"
 				},
 				{
 					"type": "build",
-					"name": "macos-arm64-ci"
-				}
-			]
-		},
-		{
-			"name": "macos-x64",
-			"displayName": "macOS (x86_64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "macos-x64"
-				},
-				{
-					"type": "build",
-					"name": "macos-x64"
-				}
-			]
-		},
-		{
-			"name": "macos-arm64",
-			"displayName": "macOS (arm64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "macos-arm64"
-				},
-				{
-					"type": "build",
-					"name": "macos-arm64"
-				}
-			]
-		},
-		{
-			"name": "macos-x64-debug",
-			"displayName": "macOS (x86_64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "macos-x64"
-				},
-				{
-					"type": "build",
-					"name": "macos-x64-debug"
-				}
-			]
-		},
-		{
-			"name": "macos-arm64-debug",
-			"displayName": "macOS (arm64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "macos-arm64"
-				},
-				{
-					"type": "build",
-					"name": "macos-arm64-debug"
+					"name": "linux-x64-debug"
 				}
 			]
 		},
@@ -388,6 +332,34 @@
 			]
 		},
 		{
+			"name": "linux-arm64",
+			"displayName": "Linux (arm64) - Release",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "linux-arm64"
+				},
+				{
+					"type": "build",
+					"name": "linux-arm64"
+				}
+			]
+		},
+		{
+			"name": "linux-arm64-debug",
+			"displayName": "Linux (arm64) - Debug",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "linux-arm64"
+				},
+				{
+					"type": "build",
+					"name": "linux-arm64-debug"
+				}
+			]
+		},
+		{
 			"name": "linux-arm64-ci",
 			"displayName": "Linux (arm64) - CI",
 			"steps": [
@@ -402,58 +374,114 @@
 			]
 		},
 		{
-			"name": "linux-x64",
-			"displayName": "Linux (x86_64)",
+			"name": "macos-x64",
+			"displayName": "macOS (x86_64) - Release",
 			"steps": [
 				{
 					"type": "configure",
-					"name": "linux-x64"
+					"name": "macos-x64"
 				},
 				{
 					"type": "build",
-					"name": "linux-x64"
+					"name": "macos-x64"
 				}
 			]
 		},
 		{
-			"name": "linux-arm64",
-			"displayName": "Linux (arm64)",
+			"name": "macos-x64-debug",
+			"displayName": "macOS (x86_64) - Debug",
 			"steps": [
 				{
 					"type": "configure",
-					"name": "linux-arm64"
+					"name": "macos-x64"
 				},
 				{
 					"type": "build",
-					"name": "linux-arm64"
+					"name": "macos-x64-debug"
 				}
 			]
 		},
 		{
-			"name": "linux-x64-debug",
-			"displayName": "Linux (x86_64)",
+			"name": "macos-x64-ci",
+			"displayName": "macOS (x86_64) - CI",
 			"steps": [
 				{
 					"type": "configure",
-					"name": "linux-x64"
+					"name": "macos-x64-ci"
 				},
 				{
 					"type": "build",
-					"name": "linux-x64-debug"
+					"name": "macos-x64-ci"
 				}
 			]
 		},
 		{
-			"name": "linux-arm64-debug",
-			"displayName": "Linux (arm64)",
+			"name": "macos-arm64",
+			"displayName": "macOS (arm64) - Release",
 			"steps": [
 				{
 					"type": "configure",
-					"name": "linux-arm64"
+					"name": "macos-arm64"
 				},
 				{
 					"type": "build",
-					"name": "linux-arm64-debug"
+					"name": "macos-arm64"
+				}
+			]
+		},
+		{
+			"name": "macos-arm64-debug",
+			"displayName": "macOS (arm64) - Debug",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "macos-arm64"
+				},
+				{
+					"type": "build",
+					"name": "macos-arm64-debug"
+				}
+			]
+		},
+		{
+			"name": "macos-arm64-ci",
+			"displayName": "macOS (arm64) - CI",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "macos-arm64-ci"
+				},
+				{
+					"type": "build",
+					"name": "macos-arm64-ci"
+				}
+			]
+		},
+		{
+			"name": "windows-x64",
+			"displayName": "Windows (x86_64) - Release",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "windows-x64"
+				},
+				{
+					"type": "build",
+					"name": "windows-x64"
+				}
+			]
+		},
+		{
+			"name": "windows-x64-debug",
+			"displayName": "Windows (x86_64) - Debug",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "windows-x64"
+				},
+				{
+					"type": "build",
+					"name": "windows-x64-debug"
 				}
 			]
 		},
@@ -472,6 +500,34 @@
 			]
 		},
 		{
+			"name": "windows-arm64",
+			"displayName": "Windows (arm64) - Release",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "windows-arm64"
+				},
+				{
+					"type": "build",
+					"name": "windows-arm64"
+				}
+			]
+		},
+		{
+			"name": "windows-arm64-debug",
+			"displayName": "Windows (arm64) - Debug",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "windows-arm64"
+				},
+				{
+					"type": "build",
+					"name": "windows-arm64-debug"
+				}
+			]
+		},
+		{
 			"name": "windows-arm64-ci",
 			"displayName": "Windows (arm64) - CI",
 			"steps": [
@@ -482,62 +538,6 @@
 				{
 					"type": "build",
 					"name": "windows-arm64-ci"
-				}
-			]
-		},
-		{
-			"name": "windows-x64",
-			"displayName": "Windows (x86_64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "windows-x64"
-				},
-				{
-					"type": "build",
-					"name": "windows-x64"
-				}
-			]
-		},
-		{
-			"name": "windows-arm64",
-			"displayName": "Windows (arm64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "windows-arm64"
-				},
-				{
-					"type": "build",
-					"name": "windows-arm64"
-				}
-			]
-		},
-		{
-			"name": "windows-x64-debug",
-			"displayName": "Windows (x86_64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "windows-x64"
-				},
-				{
-					"type": "build",
-					"name": "windows-x64-debug"
-				}
-			]
-		},
-		{
-			"name": "windows-arm64-debug",
-			"displayName": "Windows (arm64)",
-			"steps": [
-				{
-					"type": "configure",
-					"name": "windows-arm64"
-				},
-				{
-					"type": "build",
-					"name": "windows-arm64-debug"
 				}
 			]
 		}
