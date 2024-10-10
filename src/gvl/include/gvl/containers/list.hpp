@@ -7,8 +7,8 @@
 #include <memory>
 
 #include "gvl/support/debug.hpp"
-#include "gvl/support/functional.hpp"
-#include "gvl/support/platform.hpp"
+#include "gvl/support/dummy_delete.hpp"
+#include "gvl/support/noncopyable.hpp"
 
 namespace gvl {
 

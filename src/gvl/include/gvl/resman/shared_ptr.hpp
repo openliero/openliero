@@ -5,7 +5,7 @@
 
 #include "gvl/resman/shared.hpp"
 #include "gvl/support/debug.hpp"
-#include "gvl/support/functional.hpp"
+#include "gvl/support/dummy_delete.hpp"
 
 namespace gvl {
 

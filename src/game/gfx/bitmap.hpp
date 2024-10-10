@@ -2,7 +2,7 @@
 
 #include <cstring>
 #include <gvl/math/rect.hpp>
-#include <gvl/support/platform.hpp>
+#include <gvl/support/noncopyable.hpp>
 #include "color.hpp"
 
 struct Bitmap : gvl::noncopyable {
