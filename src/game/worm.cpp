@@ -128,15 +128,15 @@ void Worm::calculateReactionForce(Game& game, int newX, int newY, int dir) {
 void Worm::processPhysics(Game& game) {
   Common& common = *game.common;
 
-  if (reacts[RFUp] > 0)
+  if (reacts[static_cast<int>(Worm::ReactionForce::Up)] > 0)
     vel.x = (vel.x * LC(WormFricMult)) / LC(WormFricDiv);
 
   fixedvec absvel(std::abs(vel.x), std::abs(vel.y));
 
   int32_t rh, rv, mbh, mbv;
 
-  rh = reacts[vel.x >= 0 ? RFLeft : RFRight];
-  rv = reacts[vel.y >= 0 ? RFUp : RFDown];
+  rh = reacts[vel.x >= 0 ? static_cast<int>(Worm::ReactionForce::Left) : static_cast<int>(Worm::ReactionForce::Right)];
+  rv = reacts[vel.y >= 0 ? static_cast<int>(Worm::ReactionForce::Up) : static_cast<int>(Worm::ReactionForce::Down)];
   mbh = vel.x > 0 ? LC(MinBounceRight) : -LC(MinBounceLeft);
   mbv = vel.y > 0 ? LC(MinBounceDown) : -LC(MinBounceUp);
 
@@ -164,15 +164,15 @@ void Worm::processPhysics(Game& game) {
       vel.y = 0;
   }
 
-  if (reacts[RFUp] == 0) {
+  if (reacts[static_cast<int>(Worm::ReactionForce::Up)] == 0) {
     vel.y += LC(WormGravity);
   }
 
   // No, we can't use rh/rv here, they are out of date
-  if (reacts[vel.x >= 0 ? RFLeft : RFRight] < 2)
+  if (reacts[vel.x >= 0 ? static_cast<int>(Worm::ReactionForce::Left) : static_cast<int>(Worm::ReactionForce::Right)] < 2)
     pos.x += vel.x;
 
-  if (reacts[vel.y >= 0 ? RFUp : RFDown] < 2)
+  if (reacts[vel.y >= 0 ? static_cast<int>(Worm::ReactionForce::Up) : static_cast<int>(Worm::ReactionForce::Down)] < 2)
     pos.y += vel.y;
 }
 
@@ -199,26 +199,26 @@ void Worm::process(Game& game) {
           // Yes, Liero does this in every iteration. Keep it this way.
 
           if (iNext.x < 4) {
-            reacts[RFRight] += 5;
+            reacts[static_cast<int>(Worm::ReactionForce::Right)] += 5;
           } else if (iNext.x > game.level.width - 5) {
-            reacts[RFLeft] += 5;
+            reacts[static_cast<int>(Worm::ReactionForce::Left)] += 5;
           }
 
           if (iNext.y < 5) {
-            reacts[RFDown] += 5;
+            reacts[static_cast<int>(Worm::ReactionForce::Down)] += 5;
           } else {
             if (common.H[HWormFloat]) {
               if (iNext.y > LC(WormFloatLevel))
                 vel.y -= LC(WormFloatPower);
             } else if (iNext.y > game.level.height - 6) {
-              reacts[RFUp] += 5;
+              reacts[static_cast<int>(Worm::ReactionForce::Up)] += 5;
             }
           }
         }
 
-        if (reacts[RFDown] < 2) {
-          if (reacts[RFUp] > 0) {
-            if (reacts[RFLeft] > 0 || reacts[RFRight] > 0) {
+        if (reacts[static_cast<int>(Worm::ReactionForce::Down)] < 2) {
+          if (reacts[static_cast<int>(Worm::ReactionForce::Up)] > 0) {
+            if (reacts[static_cast<int>(Worm::ReactionForce::Left)] > 0 || reacts[static_cast<int>(Worm::ReactionForce::Right)] > 0) {
               // Low or none push down,
               // Push up and
               // Push left or right
@@ -227,15 +227,15 @@ void Worm::process(Game& game) {
               next.y = pos.y + vel.y;
               iNext.y = ftoi(next.y);
 
-              calculateReactionForce(game, iNext.x, iNext.y, RFLeft);
-              calculateReactionForce(game, iNext.x, iNext.y, RFRight);
+              calculateReactionForce(game, iNext.x, iNext.y, static_cast<int>(Worm::ReactionForce::Left));
+              calculateReactionForce(game, iNext.x, iNext.y, static_cast<int>(Worm::ReactionForce::Right));
             }
           }
         }
 
-        if (reacts[RFUp] < 2) {
-          if (reacts[RFDown] > 0) {
-            if (reacts[RFLeft] > 0 || reacts[RFRight] > 0) {
+        if (reacts[static_cast<int>(Worm::ReactionForce::Up)] < 2) {
+          if (reacts[static_cast<int>(Worm::ReactionForce::Down)] > 0) {
+            if (reacts[static_cast<int>(Worm::ReactionForce::Left)] > 0 || reacts[static_cast<int>(Worm::ReactionForce::Right)] > 0) {
               // Low or none push up,
               // Push down and
               // Push left or right
@@ -244,8 +244,8 @@ void Worm::process(Game& game) {
               next.y = pos.y + vel.y;
               iNext.y = ftoi(next.y);
 
-              calculateReactionForce(game, iNext.x, iNext.y, RFLeft);
-              calculateReactionForce(game, iNext.x, iNext.y, RFRight);
+              calculateReactionForce(game, iNext.x, iNext.y, static_cast<int>(Worm::ReactionForce::Left));
+              calculateReactionForce(game, iNext.x, iNext.y, static_cast<int>(Worm::ReactionForce::Right));
             }
           }
         }
@@ -667,15 +667,15 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
       // 540A
     }
 
-    if (worm.pressed(Worm::Left) && worm.reacts[Worm::RFRight]) {
-      if (worm.reacts[Worm::RFDown] > 0)
+    if (worm.pressed(Worm::Left) && worm.reacts[static_cast<int>(Worm::ReactionForce::Right)]) {
+      if (worm.reacts[static_cast<int>(Worm::ReactionForce::Down)] > 0)
         worm.press(Worm::Right);
       else
         worm.press(Worm::Jump);
     }  // 5454
 
-    if (worm.pressed(Worm::Right) && worm.reacts[Worm::RFLeft]) {
-      if (worm.reacts[Worm::RFDown] > 0)
+    if (worm.pressed(Worm::Right) && worm.reacts[static_cast<int>(Worm::ReactionForce::Left)]) {
+      if (worm.reacts[static_cast<int>(Worm::ReactionForce::Down)] > 0)
         worm.press(Worm::Left);
       else
         worm.press(Worm::Jump);
@@ -987,7 +987,7 @@ void Worm::processTasks(Game& game) {
       ninjarope.out = false;
       ninjarope.attached = false;
 
-      if ((reacts[RFUp] > 0 || common.H[HAirJump]) &&
+      if ((reacts[static_cast<int>(Worm::ReactionForce::Up)] > 0 || common.H[HAirJump]) &&
           (ableToJump || common.H[HMultiJump])) {
         vel.y -= LC(JumpForce);
         ableToJump = false;

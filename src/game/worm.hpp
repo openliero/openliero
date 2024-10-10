@@ -179,8 +179,13 @@ struct DumbLieroAI : WormAI {
 };
 
 struct Worm : gvl::shared {
-  enum { RFDown, RFLeft, RFUp, RFRight };
-
+  /*
+   * Enumerations for Worm Reaction Force.
+   */
+  enum class ReactionForce { Down, Left, Up, Right };
+  /*
+   * Possible enumerations for Worm Control.
+   */
   enum Control {
     Up = WormSettings::Up,
     Down = WormSettings::Down,
@@ -191,7 +196,9 @@ struct Worm : gvl::shared {
     Jump = WormSettings::Jump,
     MaxControl
   };
-
+  /*
+   * Control state for Worm.
+   */
   struct ControlState {
     ControlState() : istate(0) {}
 
@@ -258,45 +265,108 @@ struct Worm : gvl::shared {
     visible = false;
     killedTimer = 150;
   }
-
+  /*
+   * Set pressed key-press control state.
+   * TODO: Add documentation.
+   */
   bool pressed(Control control) const { return controlStates[control]; }
-
+  /*
+   * Set pressed-once key-press control state.
+   * TODO: Add documentation.
+   */
   bool pressedOnce(Control control) {
     bool state = controlStates[control];
     controlStates.set(control, false);
     return state;
   }
-
+  /*
+   * Release key-press control state.
+   * TODO: Add documentation.
+   */
   void release(Control control) { controlStates.set(control, false); }
-
+  /*
+   * Set key-press control state.
+   * TODO: Add documentation.
+   */
   void press(Control control) { controlStates.set(control, true); }
-
+  /*
+   * Set control states.
+   */
   void setControlState(Control control, bool state) {
     controlStates.set(control, state);
   }
-
+  /*
+   * Toggle control states.
+   */
   void toggleControlState(Control control) {
     controlStates.set(control, !controlStates[control]);
   }
-
+  /*
+   * Get minimap colour for Worm.
+   */
   int minimapColor() const { return 129 + index * 4; }
-
+  /*
+   * Start the respawning process for Worm.
+   */
   void beginRespawn(Game& game);
+  /*
+   * Do respawning processing for Worm.
+   */
   void doRespawning(Game& game);
+  /*
+   * General process() function for Worm.
+   * TODO: Add documentation.
+   */
   void process(Game& game);
+  /*
+   * Process weapons for Worm.
+   */
   void processWeapons(Game& game);
+  /*
+   * Process physics for Worm.
+   */
   void processPhysics(Game& game);
+  /*
+   * Process movement for Worm.
+   */
   void processMovement(Game& game);
+  /*
+   * Process a bunch of chores, homework, tasks and other assorted things for
+   * Worm.
+   */
   void processTasks(Game& game);
+  /*
+   * Process aiming for Worm.
+   */
   void processAiming(Game& game);
+  /*
+   * Process change of Weapon for Worm.
+   */
   void processWeaponChange(Game& game);
+  /*
+   * Process Steerable ShotType for Worm.
+   */
   void processSteerables(Game& game);
+  /*
+   * Calculate shot for Worm.
+   */
   void fire(Game& game);
+  /*
+   * Calculate whether or not the Worm sight goes green.
+   */
   void processSight(Game& game);
+  /*
+   * Calculate Reaction Force.
+   * TODO: Add documentation.
+   */
   void calculateReactionForce(Game& game, int newX, int newY, int dir);
+  /*
+   * Initialize weapons.
+   * TODO: Add documentation.
+   */
   void initWeapons(Game& game);
   /*
-   * Angle Frame? Quite possibly the angle that the worm is aiming at.
+   * Angle Frame? Quite possibly the angle that the Worm is aiming at.
    * TODO: Add documentation.
    */
   int angleFrame() const;
