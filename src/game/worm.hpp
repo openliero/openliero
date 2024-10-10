@@ -18,28 +18,64 @@ struct Worm;
 struct Game;
 struct Weapon;
 
-struct Ninjarope {
-  Ninjarope() : out(false), attached(false), anchor(0) {}
-
-  bool out;  // Is the ninjarope out?
+struct NinjaRope {
+  NinjaRope() : out(false), attached(false), anchor(0) {}
+  /*
+   * Has the ninja rope been deployed?
+   */
+  bool out;
+  /*
+   * Is the ninja rope attached to something?
+   */
   bool attached;
-  Worm* anchor;       // If non-zero, the worm the ninjarope is attached to
-  fixedvec pos, vel;  // Ninjarope props
-  // Not needed as far as I can tell: fixed forceX, forceY;
-  int length, curLen;
-
+  /*
+   * If non-zero, the Worm that the ninja rope is attached to.
+   */
+  Worm* anchor;
+  /*
+   * Position of the ninja rope.
+   */
+  fixedvec pos;
+  /*
+   * Velocity of the ninja rope.
+   */
+  fixedvec vel;
+  /*
+   * Length of the ninja rope.
+   */
+  int length;
+  /*
+   * Current length of the ninja rope.
+   */
+  int curLen;
+  /*
+   * Processing function.
+   */
   void process(Worm& owner, Game& game);
 };
 
 struct WormWeapon {
   WormWeapon() : ammo(0), delayLeft(0), loadingLeft(0) {}
-
+  /*
+   * Is the weapon available to use?
+   */
   bool available() const { return loadingLeft == 0; }
 
   // int id;
+  /*
+   * Type of weapon.
+   */
   Weapon const* type;
+  /*
+   * How much ammo is left.
+   */
   int ammo;
+  /*
+   * How much time is left before weapon can be fired again.
+   */
   int delayLeft;
+  /* How much time is left before weapon is reloaded.
+   */
   int loadingLeft;
 };
 
@@ -56,7 +92,6 @@ struct WormSettingsExtensions {
     MaxControl = Dig,
     MaxControlEx
   };
-  // static const int MaxControl = Dig;
 
   WormSettingsExtensions() { std::memset(controlsEx, 0, sizeof(controlsEx)); }
 
@@ -90,7 +125,6 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
 
   int color;
 
-  // std::string profilePath;
   FsNode profileNode;
 
   gvl::gash::value_type hash;
@@ -125,7 +159,6 @@ void archive(Archive ar, WormSettings& ws) {
   }
 }
 
-struct Viewport;
 struct Renderer;
 
 struct WormAI : gvl::shared {
@@ -194,33 +227,21 @@ struct Worm : gvl::shared {
         aimingAngle(0),
         aimingSpeed(0),
         ableToJump(false),
-        ableToDig(false)  // The previous state of some keys
-        ,
+        ableToDig(false),
         keyChangePressed(false),
         movable(false),
-        animate(false)  // Should the worm be animated?
-        ,
-        visible(false)  // Is the worm visible?
-        ,
-        ready(false)  // Is the worm ready to play?
-        ,
-        flag(false)  // Has the worm a flag?
-        ,
-        makeSightGreen(false)  // Changes the sight color
-        ,
-        health(0)  // Health left
-        ,
-        lives(0)  // lives left
-        ,
-        kills(0)  // Kills made
-        ,
-        timer(0)  // Timer for GOT
-        ,
-        killedTimer(0)  // Time until worm respawns
-        ,
+        animate(false),
+        visible(false),
+        ready(false),
+        flag(false),
+        makeSightGreen(false),
+        health(0),
+        lives(0),
+        kills(0),
+        timer(0),
+        killedTimer(0),
         currentFrame(0),
-        flags(0)  // How many flags does this worm have?
-        ,
+        flags(0),
         currentWeapon(0),
         lastKilledByIdx(-1),
         fireCone(0),
@@ -274,61 +295,160 @@ struct Worm : gvl::shared {
   void processSight(Game& game);
   void calculateReactionForce(Game& game, int newX, int newY, int dir);
   void initWeapons(Game& game);
+  /*
+   * Angle Frame? Quite possibly the angle that the worm is aiming at.
+   * TODO: Add documentation.
+   */
   int angleFrame() const;
-
-  fixedvec pos, vel;
-
+  /*
+   * Position of the Worm.
+   */
+  fixedvec pos;
+  /*
+   * Velocity of the Worm.
+   */
+  fixedvec vel;
+  /*
+   * Coordinates to determine location of respawn.
+   */
   gvl::ivec2 logicRespawn;
-
-  int hotspotX, hotspotY;  // Hotspots for laser, laser sight, etc.
+  /*
+   * Hotspots for laser, laser sight, etc.
+   */
+  int hotspotX, hotspotY;
+  /*
+   * Aiming variables?
+   * TODO: Add documentation.
+   */
   fixed aimingAngle, aimingSpeed;
-
-  bool ableToJump, ableToDig;  // The previous state of some keys
+  /*
+   * The previous state of some keys.
+   */
+  bool ableToJump, ableToDig;
+  /*
+   * TODO: Add documentation.
+   */
   bool keyChangePressed;
+  /*
+   * Whether or not the Worm is movable. The Worm cannot be moved when they are
+   * operating a Steerable weapon.
+   */
   bool movable;
-
-  bool animate;         // Should the worm be animated?
-  bool visible;         // Is the worm visible?
-  bool ready;           // Is the worm ready to play?
-  bool flag;            // Does the worm have a flag?
-  bool makeSightGreen;  // Changes the sight color
-  int health;           // Health left
-  int lives;            // lives left
-  int kills;            // Kills made
-
-  int timer;        // Timer for GOT
-  int killedTimer;  // Time until worm respawns
+  /*
+   * Whether or not the Worm can be animated.
+   */
+  bool animate;
+  /*
+   * Whether or not the Worm is visible.
+   */
+  bool visible;
+  /*
+   * Whether or not the Worm is ready to play.
+   */
+  bool ready;
+  /*
+   * Whether or not the Worm possesses a flag.
+   */
+  bool flag;
+  /*
+   * Whether or not to make the sight green.
+   */
+  bool makeSightGreen;
+  /*
+   * Health remaining for this Worm.
+   */
+  int health;
+  /*
+   * Lives remaining for this Worm.
+   */
+  int lives;
+  /*
+   * Kills performed by this Worm.
+   */
+  int kills;
+  /*
+   * Timer for Game of Tag.
+   */
+  int timer;
+  /*
+   * Time until this Worm can respawn.
+   */
+  int killedTimer;
+  /*
+   * The current animation frame for this Worm.
+   */
   int currentFrame;
-
-  int flags;  // How many flags does this worm have?
-
-  Ninjarope ninjarope;
-
-  int currentWeapon;    // The selected weapon
-  int lastKilledByIdx;  // What worm that last killed this worm
-  int fireCone;         // How much is left of the firecone
-  int leaveShellTimer;  // Time until next shell drop
-
-  std::shared_ptr<WormSettings> settings;  // !CLONING
-  int index;                               // 0 or 1
-
+  /*
+   *How many flags does this worm have?
+   */
+  int flags;
+  /*
+   * This Worm's ninja rope.
+   */
+  NinjaRope ninjarope;
+  /*
+   * The currently selected weapon.
+   */
+  int currentWeapon;
+  /*
+   * Which Worm was the last one that killed this Worm.
+   */
+  int lastKilledByIdx;
+  /*
+   *How much is left of the firecone.
+   */
+  int fireCone;
+  /*
+   * Time until next shell drop
+   */
+  int leaveShellTimer;
+  /*
+   * Settings for this Worm.
+   */
+  std::shared_ptr<WormSettings> settings;
+  /*
+   * Index of this Worm (0 or 1).
+   */
+  int index;
+  /*
+   * Some AI stuff?
+   * TODO: Add more documentation.
+   */
   std::shared_ptr<WormAI> ai;
-
+  /*
+   * Reaction forces in all 4 directions.
+   * TODO: Add more documentation.
+   */
   int reacts[4];
+  /*
+   * Weapons that the Worm currently has.
+   */
   WormWeapon weapons[NUM_WEAPONS];
+  /*
+   * What direction the Worm is facing.
+   * 0 = Left, 1 = Right.
+   */
   int direction;
+  /*
+   * Current control states.
+   */
   ControlState controlStates;
+  /*
+   * Previous control states.
+   */
   ControlState prevControlStates;
-
-  // Temporary state for steerables
+  /*
+   * Temporary state for steerables
+   */
   int steerableSumX, steerableSumY, steerableCount;
-
-  // which X coordinate to display stats at for this worm
+  /*
+   * Which X coordinate to display stats at for this Worm.
+   */
   int statsX;
-
-  // Data for LocalController
-  ControlState cleanControlStates;  // This contains the real state of real and
-                                    // extended controls
+  /*
+   * This contains the real state of real & extended controls.
+   */
+  ControlState cleanControlStates;
 };
 
 bool checkForWormHit(Game& game, int x, int y, int dist, Worm* ownWorm);

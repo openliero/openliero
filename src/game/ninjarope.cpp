@@ -4,7 +4,7 @@
 #include "math.hpp"
 #include "worm.hpp"
 
-void Ninjarope::process(Worm& owner, Game& game) {
+void NinjaRope::process(Worm& owner, Game& game) {
   Common& common = *game.common;
 
   if (out) {
