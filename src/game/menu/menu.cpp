@@ -33,7 +33,7 @@ void Menu::onKeys(SDL_Keysym* begin, SDL_Keysym* end, bool contains) {
         int skip = isTab ? 1 : 0;
 
         for (std::size_t offs = skip; offs < items.size(); ++offs) {
-          int i = (selection_ + offs) % (int)items.size();
+          int i = (selection_ + offs) % static_cast<int>(items.size());
           auto const& menuString = items[i].string;
 
           if (items[i].visible && menuString.size() >= newPrefix.size()) {
@@ -90,7 +90,7 @@ void Menu::draw(
     x = this->x;
 
   for (int c = itemFromVisibleIndex(topItem);
-       itemsLeft > 0 && c < (int)items.size(); ++c) {
+       itemsLeft > 0 && c < static_cast<int>(items.size()); ++c) {
     MenuItem& item = items[c];
     if (!item.visible)
       continue;
@@ -132,7 +132,7 @@ void Menu::moveToId(int id) {
 
 void Menu::moveTo(int newSelection) {
   newSelection = std::max(newSelection, 0);
-  newSelection = std::min(newSelection, (int)items.size() - 1);
+  newSelection = std::min(newSelection, static_cast<int>(items.size()) - 1);
   selection_ = firstVisibleFrom(newSelection);
   ensureInView(selection_);
 }
@@ -158,7 +158,8 @@ bool Menu::itemPosition(MenuItem& item, int& x, int& y) {
 }
 
 void Menu::ensureInView(int item) {
-  if (item < 0 || item >= (int)items.size() || !items[item].visible)
+  if (item < 0 || item >= static_cast<int>(items.size()) ||
+      !items[item].visible)
     return;  // Can't show items outside the menu or invisible items
 
   int visibleIndex = visibleItemIndex(item);
@@ -172,17 +173,17 @@ void Menu::ensureInView(int item) {
 int Menu::firstVisibleFrom(int item) {
   for (std::size_t i = item; i < items.size(); ++i) {
     if (items[i].visible && items[i].selectable) {
-      return (int)i;
+      return static_cast<int>(i);
     }
   }
 
-  return (int)items.size();
+  return static_cast<int>(items.size());
 }
 
 int Menu::lastVisibleFrom(int item) {
   for (std::size_t i = item; i-- > 0;) {
     if (items[i].visible && items[i].selectable) {
-      return (int)i + 1;
+      return static_cast<int>(i) + 1;
     }
   }
 
@@ -191,7 +192,7 @@ int Menu::lastVisibleFrom(int item) {
 
 int Menu::visibleItemIndex(int item) {
   int idx = 0;
-  for (int i = 0; i < (int)items.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(items.size()); ++i) {
     if (!items[i].visible)
       continue;
 
@@ -203,7 +204,7 @@ int Menu::visibleItemIndex(int item) {
 }
 
 int Menu::itemFromVisibleIndex(int idx) {
-  for (int i = 0; i < (int)items.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(items.size()); ++i) {
     if (!items[i].visible)
       continue;
 
@@ -211,7 +212,7 @@ int Menu::itemFromVisibleIndex(int idx) {
       return i;
     --idx;
   }
-  return (int)items.size();
+  return static_cast<int>(items.size());
 }
 
 void Menu::setBottom(int newBottomVisIdx) {
@@ -271,14 +272,14 @@ void Menu::movement(int direction) {
       }
     }
 
-    for (int i = (int)items.size() - 1; i > selection_; --i) {
+    for (int i = static_cast<int>(items.size()) - 1; i > selection_; --i) {
       if (items[i].visible && items[i].selectable) {
         moveTo(i);
         return;
       }
     }
   } else if (direction > 0) {
-    for (int i = selection_ + 1; i < (int)items.size(); ++i) {
+    for (int i = selection_ + 1; i < static_cast<int>(items.size()); ++i) {
       if (items[i].visible && items[i].selectable) {
         moveTo(i);
         return;
@@ -295,7 +296,7 @@ void Menu::movement(int direction) {
 }
 
 int Menu::addItem(MenuItem item) {
-  int idx = (int)items.size();
+  int idx = static_cast<int>(items.size());
   items.push_back(item);
   if (item.visible)
     ++visibleItemCount;
@@ -309,7 +310,7 @@ void Menu::clear() {
 }
 
 int Menu::addItem(MenuItem item, int pos) {
-  int idx = (int)items.size();
+  int idx = static_cast<int>(items.size());
   items.insert(items.begin() + pos, item);
   if (item.visible)
     ++visibleItemCount;

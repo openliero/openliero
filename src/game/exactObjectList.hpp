@@ -23,7 +23,7 @@ inline int ctz(uint32_t v) {
       31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6,  11, 5,  10, 9};
 
   return MultiplyDeBruijnBitPosition
-      [((uint32_t)((v & -v) * 0x077CB531UL)) >> 27];
+      [static_cast<uint32_t>(((v & -v) * 0x077CB531UL)) >> 27];
 }
 
 template <typename T, int Limit>
@@ -57,7 +57,7 @@ struct ExactObjectList {
         int bit = ctz(freeList[i]);
         uint32_t index = (i << 5) + bit;
         ptr = arr + index;
-        freeList[i] &= ~(uint32_t(1) << bit);
+        freeList[i] &= ~(static_cast<uint32_t>(1) << bit);
         break;
       }
     }
@@ -93,8 +93,8 @@ struct ExactObjectList {
   void free(T* ptr) {
     assert(ptr->used);
     if (ptr->used) {
-      uint32_t index = uint32_t(ptr - arr);
-      freeList[index >> 5] |= (uint32_t(1) << (index & 31));
+      uint32_t index = static_cast<uint32_t>(ptr - arr);
+      freeList[index >> 5] |= (static_cast<uint32_t>(1) << (index & 31));
 
       ptr->used = false;
 
@@ -116,7 +116,7 @@ struct ExactObjectList {
 
     // Mark padding as used
     for (uint32_t index = Limit; index < FreeListSize * 32; ++index)
-      freeList[index >> 5] &= ~(uint32_t(1) << (index & 31));
+      freeList[index >> 5] &= ~(static_cast<uint32_t>(1) << (index & 31));
   }
 
   std::size_t size() const { return count; }

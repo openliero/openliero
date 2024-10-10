@@ -193,9 +193,11 @@ void NormalStatsRecorder::write(Common& common, gvl::stream_ptr sink)
 
         uint64_t ticks_per_sec = gvl::hires_ticks_per_sec();
 
-        w << "Process time: " << (int)(processTimeTotal * 1000 / ticks_per_sec)
+        w << "Process time: " << static_cast<int>(processTimeTotal * 1000 /
+ticks_per_sec)
 << "ms, "
-          << (int)(frame * ticks_per_sec / processTimeTotal) << " fps\n";
+          << static_cast<int>(frame * ticks_per_sec / processTimeTotal) << "
+fps\n";
 
         for (int i = 0; i < 2; ++i)
         {

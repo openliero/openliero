@@ -191,7 +191,7 @@ struct FileSelector {
 
         for (std::size_t i = 0; i < p->children.size(); ++i) {
           if (ch == p->children[i].get())
-            p->getMenu().moveTo((int)i);
+            p->getMenu().moveTo(static_cast<int>(i));
         }
       }
 

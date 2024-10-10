@@ -272,8 +272,9 @@ void presentStats(NormalStatsRecorder& recorder, Game& game) {
   while (true) {
     gfx.playRenderer.bmp.copy(bg);
 
-    int offsX = (int)std::floor(pane * -renderer.renderer.renderResX);
-    int offsY = (int)offset;
+    int offsX =
+        static_cast<int>(std::floor(pane * -renderer.renderer.renderResX));
+    int offsY = static_cast<int>(offset);
 
     renderer.pane(0, offsX, offsY, [&] {
       renderer.drawWorms();
@@ -289,9 +290,10 @@ void presentStats(NormalStatsRecorder& recorder, Game& game) {
 
       {
         renderer.drawWormStat("ai processing", [&](WormStats& w, cell& c) {
-          c << (int)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         w.aiProcessTime)
-                         .count())
+          c << static_cast<int>(
+                   std::chrono::duration_cast<std::chrono::milliseconds>(
+                       w.aiProcessTime)
+                       .count())
             << "ms";
         });
       }

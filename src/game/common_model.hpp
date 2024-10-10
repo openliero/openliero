@@ -14,7 +14,7 @@ struct ObjectResolver {
     for (std::size_t i = 0; vec.size(); ++i) {
       auto& n = vec[i];
       if (n.idStr == str) {
-        v = (int)i;
+        v = static_cast<int>(i);
         return;
       }
     }
@@ -212,7 +212,7 @@ void archive_text(Common& common, Archive& ar) {
     ar.arr("materials", common.materials, [&](Material& m) {
       int f = m.flags;
       ar.i32(0, f);
-      m.flags = (uint8_t)(f & 0xff);
+      m.flags = static_cast<uint8_t>(f & 0xff);
     });
 
     char const* names[7] = {"up",   "down",   "left", "right",

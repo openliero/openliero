@@ -368,8 +368,9 @@ void SpectatorViewport::draw(
     {
       if (i->curFrame == 0) {
         int nameNum =
-            int(&*i - game.wobjects.arr) %
-            (int)common.weapons.size();  // TODO: Something nicer maybe
+            static_cast<int>(&*i - game.wobjects.arr) %
+            static_cast<int>(
+                common.weapons.size());  // TODO: Something nicer maybe
 
         std::string const& name = common.weapons[nameNum].name;
         int width = int(name.size()) * 4;

@@ -61,7 +61,7 @@ std::vector<int16_t>& sfx_sound_data(sfx_sound* snd) {
 }
 
 #define INACTIVE_FLAGS (-1)
-#define MK_HANDLE(num, idx) ((uint32)(((num) << 8) + (idx)))
+#define MK_HANDLE(num, idx) static_cast<uint32>(((num) << 8) + (idx))
 #define CHECK_HANDLE(h) \
   (((self)->channel_states[(h) & 0xff].id == (h)) ? ((h) & 0xff) : -1)
 
@@ -85,7 +85,7 @@ static int add_channel(
   uint32_t cur;
 
   // TODO: Get rid of undefined cast
-  int32_t diff = (int32_t)(pos - now);
+  int32_t diff = static_cast<int32_t>(pos - now);
   int32_t relbegin = diff;
   uint32_t soundlen = sound->samples.size();
   uint32_t flags = ch->flags;
@@ -97,17 +97,18 @@ static int add_channel(
 
   scaler = (ch->volumes & 0x1fff);
 
-  for (cur = (uint32_t)relbegin; cur < frame_count; ++cur) {
+  for (cur = static_cast<uint32_t>(relbegin); cur < frame_count; ++cur) {
     int32_t samp = out[cur];
-    int32_t soundsamp = sound->samples[(uint32_t)(ch->soundpos >> 32)];
+    int32_t soundsamp =
+        sound->samples[static_cast<uint32_t>(ch->soundpos >> 32)];
     samp += (soundsamp * scaler) >> 12;
     if (samp < -32768)
       samp = -32768;
     else if (samp > 32767)
       samp = 32767;
-    out[cur] = (int32_t)(samp);
+    out[cur] = static_cast<int32_t>(samp);
     ch->soundpos += ch->stride;
-    if ((uint32_t)(ch->soundpos >> 32) >= soundlen) {
+    if (static_cast<uint32_t>(ch->soundpos >> 32) >= soundlen) {
       if (flags & SFX_SOUND_LOOP)
         ch->soundpos = 0;
       else
@@ -119,7 +120,7 @@ static int add_channel(
 }
 
 void sfx_mixer_mix(sfx_mixer* self, void* output, unsigned long frame_count) {
-  int16_t* out = (int16_t*)(output);
+  int16_t* out = static_cast<int16_t*>(output);
   uint32_t c;
   memset(out, 0, frame_count * sizeof(int16_t));
 
@@ -156,7 +157,7 @@ static int find_channel(sfx_mixer* self, void* h) {
 
   for (c = 0; c < CHANNEL_COUNT;) {
     if (self->channel_states[c].id == h)
-      return (int)c;
+      return static_cast<int>(c);
     ++c;
   }
 
@@ -168,7 +169,7 @@ static int find_free_channel(sfx_mixer* self) {
 
   for (c = 0; c < CHANNEL_COUNT;) {
     if (self->channel_states[c].flags == INACTIVE_FLAGS)
-      return (int)c;
+      return static_cast<int>(c);
     ++c;
   }
 
@@ -181,7 +182,7 @@ void sfx_set_volume(sfx_mixer* self, void* h, double volume) {
   if (ch < 0)
     return;
 
-  v = (uint32_t)(volume * 0x1000);
+  v = static_cast<uint32_t>(volume * 0x1000);
 
   self->channel_states[ch].volumes = (v << 16) + v;
 }

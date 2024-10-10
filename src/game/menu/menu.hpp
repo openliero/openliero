@@ -108,7 +108,7 @@ struct Menu {
   }
 
   bool isSelectionValid() {
-    return selection_ >= 0 && selection_ < (int)items.size();
+    return selection_ >= 0 && selection_ < static_cast<int>(items.size());
   }
 
   void moveToFirstVisible();
@@ -143,7 +143,7 @@ struct Menu {
   }
 
   int indexFromId(int id) {
-    for (int i = 0; i < (int)items.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(items.size()); ++i) {
       if (items[i].id == id)
         return i;
     }
@@ -152,7 +152,7 @@ struct Menu {
   }
 
   MenuItem* itemFromId(int id) {
-    for (int i = 0; i < (int)items.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(items.size()); ++i) {
       if (items[i].id == id)
         return &items[i];
     }

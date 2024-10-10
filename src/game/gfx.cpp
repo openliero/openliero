@@ -190,7 +190,12 @@ int levenshtein(char const* s1, char const* s2) {
 
 struct WeaponEnumBehavior : EnumBehavior {
   WeaponEnumBehavior(Common& common, uint32_t& v)
-      : EnumBehavior(common, v, 1, (uint32_t)common.weapons.size(), false) {}
+      : EnumBehavior(
+            common,
+            v,
+            1,
+            static_cast<uint32_t>(common.weapons.size()),
+            false) {}
 
   void onUpdate(Menu& menu, MenuItem& item) {
     item.value = common.weapons[common.weapOrder[v - 1]].name;
@@ -213,8 +218,8 @@ struct WeaponEnumBehavior : EnumBehavior {
       for (uint32_t i = min; i <= max; ++i) {
         std::string& name = common.weapons[common.weapOrder[i - 1]].name;
 
-        double dist =
-            levenshtein(name.c_str(), search.c_str()) / (double)name.length();
+        double dist = levenshtein(name.c_str(), search.c_str()) /
+                      static_cast<double>(name.length());
         if (dist < minimum) {
           minimumi = i;
           minimum = dist;
@@ -1356,7 +1361,7 @@ void Gfx::weaponOptions() {
   weaponMenu.setHeight(14);
   weaponMenu.valueOffsetX = 89;
 
-  for (int i = 0; i < (int)common.weapons.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(common.weapons.size()); ++i) {
     int index = common.weapOrder[i];
     weaponMenu.addItem(MenuItem(48, 7, common.weapons[index].name, i));
   }
@@ -2055,7 +2060,7 @@ int Gfx::menuLoop() {
         w.splinterType = std::uniform_int_distribution<int>(
             0, common.nobjectTypes.size() - 1)(g);
         w.startFrame = std::uniform_int_distribution<int>(
-            0, (uint32_t)common.smallSprites.count - 13 - 1)(g);
+            0, static_cast<uint32_t>(common.smallSprites.count) - 13 - 1)(g);
         w.numFrames = std::uniform_int_distribution<int>(0, 5 - 1)(g);
         w.timeToExplo = 50 + std::uniform_int_distribution<int>(0, 200 - 1)(g);
         w.timeToExploV = 10 + std::uniform_int_distribution<int>(0, 50 - 1)(g);
@@ -2093,7 +2098,7 @@ int Gfx::menuLoop() {
                          : -1;
         n.leaveObjDelay = 10 + std::uniform_int_distribution<int>(0, 80 - 1)(g);
         n.startFrame = std::uniform_int_distribution<int>(
-            0, (uint32_t)common.smallSprites.count - 13 - 1)(g);
+            0, static_cast<uint32_t>(common.smallSprites.count) - 13 - 1)(g);
         n.numFrames = std::uniform_int_distribution<int>(0, 5 - 1)(g);
         n.speed = std::uniform_int_distribution<int>(0, 150 - 1)(g);
         n.splinterAmount =
@@ -2121,7 +2126,7 @@ int Gfx::menuLoop() {
         s.dirtEffect = std::uniform_int_distribution<int>(0, 9 - 1)(g);
         s.flash = std::uniform_int_distribution<int>(0, 5 - 1)(g);
         s.startFrame = std::uniform_int_distribution<int>(
-            0, (uint32_t)common.largeSprites.count - 7 - 1)(g);
+            0, static_cast<uint32_t>(common.largeSprites.count) - 7 - 1)(g);
         s.numFrames = std::uniform_int_distribution<int>(0, 7 - 1)(g);
         s.startSound =
             std::uniform_int_distribution<int>(0, common.sounds.size() - 1)(g);

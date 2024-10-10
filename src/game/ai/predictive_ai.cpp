@@ -120,8 +120,8 @@ int obstacles(Game& game, gvl::ivec2 from, gvl::ivec2 to) {
   for (double d = 0; d < l; d += 2.0) {
     dvec2 p = org + dir * d;
 
-    auto m =
-        game.common->materials[game.level.checkedPixelWrap((int)p.x, (int)p.y)];
+    auto m = game.common->materials[game.level.checkedPixelWrap(
+        static_cast<int>(p.x), static_cast<int>(p.y))];
 
     if (!m.background()) {
       if (m.dirt())
@@ -152,8 +152,8 @@ int obstacles(Game& game, Worm* from, Worm* to) {
     double px = orgX + dirX * d;
     double py = orgY + dirY * d;
 
-    auto m =
-        game.common->materials[game.level.checkedPixelWrap((int)px, (int)py)];
+    auto m = game.common->materials[game.level.checkedPixelWrap(
+        static_cast<int>(px), static_cast<int>(py))];
 
     if (!m.background()) {
       if (m.dirt())
@@ -307,8 +307,8 @@ double evaluateState(
         level_cell_succ());
 
     if (missilePath && wormCell && missileCell->g < wormCell->g) {
-      double closer = (double)wormCell->g - missileCell->g;
-      score += psigmoid((closer / (double)wormCell->g)) * 100.0 *
+      double closer = static_cast<double>(wormCell->g) - missileCell->g;
+      score += psigmoid((closer / static_cast<double>(wormCell->g))) * 100.0 *
                weights.missileWeight;
     }
   }
@@ -525,7 +525,7 @@ void evaluate(
         evaluateState(ai, meCopy, copy, context, targetCopy, game, i + 1);
 
     if (game.settings->aiTraces) {
-      int t = 119 - (int)(i * (119 - 104 + 1) / planSize);
+      int t = 119 - static_cast<int>(i * (119 - 104 + 1) / planSize);
 
       ai.evaluatePositions.push_back(
           std::make_tuple(gvl::ivec2(meCopy->pos.x, meCopy->pos.y), t));
@@ -545,11 +545,11 @@ void mutate(
     Worm* target,
     Plan& candidate,
     EvaluateResult const& prevResult) {
-  MutationStrategy ms(MtRange, 0, (uint32_t)candidate.size());
+  MutationStrategy ms(MtRange, 0, static_cast<uint32_t>(candidate.size()));
 
   {
     // Find the minimum suffix sum
-    uint32_t j = uint32_t(prevResult.scoreOverTime.size() - 1);
+    uint32_t j = static_cast<uint32_t>(prevResult.scoreOverTime.size() - 1);
 
     double sum = prevResult.scoreOverTime[j];
     double min = sum;
@@ -568,13 +568,14 @@ void mutate(
     if (std::uniform_int_distribution<int>(0, 8 - 1)(ai.rand) < 7) {
       ms.stop = std::uniform_int_distribution<int>(0, minj)(ai.rand);
       ms.start = std::uniform_int_distribution<int>(
-          std::max(ms.stop, uint32_t(10)) - 10, ms.stop)(ai.rand);
+          std::max(ms.stop, static_cast<uint32_t>(10)) - 10, ms.stop)(ai.rand);
     } else {
       ms.start = std::uniform_int_distribution<int>(
-          0, (uint32_t)candidate.size())(ai.rand);
+          0, static_cast<uint32_t>(candidate.size()))(ai.rand);
       ms.stop = std::uniform_int_distribution<int>(
           ms.start,
-          std::min(ms.start + 10, (uint32_t)candidate.size()))(ai.rand);
+          std::min(ms.start + 10, static_cast<uint32_t>(candidate.size())))(
+          ai.rand);
     }
   }
 

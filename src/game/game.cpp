@@ -186,7 +186,7 @@ bool checkBonusSpawnPosition(Game& game, int x, int y) {
 void Game::createBonus() {
   Common& common = *this->common;
 
-  if (int(bonuses.size()) >= settings->maxBonuses)
+  if (static_cast<int>(bonuses.size()) >= settings->maxBonuses)
     return;
 
   for (std::size_t i = 0; i < 50000; ++i) {
@@ -522,7 +522,7 @@ void Game::doDamage(Worm& w, int amount, int byIdx) {
   if (amount > 0) {
     if (settings->gameMode == Settings::GMScalesOfJustice) {
       if (byIdx < 0 || byIdx == w.index) {
-        int parts = (int)worms.size() - 1;
+        int parts = static_cast<int>(worms.size()) - 1;
         int left = amount;
 
         for (Worm* other : worms) {
@@ -544,7 +544,7 @@ void Game::doHealing(Worm& w, int amount) {
   doHealingDirect(w, amount);
 
   if (settings->gameMode == Settings::GMScalesOfJustice) {
-    int parts = (int)worms.size() - 1;
+    int parts = static_cast<int>(worms.size()) - 1;
     int left = amount;
 
     for (Worm* other : worms) {

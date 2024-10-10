@@ -43,7 +43,7 @@ struct WeaponIdxRefCreator {
   template <typename Archive>
   void
   operator()(Weapon const* w, Archive& ar, GameSerializationContext& context) {
-    int idx = (int)(w - &context.game->common->weapons[0]);
+    int idx = static_cast<int>(w - &context.game->common->weapons[0]);
     ar.i32(idx);
   }
 };
@@ -441,9 +441,10 @@ bool ReplayReader::playbackFrame(Renderer& renderer) {
   uint32_t expected = gvl::read_uint32(reader);
   uint32_t expected2 = gvl::read_uint32(reader);
   gvl::gash::value_type actual = hash(game);
-  if (expected != (uint32_t)actual.value[0]) {
+  if (expected != static_cast<uint32_t>(actual.value[0])) {
     std::cout << "Expected: " << expected
-              << ", was: " << (uint32_t)actual.value[0] << std::endl;
+              << ", was: " << static_cast<uint32_t>(actual.value[0])
+              << std::endl;
     std::cout << "Frame: " << game.cycles << std::endl;
     throw std::runtime_error("Desynced state");
   }
@@ -504,7 +505,7 @@ void ReplayWriter::recordFrame() {
 
 #ifdef DEBUG_REPLAYS
   gvl::gash::value_type actual = hash(game);
-  gvl::write_uint32(writer, (uint32_t)actual.value[0]);
+  gvl::write_uint32(writer, static_cast<uint32_t>(actual.value[0]));
   gvl::write_uint32(writer, game.cycles);
 #endif
 }

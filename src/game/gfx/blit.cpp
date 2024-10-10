@@ -19,8 +19,8 @@ void fillRect(Bitmap& scr, int x, int y, int w, int h, int color) {
   int y2 = y + h;
   int clipx2 = scr.clip_rect.x2;
   int clipy2 = scr.clip_rect.y2;
-  x = std::max(x, (int)scr.clip_rect.x1);
-  y = std::max(y, (int)scr.clip_rect.y1);
+  x = std::max(x, static_cast<int>(scr.clip_rect.x1));
+  y = std::max(y, static_cast<int>(scr.clip_rect.y1));
   x2 = std::min(x2, clipx2);
   y2 = std::min(y2, clipy2);
 
@@ -51,8 +51,8 @@ void vline(Bitmap& scr, int x, int y1, int y2, int color) {
   if (x < scr.clip_rect.x1 || x >= scr.clip_rect.x2)
     return;
 
-  y1 = std::max(y1, (int)scr.clip_rect.y1);
-  y2 = std::min(y2, (int)scr.clip_rect.y2);
+  y1 = std::max(y1, static_cast<int>(scr.clip_rect.y1));
+  y2 = std::min(y2, static_cast<int>(scr.clip_rect.y2));
 
   for (; y1 < y2; ++y1)
     scr.getPixel(x, y1) = color;
@@ -678,7 +678,7 @@ void drawGraph(
     int baseY = startY + (balanced ? height / 2 : height);
 
     for (double v : data) {
-      int y1 = baseY - (int)std::floor(v + 0.5);
+      int y1 = baseY - static_cast<int>(std::floor(v + 0.5));
       int y2 = baseY;
       if (y1 > y2)
         std::swap(y1, y2);
@@ -687,7 +687,8 @@ void drawGraph(
     }
   }
 
-  drawRoundedLineBox(scr, startX, startY, 7, (int)data.size(), height);
+  drawRoundedLineBox(
+      scr, startX, startY, 7, static_cast<int>(data.size()), height);
 }
 
 void drawHeatmap(Bitmap& scr, int x, int y, Heatmap& hm) {
@@ -747,7 +748,7 @@ void scaleDraw(
   } else if (mag > 1) {
     for (int y = 0; y < h; ++y) {
       PalIdx* line = src + y * srcPitch;
-      int destMagPitch = mag * (int)destPitch;
+      int destMagPitch = mag * static_cast<int>(destPitch);
       uint8_t* destLine = dest + y * destMagPitch;
 
       for (int x = 0; x < w / 4; ++x) {
@@ -760,25 +761,29 @@ void scaleDraw(
         uint32_t d = pal32[pix & 0x000000ff];
 
         for (int dx = 0; dx < mag; ++dx) {
-          for (int dy = 0; dy < destMagPitch; dy += (int)destPitch) {
+          for (int dy = 0; dy < destMagPitch;
+               dy += static_cast<int>(destPitch)) {
             *reinterpret_cast<uint32_t*>(destLine + dy) = d;
           }
           destLine += 4;
         }
         for (int dx = 0; dx < mag; ++dx) {
-          for (int dy = 0; dy < destMagPitch; dy += (int)destPitch) {
+          for (int dy = 0; dy < destMagPitch;
+               dy += static_cast<int>(destPitch)) {
             *reinterpret_cast<uint32_t*>(destLine + dy) = c;
           }
           destLine += 4;
         }
         for (int dx = 0; dx < mag; ++dx) {
-          for (int dy = 0; dy < destMagPitch; dy += (int)destPitch) {
+          for (int dy = 0; dy < destMagPitch;
+               dy += static_cast<int>(destPitch)) {
             *reinterpret_cast<uint32_t*>(destLine + dy) = b;
           }
           destLine += 4;
         }
         for (int dx = 0; dx < mag; ++dx) {
-          for (int dy = 0; dy < destMagPitch; dy += (int)destPitch) {
+          for (int dy = 0; dy < destMagPitch;
+               dy += static_cast<int>(destPitch)) {
             *reinterpret_cast<uint32_t*>(destLine + dy) = a;
           }
           destLine += 4;

@@ -303,8 +303,8 @@ int readSpriteTga(gvl::octet_reader& r, SpriteSet& ss, Palette* pal) {
 #undef CHECK
 
 inline uint32_t quad(char a, char b, char c, char d) {
-  return (uint32_t)a + ((uint32_t)b << 8) + ((uint32_t)c << 16) +
-         ((uint32_t)d << 24);
+  return static_cast<uint32_t>(a) + (static_cast<uint32_t>(b) << 8) +
+         (static_cast<uint32_t>(c) << 16) + (static_cast<uint32_t>(d) << 24);
 }
 
 void Common::load(FsNode node) {
@@ -371,8 +371,8 @@ void Common::load(FsNode node) {
       std::vector<uint8_t> data(font.chars.size() * 7 * 8, 10);
 
       readSpriteTga(
-          r, 7, (int)font.chars.size() * 8, (int)font.chars.size(), &data[0],
-          0);
+          r, 7, static_cast<int>(font.chars.size()) * 8,
+          static_cast<int>(font.chars.size()), &data[0], 0);
 
       for (std::size_t i = 0; i < font.chars.size(); ++i) {
         Font::Char& ch = font.chars[i];
@@ -388,7 +388,7 @@ void Common::load(FsNode node) {
             } else if (p == 50) {
               ch.data[y * 7 + x] = 8;
             } else {
-              ch.width = (int)x;
+              ch.width = static_cast<int>(x);
               break;
             }
           }
@@ -422,7 +422,7 @@ void Common::load(FsNode node) {
 
 void Common::precompute() {
   weapOrder.resize(weapons.size());
-  for (int i = 0; i < (int)weapons.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(weapons.size()); ++i) {
     weapOrder[i] = i;
     weapons[i].id = i;
   }
@@ -431,11 +431,11 @@ void Common::precompute() {
     return this->weapons[a].name < this->weapons[b].name;
   });
 
-  for (int i = 0; i < (int)nobjectTypes.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(nobjectTypes.size()); ++i) {
     nobjectTypes[i].id = i;
   }
 
-  for (int i = 0; i < (int)sobjectTypes.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(sobjectTypes.size()); ++i) {
     sobjectTypes[i].id = i;
   }
 

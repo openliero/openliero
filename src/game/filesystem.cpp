@@ -445,7 +445,7 @@ struct FsNodeZipFile : FsNodeImp {
         if (!c)
           c.reset(new FsNodeZipFile(
               archive, joinPath(cur->path, part), joinPath(cur->relPath, part),
-              (int)fileIndex, isDir));
+              static_cast<int>(fileIndex), isDir));
         cur = c.get();
       }
     }

@@ -70,7 +70,7 @@ void commonSave(Common& common, std::string const& path) {
     auto roundedSize = (s.originalData.size() + 1) & ~1;
 
     w.put((uint8_t const*)"RIFF", 4);
-    gvl::write_uint32_le(w, (uint32_t)roundedSize - 8);
+    gvl::write_uint32_le(w, static_cast<uint32_t>(roundedSize) - 8);
     w.put((uint8_t const*)"WAVE", 4);
 
     w.put((uint8_t const*)"fmt ", 4);
@@ -84,7 +84,7 @@ void commonSave(Common& common, std::string const& path) {
 
     w.put((uint8_t const*)"data", 4);
     gvl::write_uint32_le(
-        w, (uint32_t)s.originalData.size() * 1 * 1);  // Data size
+        w, static_cast<uint32_t>(s.originalData.size()) * 1 * 1);  // Data size
 
     auto curSize = s.originalData.size();
 
@@ -134,7 +134,7 @@ void commonSave(Common& common, std::string const& path) {
           }
       }
       writeSpriteTga(
-          w, 7, (int)common.font.chars.size() * 8, &data[0], common.exepal);
+          w, 7, static_cast<int>(common.font.chars.size()) * 8, &data[0], common.exepal);
     }
   }
 
