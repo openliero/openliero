@@ -516,8 +516,9 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
     // The other worm is close enough
     bool fire = worm.pressed(Worm::Fire);
     if (std::uniform_int_distribution<int>(
-            0, common.aiParams.k[fire][WormSettings::Fire] - 1)(game.rand) ==
-        0) {
+            0, common.aiParams
+                       .k[fire][static_cast<int>(WormSettings::Control::Fire)] -
+                   1)(game.rand) == 0) {
       worm.setControlState(Worm::Fire, !fire);
     }  // 4DE7
   } else if (worm.visible) {
@@ -527,14 +528,18 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
   // In Liero this is a loop with two iterations, that's better maybe
   bool jump = worm.pressed(Worm::Jump);
   if (std::uniform_int_distribution<int>(
-          0, common.aiParams.k[jump][WormSettings::Jump] - 1)(game.rand) == 0) {
+          0, common.aiParams
+                     .k[jump][static_cast<int>(WormSettings::Control::Jump)] -
+                 1)(game.rand) == 0) {
     worm.toggleControlState(Worm::Jump);
   }
 
   bool change = worm.pressed(Worm::Change);
   if (std::uniform_int_distribution<int>(
-          0, common.aiParams.k[change][WormSettings::Change] - 1)(game.rand) ==
-      0) {
+          0,
+          common.aiParams
+                  .k[change][static_cast<int>(WormSettings::Control::Change)] -
+              1)(game.rand) == 0) {
     worm.toggleControlState(Worm::Change);
   }
 
@@ -625,15 +630,16 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
 
   if (change) {
     if (std::uniform_int_distribution<int>(
-            0, common.aiParams.k[worm.pressed(Worm::Left)][WormSettings::Left] -
+            0, common.aiParams.k[worm.pressed(Worm::Left)][static_cast<int>(
+                   WormSettings::Control::Left)] -
                    1)(game.rand) == 0) {
       worm.toggleControlState(Worm::Left);
     }
 
     if (std::uniform_int_distribution<int>(
-            0,
-            common.aiParams.k[worm.pressed(Worm::Right)][WormSettings::Right] -
-                1)(game.rand) == 0) {
+            0, common.aiParams.k[worm.pressed(Worm::Right)][static_cast<int>(
+                   WormSettings::Control::Right)] -
+                   1)(game.rand) == 0) {
       worm.toggleControlState(Worm::Right);
     }
 
@@ -642,14 +648,18 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
       bool up = worm.pressed(Worm::Up);
 
       if (std::uniform_int_distribution<int>(
-              0, common.aiParams.k[up][WormSettings::Up] - 1)(game.rand) == 0) {
+              0, common.aiParams
+                         .k[up][static_cast<int>(WormSettings::Control::Up)] -
+                     1)(game.rand) == 0) {
         worm.toggleControlState(Worm::Up);
       }
 
       bool down = worm.pressed(Worm::Down);
       if (std::uniform_int_distribution<int>(
-              0, common.aiParams.k[down][WormSettings::Down] - 1)(game.rand) ==
-          0) {
+              0,
+              common.aiParams
+                      .k[down][static_cast<int>(WormSettings::Control::Down)] -
+                  1)(game.rand) == 0) {
         worm.toggleControlState(Worm::Down);
       }
     } else {

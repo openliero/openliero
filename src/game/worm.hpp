@@ -80,7 +80,7 @@ struct WormWeapon {
 };
 
 struct WormSettingsExtensions {
-  enum Control {
+  enum class Control {
     Up,
     Down,
     Left,
@@ -95,7 +95,8 @@ struct WormSettingsExtensions {
 
   WormSettingsExtensions() { std::memset(controlsEx, 0, sizeof(controlsEx)); }
 
-  uint32_t controlsEx[MaxControlEx];
+  uint32_t controlsEx[static_cast<int>(
+      WormSettingsExtensions::Control::MaxControlEx)];
 };
 
 struct WormSettings : gvl::shared, WormSettingsExtensions {
@@ -117,7 +118,7 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
 
   int health;
   uint32_t controller;  // CPU / Human
-  uint32_t controls[MaxControl];
+  uint32_t controls[static_cast<int>(WormSettings::Control::MaxControl)];
   uint32_t weapons[NUM_WEAPONS];  // TODO: Adjustable
   std::string name;
   int rgb[3];
@@ -133,7 +134,7 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
 template <typename Archive>
 void archive(Archive ar, WormSettings& ws) {
   ar.ui32(ws.color).ui32(ws.health).ui16(ws.controller);
-  for (int i = 0; i < WormSettings::MaxControl; ++i)
+  for (int i = 0; i < static_cast<int>(WormSettings::Control::MaxControl); ++i)
     ar.ui16(ws.controls[i]);  // TODO: Initialize controlsEx from this earlier
   for (int i = 0; i < NUM_WEAPONS; ++i)
     ar.ui16(ws.weapons[i]);
@@ -149,12 +150,14 @@ void archive(Archive ar, WormSettings& ws) {
   int wsVersion = myGameVersion;
   ar.ui8(wsVersion);
 
-  for (int c = 0; c < WormSettings::MaxControl; ++c) {
+  for (int c = 0; c < static_cast<int>(WormSettings::Control::MaxControl);
+       ++c) {
     int dummy = 0;
     gvl::enable_when(ar, wsVersion >= 2).ui8(dummy, 255).ui8(dummy, 255);
   }
 
-  for (int c = 0; c < WormSettings::MaxControlEx; ++c) {
+  for (int c = 0; c < static_cast<int>(WormSettings::Control::MaxControlEx);
+       ++c) {
     gvl::enable_when(ar, wsVersion >= 3).ui32(ws.controlsEx[c], ws.controls[c]);
   }
 }
@@ -187,13 +190,13 @@ struct Worm : gvl::shared {
    * Possible enumerations for Worm Control.
    */
   enum Control {
-    Up = WormSettings::Up,
-    Down = WormSettings::Down,
-    Left = WormSettings::Left,
-    Right = WormSettings::Right,
-    Fire = WormSettings::Fire,
-    Change = WormSettings::Change,
-    Jump = WormSettings::Jump,
+    Up = static_cast<int>(WormSettings::Control::Up),
+    Down = static_cast<int>(WormSettings::Control::Down),
+    Left = static_cast<int>(WormSettings::Control::Left),
+    Right = static_cast<int>(WormSettings::Control::Right),
+    Fire = static_cast<int>(WormSettings::Control::Fire),
+    Change = static_cast<int>(WormSettings::Control::Change),
+    Jump = static_cast<int>(WormSettings::Control::Jump),
     MaxControl
   };
   /*

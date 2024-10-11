@@ -44,7 +44,8 @@ void Game::onKey(uint32_t key, bool state) {
   for (std::size_t i = 0; i < worms.size(); ++i) {
     Worm& w = *worms[i];
 
-    for (std::size_t control = 0; control < WormSettings::MaxControl;
+    for (std::size_t control = 0;
+         control < static_cast<int>(WormSettings::Control::MaxControl);
          ++control) {
       if (w.settings->controls[control] == key) {
         w.setControlState(static_cast<Worm::Control>(control), state);
@@ -59,8 +60,10 @@ Worm* Game::findControlForKey(uint32_t key, Worm::Control& control) {
 
     uint32_t* controls =
         settings->extensions ? w.settings->controlsEx : w.settings->controls;
-    std::size_t maxControl = settings->extensions ? WormSettings::MaxControlEx
-                                                  : WormSettings::MaxControl;
+    std::size_t maxControl =
+        settings->extensions
+            ? static_cast<int>(WormSettings::Control::MaxControlEx)
+            : static_cast<int>(WormSettings::Control::MaxControl);
     for (std::size_t c = 0; c < maxControl; ++c) {
       if (controls[c] == key) {
         control = static_cast<Worm::Control>(c);
@@ -76,7 +79,8 @@ void Game::releaseControls() {
   for (std::size_t i = 0; i < worms.size(); ++i) {
     Worm& w = *worms[i];
 
-    for (std::size_t control = 0; control < WormSettings::MaxControl;
+    for (std::size_t control = 0;
+         control < static_cast<int>(WormSettings::Control::MaxControl);
          ++control) {
       w.release(static_cast<Worm::Control>(control));
     }

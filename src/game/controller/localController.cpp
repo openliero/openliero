@@ -79,7 +79,8 @@ void LocalController::onKey(int key, bool keyState) {
       worm->setControlState(control, keyState);
     }
 
-    if (worm->cleanControlStates[WormSettings::Dig]) {
+    if (worm->cleanControlStates[static_cast<int>(
+            WormSettings::Control::Dig)]) {
       worm->press(Worm::Left);
       worm->press(Worm::Right);
     } else {
