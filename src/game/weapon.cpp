@@ -159,7 +159,8 @@ void WObject::process(Game& game) {
   // As liero would do this while rendering, we try to do it as early as
   // possible
   if (common.H[HRemExp] && type - &common.weapons[0] == LC(RemExpObject) - 1) {
-    if (owner->pressed(Worm::Change) && owner->pressed(Worm::Fire)) {
+    if (owner->pressed(Worm::Control::Change) &&
+        owner->pressed(Worm::Control::Fire)) {
       timeLeft = 0;
     }
   }
@@ -172,7 +173,7 @@ void WObject::process(Game& game) {
       fixedvec dir(cossinTable[curFrame]);
       auto newVel = dir * w.speed / 100;
 
-      if (owner->visible && owner->pressed(Worm::Up)) {
+      if (owner->visible && owner->pressed(Worm::Control::Up)) {
         newVel += dir * w.addSpeed / 100;
       }
 

@@ -221,7 +221,8 @@ void SpectatorViewport::draw(
   for (std::size_t i = 0; i < game.worms.size(); ++i) {
     Worm const& worm = *game.worms[i];
     if (!worm.visible && worm.killedTimer <= 0 && !worm.ready) {
-      if (game.settings->allowViewingSpawnPoint && worm.pressed(Worm::Change)) {
+      if (game.settings->allowViewingSpawnPoint &&
+          worm.pressed(Worm::Control::Change)) {
         int tempX = ftoi(worm.pos.x) - 7 + offs.x;
         int tempY = ftoi(worm.pos.y) - 5 + offs.y;
 
@@ -439,7 +440,7 @@ void SpectatorViewport::draw(
         }
 
         if (ww.type - &common.weapons[0] == LC(LaserWeapon) - 1 &&
-            w.pressed(Worm::Fire)) {
+            w.pressed(Worm::Control::Fire)) {
           drawLine(
               renderer.bmp, hotspotX, hotspotY, tempX + 7, tempY + 4,
               weapon.colorBullets);
@@ -520,7 +521,7 @@ void SpectatorViewport::draw(
           renderer.bmp, common.smallSprites[worm.makeSightGreen ? 44 : 43],
           temp.x, temp.y);
 
-      if (worm.pressed(Worm::Change)) {
+      if (worm.pressed(Worm::Control::Change)) {
         std::string const& name = worm.weapons[worm.currentWeapon].type->name;
 
         int len = int(name.size()) * 4;  // TODO: Read 4 from exe? (SW_CHARWID)

@@ -23,7 +23,7 @@ struct InputState {
     auto cs = w->controlStates;
     auto v = cs.pack();
 
-    if (!cs[Worm::Change]) {
+    if (!cs[static_cast<int>(Worm::Control::Change)]) {
       // MoveJumpFire
       idx = (v >> 2) << 1;
       if (idx > 48)
@@ -31,7 +31,7 @@ struct InputState {
       idx = 2;
       idx |= (v & 1);
     } else {
-      if (!cs[Worm::Jump]) {
+      if (!cs[static_cast<int>(Worm::Control::Jump)]) {
         // ChangeWeapon
         idx = 48 + w->currentWeapon;
       } else {

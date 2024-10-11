@@ -232,8 +232,8 @@ bool WeaponSelection::processFrame() {
 
     if (!isReady[i]) {
       if (weapID >= 0 && weapID < Settings::selectableWeapons) {
-        if (worm.pressed(Worm::Left)) {
-          worm.release(Worm::Left);
+        if (worm.pressed(Worm::Control::Left)) {
+          worm.release(Worm::Control::Left);
 
           game.soundPlayer->play(25);
 
@@ -250,8 +250,8 @@ bool WeaponSelection::processFrame() {
           menus[i].selected()->string = common.weapons[w].name;
         }
 
-        if (worm.pressed(Worm::Right)) {
-          worm.release(Worm::Right);
+        if (worm.pressed(Worm::Control::Right)) {
+          worm.release(Worm::Control::Right);
 
           game.soundPlayer->play(26);
 
@@ -269,17 +269,17 @@ bool WeaponSelection::processFrame() {
         }
       }
 
-      if (worm.pressedOnce(Worm::Up)) {
+      if (worm.pressedOnce(Worm::Control::Up)) {
         game.soundPlayer->play(26);
         menus[i].movement(-1);
       }
 
-      if (worm.pressedOnce(Worm::Down)) {
+      if (worm.pressedOnce(Worm::Control::Down)) {
         game.soundPlayer->play(25);
         menus[i].movement(1);
       }
 
-      if (worm.pressed(Worm::Fire)) {
+      if (worm.pressed(Worm::Control::Fire)) {
         if (menus[i].selection() == 0) {
           bool weapUsed[256] = {};
 

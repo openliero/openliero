@@ -387,7 +387,7 @@ void SimpleAI::process(Game& game, Worm& worm) {
   auto cs = worm.controlStates;
 
   if (!worm.visible) {
-    cs.set(Worm::Fire, true);
+    cs.set(static_cast<int>(Worm::Control::Fire), true);
   } else {
     int aim = normalizedLangle(worm.aimingAngle);
     double currentAim = langleToRadians(aim);
@@ -404,18 +404,22 @@ void SimpleAI::process(Game& game, Worm& worm) {
                 obstacles(game, &worm, target) < 4;
     {
       cs = initial;
-      cs.set(Worm::Down, aimDiff < -tolerance);
-      cs.set(Worm::Up, aimDiff > tolerance);
-      cs.set(Worm::Fire, fire || initial[Worm::Fire]);
-      cs.set(Worm::Change, false);
+      cs.set(static_cast<int>(Worm::Control::Down), aimDiff < -tolerance);
+      cs.set(static_cast<int>(Worm::Control::Up), aimDiff > tolerance);
+      cs.set(
+          static_cast<int>(Worm::Control::Fire),
+          fire || initial[static_cast<int>(Worm::Control::Fire)]);
+      cs.set(static_cast<int>(Worm::Control::Change), false);
 
-      if (cs[Worm::Fire] && target->pos.x < worm.pos.x && worm.direction != 0) {
-        cs.set(Worm::Left, true);
-        cs.set(Worm::Right, false);
+      if (cs[static_cast<int>(Worm::Control::Fire)] &&
+          target->pos.x < worm.pos.x && worm.direction != 0) {
+        cs.set(static_cast<int>(Worm::Control::Left), true);
+        cs.set(static_cast<int>(Worm::Control::Right), false);
       } else if (
-          cs[Worm::Fire] && target->pos.x > worm.pos.x && worm.direction != 1) {
-        cs.set(Worm::Left, false);
-        cs.set(Worm::Right, true);
+          cs[static_cast<int>(Worm::Control::Fire)] &&
+          target->pos.x > worm.pos.x && worm.direction != 1) {
+        cs.set(static_cast<int>(Worm::Control::Left), false);
+        cs.set(static_cast<int>(Worm::Control::Right), true);
       }
     }
   }
@@ -743,36 +747,36 @@ Worm::ControlState InputContext::update(
 
   if (worm->visible && wantedWeapon != worm->currentWeapon) {
     int offset = weaponChangeOffset(wantedWeapon, worm->currentWeapon);
-    cs.set(Worm::Left, offset < 0);
-    cs.set(Worm::Right, offset > 0);
-    cs.set(Worm::Change, true);
+    cs.set(static_cast<int>(Worm::Control::Left), offset < 0);
+    cs.set(static_cast<int>(Worm::Control::Right), offset > 0);
+    cs.set(static_cast<int>(Worm::Control::Change), true);
   } else {
     int pa, pb, pc;
     switch (newState.decompose(pa, pb, pc)) {
       case InputState::MoveJumpFire: {
-        cs.set(Worm::Up, (pa >> 1) & 1);
-        cs.set(Worm::Down, pa & 1);
-        cs.set(Worm::Left, (pb >> 1) & 1);
-        cs.set(Worm::Right, pb & 1);
-        cs.set(Worm::Fire, (pc >> 1) & 1);
-        cs.set(Worm::Jump, pc & 1);
+        cs.set(static_cast<int>(Worm::Control::Up), (pa >> 1) & 1);
+        cs.set(static_cast<int>(Worm::Control::Down), pa & 1);
+        cs.set(static_cast<int>(Worm::Control::Left), (pb >> 1) & 1);
+        cs.set(static_cast<int>(Worm::Control::Right), pb & 1);
+        cs.set(static_cast<int>(Worm::Control::Fire), (pc >> 1) & 1);
+        cs.set(static_cast<int>(Worm::Control::Jump), pc & 1);
         break;
       }
 
       case InputState::ChangeWeapon: {
         if (wantedWeapon != pa) {
           wantedWeapon = pa;
-          cs.set(Worm::Change, true);
+          cs.set(static_cast<int>(Worm::Control::Change), true);
         }
         break;
       }
 
       case InputState::RopeUpDown: {
-        cs.set(Worm::Up, (pa >> 1) & 1);
-        cs.set(Worm::Down, pa & 1);
-        cs.set(Worm::Change, 1);
+        cs.set(static_cast<int>(Worm::Control::Up), (pa >> 1) & 1);
+        cs.set(static_cast<int>(Worm::Control::Down), pa & 1);
+        cs.set(static_cast<int>(Worm::Control::Change), 1);
         if (pa == 0)
-          cs.set(Worm::Jump, 1);
+          cs.set(static_cast<int>(Worm::Control::Jump), 1);
         break;
       }
     }

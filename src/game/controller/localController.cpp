@@ -72,22 +72,22 @@ void LocalController::onKey(int key, bool keyState) {
   Worm::Control control;
   Worm* worm = game.findControlForKey(key, control);
   if (worm) {
-    worm->cleanControlStates.set(control, keyState);
+    worm->cleanControlStates.set(static_cast<int>(control), keyState);
 
-    if (control < Worm::MaxControl) {
+    if (control < Worm::Control::MaxControl) {
       // Only real controls
       worm->setControlState(control, keyState);
     }
 
     if (worm->cleanControlStates[static_cast<int>(
             WormSettings::Control::Dig)]) {
-      worm->press(Worm::Left);
-      worm->press(Worm::Right);
+      worm->press(Worm::Control::Left);
+      worm->press(Worm::Control::Right);
     } else {
-      if (!worm->cleanControlStates[Worm::Left])
-        worm->release(Worm::Left);
-      if (!worm->cleanControlStates[Worm::Right])
-        worm->release(Worm::Right);
+      if (!worm->cleanControlStates[static_cast<int>(Worm::Control::Left)])
+        worm->release(Worm::Control::Left);
+      if (!worm->cleanControlStates[static_cast<int>(Worm::Control::Right)])
+        worm->release(Worm::Control::Right);
     }
   }
 

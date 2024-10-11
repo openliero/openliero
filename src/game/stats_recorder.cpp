@@ -142,10 +142,10 @@ void NormalStatsRecorder::tick(Game& game) {
       ws.presence.inc(ftoi(w->pos.x), ftoi(w->pos.y));
 
       bool ok = true;
-      if (!w->controlStates[Worm::Control::Fire] &&
-          (!w->controlStates[Worm::Control::Change] ||
-           (!w->controlStates[Worm::Control::Left] &&
-            !w->controlStates[Worm::Control::Right])) &&
+      if (!w->controlStates[static_cast<int>(Worm::Control::Fire)] &&
+          (!w->controlStates[static_cast<int>(Worm::Control::Change)] ||
+           (!w->controlStates[static_cast<int>(Worm::Control::Left)] &&
+            !w->controlStates[static_cast<int>(Worm::Control::Right)])) &&
           w->weapons[w->currentWeapon].loadingLeft == 0 &&
           std::find_if(w->weapons, w->weapons + 5, [](WormWeapon& ww) {
             return ww.loadingLeft > 0;

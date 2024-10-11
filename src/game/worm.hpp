@@ -189,7 +189,7 @@ struct Worm : gvl::shared {
   /*
    * Possible enumerations for Worm Control.
    */
-  enum Control {
+  enum class Control {
     Up = static_cast<int>(WormSettings::Control::Up),
     Down = static_cast<int>(WormSettings::Control::Down),
     Left = static_cast<int>(WormSettings::Control::Left),
@@ -272,37 +272,44 @@ struct Worm : gvl::shared {
    * Set pressed key-press control state.
    * TODO: Add documentation.
    */
-  bool pressed(Control control) const { return controlStates[control]; }
+  bool pressed(Control control) const {
+    return controlStates[static_cast<int>(control)];
+  }
   /*
    * Set pressed-once key-press control state.
    * TODO: Add documentation.
    */
   bool pressedOnce(Control control) {
-    bool state = controlStates[control];
-    controlStates.set(control, false);
+    bool state = controlStates[static_cast<int>(control)];
+    controlStates.set(static_cast<int>(control), false);
     return state;
   }
   /*
    * Release key-press control state.
    * TODO: Add documentation.
    */
-  void release(Control control) { controlStates.set(control, false); }
+  void release(Control control) {
+    controlStates.set(static_cast<int>(control), false);
+  }
   /*
    * Set key-press control state.
    * TODO: Add documentation.
    */
-  void press(Control control) { controlStates.set(control, true); }
+  void press(Control control) {
+    controlStates.set(static_cast<int>(control), true);
+  }
   /*
    * Set control states.
    */
   void setControlState(Control control, bool state) {
-    controlStates.set(control, state);
+    controlStates.set(static_cast<int>(control), state);
   }
   /*
    * Toggle control states.
    */
   void toggleControlState(Control control) {
-    controlStates.set(control, !controlStates[control]);
+    controlStates.set(
+        static_cast<int>(control), !controlStates[static_cast<int>(control)]);
   }
   /*
    * Get minimap colour for Worm.
