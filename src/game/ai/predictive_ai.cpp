@@ -412,12 +412,14 @@ void SimpleAI::process(Game& game, Worm& worm) {
       cs.set(static_cast<int>(Worm::Control::Change), false);
 
       if (cs[static_cast<int>(Worm::Control::Fire)] &&
-          target->pos.x < worm.pos.x && worm.direction != 0) {
+          target->pos.x < worm.pos.x &&
+          worm.direction != static_cast<int>(Worm::Direction::Left)) {
         cs.set(static_cast<int>(Worm::Control::Left), true);
         cs.set(static_cast<int>(Worm::Control::Right), false);
       } else if (
           cs[static_cast<int>(Worm::Control::Fire)] &&
-          target->pos.x > worm.pos.x && worm.direction != 1) {
+          target->pos.x > worm.pos.x &&
+          worm.direction != static_cast<int>(Worm::Direction::Right)) {
         cs.set(static_cast<int>(Worm::Control::Left), false);
         cs.set(static_cast<int>(Worm::Control::Right), true);
       }

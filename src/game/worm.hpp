@@ -200,6 +200,10 @@ struct Worm : gvl::shared {
     MaxControl
   };
   /*
+   * Enumerations for direction the Worm is facing.
+   */
+  enum class Direction { Left, Right };
+  /*
    * Control state for Worm.
    */
   struct ControlState {

@@ -454,7 +454,7 @@ void Worm::process(Game& game) {
 int Worm::angleFrame() const {
   int x = ftoi(aimingAngle) - 12;
 
-  if (direction != 0)
+  if (direction != static_cast<int>(Worm::Direction::Left))
     x -= 49;
 
   x >>= 3;
@@ -463,7 +463,7 @@ int Worm::angleFrame() const {
   else if (x > 6)
     x = 6;
 
-  if (direction != 0) {
+  if (direction != static_cast<int>(Worm::Direction::Left)) {
     x = 6 - x;
   }  // 9581
 
@@ -679,7 +679,7 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
       worm.release(Worm::Control::Left);
     }
 
-    if (worm.direction != 0) {
+    if (worm.direction != static_cast<int>(Worm::Direction::Left)) {
       if (dir < 64)
         worm.press(Worm::Control::Left);
       // 5369
@@ -827,10 +827,10 @@ void Worm::doRespawning(Game& game) {
     // sense
     if (std::uniform_int_distribution<int>(0, 1)(game.rand) & 1) {
       aimingAngle = itof(32);
-      direction = 0;
+      direction = static_cast<int>(Worm::Direction::Left);
     } else {
       aimingAngle = itof(96);
-      direction = 1;
+      direction = static_cast<int>(Worm::Direction::Right);
     }
 
     game.statsRecorder->afterSpawn(this);
@@ -888,11 +888,11 @@ void Worm::processMovement(Game& game) {
       if (vel.x > LC(MaxVelLeft))
         vel.x -= LC(WalkVelLeft);
 
-      if (direction != 0) {
+      if (direction != static_cast<int>(Worm::Direction::Left)) {
         aimingSpeed = 0;
         if (aimingAngle >= itof(64))
           aimingAngle = itof(128) - aimingAngle;
-        direction = 0;
+        direction = static_cast<int>(Worm::Direction::Left);
       }
 
       animate = true;
@@ -902,11 +902,11 @@ void Worm::processMovement(Game& game) {
       if (vel.x < LC(MaxVelRight))
         vel.x += LC(WalkVelRight);
 
-      if (direction != 1) {
+      if (direction != static_cast<int>(Worm::Direction::Right)) {
         aimingSpeed = 0;
         if (aimingAngle <= itof(64))
           aimingAngle = itof(128) - aimingAngle;
-        direction = 1;
+        direction = static_cast<int>(Worm::Direction::Right);
       }
 
       animate = true;
@@ -1046,7 +1046,7 @@ void Worm::processAiming(Game& game) {
       aimingSpeed = (aimingSpeed * LC(AimFricMult)) / LC(AimFricDiv);
     }
 
-    if (direction == 1) {
+    if (direction == static_cast<int>(Worm::Direction::Right)) {
       if (ftoi(aimingAngle) > LC(AimMaxRight)) {
         aimingSpeed = 0;
         aimingAngle = itof(LC(AimMaxRight));
@@ -1069,7 +1069,7 @@ void Worm::processAiming(Game& game) {
 
   if (movable && (!ninjarope.out || !pressed(Worm::Control::Change))) {
     if (up) {
-      if (direction == 0) {
+      if (direction == static_cast<int>(Worm::Direction::Left)) {
         if (aimingSpeed < LC(MaxAimVelLeft))
           aimingSpeed += LC(AimAccLeft);
       } else {
@@ -1079,7 +1079,7 @@ void Worm::processAiming(Game& game) {
     }
 
     if (down) {
-      if (direction == 1) {
+      if (direction == static_cast<int>(Worm::Direction::Right)) {
         if (aimingSpeed < LC(MaxAimVelLeft))
           aimingSpeed += LC(AimAccLeft);
       } else {
