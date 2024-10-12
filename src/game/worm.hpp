@@ -239,17 +239,17 @@ struct Worm : gvl::shared {
         ableToJump(false),
         ableToDig(false),
         keyChangePressed(false),
-        movable(false),
+        movable(true),
         animate(false),
         visible(false),
-        ready(false),
+        ready(true),
         flag(false),
         makeSightGreen(false),
         health(0),
         lives(0),
         kills(0),
         timer(0),
-        killedTimer(0),
+        killedTimer(150),
         currentFrame(0),
         flags(0),
         currentWeapon(0),
@@ -259,17 +259,9 @@ struct Worm : gvl::shared {
         index(0),
         direction(0),
         steerableCount(0),
-        statsX(0) {
-    makeSightGreen = false;
-
-    ready = true;
-    movable = true;
-
-    visible = false;
-    killedTimer = 150;
-  }
+        statsX(0) {}
   /*
-   * Set pressed key-press control state.
+   * Get control state of pressed key-press.
    * TODO: Add documentation.
    */
   bool pressed(Control control) const {
