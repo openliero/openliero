@@ -121,7 +121,8 @@ struct ExactObjectList {
 
   std::size_t size() const { return count; }
 
-  T arr[Limit + 1];  // Sentinel
+  // Sentinel
+  T arr[Limit + 1];
 
   static uint32_t const FreeListSize = (Limit + 31) / 32;
   uint32_t freeList[FreeListSize];
