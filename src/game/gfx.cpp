@@ -1041,16 +1041,16 @@ void SettingsMenu::onUpdate() {
   setVisibility(SiFlagsToWin, false);
 
   switch (gfx.settings->gameMode) {
-    case Settings::GMKillEmAll:
-    case Settings::GMScalesOfJustice:
+    case Settings::GameMode::KillEmAll:
+    case Settings::GameMode::ScalesOfJustice:
       setVisibility(SiLives, true);
       break;
 
-    case Settings::GMGameOfTag:
+    case Settings::GameMode::GameOfTag:
       setVisibility(SiTimeToLose, true);
       break;
 
-    case Settings::GMHoldazone:
+    case Settings::GameMode::Holdazone:
       setVisibility(SiTimeToWin, true);
       setVisibility(SiZoneTimeout, true);
       break;

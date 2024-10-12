@@ -319,7 +319,7 @@ double evaluateState(
   score += meHealth * weights.healthWeight * weights.defenseWeight;
   score -= targetHealth * weights.healthWeight;
 
-  if (game.settings->gameMode == Settings::GMHoldazone &&
+  if (game.settings->gameMode == Settings::GameMode::Holdazone &&
       game.holdazone.holderIdx == me->index) {
     double aimDiff = aimingDiff(me, target);
     score -= aimDiff * 2.0 * weights.aimWeight;
@@ -334,13 +334,13 @@ double evaluateState(
     score += meAmmoWorth * 2.0 * weights.ammoWeight;
   }
 
-  if (game.settings->gameMode == Settings::GMHoldazone) {
+  if (game.settings->gameMode == Settings::GameMode::Holdazone) {
     double scale = 1.0 / 4.0;
     if (game.holdazone.holderIdx != me->index)
       scale = 1.0;
 
     score -= len * scale;
-  } else if (game.settings->gameMode == Settings::GMGameOfTag) {
+  } else if (game.settings->gameMode == Settings::GameMode::GameOfTag) {
     if (game.lastKilledIdx >= 0 && game.lastKilledIdx != me->index)
       score += len;
     else
@@ -353,7 +353,7 @@ double evaluateState(
   } else if (me->visible) {
   }
 
-  if (game.settings->gameMode == Settings::GMHoldazone) {
+  if (game.settings->gameMode == Settings::GameMode::Holdazone) {
     if (game.holdazone.holderIdx == me->index)
       score += 50.0;
     if (game.holdazone.contenderIdx == me->index)
@@ -641,7 +641,7 @@ void FollowAI::process(Game& game, Worm& worm) {
   {
     int targetx = ftoi(target->pos.x), targety = ftoi(target->pos.y);
 
-    if (game.settings->gameMode == Settings::GMHoldazone) {
+    if (game.settings->gameMode == Settings::GameMode::Holdazone) {
       targetx = game.holdazone.rect.center_x();
       targety = game.holdazone.rect.center_y();
     }

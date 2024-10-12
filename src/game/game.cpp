@@ -337,7 +337,7 @@ void Game::processFrame() {
   }
 
   switch (settings->gameMode) {
-    case Settings::GMGameOfTag: {
+    case Settings::GameMode::GameOfTag: {
       bool someInvisible = false;
       for (std::size_t i = 0; i < worms.size(); ++i) {
         if (!worms[i]->visible) {
@@ -354,7 +354,7 @@ void Game::processFrame() {
       }
     } break;
 
-    case Settings::GMHoldazone: {
+    case Settings::GameMode::Holdazone: {
       int contenderIdx = -1;
       int contenders = 0;
 
@@ -471,24 +471,24 @@ void Game::startGame() {
   soundPlayer->play(22);
   bobjects.resize(settings->bloodParticleMax);
 
-  if (settings->gameMode == Settings::GMHoldazone) {
+  if (settings->gameMode == Settings::GameMode::Holdazone) {
     spawnZone();
   }
 }
 
 bool Game::isGameOver() {
-  if (settings->gameMode == Settings::GMKillEmAll ||
-      settings->gameMode == Settings::GMScalesOfJustice) {
+  if (settings->gameMode == Settings::GameMode::KillEmAll ||
+      settings->gameMode == Settings::GameMode::ScalesOfJustice) {
     for (std::size_t i = 0; i < worms.size(); ++i) {
       if (worms[i]->lives <= 0)
         return true;
     }
-  } else if (settings->gameMode == Settings::GMGameOfTag) {
+  } else if (settings->gameMode == Settings::GameMode::GameOfTag) {
     for (std::size_t i = 0; i < worms.size(); ++i) {
       if (worms[i]->timer >= settings->timeToLose)
         return true;
     }
-  } else if (settings->gameMode == Settings::GMHoldazone) {
+  } else if (settings->gameMode == Settings::GameMode::Holdazone) {
     for (auto* w : worms)
       if (w->timer >= settings->timeToLose)
         return true;
@@ -508,7 +508,7 @@ void Game::doDamageDirect(Worm& w, int amount, int byIdx) {
 
 void Game::doHealingDirect(Worm& w, int amount) {
   w.health += amount;
-  if (settings->gameMode == Settings::GMScalesOfJustice) {
+  if (settings->gameMode == Settings::GameMode::ScalesOfJustice) {
     while (w.health > w.settings->health) {
       w.lives += 1;
       w.health -= w.settings->health;
@@ -524,7 +524,7 @@ void Game::doDamage(Worm& w, int amount, int byIdx) {
   doDamageDirect(w, amount, byIdx);
 
   if (amount > 0) {
-    if (settings->gameMode == Settings::GMScalesOfJustice) {
+    if (settings->gameMode == Settings::GameMode::ScalesOfJustice) {
       if (byIdx < 0 || byIdx == w.index) {
         int parts = static_cast<int>(worms.size()) - 1;
         int left = amount;
@@ -547,7 +547,7 @@ void Game::doDamage(Worm& w, int amount, int byIdx) {
 void Game::doHealing(Worm& w, int amount) {
   doHealingDirect(w, amount);
 
-  if (settings->gameMode == Settings::GMScalesOfJustice) {
+  if (settings->gameMode == Settings::GameMode::ScalesOfJustice) {
     int parts = static_cast<int>(worms.size()) - 1;
     int left = amount;
 

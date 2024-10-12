@@ -190,8 +190,8 @@ void Worm::process(Game& game) {
   if (health > settings->health)
     health = settings->health;
 
-  if ((game.settings->gameMode != Settings::GMKillEmAll &&
-       game.settings->gameMode != Settings::GMScalesOfJustice) ||
+  if ((game.settings->gameMode != Settings::GameMode::KillEmAll &&
+       game.settings->gameMode != Settings::GameMode::ScalesOfJustice) ||
       lives > 0) {
     if (visible) {
       // Liero.exe: 291C
@@ -381,7 +381,7 @@ void Worm::process(Game& game) {
         fireCone = 0;
         ninjarope.out = false;
 
-        if (game.settings->gameMode == Settings::GMScalesOfJustice) {
+        if (game.settings->gameMode == Settings::GameMode::ScalesOfJustice) {
           while (health <= 0) {
             health += settings->health;
             --lives;
@@ -393,7 +393,7 @@ void Worm::process(Game& game) {
         int oldLastKilled = game.lastKilledIdx;
         // For GameOfTag, 'it' doesn't change if the killer
         // was not 'it', itself, unknown or there were no 'it'.
-        if (game.settings->gameMode != Settings::GMGameOfTag ||
+        if (game.settings->gameMode != Settings::GameMode::GameOfTag ||
             game.lastKilledIdx < 0 || lastKilledByIdx < 0 ||
             lastKilledByIdx == index || lastKilledByIdx == game.lastKilledIdx) {
           game.lastKilledIdx = index;
@@ -820,7 +820,7 @@ void Worm::doRespawning(Game& game) {
     visible = true;
     fireCone = 0;
     vel.zero();
-    if (game.settings->gameMode != Settings::GMScalesOfJustice)
+    if (game.settings->gameMode != Settings::GameMode::ScalesOfJustice)
       health = settings->health;
 
     // NOTE: This was done at death before, but doing it here seems to make more

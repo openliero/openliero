@@ -38,11 +38,11 @@ struct Extensions {
 };
 
 struct Settings : gvl::shared, Extensions {
-  enum GameModes {
-    GMKillEmAll,
-    GMGameOfTag,
-    GMHoldazone,
-    GMScalesOfJustice,
+  enum GameMode {
+    KillEmAll,
+    GameOfTag,
+    Holdazone,
+    ScalesOfJustice,
     MaxGameModes
   };
 

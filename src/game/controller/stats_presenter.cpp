@@ -298,8 +298,8 @@ void presentStats(NormalStatsRecorder& recorder, Game& game) {
         });
       }
 
-      if (game.settings->gameMode == Settings::GMHoldazone ||
-          game.settings->gameMode == Settings::GMGameOfTag) {
+      if (game.settings->gameMode == Settings::GameMode::Holdazone ||
+          game.settings->gameMode == Settings::GameMode::GameOfTag) {
         renderer.drawWormStat("timer", [&](WormStats& w, cell& c) {
           c << timeToString(w.timer);
         });

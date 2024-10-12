@@ -39,7 +39,7 @@ struct Texture {
 struct Texts {
   Texts();
 
-  std::string gameModes[Settings::GameModes::MaxGameModes];
+  std::string gameModes[Settings::GameMode::MaxGameModes];
   std::string onoff[NUM_ON_OFF];
   std::string controllers[3];
 

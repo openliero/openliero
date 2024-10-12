@@ -153,14 +153,14 @@ void SpectatorViewport::draw(
     int const stateColours[2][2] = {{6, 10}, {79, 4}};
 
     switch (game.settings->gameMode) {
-      case Settings::GMKillEmAll:
-      case Settings::GMScalesOfJustice: {
+      case Settings::GameMode::KillEmAll:
+      case Settings::GameMode::ScalesOfJustice: {
         common.font.drawText(
             renderer.bmp, (LS(Lives) + toString(worm.lives)),
             offsetX + worm.statsX * multiplier, renderer.renderResY - 22, 6);
       } break;
 
-      case Settings::GMHoldazone: {
+      case Settings::GameMode::Holdazone: {
         int state = 0;
 
         for (auto* w : game.worms)
@@ -174,7 +174,7 @@ void SpectatorViewport::draw(
             renderer.renderResY - 39, color);
       } break;
 
-      case Settings::GMGameOfTag: {
+      case Settings::GameMode::GameOfTag: {
         int state = 0;
 
         for (auto* w : game.worms)
@@ -194,7 +194,7 @@ void SpectatorViewport::draw(
       renderer.bmp, &game.level.data[0], offs.x, offs.y, game.level.width,
       game.level.height);
 
-  if (game.settings->gameMode == Settings::GMHoldazone) {
+  if (game.settings->gameMode == Settings::GameMode::Holdazone) {
     bool timingOut = game.holdazone.timeoutLeft < 70 * 4;
 
     int color = timingOut ? 168 : 50;
@@ -234,7 +234,8 @@ void SpectatorViewport::draw(
     }
 
     if (bannerY > -8 && worm.health <= 0) {
-      if (game.settings->gameMode == Settings::GMGameOfTag && game.gotChanged) {
+      if (game.settings->gameMode == Settings::GameMode::GameOfTag &&
+          game.gotChanged) {
         common.font.drawText(
             renderer.bmp, LS(YoureIt), rect.x1 + 3, bannerY + 1, 0);
         common.font.drawText(

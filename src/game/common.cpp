@@ -199,10 +199,10 @@ char const* Texts::keyNames[177] = {
 };
 
 Texts::Texts() {
-  gameModes[Settings::GameModes::GMKillEmAll] = "Kill'em All";
-  gameModes[Settings::GameModes::GMGameOfTag] = "Game of Tag";
-  gameModes[Settings::GameModes::GMHoldazone] = "Holdazone";
-  gameModes[Settings::GameModes::GMScalesOfJustice] = "Scales of Justice";
+  gameModes[Settings::GameMode::KillEmAll] = "Kill'em All";
+  gameModes[Settings::GameMode::GameOfTag] = "Game of Tag";
+  gameModes[Settings::GameMode::Holdazone] = "Holdazone";
+  gameModes[Settings::GameMode::ScalesOfJustice] = "Scales of Justice";
 
   onoff[0] = "OFF";
   onoff[1] = "ON";
