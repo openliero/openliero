@@ -57,8 +57,6 @@ ItemBehavior* HiddenMenu::getItemBehavior(Common& common, MenuItem& item) {
   }
 }
 
-void HiddenMenu::onUpdate() {}
-
 void HiddenMenu::drawItemOverlay(
     Common& common,
     MenuItem& item,

@@ -27,18 +27,15 @@ struct HiddenMenu : Menu {
 
   HiddenMenu(int x, int y) : Menu(x, y), paletteColor(0) {}
 
-  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item)
-      override;
+  ItemBehavior* getItemBehavior(Common& common, MenuItem& item) override;
 
-  virtual void drawItemOverlay(
+  void drawItemOverlay(
       Common& common,
       MenuItem& item,
       int x,
       int y,
       bool selected,
       bool disabled) override;
-
-  virtual void onUpdate() override;
 
   int paletteColor;
 };
