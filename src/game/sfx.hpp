@@ -37,11 +37,11 @@ struct DefaultSoundPlayer : SoundPlayer {
 
   Common& common;
 
-  void play(int sound, void* id = 0, int loops = 0) {
+  void play(int sound, void* id = 0, int loops = 0) override {
     sfx.play(common, sound, id, loops);
   }
 
-  bool isPlaying(void* id) { return sfx.isPlaying(id); }
+  bool isPlaying(void* id) override { return sfx.isPlaying(id); }
 
-  void stop(void* id) { sfx.stop(id); }
+  void stop(void* id) override { sfx.stop(id); }
 };

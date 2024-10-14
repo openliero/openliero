@@ -17,22 +17,22 @@ struct LocalController : CommonController {
   LocalController(
       std::shared_ptr<Common> common,
       std::shared_ptr<Settings> settings);
-  ~LocalController();
-  void onKey(int key, bool keyState);
+  ~LocalController() override;
+  void onKey(int key, bool keyState) override;
 
   // Called when the controller loses focus. When not focused, it will not
   // receive key events among other things.
-  void unfocus();
+  void unfocus() override;
   // Called when the controller gets focus.
-  void focus();
-  bool process();
-  void draw(Renderer& renderer, bool useSpectatorViewports);
+  void focus() override;
+  bool process() override;
+  void draw(Renderer& renderer, bool useSpectatorViewports) override;
   void changeState(GameState newState);
   void endRecord();
-  void swapLevel(Level& newLevel);
-  Level* currentLevel();
-  Game* currentGame();
-  bool running();
+  void swapLevel(Level& newLevel) override;
+  Level* currentLevel() override;
+  Game* currentGame() override;
+  bool running() override;
 
   Game game;
   std::unique_ptr<WeaponSelection> ws;

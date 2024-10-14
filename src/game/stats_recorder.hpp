@@ -129,24 +129,22 @@ struct NormalStatsRecorder : StatsRecorder {
 
   Heatmap presence;
 
-  void damagePotential(Worm* byWorm, WormWeapon* weapon, int hp);
+  void damagePotential(Worm* byWorm, WormWeapon* weapon, int hp) override;
   void damageDealt(
       Worm* byWorm,
       WormWeapon* weapon,
       Worm* toWorm,
       int hp,
-      bool hasHit);
+      bool hasHit) override;
 
-  void shot(Worm* byWorm, WormWeapon* weapon);
-  void hit(Worm* byWorm, WormWeapon* weapon, Worm* toWorm);
+  void shot(Worm* byWorm, WormWeapon* weapon) override;
+  void hit(Worm* byWorm, WormWeapon* weapon, Worm* toWorm) override;
 
-  void afterSpawn(Worm* worm);
-  void afterDeath(Worm* worm);
-  void preTick(Game& game);
-  void tick(Game& game);
+  void afterSpawn(Worm* worm) override;
+  void afterDeath(Worm* worm) override;
+  void preTick(Game& game) override;
+  void tick(Game& game) override;
 
-  void finish(Game& game);
-  void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
-
-  // void write(Common& common, gvl::stream_ptr sink);
+  void finish(Game& game) override;
+  void aiProcessTime(Worm* worm, std::chrono::nanoseconds time) override;
 };

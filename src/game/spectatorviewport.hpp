@@ -12,6 +12,7 @@ struct SpectatorViewport : Viewport {
   SpectatorViewport(gvl::rect rect, int levwidth, int levheight)
       : Viewport(rect, 0, levwidth, levheight) {}
 
-  void draw(Game& game, Renderer& renderer, GameState state, bool isReplay);
-  void process(Game& game);
+  void draw(Game& game, Renderer& renderer, GameState state, bool isReplay)
+      override;
+  void process(Game& game) override;
 };

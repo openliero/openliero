@@ -176,7 +176,7 @@ struct WormAI : gvl::shared {
 };
 
 struct DumbLieroAI : WormAI {
-  void process(Game& game, Worm& worm);
+  void process(Game& game, Worm& worm) override;
 
   std::mt19937 rand;
 };

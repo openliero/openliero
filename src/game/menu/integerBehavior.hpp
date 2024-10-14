@@ -22,9 +22,9 @@ struct IntegerBehavior : ItemBehavior {
         percentage(percentage),
         allowEntry(true) {}
 
-  bool onLeftRight(Menu& menu, MenuItem& item, int dir);
-  int onEnter(Menu& menu, MenuItem& item);
-  void onUpdate(Menu& menu, MenuItem& item);
+  bool onLeftRight(Menu& menu, MenuItem& item, int dir) override;
+  int onEnter(Menu& menu, MenuItem& item) override;
+  void onUpdate(Menu& menu, MenuItem& item) override;
 
   Common& common;
   int& v;

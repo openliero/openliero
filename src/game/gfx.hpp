@@ -62,9 +62,10 @@ struct PlayerMenu : Menu {
       int x,
       int y,
       bool selected,
-      bool disabled);
+      bool disabled) override;
 
-  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item);
+  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item)
+      override;
 
   std::shared_ptr<WormSettings> ws;
 };
@@ -92,9 +93,10 @@ struct SettingsMenu : Menu {
 
   SettingsMenu(int x, int y) : Menu(x, y) {}
 
-  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item);
+  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item)
+      override;
 
-  virtual void onUpdate();
+  virtual void onUpdate() override;
 };
 
 struct Joystick {

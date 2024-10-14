@@ -42,7 +42,7 @@ struct KeyBehavior : ItemBehavior {
       bool extended = false)
       : common(common), key(key), keyEx(keyEx), extended(extended) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     uint32_t k;
     bool isEx;
@@ -63,7 +63,7 @@ struct KeyBehavior : ItemBehavior {
     return -1;
   }
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     item.value = gfx.getKeyName(extended ? keyEx : key);
     item.hasValue = true;
   }
@@ -77,7 +77,7 @@ struct KeyBehavior : ItemBehavior {
 struct WormNameBehavior : ItemBehavior {
   WormNameBehavior(Common& common, WormSettings& ws) : common(common), ws(ws) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
 
     ws.randomName = false;
@@ -95,7 +95,7 @@ struct WormNameBehavior : ItemBehavior {
     return -1;
   }
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     item.value = ws.name;
     item.hasValue = true;
   }
@@ -108,7 +108,7 @@ struct ProfileSaveBehavior : ItemBehavior {
   ProfileSaveBehavior(Common& common, WormSettings& ws, bool saveAs = false)
       : common(common), ws(ws), saveAs(saveAs) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
 
     int x, y;
@@ -132,7 +132,7 @@ struct ProfileSaveBehavior : ItemBehavior {
     return -1;
   }
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     if (!saveAs) {
       item.visible = (bool)ws.profileNode;
     }
@@ -147,7 +147,7 @@ struct ProfileLoadedBehavior : ItemBehavior {
   ProfileLoadedBehavior(Common& common, WormSettings& ws)
       : common(common), ws(ws) {}
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     if (ws.profileNode) {
       item.value = getBasename(getLeaf(ws.profileNode.fullPath()));
       item.visible = true;
@@ -197,12 +197,12 @@ struct WeaponEnumBehavior : EnumBehavior {
             static_cast<uint32_t>(common.weapons.size()),
             false) {}
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     item.value = common.weapons[common.weapOrder[v - 1]].name;
     item.hasValue = true;
   }
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
 
     int x, y;
@@ -872,7 +872,7 @@ struct ProfileLoadBehavior : ItemBehavior {
   ProfileLoadBehavior(Common& common, WormSettings& ws)
       : common(common), ws(ws) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     gfx.selectProfile(ws);
     sfx.play(common, 27);
@@ -888,7 +888,7 @@ struct PlayerSettingsBehavior : ItemBehavior {
   PlayerSettingsBehavior(Common& common, int player)
       : common(common), player(player) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     gfx.playerSettings(player);
     return -1;
@@ -901,7 +901,7 @@ struct PlayerSettingsBehavior : ItemBehavior {
 struct LevelSelectBehavior : ItemBehavior {
   LevelSelectBehavior(Common& common) : common(common) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     gfx.selectLevel();
     sfx.play(common, 27);
@@ -909,7 +909,7 @@ struct LevelSelectBehavior : ItemBehavior {
     return -1;
   }
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     item.hasValue = true;
     if (!gfx.settings->randomLevel) {
       item.value = '"' + getBasename(getLeaf(gfx.settings->levelFile)) + '"';
@@ -927,7 +927,7 @@ struct LevelSelectBehavior : ItemBehavior {
 struct WeaponOptionsBehavior : ItemBehavior {
   WeaponOptionsBehavior(Common& common) : common(common) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     gfx.weaponOptions();
     sfx.play(common, 27);
@@ -940,7 +940,7 @@ struct WeaponOptionsBehavior : ItemBehavior {
 struct OptionsSaveBehavior : ItemBehavior {
   OptionsSaveBehavior(Common& common) : common(common) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
 
     int x, y;
@@ -961,7 +961,7 @@ struct OptionsSaveBehavior : ItemBehavior {
     return -1;
   }
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     item.value = getBasename(getLeaf(gfx.settingsNode.fullPath()));
     item.hasValue = true;
   }
@@ -972,7 +972,7 @@ struct OptionsSaveBehavior : ItemBehavior {
 struct OptionsSelectBehavior : ItemBehavior {
   OptionsSelectBehavior(Common& common) : common(common) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     gfx.selectOptions();
     sfx.play(common, 27);
@@ -1347,7 +1347,7 @@ std::unique_ptr<Common> Gfx::selectTc() {
 struct WeaponMenu : Menu {
   WeaponMenu(int x, int y) : Menu(x, y) {}
 
-  ItemBehavior* getItemBehavior(Common& common, MenuItem& item) {
+  ItemBehavior* getItemBehavior(Common& common, MenuItem& item) override {
     int index = common.weapOrder[item.id];
     return new ArrayEnumBehavior(
         common, gfx.settings->weapTable[index], common.texts.weapStates);

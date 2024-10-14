@@ -32,7 +32,7 @@ namespace gvl {
       prepare_out();
     }
 
-    ~deflate_source() {
+    ~deflate_source() override {
       if (compress) {
         while (drive(MZ_FINISH) == source_result::ok) {
           try_write_cur();
@@ -48,7 +48,7 @@ namespace gvl {
       str.avail_out = 65536;
     }
 
-    virtual source_result read_next(size_t amount = 0) {
+    virtual source_result read_next(size_t amount = 0) override {
       sassert(pull);
 
       auto s = drive();
@@ -84,7 +84,7 @@ namespace gvl {
       return r;
     }
 
-    virtual sink_result write(unique_ptr<bucket_data_mem>&& data) {
+    virtual sink_result write(unique_ptr<bucket_data_mem>&& data) override {
       sassert(!pull);
 
       while (true) {

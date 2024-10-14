@@ -18,20 +18,20 @@ struct Game;
 struct ReplayController : CommonController {
   ReplayController(std::shared_ptr<Common> common, gvl::source source);
 
-  bool isReplay() { return true; };
-  void onKey(int key, bool keyState);
+  bool isReplay() override { return true; };
+  void onKey(int key, bool keyState) override;
   // Called when the controller loses focus. When not focused, it will not
   // receive key events among other things.
-  void unfocus();
+  void unfocus() override;
   // Called when the controller gets focus.
-  void focus();
-  bool process();
-  void draw(Renderer& renderer, bool useSpectatorViewports);
+  void focus() override;
+  bool process() override;
+  void draw(Renderer& renderer, bool useSpectatorViewports) override;
   void changeState(GameState newState);
-  void swapLevel(Level& newLevel);
-  Level* currentLevel();
-  Game* currentGame();
-  bool running();
+  void swapLevel(Level& newLevel) override;
+  Level* currentLevel() override;
+  Game* currentGame() override;
+  bool running() override;
 
   std::unique_ptr<Game> game;
 

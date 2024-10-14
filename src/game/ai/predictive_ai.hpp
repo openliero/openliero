@@ -289,7 +289,7 @@ struct EvaluateResult {
 };
 
 struct SimpleAI : WormAI {
-  void process(Game& game, Worm& worm);
+  void process(Game& game, Worm& worm) override;
 
   Worm::ControlState initial;
 };
@@ -330,16 +330,16 @@ struct FollowAI : WormAI, AiContext {
   {
   }
 
-  ~FollowAI() {}
+  ~FollowAI() override {}
 
-  void process(Game& game, Worm& worm);
+  void process(Game& game, Worm& worm) override;
 
   void drawDebug(
       Game& game,
       Worm const& worm,
       Renderer& renderer,
       int offsX,
-      int offsY);
+      int offsY) override;
 
   std::mt19937 rand;
   int frame;

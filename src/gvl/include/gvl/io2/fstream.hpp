@@ -30,9 +30,9 @@ namespace gvl {
       }
     }
 
-    ~file_bucket_pipe() { close(); }
+    ~file_bucket_pipe() override { close(); }
 
-    virtual source_result read_next(size_t amount = 0) {
+    virtual source_result read_next(size_t amount = 0) override {
       if (!f)
         return std::unique_ptr<bucket_data_mem>();
 
@@ -48,7 +48,7 @@ namespace gvl {
       return source_result(std::move(r));
     }
 
-    virtual sink_result write(unique_ptr<bucket_data_mem>&& data) {
+    virtual sink_result write(unique_ptr<bucket_data_mem>&& data) override {
       auto write_bytes = std::fwrite(data->begin(), data->size(), 1, f);
 
       if (write_bytes == 0)
@@ -57,7 +57,7 @@ namespace gvl {
       return sink_result(sink_result::ok);
     }
 
-    virtual sink_result flush() {
+    virtual sink_result flush() override {
       // Everything is flushed
       return sink_result(sink_result::ok);
     }

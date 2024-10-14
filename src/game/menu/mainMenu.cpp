@@ -6,7 +6,7 @@
 struct ReplaySelectBehavior : ItemBehavior {
   ReplaySelectBehavior(Common& common) : common(common) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     int ret = gfx.selectReplay();
     sfx.play(common, 27);
@@ -19,7 +19,7 @@ struct ReplaySelectBehavior : ItemBehavior {
 struct TcSelectBehavior : ItemBehavior {
   TcSelectBehavior(Common& common) : common(common) {}
 
-  int onEnter(Menu& menu, MenuItem& item) {
+  int onEnter(Menu& menu, MenuItem& item) override {
     sfx.play(common, 27);
     auto newCommon = gfx.selectTc();
     if (newCommon) {

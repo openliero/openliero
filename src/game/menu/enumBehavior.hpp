@@ -20,9 +20,9 @@ struct EnumBehavior : ItemBehavior {
         max(max),
         brokenLeftRight(brokenLeftRight) {}
 
-  bool onLeftRight(Menu& menu, MenuItem& item, int dir);
-  int onEnter(Menu& menu, MenuItem& item);
-  void onUpdate(Menu& menu, MenuItem& item);
+  bool onLeftRight(Menu& menu, MenuItem& item, int dir) override;
+  int onEnter(Menu& menu, MenuItem& item) override;
+  void onUpdate(Menu& menu, MenuItem& item) override;
 
   void change(Menu& menu, MenuItem& item, int dir);
 

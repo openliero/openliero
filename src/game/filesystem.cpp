@@ -359,24 +359,24 @@ struct FsNodeJoin : FsNodeImp {
   FsNodeJoin(std::shared_ptr<FsNodeImp> aInit, std::shared_ptr<FsNodeImp> bInit)
       : a(std::move(aInit)), b(std::move(bInit)) {}
 
-  std::string const& fullPath() { return a->fullPath(); }
+  std::string const& fullPath() override { return a->fullPath(); }
 
-  DirectoryListing iter() { return a->iter() | b->iter(); }
+  DirectoryListing iter() override { return a->iter() | b->iter(); }
 
-  std::shared_ptr<FsNodeImp> go(std::string const& name) {
+  std::shared_ptr<FsNodeImp> go(std::string const& name) override {
     return join(a->go(name), b->go(name));
   }
 
-  bool exists() const { return a->exists() || b->exists(); }
+  bool exists() const override { return a->exists() || b->exists(); }
 
-  gvl::source tryToSource() {
+  gvl::source tryToSource() override {
     auto s = a->tryToSource();
     if (s)
       return s;
     return b->tryToSource();
   }
 
-  gvl::sink tryToSink() {
+  gvl::sink tryToSink() override {
     auto s = a->tryToSink();
     if (s)
       return s;
@@ -465,16 +465,9 @@ struct FsNodeZipFile : FsNodeImp {
 
   std::map<std::string, std::shared_ptr<FsNodeZipFile>> children;
 
-  std::string const& fullPath() { return path; }
+  std::string const& fullPath() override { return path; }
 
-  DirectoryListing iter() {
-    // std::unique_ptr<dir_zip_archive_itr_imp> imp(new
-    // dir_zip_archive_itr_imp(std::shared_ptr<FsNodeZipFile>(this,
-    // gvl::shared_ownership())));
-
-    // if (imp->cur == imp->end)
-    //	imp.reset();
-
+  DirectoryListing iter() override {
     std::vector<NodeName> subs;
 
     for (auto& i : children) {
@@ -484,16 +477,16 @@ struct FsNodeZipFile : FsNodeImp {
     return DirectoryListing(std::move(subs));
   }
 
-  std::shared_ptr<FsNodeImp> go(std::string const& name) {
+  std::shared_ptr<FsNodeImp> go(std::string const& name) override {
     auto i = children.find(name);
     if (i != children.end())
       return i->second;
     return std::shared_ptr<FsNodeImp>();
   }
 
-  bool exists() const { return true; }
+  bool exists() const override { return true; }
 
-  gvl::source tryToSource() {
+  gvl::source tryToSource() override {
     if (fileIndex < 0)
       return gvl::source();
 
@@ -512,7 +505,7 @@ struct FsNodeZipFile : FsNodeImp {
     return s;
   }
 
-  gvl::sink tryToSink() {
+  gvl::sink tryToSink() override {
     return gvl::sink();  // We don't want to write to .zip files
   }
 };
@@ -523,20 +516,15 @@ struct FsNodeFilesystem : FsNodeImp {
       path.assign(".");
   }
 
-  std::string const& fullPath() { return path; }
+  std::string const& fullPath() override { return path; }
 
-  DirectoryListing iter() { return DirectoryListing(path); }
+  DirectoryListing iter() override { return DirectoryListing(path); }
 
-  std::shared_ptr<FsNodeImp> go(std::string const& name) {
+  std::shared_ptr<FsNodeImp> go(std::string const& name) override {
     std::string fullPath(joinPath(path, name));
     std::shared_ptr<FsNodeImp> imp;
 
-    // struct stat st;
-    // if (stat(fullPath.c_str(), &st) == 0)
     {
-      // if ((st.st_mode & S_IFMT) == S_IFDIR)
-      //	dir = true;
-
       imp.reset(new FsNodeFilesystem(fullPath));
     }
 
@@ -557,9 +545,9 @@ struct FsNodeFilesystem : FsNodeImp {
     return imp;
   }
 
-  bool exists() const { return access(path.c_str(), 0) != -1; }
+  bool exists() const override { return access(path.c_str(), 0) != -1; }
 
-  gvl::source tryToSource() {
+  gvl::source tryToSource() override {
     FILE* f = tolerantFOpen(path.c_str(), "rb");
     if (!f)
       return gvl::source();
@@ -567,7 +555,7 @@ struct FsNodeFilesystem : FsNodeImp {
     return gvl::to_source(new gvl::file_bucket_pipe(f));
   }
 
-  gvl::sink tryToSink() {
+  gvl::sink tryToSink() override {
     FILE* f = fopen(path.c_str(), "wb");
     if (!f) {
       // Try to create directories

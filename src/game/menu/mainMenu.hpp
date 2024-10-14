@@ -21,5 +21,6 @@ struct MainMenu : Menu {
 
   MainMenu(int x, int y) : Menu(x, y) {}
 
-  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item);
+  virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item)
+      override;
 };

@@ -16,7 +16,7 @@ struct ArrayEnumBehavior : EnumBehavior {
       bool brokenEnter = false)
       : EnumBehavior(common, v, 0, N - 1, brokenEnter), arr(arr) {}
 
-  void onUpdate(Menu& menu, MenuItem& item) {
+  void onUpdate(Menu& menu, MenuItem& item) override {
     item.value = arr[v];
     item.hasValue = true;
   }

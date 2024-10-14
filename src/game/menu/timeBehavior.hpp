@@ -17,7 +17,7 @@ struct TimeBehavior : IntegerBehavior {
     allowEntry = false;
   }
 
-  void onUpdate(Menu& menu, MenuItem& item);
+  void onUpdate(Menu& menu, MenuItem& item) override;
 
   bool frames;
 };
