@@ -16,7 +16,7 @@ vector<D> convert(vector<T> const& src) {
 }
 
 template <typename T, typename C>
-vector<T> pluck(vector<C> const& src, T(C::*a)) {
+vector<T> pluck(vector<C> const& src, T(C::* a)) {
   vector<T> v;
 
   for (auto& e : src)

@@ -295,7 +295,7 @@ void Menu::movement(int direction) {
   }
 }
 
-int Menu::addItem(MenuItem item) {
+int Menu::addItem(const MenuItem& item) {
   int idx = static_cast<int>(items.size());
   items.push_back(item);
   if (item.visible)
@@ -309,7 +309,7 @@ void Menu::clear() {
   setTop(0);
 }
 
-int Menu::addItem(MenuItem item, int pos) {
+int Menu::addItem(const MenuItem& item, int pos) {
   int idx = static_cast<int>(items.size());
   items.insert(items.begin() + pos, item);
   if (item.visible)

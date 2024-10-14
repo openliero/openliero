@@ -41,7 +41,7 @@ void blitImageNoKeyColour(
     int pitch);
 // void blitImage(Bitmap& scr, PalIdx* mem, int x, int y, int width, int
 // height);
-void blitImage(const Bitmap& scr, Sprite spr, int x, int y);
+void blitImage(const Bitmap& scr, const Sprite& spr, int x, int y);
 void blitImageR(
     const Bitmap& scr,
     PalIdx* mem,
@@ -49,7 +49,12 @@ void blitImageR(
     int y,
     int width,
     int height);
-void blitImageTrans(const Bitmap& scr, Sprite spr, int x, int y, int phase);
+void blitImageTrans(
+    const Bitmap& scr,
+    const Sprite& spr,
+    int x,
+    int y,
+    int phase);
 void blitShadowImage(
     Common& common,
     const Bitmap& scr,

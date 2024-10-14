@@ -115,8 +115,8 @@ struct Menu {
   void movement(int direction);
   void movementPage(int direction);
 
-  int addItem(MenuItem item);
-  int addItem(MenuItem item, int pos);
+  int addItem(const MenuItem& item);
+  int addItem(const MenuItem& item, int pos);
   void clear();
 
   bool itemPosition(MenuItem& item, int& x, int& y);

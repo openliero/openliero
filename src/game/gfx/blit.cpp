@@ -155,7 +155,7 @@ void blitImageNoKeyColour(
   int pitch = (s).pitch, width = (s).width, height = (s).height; \
   PalIdx* mem = (s).mem
 
-void blitImage(const Bitmap& scr, Sprite spr, int x, int y) {
+void blitImage(const Bitmap& scr, const Sprite& spr, int x, int y) {
   UNPACK_SPRITE(spr);
 
   CLIP_IMAGE(scr.clip_rect);
@@ -179,7 +179,12 @@ void blitImage(const Bitmap& scr, Sprite spr, int x, int y) {
   }
 }
 
-void blitImageTrans(const Bitmap& scr, Sprite spr, int x, int y, int phase) {
+void blitImageTrans(
+    const Bitmap& scr,
+    const Sprite& spr,
+    int x,
+    int y,
+    int phase) {
   UNPACK_SPRITE(spr);
 
   CLIP_IMAGE(scr.clip_rect);
