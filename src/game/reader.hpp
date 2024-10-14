@@ -24,7 +24,7 @@ struct ReaderFile : gvl::noncopyable {
       cur = cur->next;
     }
 
-    data = (uint8_t*)malloc(len);
+    data = static_cast<uint8_t*>(malloc(len));
     uint8_t* p = data;
 
     cur = source;

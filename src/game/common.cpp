@@ -286,7 +286,7 @@ int readSpriteTga(
   // Bottom to top
   for (std::size_t y = (std::size_t)imageHeight; y-- > 0;) {
     auto* src = &data[y * imageWidth];
-    r.get((uint8_t*)src, imageWidth);
+    r.get(src, imageWidth);
   }
 
   return 1;

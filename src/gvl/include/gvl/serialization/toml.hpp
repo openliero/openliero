@@ -444,7 +444,7 @@ namespace gvl {
         if (name) {
           if (cur.tt != t_object)
             throw parse_error();
-          return ((object*)cur.u.s)->f.at(name);
+          return static_cast<object*>(cur.u.s)->f.at(name);
         } else {
           return cur;
         }
@@ -465,7 +465,7 @@ namespace gvl {
         value v(f(name));
         if (v.tt != t_array)
           throw parse_error();
-        array& jv = *(array*)v.u.s;
+        array& jv = *static_cast<array*>(v.u.s);
         resize(arr, jv.v.size());
 
         auto i = jv.v.begin();
@@ -516,7 +516,7 @@ namespace gvl {
         } else {
           if (jv.tt != t_string)
             throw parse_error();
-          resolver.r2v(v, ((string*)jv.u.s)->s);
+          resolver.r2v(v, static_cast<string*>(jv.u.s)->s);
         }
         return *this;
       }
@@ -525,7 +525,7 @@ namespace gvl {
         value jv(f(name));
         if (jv.tt != t_string)
           throw parse_error();
-        s = ((string*)jv.u.s)->s;
+        s = static_cast<string*>(jv.u.s)->s;
         return *this;
       }
 

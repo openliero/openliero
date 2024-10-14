@@ -11,7 +11,7 @@ Sfx sfx;
 extern "C" void SDLCALL Sfx_callback(void* userdata, Uint8* stream, int len) {
   uint32_t frame_count = len / 2;
 
-  sfx_mixer_mix((sfx_mixer*)userdata, stream, frame_count);
+  sfx_mixer_mix(static_cast<sfx_mixer*>(userdata), stream, frame_count);
 }
 
 void Sfx::init() {

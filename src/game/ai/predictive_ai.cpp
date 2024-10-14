@@ -179,12 +179,11 @@ aimingDiff(AiContext& context, Game& game, const Worm* from, level_cell* cell) {
   double dirx = 0, diry = 0;
   auto* c = cell;
 
-  // if (from->index == 0)
-  if (true) {
+  if (from->index == 0) {
     int count = 15;
     dirx = 1;
     while (c->parent && count-- > 0) {
-      c = (level_cell*)c->parent;
+      c = static_cast<level_cell*>(c->parent);
       auto path = context.dlevel.coords_level(c);
 
       if ((path.x != orgl.x && path.y != orgl.y) &&
@@ -198,7 +197,7 @@ aimingDiff(AiContext& context, Game& game, const Worm* from, level_cell* cell) {
     int count = 10;
 
     while (count-- > 0) {
-      c = (level_cell*)c->parent;
+      c = static_cast<level_cell*>(c->parent);
       if (!c)
         break;
 

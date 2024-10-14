@@ -499,7 +499,8 @@ struct FsNodeZipFile : FsNodeImp {
 
     gvl::source s(new gvl::stream_piece(
         gvl::make_shared(gvl::bucket_data_mem::create_from(
-            (uint8_t const*)ptr, (uint8_t const*)ptr + size, size))));
+            static_cast<uint8_t const*>(ptr),
+            static_cast<uint8_t const*>(ptr) + size, size))));
     free(ptr);
 
     return s;

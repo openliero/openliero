@@ -44,7 +44,7 @@ namespace gvl {
 
     void prepare_out() {
       cur_out.reset(bucket_data_mem::create(65536, 0));
-      str.next_out = (unsigned char*)cur_out->begin();
+      str.next_out = static_cast<unsigned char*>(cur_out->begin());
       str.avail_out = 65536;
     }
 
@@ -108,15 +108,15 @@ namespace gvl {
           continue;
         } else {
           set_bucket_(shared_ptr<bucket_data_mem>(data.release()));
-          str.avail_in = (unsigned int)buf_left();
+          str.avail_in = static_cast<unsigned int>(buf_left());
           sassert(str.avail_in > 0);
-          str.next_in = (unsigned char*)cur_;
+          str.next_in = static_cast<const unsigned char*>(cur_);
 
           auto s = drive();
-          if (s != source_result::ok)
-            return sink_result::would_block;  // TODO: Should return error if
-                                              // the stream does
-
+          if (s != source_result::ok) {
+            // TODO: Should return error if the stream does
+            return sink_result::would_block;
+          }
           try_write_cur();
           return sink_result::ok;
         }
@@ -133,16 +133,14 @@ namespace gvl {
             cur_ = end_;
             auto s = next_piece_();
             if (s == source_result::ok) {
-              str.avail_in = (unsigned int)buf_left();
+              str.avail_in = static_cast<unsigned int>(buf_left());
               sassert(str.avail_in > 0);
-              str.next_in = (unsigned char*)cur_;
+              str.next_in = static_cast<const unsigned char*>(cur_);
             } else if (s != source_result::eos) {
               return s;
             }
-          } else if (deflate_flags != MZ_FINISH)  // If MZ_FINISH, we wait until
-                                                  // mz reports the stream to be
-                                                  // done
-          {
+          } else if (deflate_flags != MZ_FINISH) {
+            // If MZ_FINISH, we wait until mz reports the stream to be done
             return source_result::ok;
           }
         }
