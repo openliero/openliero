@@ -113,7 +113,7 @@ struct Common {
                            [FIRE_CONE_OFFSET_ANGLE_FRAME][FIRE_CONE_OFFSET_XY];
 
   void load(FsNode node);
-  void drawTextSmall(Bitmap& scr, char const* str, int x, int y);
+  void drawTextSmall(const Bitmap& scr, char const* str, int x, int y);
   void precompute();
 
   std::string guessName() const;

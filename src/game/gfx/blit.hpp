@@ -32,7 +32,7 @@ void drawRoundedLineBox(
     int width,
     int height);
 void blitImageNoKeyColour(
-    Bitmap& scr,
+    const Bitmap& scr,
     PalIdx* mem,
     int x,
     int y,
@@ -41,25 +41,31 @@ void blitImageNoKeyColour(
     int pitch);
 // void blitImage(Bitmap& scr, PalIdx* mem, int x, int y, int width, int
 // height);
-void blitImage(Bitmap& scr, Sprite spr, int x, int y);
-void blitImageR(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height);
-void blitImageTrans(Bitmap& scr, Sprite spr, int x, int y, int phase);
+void blitImage(const Bitmap& scr, Sprite spr, int x, int y);
+void blitImageR(
+    const Bitmap& scr,
+    PalIdx* mem,
+    int x,
+    int y,
+    int width,
+    int height);
+void blitImageTrans(const Bitmap& scr, Sprite spr, int x, int y, int phase);
 void blitShadowImage(
     Common& common,
-    Bitmap& scr,
+    const Bitmap& scr,
     PalIdx* mem,
     int x,
     int y,
     int width,
     int height);
 void blitStone(
-    Common& common,
+    const Common& common,
     Level& level,
     bool p1,
     PalIdx* mem,
     int x,
     int y);
-void blitFireCone(Bitmap& scr, int fc, PalIdx* mem, int x, int y);
+void blitFireCone(const Bitmap& scr, int fc, PalIdx* mem, int x, int y);
 void drawDirtEffect(
     Common& common,
     std::mt19937& rand,
@@ -68,14 +74,14 @@ void drawDirtEffect(
     int x,
     int y);
 void blitImageOnMap(
-    Common& common,
+    const Common& common,
     Level& level,
     PalIdx* mem,
     int x,
     int y,
     int width,
     int height);
-void correctShadow(Common& common, Level& level, gvl::rect rect);
+void correctShadow(const Common& common, Level& level, gvl::rect rect);
 void drawDashedLineBox(
     Bitmap& scr,
     int x,
@@ -89,14 +95,14 @@ void drawDashedLineBox(
     int phase);
 
 void drawNinjarope(
-    Common& common,
-    Bitmap& scr,
+    const Common& common,
+    const Bitmap& scr,
     int fromX,
     int fromY,
     int toX,
     int toY);
 void drawLaserSight(
-    Bitmap& scr,
+    const Bitmap& scr,
     std::mt19937& rand,
     int fromX,
     int fromY,
@@ -109,7 +115,13 @@ void drawShadowLine(
     int fromY,
     int toX,
     int toY);
-void drawLine(Bitmap& scr, int fromX, int fromY, int toX, int toY, int color);
+void drawLine(
+    const Bitmap& scr,
+    int fromX,
+    int fromY,
+    int toX,
+    int toY,
+    int color);
 
 void drawGraph(
     Bitmap& scr,
@@ -129,7 +141,7 @@ void scaleDraw(
     uint8_t* dest,
     std::size_t destPitch,
     int mag,
-    uint32_t* pal32);
+    const uint32_t* pal32);
 
 void preparePaletteBgra(Color realPal[256], uint32_t (&pal32)[256]);
 int fitScreen(
@@ -141,7 +153,7 @@ int fitScreen(
     int& offsetY);
 
 inline void blitImageNoKeyColour(
-    Bitmap& scr,
+    const Bitmap& scr,
     PalIdx* mem,
     int x,
     int y,
@@ -190,4 +202,4 @@ struct Heatmap {
   std::vector<int> map;
 };
 
-void drawHeatmap(Bitmap& scr, int x, int y, Heatmap& hm);
+void drawHeatmap(const Bitmap& scr, int x, int y, Heatmap& hm);

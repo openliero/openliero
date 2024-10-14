@@ -12,7 +12,7 @@ struct ObjectResolver {
 
   void r2v(int& v, std::string const& str) {
     for (std::size_t i = 0; vec.size(); ++i) {
-      auto& n = vec[i];
+      const auto& n = vec[i];
       if (n.idStr == str) {
         v = static_cast<int>(i);
         return;

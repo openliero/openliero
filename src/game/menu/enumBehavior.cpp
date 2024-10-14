@@ -26,7 +26,7 @@ int EnumBehavior::onEnter(Menu& menu, MenuItem& item) {
   return -1;
 }
 
-void EnumBehavior::change(Menu& menu, MenuItem& item, int dir) {
+void EnumBehavior::change(Menu& menu, const MenuItem& item, int dir) {
   uint32_t range = max - min + 1;
   uint32_t newV = ((v + dir + range - min) % range) + min;
 

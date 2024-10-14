@@ -46,7 +46,11 @@ void Palette::lightUp(int amount) {
   }
 }
 
-void Palette::rotateFrom(Palette& source, int from, int to, unsigned dist) {
+void Palette::rotateFrom(
+    const Palette& source,
+    int from,
+    int to,
+    unsigned dist) {
   int count = (to - from + 1);
   dist %= count;
 

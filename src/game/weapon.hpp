@@ -365,7 +365,7 @@ struct Weapon {
   int partTrailDelay;
   bool chainExplosion;
 
-  int computedLoadingTime(Settings& settings) const;
+  int computedLoadingTime(const Settings& settings) const;
 
   int id;
   std::string name;

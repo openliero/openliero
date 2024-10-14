@@ -135,8 +135,8 @@ struct StatsRenderer {
     });
   }
 
-  void drawWormStat(char const* name, int(WormStats::*field)) {
-    drawWormStat(name, [field](WormStats& w, cell& c) { c << w.*field; });
+  void drawWormStat(char const* name, int(WormStats::* field)) {
+    drawWormStat(name, [field](const WormStats& w, cell& c) { c << w.*field; });
   }
 
   void section(cell const& c, int level = 1) {
@@ -156,7 +156,7 @@ struct StatsRenderer {
   void gap(int n = 5) { y += n; }
 
   void weaponStats(vector<WeaponStats> const& list) {
-    for (auto& ws : list) {
+    for (const auto& ws : list) {
       if (ws.totalHp > 0) {
         section(cell().ref() << common.weapons[ws.index].name);
         drawStat("hits", [ws](cell& c) {
@@ -300,7 +300,7 @@ void presentStats(NormalStatsRecorder& recorder, Game& game) {
 
       if (game.settings->gameMode == Settings::GameMode::Holdazone ||
           game.settings->gameMode == Settings::GameMode::GameOfTag) {
-        renderer.drawWormStat("timer", [&](WormStats& w, cell& c) {
+        renderer.drawWormStat("timer", [&](const WormStats& w, cell& c) {
           c << timeToString(w.timer);
         });
       } else {
@@ -323,10 +323,11 @@ void presentStats(NormalStatsRecorder& recorder, Game& game) {
         c << timeToStringFrames(max);
       });
 
-      renderer.drawWormStat("loading efficiency", [](WormStats& w, cell& c) {
-        c << percent(
-            w.weaponChangeGood, w.weaponChangeGood + w.weaponChangeBad);
-      });
+      renderer.drawWormStat(
+          "loading efficiency", [](const WormStats& w, cell& c) {
+            c << percent(
+                w.weaponChangeGood, w.weaponChangeGood + w.weaponChangeBad);
+          });
 
       renderer.gap();
 

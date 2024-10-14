@@ -344,7 +344,7 @@ struct Worm : gvl::shared {
   /*
    * Process aiming for Worm.
    */
-  void processAiming(Game& game);
+  void processAiming(const Game& game);
   /*
    * Process change of Weapon for Worm.
    */

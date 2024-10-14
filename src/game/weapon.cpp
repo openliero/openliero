@@ -6,7 +6,7 @@
 #include "math.hpp"
 #include "mixer/player.hpp"
 
-int Weapon::computedLoadingTime(Settings& settings) const {
+int Weapon::computedLoadingTime(const Settings& settings) const {
   int ret = (settings.loadingTime * loadingTime) / 100;
   if (ret == 0)
     ret = 1;

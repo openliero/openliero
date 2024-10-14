@@ -166,7 +166,7 @@ namespace gvl {
         return *this;
       }
 
-      writer& str(std::string& s) {
+      writer& str(const std::string& s) {
         w << '"';
         for (char c : s) {
           if (c >= 0x20 && c <= 0x7e) {
@@ -183,7 +183,7 @@ namespace gvl {
         return *this;
       }
 
-      writer& str(char const* name, std::string& s) {
+      writer& str(char const* name, const std::string& s) {
         f(name);
         str(s);
         return *this;
@@ -226,7 +226,7 @@ namespace gvl {
       inline value(string&& s);
 
       value& operator=(value const& other) {
-        shared* old = tt >= t_string ? u.s : 0;
+        const shared* old = tt >= t_string ? u.s : 0;
         tt = other.tt;
         u = other.u;
         if (tt >= t_string)
@@ -237,7 +237,7 @@ namespace gvl {
       }
 
       value& operator=(value&& other) {
-        shared* old = tt >= t_string ? u.s : 0;
+        const shared* old = tt >= t_string ? u.s : 0;
         tt = other.tt;
         u = other.u;
         other.tt = t_null;

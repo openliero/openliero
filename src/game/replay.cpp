@@ -9,23 +9,25 @@
 // #define DEBUG_REPLAYS 1
 
 struct WormCreator {
-  Worm* operator()(GameSerializationContext& context) { return new Worm(); }
+  Worm* operator()(const GameSerializationContext& context) {
+    return new Worm();
+  }
 };
 
 struct ViewportCreator {
-  Viewport* operator()(GameSerializationContext& context) {
+  Viewport* operator()(const GameSerializationContext& context) {
     return new Viewport();
   }
 };
 
 struct WormIdxRefCreator {
-  Worm* operator()(int idx, GameSerializationContext& context) {
+  Worm* operator()(int idx, const GameSerializationContext& context) {
     if (idx < 0)
       return 0;
     return context.game->worms.at(idx);
   }
 
-  int operator()(Worm* w, GameSerializationContext&) {
+  int operator()(const Worm* w, GameSerializationContext&) {
     if (!w)
       return -1;
     return w->index;
@@ -201,7 +203,7 @@ void archive(in_archive_t ar, Level& level) {
   if (ar.context.replayVersion > 1)
     archive(ar, level.origpal);
 
-  Common& common = *ar.context.game->common;
+  const Common& common = *ar.context.game->common;
 
   for (unsigned int y = 0; y < h; ++y)
     for (unsigned int x = 0; x < w; ++x) {
@@ -371,11 +373,11 @@ void ReplayWriter::endRecord() {
   writer.put(0x83);
 }
 
-uint32_t fastGameChecksum(Game& game) {
+uint32_t fastGameChecksum(const Game& game) {
   // game.rand is like a golden thread
   uint32_t checksum = game.rand_seed;
   for (std::size_t i = 0; i < game.worms.size(); ++i) {
-    Worm& worm = *game.worms[i];
+    const Worm& worm = *game.worms[i];
     checksum ^= worm.pos.x;
     checksum += worm.vel.x;
     checksum ^= worm.pos.y;

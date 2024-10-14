@@ -19,7 +19,7 @@ struct Palette {
   void activate(Color realPal[256]);
   void fade(int amount);
   void lightUp(int amount);
-  void rotateFrom(Palette& source, int from, int to, unsigned dist);
+  void rotateFrom(const Palette& source, int from, int to, unsigned dist);
   void read(gvl::octet_reader& r);
 
   void scaleAdd(int dest, int const (&c)[3], int scale, int add) {

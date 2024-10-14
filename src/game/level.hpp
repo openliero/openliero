@@ -16,16 +16,17 @@ struct Settings;
 struct Common;
 
 struct Level {
-  Level(Common& common) : width(0), height(0) {
+  Level(const Common& common) : width(0), height(0) {
     zeroMaterial = common.materials[0];
   }
 
-  bool load(Common& common, Settings const& settings, gvl::octet_reader r);
+  bool
+  load(const Common& common, Settings const& settings, gvl::octet_reader r);
 
   void generateDirtPattern(Common& common, std::mt19937& rand);
   void
   generateRandom(Common& common, Settings const& settings, std::mt19937& rand);
-  void makeShadow(Common& common);
+  void makeShadow(const Common& common);
   void generateFromSettings(
       Common& common,
       Settings const& settings,
@@ -39,12 +40,12 @@ struct Level {
 
   unsigned char* pixelp(int x, int y) { return &data[x + y * width]; }
 
-  void setPixel(int x, int y, PalIdx w, Common& common) {
+  void setPixel(int x, int y, PalIdx w, const Common& common) {
     data[x + y * width] = w;
     materials[x + y * width] = common.materials[w];
   }
 
-  void setPixel(fixedvec pos, PalIdx w, Common& common) {
+  void setPixel(fixedvec pos, PalIdx w, const Common& common) {
     data[pos.x + pos.y * width] = w;
     materials[pos.x + pos.y * width] = common.materials[w];
   }

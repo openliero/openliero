@@ -132,7 +132,7 @@ void drawDashedLineBox(
 }
 
 void blitImageNoKeyColour(
-    Bitmap& scr,
+    const Bitmap& scr,
     PalIdx* mem,
     int x,
     int y,
@@ -155,7 +155,7 @@ void blitImageNoKeyColour(
   int pitch = (s).pitch, width = (s).width, height = (s).height; \
   PalIdx* mem = (s).mem
 
-void blitImage(Bitmap& scr, Sprite spr, int x, int y) {
+void blitImage(const Bitmap& scr, Sprite spr, int x, int y) {
   UNPACK_SPRITE(spr);
 
   CLIP_IMAGE(scr.clip_rect);
@@ -179,7 +179,7 @@ void blitImage(Bitmap& scr, Sprite spr, int x, int y) {
   }
 }
 
-void blitImageTrans(Bitmap& scr, Sprite spr, int x, int y, int phase) {
+void blitImageTrans(const Bitmap& scr, Sprite spr, int x, int y, int phase) {
   UNPACK_SPRITE(spr);
 
   CLIP_IMAGE(scr.clip_rect);
@@ -269,7 +269,13 @@ void blitImageTrans(Bitmap& scr, Sprite spr, int x, int y, int phase) {
     }                                                     \
   } while (false)
 
-void blitImageR(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height) {
+void blitImageR(
+    const Bitmap& scr,
+    PalIdx* mem,
+    int x,
+    int y,
+    int width,
+    int height) {
   int pitch = width;
 
   CLIP_IMAGE(scr.clip_rect);
@@ -293,7 +299,7 @@ void blitImageR(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height) {
   }
 }
 
-void blitFireCone(Bitmap& scr, int fc, PalIdx* mem, int x, int y) {
+void blitFireCone(const Bitmap& scr, int fc, PalIdx* mem, int x, int y) {
   int width = 16;
   int height = 16;
   int pitch = width;
@@ -332,7 +338,7 @@ void blitFireCone(Bitmap& scr, int fc, PalIdx* mem, int x, int y) {
 }
 
 void blitImageOnMap(
-    Common& common,
+    const Common& common,
     Level& level,
     PalIdx* mem,
     int x,
@@ -359,7 +365,7 @@ void blitImageOnMap(
 
 void blitShadowImage(
     Common& common,
-    Bitmap& scr,
+    const Bitmap& scr,
     PalIdx* mem,
     int x,
     int y,
@@ -390,7 +396,7 @@ void blitShadowImage(
 }
 
 void blitStone(
-    Common& common,
+    const Common& common,
     Level& level,
     bool p1,
     PalIdx* mem,
@@ -464,9 +470,9 @@ void drawDirtEffect(
     int x,
     int y) {
   assert(dirtEffect >= 0 && dirtEffect < 9);
-  Texture& tex = common.textures[dirtEffect];
+  const Texture& tex = common.textures[dirtEffect];
   std::uniform_int_distribution<int> distTexrFrame(0, tex.rFrame - 1);
-  PalIdx* tFrame =
+  const PalIdx* tFrame =
       common.largeSprites.spritePtr(tex.sFrame + distTexrFrame(rand));
   PalIdx* mFrame = common.largeSprites.spritePtr(tex.mFrame);
 
@@ -534,7 +540,7 @@ void drawDirtEffect(
   }
 }
 
-void correctShadow(Common& common, Level& level, gvl::rect rect) {
+void correctShadow(const Common& common, Level& level, gvl::rect rect) {
   rect.intersect(gvl::rect(0, 3, level.width - 3, level.height));
 
   for (int x = rect.x1; x < rect.x2; ++x)
@@ -591,15 +597,15 @@ inline int sign(int v) {
   }
 
 void drawNinjarope(
-    Common& common,
-    Bitmap& scr,
+    const Common& common,
+    const Bitmap& scr,
     int fromX,
     int fromY,
     int toX,
     int toY) {
   int color = LC(NRColourBegin);
 
-  gvl::rect& clip = scr.clip_rect;
+  const gvl::rect& clip = scr.clip_rect;
   PalIdx* ptr = scr.pixels;
   unsigned int pitch = scr.pitch;
 
@@ -613,13 +619,13 @@ void drawNinjarope(
 }
 
 void drawLaserSight(
-    Bitmap& scr,
+    const Bitmap& scr,
     std::mt19937& rand,
     int fromX,
     int fromY,
     int toX,
     int toY) {
-  gvl::rect& clip = scr.clip_rect;
+  const gvl::rect& clip = scr.clip_rect;
   PalIdx* ptr = scr.pixels;
   unsigned int pitch = scr.pitch;
 
@@ -638,7 +644,7 @@ void drawShadowLine(
     int fromY,
     int toX,
     int toY) {
-  gvl::rect& clip = scr.clip_rect;
+  const gvl::rect& clip = scr.clip_rect;
   PalIdx* ptr = scr.pixels;
   unsigned int pitch = scr.pitch;
 
@@ -651,8 +657,14 @@ void drawShadowLine(
   });
 }
 
-void drawLine(Bitmap& scr, int fromX, int fromY, int toX, int toY, int color) {
-  gvl::rect& clip = scr.clip_rect;
+void drawLine(
+    const Bitmap& scr,
+    int fromX,
+    int fromY,
+    int toX,
+    int toY,
+    int color) {
+  const gvl::rect& clip = scr.clip_rect;
   PalIdx* ptr = scr.pixels;
   unsigned int pitch = scr.pitch;
 
@@ -691,7 +703,7 @@ void drawGraph(
       scr, startX, startY, 7, static_cast<int>(data.size()), height);
 }
 
-void drawHeatmap(Bitmap& scr, int x, int y, Heatmap& hm) {
+void drawHeatmap(const Bitmap& scr, int x, int y, Heatmap& hm) {
   int width = hm.width, height = hm.height;
   int pitch = width;
   int* mem = &hm.map[0];
@@ -713,7 +725,7 @@ void drawHeatmap(Bitmap& scr, int x, int y, Heatmap& hm) {
 
   mapping[0] = 0;
 
-  for (auto& v : counts) {
+  for (const auto& v : counts) {
     mapping[v.first] = int(104 + int64_t(cum) * maxIdx / totalPixels);
     cum += v.second;
   }
@@ -734,10 +746,10 @@ void scaleDraw(
     uint8_t* dest,
     std::size_t destPitch,
     int mag,
-    uint32_t* pal32) {
+    const uint32_t* pal32) {
   if (mag == 1) {
     for (int y = 0; y < h; ++y) {
-      PalIdx* line = src + y * srcPitch;
+      const PalIdx* line = src + y * srcPitch;
       uint32_t* destLine = reinterpret_cast<uint32_t*>(dest + y * destPitch);
 
       for (int x = 0; x < w; ++x) {

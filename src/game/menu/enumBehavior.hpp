@@ -24,7 +24,7 @@ struct EnumBehavior : ItemBehavior {
   int onEnter(Menu& menu, MenuItem& item) override;
   void onUpdate(Menu& menu, MenuItem& item) override;
 
-  void change(Menu& menu, MenuItem& item, int dir);
+  void change(Menu& menu, const MenuItem& item, int dir);
 
   Common& common;
   uint32_t& v;

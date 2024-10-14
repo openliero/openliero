@@ -5,7 +5,7 @@
 #include "macros.hpp"
 
 void Font::drawChar(
-    Bitmap& scr,
+    const Bitmap& scr,
     unsigned char c,
     int x,
     int y,
@@ -47,7 +47,7 @@ void Font::drawChar(
 }
 
 void Font::drawText(
-    Bitmap& scr,
+    const Bitmap& scr,
     char const* str,
     std::size_t len,
     int x,

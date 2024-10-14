@@ -52,7 +52,7 @@ struct FileNode : gvl::shared {
     ensureFilled();
 
     if (menu.items.empty()) {
-      for (auto& c : children)
+      for (const auto& c : children)
         menu.addItem(MenuItem(c->folder ? 47 : 48, 7, c->name));
 
       menu.moveToFirstVisible();
@@ -185,7 +185,7 @@ struct FileSelector {
     if (parent) {
       FileNode* p = fn;
       while (p->parent) {
-        FileNode* ch = p;
+        const FileNode* ch = p;
         p = p->parent;
         p->selectedChild = fn;
 

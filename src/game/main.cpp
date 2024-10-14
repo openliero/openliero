@@ -1,7 +1,7 @@
 #include <exception>
 #include <string>
 
-int gameEntry(int argc, char* argv[]);
+int gameEntry(int argc, const char* argv[]);
 
 #if _WIN32
 #include <windows.h>
@@ -23,7 +23,7 @@ INT WINAPI WinMain(
   }
 }
 #else
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   return gameEntry(argc, argv);
 }
 #endif

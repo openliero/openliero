@@ -58,7 +58,7 @@ Worm* Game::findControlForKey(uint32_t key, Worm::Control& control) {
   for (std::size_t i = 0; i < worms.size(); ++i) {
     Worm& w = *worms[i];
 
-    uint32_t* controls =
+    const uint32_t* controls =
         settings->extensions ? w.settings->controlsEx : w.settings->controls;
     std::size_t maxControl =
         settings->extensions
@@ -439,7 +439,7 @@ void Game::updateSettings(Renderer& renderer) {
   renderer.origpal = level.origpal;  // Activate the Level palette
 
   for (std::size_t i = 0; i < worms.size(); ++i) {
-    Worm& worm = *worms[i];
+    const Worm& worm = *worms[i];
     if (worm.index >= 0 && worm.index < 2)
       renderer.origpal.setWormColour(worm.index, *worm.settings);
   }
@@ -489,7 +489,7 @@ bool Game::isGameOver() {
         return true;
     }
   } else if (settings->gameMode == Settings::GameMode::Holdazone) {
-    for (auto* w : worms)
+    for (const auto* w : worms)
       if (w->timer >= settings->timeToLose)
         return true;
   }
@@ -573,7 +573,7 @@ bool checkRespawnPosition(
     int oldY,
     int x,
     int y) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
   int deltaX = oldX;
   int deltaY = oldY - y;
@@ -611,7 +611,7 @@ bool checkRespawnPosition(
   return true;
 }
 
-void Game::postClone(Game& original, bool complete) {
+void Game::postClone(const Game& original, bool complete) {
   if (!complete) {
     statsRecorder.reset(new StatsRecorder);
     soundPlayer.reset(new NullSoundPlayer);

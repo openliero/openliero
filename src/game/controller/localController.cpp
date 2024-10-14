@@ -17,7 +17,7 @@
 #include <cctype>
 
 std::shared_ptr<WormAI>
-createAi(int controller, Worm& worm, Settings& settings) {
+createAi(int controller, const Worm& worm, const Settings& settings) {
   if (controller == 1)
     return std::shared_ptr<WormAI>(new DumbLieroAI());
   else if (controller == 2)
@@ -222,14 +222,14 @@ void LocalController::changeState(GameState newState) {
     if (game.settings->extensions && game.settings->recordReplays) {
       try {
         std::time_t ticks = std::time(0);
-        std::tm* now = std::localtime(&ticks);
+        const std::tm* now = std::localtime(&ticks);
 
         char buf[512];
         std::strftime(buf, sizeof(buf), "%Y-%m-%d %H.%M.%S", now);
 
         std::string playerNames = " ";
         for (std::size_t i = 0; i < 2; ++i) {
-          Worm& worm = *game.worms[i];
+          const Worm& worm = *game.worms[i];
           std::string const& name = worm.settings->name;
           int chars = 0;
 

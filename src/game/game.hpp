@@ -87,7 +87,7 @@ struct Game {
   void doHealingDirect(Worm& w, int amount);
   void doDamage(Worm& w, int amount, int byIdx);
   void doHealing(Worm& w, int amount);
-  void postClone(Game& original, bool complete = false);
+  void postClone(const Game& original, bool complete = false);
 
   void spawnZone();
 

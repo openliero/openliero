@@ -19,7 +19,7 @@ struct InputState {
     RopeUpDown = 2,    // 3,  aa00110, a != 3
   };
 
-  InputState(Worm* w) {
+  InputState(const Worm* w) {
     auto cs = w->controlStates;
     auto v = cs.pack();
 
@@ -139,8 +139,11 @@ struct InputContext {
   InputContext()
       : wantedWeapon(0), hiddenFrames(0), facingEnemy(0), ninjaropeOut(0) {}
 
-  Worm::ControlState
-  update(InputState newState, Game& game, Worm* worm, AiContext& aiContext);
+  Worm::ControlState update(
+      InputState newState,
+      const Game& game,
+      Worm* worm,
+      const AiContext& aiContext);
 
   int pack() {
     int i = ninjaropeOut;
@@ -275,7 +278,7 @@ struct AiContext {
     return state[wx][wy];
   }
 
-  void update(FollowAI& ai, Worm& worm);
+  void update(const FollowAI& ai, Worm& worm);
   level_cell* pathFind(int x, int y);
 };
 

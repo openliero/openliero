@@ -41,7 +41,7 @@ struct sfx_sound {
   std::vector<int16_t> samples;
 };
 
-int32_t sfx_mixer_now(sfx_mixer* mixer) {
+int32_t sfx_mixer_now(const sfx_mixer* mixer) {
   return mixer->base_frame;
 }
 
@@ -152,7 +152,7 @@ void sfx_mixer_fill(sfx_stream* str, uint32_t start, uint32_t frames)
         sfx_mixer_mix(self, str->buffer, frames, start);
 }*/
 
-static int find_channel(sfx_mixer* self, void* h) {
+static int find_channel(const sfx_mixer* self, const void* h) {
   uint32_t c;
 
   for (c = 0; c < CHANNEL_COUNT;) {
@@ -164,7 +164,7 @@ static int find_channel(sfx_mixer* self, void* h) {
   return -1;
 }
 
-static int find_free_channel(sfx_mixer* self) {
+static int find_free_channel(const sfx_mixer* self) {
   uint32_t c;
 
   for (c = 0; c < CHANNEL_COUNT;) {
@@ -176,7 +176,7 @@ static int find_free_channel(sfx_mixer* self) {
   return -1;
 }
 
-void sfx_set_volume(sfx_mixer* self, void* h, double volume) {
+void sfx_set_volume(sfx_mixer* self, const void* h, double volume) {
   uint32_t v;
   int ch = find_channel(self, h);
   if (ch < 0)
@@ -187,12 +187,12 @@ void sfx_set_volume(sfx_mixer* self, void* h, double volume) {
   self->channel_states[ch].volumes = (v << 16) + v;
 }
 
-int sfx_is_playing(sfx_mixer* self, void* h) {
+int sfx_is_playing(const sfx_mixer* self, const void* h) {
   int ch = find_channel(self, h);
   return (ch >= 0);
 }
 
-void sfx_mixer_stop(sfx_mixer* self, void* h) {
+void sfx_mixer_stop(sfx_mixer* self, const void* h) {
   int ch = find_channel(self, h);
   if (ch < 0)
     return;

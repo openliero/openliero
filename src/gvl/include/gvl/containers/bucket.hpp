@@ -22,7 +22,9 @@ namespace gvl {
 
     virtual size_type size() const = 0;
 
-    virtual uint8_t const* get_ptr(bucket& owner_bucket, size_type offset) = 0;
+    virtual uint8_t const* get_ptr(
+        const bucket& owner_bucket,
+        size_type offset) = 0;
 
     // Placement-new
     void* operator new(std::size_t, void* p) { return p; }
@@ -71,7 +73,7 @@ namespace gvl {
 
     bucket_data_mem(bucket_size size) : size_(size) {}
 
-    uint8_t const* get_ptr(bucket& owner_bucket, size_type offset) {
+    uint8_t const* get_ptr(const bucket& owner_bucket, size_type offset) {
       return data + offset;
     }
 

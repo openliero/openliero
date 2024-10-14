@@ -16,7 +16,7 @@ struct Font {
   Font() : chars(250) {}
 
   void drawText(
-      Bitmap& scr,
+      const Bitmap& scr,
       char const* str,
       std::size_t len,
       int x,
@@ -24,15 +24,20 @@ struct Font {
       int color,
       int size);
   int getDims(char const* str, std::size_t len, int* height = 0);
-  void
-  drawChar(Bitmap& scr, unsigned char ch, int x, int y, int color, int size);
+  void drawChar(
+      const Bitmap& scr,
+      unsigned char ch,
+      int x,
+      int y,
+      int color,
+      int size);
 
-  void drawChar(Bitmap& scr, unsigned char ch, int x, int y, int color) {
+  void drawChar(const Bitmap& scr, unsigned char ch, int x, int y, int color) {
     drawChar(scr, ch, x, y, color, 1);
   }
 
   void drawCenteredText(
-      Bitmap& scr,
+      const Bitmap& scr,
       std::string const& str,
       int x,
       int y,
@@ -43,7 +48,7 @@ struct Font {
   }
 
   void drawCenteredText(
-      Bitmap& scr,
+      const Bitmap& scr,
       std::string const& str,
       int x,
       int y,
@@ -54,7 +59,7 @@ struct Font {
   // draws text with a simple shadow underneath it, so even text that would
   // blend into the background can be displayed
   void drawShadowedText(
-      Bitmap& scr,
+      const Bitmap& scr,
       std::string const& str,
       int x,
       int y,
@@ -64,7 +69,7 @@ struct Font {
   }
 
   void drawText(
-      Bitmap& scr,
+      const Bitmap& scr,
       char const* str,
       std::size_t len,
       int x,
@@ -73,11 +78,13 @@ struct Font {
     drawText(scr, str, len, x, y, color, 1);
   }
 
-  void drawText(Bitmap& scr, std::string const& str, int x, int y, int color) {
+  void
+  drawText(const Bitmap& scr, std::string const& str, int x, int y, int color) {
     drawText(scr, str.data(), str.size(), x, y, color, 1);
   }
 
-  void drawText(Bitmap& scr, gvl::cell const& str, int x, int y, int color) {
+  void
+  drawText(const Bitmap& scr, gvl::cell const& str, int x, int y, int color) {
     if (str.buffer.empty())
       return;
 

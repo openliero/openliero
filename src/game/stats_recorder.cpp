@@ -119,7 +119,7 @@ void NormalStatsRecorder::preTick(Game& game) {
   for (auto& w : worms) {
     w.wormFrameStats.push_back(WormFrameStats());
 
-    Worm& worm = *game.worms[w.index];
+    const Worm& worm = *game.worms[w.index];
 
     int h = std::max(worm.health, 0);
     if (!worm.visible)
@@ -147,7 +147,7 @@ void NormalStatsRecorder::tick(Game& game) {
            (!w->controlStates[static_cast<int>(Worm::Control::Left)] &&
             !w->controlStates[static_cast<int>(Worm::Control::Right)])) &&
           w->weapons[w->currentWeapon].loadingLeft == 0 &&
-          std::find_if(w->weapons, w->weapons + 5, [](WormWeapon& ww) {
+          std::find_if(w->weapons, w->weapons + 5, [](const WormWeapon& ww) {
             return ww.loadingLeft > 0;
           }) != w->weapons + 5) {
         ok = false;

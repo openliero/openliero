@@ -218,7 +218,7 @@ Texts::Texts() {
   copyrightBarFormat = 64;
 }
 
-void Common::drawTextSmall(Bitmap& scr, char const* str, int x, int y) {
+void Common::drawTextSmall(const Bitmap& scr, char const* str, int x, int y) {
   for (; *str; ++str) {
     unsigned char c = *str - 'A';
 

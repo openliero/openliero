@@ -10,7 +10,7 @@
 
 #include "../common.hpp"
 
-void Menu::onKeys(SDL_Keysym* begin, SDL_Keysym* end, bool contains) {
+void Menu::onKeys(SDL_Keysym* begin, const SDL_Keysym* end, bool contains) {
   for (; begin != end; ++begin) {
     bool isTab = begin->scancode == SDL_SCANCODE_TAB;
     if ((begin->sym >= 32 &&

@@ -52,7 +52,7 @@ void Level::generateDirtPattern(Common& common, std::mt19937& rand) {
 
     int temp = std::uniform_int_distribution<int>(69, 72)(rand);
 
-    PalIdx* image = common.largeSprites.spritePtr(temp);
+    const PalIdx* image = common.largeSprites.spritePtr(temp);
 
     for (int cy = 0; cy < 16; ++cy) {
       int my = cy + y;
@@ -94,7 +94,7 @@ void Level::generateDirtPattern(Common& common, std::mt19937& rand) {
   }
 }
 
-bool isNoRock(Common& common, Level& level, int size, int x, int y) {
+bool isNoRock(const Common& common, Level& level, int size, int x, int y) {
   gvl::rect rect(x, y, x + size + 1, y + size + 1);
 
   rect.intersect(gvl::rect(0, 0, level.width, level.height));
@@ -200,7 +200,7 @@ void Level::generateRandom(
   }
 }
 
-void Level::makeShadow(Common& common) {
+void Level::makeShadow(const Common& common) {
   for (int x = 0; x < width - 3; ++x)
     for (int y = 3; y < height; ++y) {
       if (mat(x, y).seeShadow() && mat(x + 3, y - 3).dirtRock()) {
@@ -229,7 +229,7 @@ void Level::resize(int width_new, int height_new) {
 }
 
 bool Level::load(
-    Common& common,
+    const Common& common,
     Settings const& settings,
     gvl::octet_reader r) {
   resize(504, 350);

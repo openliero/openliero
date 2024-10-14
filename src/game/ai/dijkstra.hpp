@@ -126,7 +126,7 @@ struct level_cell_succ {
   level_cell* node() { return &c[level_cell_offsets[i]]; }
 
   int cost() {
-    level_cell* n = c + level_cell_offsets[i];
+    const level_cell* n = c + level_cell_offsets[i];
     return level_cell_costs[i] * n->cost;
   }
 
@@ -155,14 +155,14 @@ struct dijkstra_level : dijkstra_state<level_cell*, dijkstra_level> {
 
   level_cell* cell(int x, int y) { return &cells[(y + 1) * pitch + x + 1]; }
 
-  gvl::ivec2 coords(level_cell* c) {
+  gvl::ivec2 coords(const level_cell* c) {
     int offset = static_cast<int>(c - cells);
     int y = offset / pitch;
     int x = offset % pitch;
     return gvl::ivec2(x - 1, y - 1);
   }
 
-  gvl::ivec2 coords_level(level_cell* c) {
+  gvl::ivec2 coords_level(const level_cell* c) {
     return coords(c) * factor + gvl::ivec2(factor / 2, factor / 2);
   }
 
@@ -174,10 +174,10 @@ struct dijkstra_level : dijkstra_state<level_cell*, dijkstra_level> {
     return cell(x, y);
   }
 
-  void build(Level& level, Common& common) {
+  void build(Level& level, const Common& common) {
     this->reset();
 
-    Material* mat = common.materials;
+    const Material* mat = common.materials;
 
     for (int x = 0; x < width + 2; ++x) {
       cells[x].cost = -1;

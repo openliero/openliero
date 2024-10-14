@@ -126,7 +126,7 @@ void Worm::calculateReactionForce(Game& game, int newX, int newY, int dir) {
 }
 
 void Worm::processPhysics(Game& game) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
   if (reacts[static_cast<int>(Worm::ReactionForce::Up)] > 0)
     vel.x = (vel.x * LC(WormFricMult)) / LC(WormFricDiv);
@@ -475,9 +475,9 @@ int sqrVectorLength(int x, int y) {
 }
 
 void DumbLieroAI::process(Game& game, Worm& worm) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
-  Worm* target = 0;
+  const Worm* target = 0;
   int minLen = 0;
   for (std::size_t i = 0; i < game.worms.size(); ++i) {
     Worm* w = game.worms[i];
@@ -494,7 +494,7 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
 
   int maxDist;
 
-  WormWeapon& ww = worm.weapons[worm.currentWeapon];
+  const WormWeapon& ww = worm.weapons[worm.currentWeapon];
   Weapon const& w = *ww.type;
 
   if (w.timeToExplo > 0 && w.timeToExplo < 500) {
@@ -732,7 +732,7 @@ void Worm::initWeapons(Game& game) {
 }
 
 void Worm::beginRespawn(Game& game) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
   auto temp = ftoi(pos);
 
@@ -988,7 +988,7 @@ void Worm::processMovement(Game& game) {
 }
 
 void Worm::processTasks(Game& game) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
   if (pressed(Worm::Control::Change)) {
     if (ninjarope.out) {
@@ -1033,8 +1033,8 @@ void Worm::processTasks(Game& game) {
   }
 }
 
-void Worm::processAiming(Game& game) {
-  Common& common = *game.common;
+void Worm::processAiming(const Game& game) {
+  const Common& common = *game.common;
 
   bool up = pressed(Worm::Control::Up);
   bool down = pressed(Worm::Control::Down);
@@ -1217,9 +1217,9 @@ bool checkForSpecWormHit(Game& game, int x, int y, int dist, Worm& w) {
 }
 
 void Worm::processSight(Game& game) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
-  WormWeapon& ww = weapons[currentWeapon];
+  const WormWeapon& ww = weapons[currentWeapon];
   Weapon const& w = *ww.type;
 
   if (ww.available() &&
@@ -1246,7 +1246,7 @@ void Worm::processSteerables(Game& game) {
   steerableSumX = 0;
   steerableSumY = 0;
 
-  WormWeapon& ww = weapons[currentWeapon];
+  const WormWeapon& ww = weapons[currentWeapon];
   if (ww.type->shotType == Weapon::ShotType::Steerable) {
     auto wr = game.wobjects.all();
     for (WObject* i; (i = wr.next());) {

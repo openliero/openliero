@@ -51,7 +51,7 @@ void Sfx::deinit() {
   SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-void Sfx::play(Common& common, int sound, void* id, int loops) {
+void Sfx::play(const Common& common, int sound, void* id, int loops) {
   if (!initialized)
     return;
 
@@ -60,14 +60,14 @@ void Sfx::play(Common& common, int sound, void* id, int loops) {
       loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
 }
 
-void Sfx::stop(void* id) {
+void Sfx::stop(const void* id) {
   if (!initialized)
     return;
 
   sfx_mixer_stop(mixer, id);
 }
 
-bool Sfx::isPlaying(void* id) {
+bool Sfx::isPlaying(const void* id) {
   if (!initialized)
     return false;
 

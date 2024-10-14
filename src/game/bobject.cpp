@@ -24,7 +24,7 @@ void Game::createBObject(fixedvec pos, fixedvec vel) {
 }
 
 bool BObject::process(Game& game) {
-  Common& common = *game.common;
+  const Common& common = *game.common;
 
   pos += vel;
 

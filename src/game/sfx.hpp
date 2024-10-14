@@ -20,10 +20,10 @@ struct Sfx {
   void init();
   void deinit();
 
-  void play(Common& common, int sound, void* id = 0, int loops = 0);
-  bool isPlaying(void* id);
+  void play(const Common& common, int sound, void* id = 0, int loops = 0);
+  bool isPlaying(const void* id);
 
-  void stop(void* id);
+  void stop(const void* id);
   ChannelInfo channelInfo[8];
 
   sfx_mixer* mixer;

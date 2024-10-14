@@ -216,7 +216,7 @@ struct WeaponEnumBehavior : EnumBehavior {
       uint32_t minimumi;
       double minimum = std::numeric_limits<double>::max();
       for (uint32_t i = min; i <= max; ++i) {
-        std::string& name = common.weapons[common.weapOrder[i - 1]].name;
+        const std::string& name = common.weapons[common.weapOrder[i - 1]].name;
 
         double dist = levenshtein(name.c_str(), search.c_str()) /
                       static_cast<double>(name.length());
@@ -845,7 +845,7 @@ void Gfx::flip() {
   lastFrame = wantedTime;
 }
 
-void playChangeSound(Common& common, int change) {
+void playChangeSound(const Common& common, int change) {
   if (change > 0) {
     sfx.play(common, 25);
   } else {
@@ -1127,7 +1127,7 @@ void Gfx::selectLevel() {
         testSDLKeyOnce(SDL_SCANCODE_KP_ENTER)) {
       sfx.play(common, 27);
 
-      auto* sel = levSel.enter();
+      const auto* sel = levSel.enter();
 
       if (sel) {
         if (sel == random.get()) {
@@ -1305,7 +1305,7 @@ std::unique_ptr<Common> Gfx::selectTc() {
 
     tcSel.rootNode.children.erase(end, tcSel.rootNode.children.end());
 
-    for (auto& c : tcSel.rootNode.children) {
+    for (const auto& c : tcSel.rootNode.children) {
       c->folder = false;
     }
   }

@@ -232,8 +232,8 @@ void SObjectType::create(
 }
 
 void SObject::process(Game& game) {
-  Common& common = *game.common;
-  SObjectType& t = common.sobjectTypes[id];
+  const Common& common = *game.common;
+  const SObjectType& t = common.sobjectTypes[id];
 
   if (--animDelay <= 0) {
     animDelay = t.animDelay;

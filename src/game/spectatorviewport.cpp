@@ -163,7 +163,7 @@ void SpectatorViewport::draw(
       case Settings::GameMode::Holdazone: {
         int state = 0;
 
-        for (auto* w : game.worms)
+        for (const auto* w : game.worms)
           if (w != &worm && w->timer <= worm.timer)
             state = 1;
 
@@ -177,7 +177,7 @@ void SpectatorViewport::draw(
       case Settings::GameMode::GameOfTag: {
         int state = 0;
 
-        for (auto* w : game.worms)
+        for (const auto* w : game.worms)
           if (w != &worm && w->timer >= worm.timer)
             state = 1;
 
@@ -201,7 +201,7 @@ void SpectatorViewport::draw(
     int contenderColor;
 
     if (game.holdazone.contenderIdx >= 0) {
-      Worm* contender = game.wormByIdx(game.holdazone.contenderIdx);
+      const Worm* contender = game.wormByIdx(game.holdazone.contenderIdx);
       if (timingOut)
         contenderColor = contender->minimapColor();
       else

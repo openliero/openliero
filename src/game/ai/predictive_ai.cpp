@@ -24,10 +24,10 @@ double totalHealthNorm(Worm* w) {
 }
 
 // 0..6*len(w->weapons)
-double totalAmmoWorth(Game& game, Worm* w) {
+double totalAmmoWorth(const Game& game, Worm* w) {
   double ammoWorth = 0;
   for (int i = 0; i < 5; ++i) {
-    WormWeapon& weap = w->weapons[i];
+    const WormWeapon& weap = w->weapons[i];
     Weapon const& winfo = *weap.type;
 
     if (weap.loadingLeft > 0)
@@ -39,10 +39,10 @@ double totalAmmoWorth(Game& game, Worm* w) {
   return ammoWorth;
 }
 
-int readyWeapons(Game& game, Worm* w) {
+int readyWeapons(const Game& game, Worm* w) {
   int count = 0;
   for (int i = 0; i < 5; ++i) {
-    WormWeapon& weap = w->weapons[i];
+    const WormWeapon& weap = w->weapons[i];
 
     if (weap.loadingLeft == 0 && weap.delayLeft < 70)
       ++count;
@@ -51,9 +51,9 @@ int readyWeapons(Game& game, Worm* w) {
   return count;
 }
 
-bool hasUsableWeapon(Game& game, Worm* w) {
+bool hasUsableWeapon(const Game& game, Worm* w) {
   for (int i = 0; i < 5; ++i) {
-    WormWeapon& weap = w->weapons[i];
+    const WormWeapon& weap = w->weapons[i];
 
     if (weap.loadingLeft <= 0)
       return true;
@@ -169,7 +169,7 @@ int obstacles(Game& game, Worm* from, Worm* to) {
 }
 
 double
-aimingDiff(AiContext& context, Game& game, Worm* from, level_cell* cell) {
+aimingDiff(AiContext& context, Game& game, const Worm* from, level_cell* cell) {
   if (!cell || !cell->parent)
     return 1.0;
 
@@ -245,7 +245,8 @@ struct MutationStrategy {
   uint32_t stop;
 };
 
-InputState generate(FollowAI& ai, std::mt19937& rand, InputContext& prev) {
+InputState
+generate(FollowAI& ai, std::mt19937& rand, const InputContext& prev) {
   return ai.model.random(prev, rand);
 }
 
@@ -271,7 +272,7 @@ double evaluateState(
     FollowAI& ai,
     Worm* me,
     Game& game,
-    InputContext& context,
+    const InputContext& context,
     Worm* target,
     Game& orgGame,
     std::size_t index) {
@@ -281,7 +282,7 @@ double evaluateState(
 
   int posx = ftoi(me->pos.x), posy = ftoi(me->pos.y);
   auto* wormCell = ai.pathFind(posx, posy);
-  Worm* meOrg = orgGame.wormByIdx(me->index);
+  const Worm* meOrg = orgGame.wormByIdx(me->index);
 
   double len = 200.0;
   if (wormCell) {
@@ -300,7 +301,7 @@ double evaluateState(
   }
 
   if (meOrg->steerableCount == 1) {
-    auto* missileCell =
+    const auto* missileCell =
         ai.dlevel.cell_from_px(me->steerableSumX, me->steerableSumY);
     bool missilePath = ai.dlevel.run(
         [=] { return missileCell->state == path_node::closed; },
@@ -432,9 +433,9 @@ void SimpleAI::process(Game& game, Worm& worm) {
 void evaluate(
     EvaluateResult& result,
     FollowAI& ai,
-    Worm* me,
+    const Worm* me,
     Game& game,
-    Worm* target,
+    const Worm* target,
     Plan& plan,
     std::size_t planSize,
     MutationStrategy const& ms) {
@@ -547,8 +548,8 @@ void mutate(
     EvaluateResult& result,
     FollowAI& ai,
     Game& game,
-    Worm& worm,
-    Worm* target,
+    const Worm& worm,
+    const Worm* target,
     Plan& candidate,
     EvaluateResult const& prevResult) {
   MutationStrategy ms(MtRange, 0, static_cast<uint32_t>(candidate.size()));
@@ -595,7 +596,7 @@ void FollowAI::drawDebug(
     Renderer& renderer,
     int offsX,
     int offsY) {
-  for (auto& p : evaluatePositions) {
+  for (const auto& p : evaluatePositions) {
     gvl::ivec2 v;
     PalIdx t;
     std::tie(v, t) = p;
@@ -742,9 +743,9 @@ void FollowAI::process(Game& game, Worm& worm) {
 
 Worm::ControlState InputContext::update(
     InputState newState,
-    Game& game,
+    const Game& game,
     Worm* worm,
-    AiContext& aiContext) {
+    const AiContext& aiContext) {
   Worm::ControlState cs;
 
   if (worm->visible && wantedWeapon != worm->currentWeapon) {
@@ -799,7 +800,7 @@ Worm::ControlState InputContext::update(
 }
 
 void transToM(
-    Weights& weights,
+    const Weights& weights,
     double& p,
     int pa,
     int pb,
@@ -918,7 +919,7 @@ TransModel::TransModel(Weights& weights, bool testing) {
   }
 }
 
-void AiContext::update(FollowAI& ai, Worm& worm) {
+void AiContext::update(const FollowAI& ai, Worm& worm) {
   double presence = 0, damage = 0;
 
   if (worm.visible) {

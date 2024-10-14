@@ -90,7 +90,7 @@ struct Menu {
     return b->onEnter(*this, *s);
   }
 
-  void onKeys(SDL_Keysym* begin, SDL_Keysym* end, bool contains = false);
+  void onKeys(SDL_Keysym* begin, const SDL_Keysym* end, bool contains = false);
 
   void updateItems(Common& common) {
     for (std::size_t i = 0; i < items.size(); ++i) {

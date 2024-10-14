@@ -470,7 +470,7 @@ struct FsNodeZipFile : FsNodeImp {
   DirectoryListing iter() override {
     std::vector<NodeName> subs;
 
-    for (auto& i : children) {
+    for (const auto& i : children) {
       subs.push_back(NodeName(i.first, i.second->isDir));
     }
 

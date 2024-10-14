@@ -17,7 +17,7 @@
 #include <exception>
 #include <random>
 
-int gameEntry(int argc, char* argv[]) try {
+int gameEntry(int argc, const char* argv[]) try {
   // TODO: Validate PRNG seeding
   // why do we have *two* PRNGs (gfx & game)?
   std::random_device r;

@@ -45,7 +45,7 @@ namespace gvl {
       }
     }
 
-    void process(uint64_t* n) {
+    void process(const uint64_t* n) {
       d[0] ^= n[0];
       d[1] ^= n[1];
       d[2] ^= n[2];
