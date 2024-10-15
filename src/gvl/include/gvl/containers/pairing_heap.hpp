@@ -11,9 +11,12 @@
 namespace gvl {
 
   struct pairing_node_common {
-    pairing_node_common* left_child;     // Left child
-    pairing_node_common** prev_next;     // Previous node slot pointing to this
-    pairing_node_common* right_sibling;  // Right sibling
+    // Left child
+    pairing_node_common* left_child;
+    // Previous node slot pointing to this
+    pairing_node_common** prev_next;
+    // Right sibling
+    pairing_node_common* right_sibling;
   };
 
   struct default_pairing_tag;
@@ -44,20 +47,18 @@ namespace gvl {
     void swap(pairing_heap& b) { std::swap(root, b.root); }
 
     void meld(pairing_heap& b) {
-      if (root && b.root)  // comparison_link_ assumes non-zero pointers
-      {
+      // comparison_link_ assumes non-zero pointers
+      if (root && b.root) {
         root = comparison_link_(root, b.root);
       } else if (!root) {
         // root is 0, but b.root may not be
         root = b.root;
       }
       // If root is non-zero and b.root is zero, we leave root as is
-
       b.root = 0;
     }
 
     // NOTE: TODO: Does root->prev have to have a defined value?
-
     void insert(T* el_) {
       pairing_node_common* el = upcast(el_);
       el->left_child = 0;
@@ -217,22 +218,21 @@ namespace gvl {
       pairing_node_common* first = el;
       pairing_node_common* second = first->right_sibling;
 
+      // Only one sub-tree
       if (!second)
-        return first;  // Only one sub-tree
+        return first;
 
       // We're fast-tracking the case with two children
-
       pairing_node_common* next = second->right_sibling;
-
       pairing_node_common* stack = comparison_link_(first, second);
 
       if (!next)
         return stack;
 
-      stack->right_sibling = 0;  // stack termination
+      // stack termination
+      stack->right_sibling = 0;
 
       // First pass
-
       do {
         first = next;
         second = next->right_sibling;
@@ -252,7 +252,6 @@ namespace gvl {
       } while (next);
 
       // Second pass
-
       first = stack;
       second = stack->right_sibling;
 
@@ -260,9 +259,9 @@ namespace gvl {
       // the stack
       sassert(second);
       do {
-        pairing_node_common* next = second->right_sibling;
+        pairing_node_common* second_next = second->right_sibling;
         first = comparison_link_(first, second);
-        second = next;
+        second = second_next;
       } while (second);
 
       return first;
@@ -275,13 +274,12 @@ namespace gvl {
       while (true) {
         pairing_node_common* second = first->right_sibling;
 
+        // Only one sub-tree
         if (!second)
-          return first;  // Only one sub-tree
+          return first;
 
         // We're fast-tracking the case with two children
-
         pairing_node_common* next = second->right_sibling;
-
         first = comparison_link_(first, second);
 
         if (!next)
@@ -328,8 +326,8 @@ namespace gvl {
       Deleter::operator()(el);
     }
 
-    pairing_node_common*
-        root;  // root->prev_next and root->right_sibling are undefined
+    // root->prev_next and root->right_sibling are undefined
+    pairing_node_common* root;
   };
 
 }

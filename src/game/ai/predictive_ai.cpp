@@ -261,10 +261,10 @@ double psigmoid(double x) {
 }
 
 level_cell* AiContext::pathFind(int x, int y) {
-  auto* cell = dlevel.cell_from_px(x, y);
+  auto* pf_cell = dlevel.cell_from_px(x, y);
   bool path = dlevel.run(
-      [=] { return cell->state == path_node::closed; }, level_cell_succ());
-  return path ? cell : 0;
+      [=] { return pf_cell->state == path_node::closed; }, level_cell_succ());
+  return path ? pf_cell : 0;
 }
 
 double evaluateState(
