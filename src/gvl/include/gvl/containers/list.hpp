@@ -431,10 +431,8 @@ namespace gvl {
     iterator insert_sorted(T* el, Compare compare) {
       el = static_cast<T*>(Ownership::take(el));
 
-      gvl_list_node* before = &sentinel_;
-      gvl_list_node* after = before->next;
+      gvl_list_node* after = &sentinel_.next;
       while (after != &sentinel_ && compare(*downcast(after), *el)) {
-        before = after;
         after = after->next;
       }
 
