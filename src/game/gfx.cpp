@@ -1978,8 +1978,6 @@ int Gfx::menuLoop() {
     }
 
     if (testSDLKeyOnce(SDL_SCANCODE_F8)) {
-      uint32_t s = 14;
-
       // TODO ensure this is deterministic
       std::random_device rd;
       std::mt19937 g(rd());

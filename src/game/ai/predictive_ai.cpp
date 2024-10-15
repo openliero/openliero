@@ -852,8 +852,6 @@ TransModel::TransModel(Weights& weights, bool testing) {
     int pa, pb, pc;
     auto type = prev.decompose(pa, pb, pc);
 
-    double sum2 = 0.0;
-
     for (int j = 0; j < this->freeStates; ++j) {
       int pa2, pb2, pc2;
       auto type2 = InputState(j).decompose(pa2, pb2, pc2);
@@ -904,8 +902,6 @@ TransModel::TransModel(Weights& weights, bool testing) {
           p *= select(pa2, 0.98, 0.01, 0.01);  // TODO: Rope out
         }
       }
-
-      sum2 += p;
 
       trans[i][j] = p;
     }
