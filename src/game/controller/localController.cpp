@@ -197,6 +197,11 @@ void LocalController::draw(Renderer& renderer, bool useSpectatorViewports) {
   renderer.fadeValue = fadeValue;
 }
 
+struct std::tm* localtime_reentrant(time_t* timer) {
+  static struct tm tt;
+  return localtime_r(timer, &tt);
+}
+
 void LocalController::changeState(GameState newState) {
   if (state == newState)
     return;
@@ -222,7 +227,7 @@ void LocalController::changeState(GameState newState) {
     if (game.settings->extensions && game.settings->recordReplays) {
       try {
         std::time_t ticks = std::time(0);
-        const std::tm* now = std::localtime(&ticks);
+        const std::tm* now = localtime_reentrant(&ticks);
 
         char buf[512];
         std::strftime(buf, sizeof(buf), "%Y-%m-%d %H.%M.%S", now);
