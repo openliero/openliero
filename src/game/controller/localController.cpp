@@ -197,9 +197,20 @@ void LocalController::draw(Renderer& renderer, bool useSpectatorViewports) {
   renderer.fadeValue = fadeValue;
 }
 
-struct std::tm* localtime_reentrant(time_t* timer) {
-  static struct tm tt;
-  return localtime_r(timer, &tt);
+/*
+ * An attempt at ensuring thread-safe usage of localtime().
+ * Ref:
+ * https://pubs.opengroup.org/onlinepubs/9699919799/functions/localtime_r.html
+ */
+std::tm* localtime_reentrant(time_t* timer) {
+#if _MSC_VER >= 1400
+  // localtime is thread-safe as of VS8.0 (2005)
+  return localtime(timer);
+#else
+  // POSIX
+  std::tm temp;
+  return localtime_r(timer, &temp);
+#endif
 }
 
 void LocalController::changeState(GameState newState) {
