@@ -12,7 +12,7 @@ vector<D> convert(vector<T> const& src) {
   for (auto& e : src)
     v.push_back(e);
 
-  return std::move(v);
+  return v;
 }
 
 template <typename T, typename C>
@@ -22,7 +22,7 @@ vector<T> pluck(vector<C> const& src, T(C::* a)) {
   for (auto& e : src)
     v.push_back(e.*a);
 
-  return std::move(v);
+  return v;
 }
 
 template <typename T>
@@ -51,7 +51,7 @@ vector<T> stretch(vector<T> const& src, size_t len) {
     v[ci] = c ? sum / c : T();
   }
 
-  return std::move(v);
+  return v;
 }
 
 template <typename T>
@@ -94,5 +94,5 @@ vector<T> zip(vector<T>& src, vector<T> const& other, Op op) {
     n[i] = op(src[i], other[i]);
   }
 
-  return std::move(n);
+  return n;
 }
