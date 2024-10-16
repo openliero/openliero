@@ -25,9 +25,8 @@ struct InputState {
 
     if (!cs[static_cast<int>(Worm::Control::Change)]) {
       // MoveJumpFire
-      idx = (v >> 2) << 1;
-      if (idx > 48)
-        idx -= (1 << 5);
+      // TODO check out `git blame` for this particular code if there are any
+      // issues. idx was assigned/overwritten a few times *prior*.
       idx = 2;
       idx |= (v & 1);
     } else {

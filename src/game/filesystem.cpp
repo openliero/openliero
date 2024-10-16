@@ -428,10 +428,11 @@ struct FsNodeZipFile : FsNodeImp {
           std::string const& part = filepath.substr(beg, i - beg);
 
           auto& c = cur->children[part];
-          if (!c)
+          if (!c) {
             c.reset(new FsNodeZipFile(
                 archive, joinPath(cur->path, part),
                 joinPath(cur->relPath, part), -1, true));
+          }
           cur = c.get();
 
           beg = i + 1;
@@ -549,7 +550,7 @@ struct FsNodeFilesystem : FsNodeImp {
   bool exists() const override { return access(path.c_str(), 0) != -1; }
 
   gvl::source tryToSource() override {
-    FILE* f = tolerantFOpen(path.c_str(), "rb");
+    FILE* f = tolerantFOpen(path, "rb");
     if (!f)
       return gvl::source();
 

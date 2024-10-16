@@ -108,10 +108,10 @@ void archive_liero(Archive ar, Settings& settings) {
       .b(settings.regenerateLevel)
       .b(settings.shadow);
 
-  if (ar.in)
+  if (ar.in) {
     settings.wormSettings[0]->controller %= 3;
-  if (ar.in)
     settings.wormSettings[1]->controller %= 3;
+  }
 
   for (int i = 0; i < 40; ++i) {
     ar.ui8(settings.weapTable[i]);

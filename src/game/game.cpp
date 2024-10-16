@@ -477,24 +477,26 @@ void Game::startGame() {
 }
 
 bool Game::isGameOver() {
-  if (settings->gameMode == Settings::GameMode::KillEmAll ||
-      settings->gameMode == Settings::GameMode::ScalesOfJustice) {
-    for (std::size_t i = 0; i < worms.size(); ++i) {
-      if (worms[i]->lives <= 0)
-        return true;
-    }
-  } else if (settings->gameMode == Settings::GameMode::GameOfTag) {
-    for (std::size_t i = 0; i < worms.size(); ++i) {
-      if (worms[i]->timer >= settings->timeToLose)
-        return true;
-    }
-  } else if (settings->gameMode == Settings::GameMode::Holdazone) {
-    for (const auto* w : worms)
-      if (w->timer >= settings->timeToLose)
-        return true;
+  int timeToLose = settings->timeToLose;
+  switch (settings->gameMode) {
+    case Settings::GameMode::KillEmAll:
+    // [[fallthrough]]; C++17
+    case Settings::GameMode::ScalesOfJustice:
+      return std::any_of(worms.begin(), worms.end(), [](const Worm* w) {
+        return w->lives <= 0;
+      });
+      break;
+    case Settings::GameMode::GameOfTag:
+    // [[fallthrough]]; C++17
+    case Settings::GameMode::Holdazone:
+      return std::any_of(
+          worms.begin(), worms.end(),
+          [timeToLose](const Worm* w) { return w->timer >= timeToLose; });
+      break;
+    default:
+      return false;
+      break;
   }
-
-  return false;
 }
 
 void Game::doDamageDirect(Worm& w, int amount, int byIdx) {

@@ -58,13 +58,11 @@ struct ColourAnim {
 
 /* AI parameters sourced from [[constants.aiparams]] in tc.cfg */
 struct AIParams {
-  int k[NUM_AIPARAMS_VALUES][NUM_AIPARAMS_KEYS];  // 0x1AEEE, contiguous words
+  // 0x1AEEE, contiguous words
+  int k[NUM_AIPARAMS_VALUES][NUM_AIPARAMS_KEYS];
 };
 
 struct SfxSample : gvl::noncopyable {
-  // SfxSample(SfxSample const&) = delete;
-  // SfxSample& operator=(SfxSample const&) = delete;
-
   SfxSample() : sound(0) {}
 
   SfxSample(SfxSample&& other)
@@ -76,9 +74,11 @@ struct SfxSample : gvl::noncopyable {
 
   SfxSample& operator=(SfxSample&& other) {
     name = std::move(other.name);
-    sound = other.sound;
-    sound = 0;
     originalData = std::move(other.originalData);
+    // TODO the below code was originally zero'd out could be a bug or
+    // something. noted for future reference.
+    sound = other.sound;
+
     return *this;
   }
 

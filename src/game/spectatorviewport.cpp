@@ -370,7 +370,7 @@ void SpectatorViewport::draw(
     {
       if (i->curFrame == 0) {
         int nameNum =
-            static_cast<int>(&*i - game.wobjects.arr) %
+            static_cast<int>(i - game.wobjects.arr) %
             static_cast<int>(
                 common.weapons.size());  // TODO: Something nicer maybe
 

@@ -445,12 +445,7 @@ void evaluate(
   Worm* meCopy = copy.wormByIdx(me->index);
   Worm* targetCopy = copy.wormByIdx(target->index);
 
-  FollowAI* targetAi = 0;
-
   auto context = ai.currentContext;
-  InputContext targetContext;
-  if (targetAi)
-    targetContext = targetAi->currentContext;
 
   SimpleAI simpleAi;
 
@@ -519,11 +514,7 @@ void evaluate(
 
     meCopy->controlStates = context.update(plan[i], copy, meCopy, ai);
 
-    if (targetAi && targetAi->best && i < targetAi->best->plan.size())
-      targetCopy->controlStates = targetContext.update(
-          targetAi->best->plan[i], copy, targetCopy, *targetAi);
-    else
-      simpleAi.process(copy, *targetCopy);
+    simpleAi.process(copy, *targetCopy);
 
     copy.processFrame();
 

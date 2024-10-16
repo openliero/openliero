@@ -9,8 +9,7 @@ template <typename D, typename T>
 vector<D> convert(vector<T> const& src) {
   vector<D> v;
 
-  for (auto& e : src)
-    v.push_back(e);
+  std::copy(src.begin(), src.end(), std::back_inserter(v));
 
   return v;
 }
@@ -80,9 +79,9 @@ void normalize(vector<T>& src, size_t limit, bool balance = true) {
   T range = max - min;
 
   if (range > T()) {
-    for (auto& e : src) {
-      e = (e * T(limit)) / range;
-    }
+    std::transform(src.cbegin(), src.cend(), src.begin(), [limit, range](T e) {
+      return (e * T(limit)) / range;
+    });
   }
 }
 
