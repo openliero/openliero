@@ -8,6 +8,7 @@
 #include "filesystem.hpp"
 #include "gfx/blit.hpp"
 #include "worm.hpp"
+#include <algorithm>
 
 int Common::fireConeOffset
     [FIRE_CONE_OFFSET_DIRECTION][FIRE_CONE_OFFSET_ANGLE_FRAME]

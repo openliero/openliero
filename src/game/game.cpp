@@ -11,6 +11,7 @@
 #include "viewport.hpp"
 #include "weapsel.hpp"
 #include "worm.hpp"
+#include <algorithm>
 
 Game::Game(
     std::shared_ptr<Common> common,
