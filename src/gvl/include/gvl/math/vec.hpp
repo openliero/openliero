@@ -179,14 +179,12 @@ namespace gvl {
 
   template <typename T>
   inline T length(basic_vec<T, 2> self) {
-    using std::sqrt;  // To allow overloading
-    return sqrt(length_sqr(self));
+    return std::sqrt(length_sqr(self));
   }
 
   template <typename T2, typename T>
   inline T2 length_convert(basic_vec<T, 2> self) {
-    using std::sqrt;  // To allow overloading
-    return sqrt(T2(length_sqr(self)));
+    return std::sqrt(T2(length_sqr(self)));
   }
 
   template <typename T>
