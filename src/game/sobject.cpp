@@ -110,9 +110,9 @@ void SObjectType::create(
           }
 
           if (std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0) {
-            int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(
-                               game.rand);  // NOTE: MUST be outside the
-                                            // unpredictable branch below
+            // NOTE: MUST be outside the  unpredictable branch below
+            int snd =
+                18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand);
             if (!game.soundPlayer->isPlaying(&w)) {
               game.soundPlayer->play(snd, &w);
             }
