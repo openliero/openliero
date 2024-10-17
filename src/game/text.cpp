@@ -88,7 +88,8 @@ bool ciLess(std::string const& a, std::string const& b) {
       return false;
   }
 
-  return b.size() > a.size();  // if b is longer, then a < b, otherwise a == b
+  // if b is longer, then a < b, otherwise a == b
+  return b.size() > a.size();
 }
 
 char utf8ToDOS(char* str) {

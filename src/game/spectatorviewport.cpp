@@ -270,10 +270,10 @@ void SpectatorViewport::draw(
           ftoi(i->y) - 3 + offs.y);
 
       if (game.settings->shadow) {
+        // TODO: Use offsX
         blitShadowImage(
             common, renderer.bmp, common.smallSprites.spritePtr(f),
-            ftoi(i->x) - 5 + offs.x,  // TODO: Use offsX
-            ftoi(i->y) - 1 + offs.y, 7, 7);
+            ftoi(i->x) - 5 + offs.x, ftoi(i->y) - 1 + offs.y, 7, 7);
       }
 
       if (game.settings->namesOnBonuses && i->frame == 0) {
@@ -297,13 +297,11 @@ void SpectatorViewport::draw(
         i->y + offs.y, 16, 16);
 
     if (game.settings->shadow) {
+      // TODO: Original doesn't offset the shadow, which is clearly wrong. Check
+      // that this offset is correct.
       blitShadowImage(
           common, renderer.bmp, common.largeSprites.spritePtr(frame),
-          i->x + offs.x - 3,
-          i->y + offs.y +
-              3,  // TODO: Original doesn't offset the shadow, which is clearly
-                  // wrong. Check that this offset is correct.
-          16, 16);
+          i->x + offs.x - 3, i->y + offs.y + 3, 16, 16);
     }
   }
 
@@ -365,14 +363,13 @@ void SpectatorViewport::draw(
       }
     }
 
+    // TODO: Read from EXE
     if (!common.H[HRemExp] && i->type - &common.weapons[0] == 34 &&
-        game.settings->namesOnBonuses)  // TODO: Read from EXE
-    {
+        game.settings->namesOnBonuses) {
       if (i->curFrame == 0) {
-        int nameNum =
-            static_cast<int>(i - game.wobjects.arr) %
-            static_cast<int>(
-                common.weapons.size());  // TODO: Something nicer maybe
+        // TODO: Something nicer maybe
+        int nameNum = static_cast<int>(i - game.wobjects.arr) %
+                      static_cast<int>(common.weapons.size());
 
         std::string const& name = common.weapons[nameNum].name;
         int width = int(name.size()) * 4;
@@ -496,27 +493,11 @@ void SpectatorViewport::draw(
       w.ai->drawDebug(game, w, renderer, offs.x, offs.y);
   }
 
-  /*
-  auto& dp = gfx.debugPoints;
-
-  for (auto& p : dp)
-  {
-          int x = ftoi(p.first) + offsX;
-          int y = ftoi(p.second) + offsY;
-
-          if(isInside(renderer.bmp.clip_rect, x, y))
-                  renderer.bmp.getPixel(x, y) = 0;
-  }*/
-
   for (std::size_t i = 0; i < game.worms.size(); ++i) {
     Worm const& worm = *game.worms[i];
     if (worm.visible) {
       auto temp = ftoi(worm.pos) - gvl::ivec2(1, 2) +
                   ftoi(cossinTable[ftoi(worm.aimingAngle)] * 16) + offs;
-      // int tempX = ftoi(worm.pos.x) - 1 +
-      // ftoi(cosTable[ftoi(worm.aimingAngle)] * 16) + offs.x; int tempY =
-      // ftoi(worm.pos.y) - 2 + ftoi(sinTable[ftoi(worm.aimingAngle)] * 16) +
-      // offs.y;
 
       blitImage(
           renderer.bmp, common.smallSprites[worm.makeSightGreen ? 44 : 43],
@@ -525,7 +506,8 @@ void SpectatorViewport::draw(
       if (worm.pressed(Worm::Control::Change)) {
         std::string const& name = worm.weapons[worm.currentWeapon].type->name;
 
-        int len = int(name.size()) * 4;  // TODO: Read 4 from exe? (SW_CHARWID)
+        // TODO: Read 4 from exe? (SW_CHARWID)
+        int len = int(name.size()) * 4;
 
         common.drawTextSmall(
             renderer.bmp, name.c_str(), ftoi(worm.pos.x) - len / 2 + 1 + offs.x,

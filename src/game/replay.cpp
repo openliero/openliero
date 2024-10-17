@@ -265,8 +265,8 @@ void archive_worms(
 
     ar.obj(worm, WormCreator());
 
-    data.settingsExpired =
-        false;  // We just serialized them, so they have to be up to date
+    // We just serialized them, so they have to be up to date
+    data.settingsExpired = false;
   }
   ar.writer.put(0);
 
@@ -290,6 +290,7 @@ void archive(Archive ar, Game& game) {
       .i32(game.screenFlash);
 
   // PRNG seed
+  // TODO figure out how to get replays to read/load this value
   ar.ui32(game.rand_seed);
 
   archive_worms(ar, game);
@@ -360,8 +361,8 @@ void ReplayWriter::beginRecord(Game& game) {
   writer.put(context.replayVersion);
 
   write(writer, context, game);
-  settingsExpired =
-      false;  // We just serialized them, so they have to be up to date
+  // We just serialized them, so they have to be up to date
+  settingsExpired = false;
 
 #ifdef DEBUG_REPLAYS
   gvl::gash::value_type h = hash(game);
@@ -469,7 +470,8 @@ void ReplayWriter::recordFrame() {
 
   bool writeStates = false;
 
-  if (game.worms.size() <= 3)  // TODO: What limit do we want here? None?
+  // TODO: What limit do we want here? None?
+  if (game.worms.size() <= 3)
     writeStates = true;
   else {
     for (auto* worm : game.worms) {
@@ -497,7 +499,8 @@ void ReplayWriter::recordFrame() {
       writer.put(state);
     }
   } else {
-    writer.put(0x80);  // Bit 7 means empty frame
+    // Bit 7 means empty frame
+    writer.put(0x80);
   }
 
   if ((game.cycles % (70 * 15)) == 0) {

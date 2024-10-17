@@ -40,8 +40,9 @@ void NinjaRope::process(Worm& owner, Game& game) {
         if (game.level.inside(ipos)) {
           if (game.level.mat(ipos).anyDirt()) {
             PalIdx pix = game.level.pixel(ipos);
-            for (int i = 0; i < 11; ++i)  // TODO: Check 11 and read from exe
-            {
+
+            // TODO: Check 11 and read from exe
+            for (int i = 0; i < 11; ++i) {
               common.nobjectTypes[2].create2(
                   game,
                   std::uniform_int_distribution<int>(0, 128 - 1)(game.rand),
@@ -54,8 +55,8 @@ void NinjaRope::process(Worm& owner, Game& game) {
       vel.zero();
     } else if (anchor) {
       if (!attached) {
-        length = LC(NRAttachLength);  // TODO: Should this value be separate
-                                      // from the non-worm attaching?
+        // TODO: Should this value be separate from the non-worm attaching?
+        length = LC(NRAttachLength);
         attached = true;
       }
 

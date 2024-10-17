@@ -27,5 +27,3 @@ struct WeaponSelection {
   bool cachedBackground, cachedSpectatorBackground;
   bool focused;
 };
-
-// void selectWeapons(Game& game);

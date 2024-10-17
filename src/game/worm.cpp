@@ -144,9 +144,9 @@ void Worm::processPhysics(Game& game) {
   mbh = vel.x > 0 ? LC(MinBounceRight) : -LC(MinBounceLeft);
   mbv = vel.y > 0 ? LC(MinBounceDown) : -LC(MinBounceUp);
 
-  if (vel.x && rh)  // TODO: We wouldn't need the vel.x check if we knew that
-                    // mbh/mbv were always non-zero
-  {
+  // TODO: We wouldn't need the vel.x check if we knew that mbh/mbv were always
+  // non-zero
+  if (vel.x && rh) {
     if (absvel.x > mbh) {
       if (common.H[HFallDamage])
         health -= LC(FallDamageRight);
@@ -199,8 +199,8 @@ void Worm::process(Game& game) {
       auto next = pos + vel;
       auto iNext = ftoi(next);
 
-      {  // Calculate reaction forces
-
+      // Calculate reaction forces
+      {
         for (int i = 0; i < 4; i++) {
           calculateReactionForce(game, iNext.x, iNext.y, i);
 
@@ -442,7 +442,8 @@ void Worm::process(Game& game) {
       if (killedTimer > 0)
         --killedTimer;
 
-      if (killedTimer == 0 && !game.quickSim)  // Don't respawn in quicksim
+      // Don't respawn in quicksim
+      if (killedTimer == 0 && !game.quickSim)
         beginRespawn(game);
 
       if (killedTimer < 0)
@@ -484,8 +485,8 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
     if (w != &worm) {
       int len = sqrVectorLength(
           ftoi(worm.pos.x) - ftoi(w->pos.x), ftoi(worm.pos.y) - ftoi(w->pos.y));
-      if (!target || len < minLen)  // First or closer worm
-      {
+      // First or closer worm
+      if (!target || len < minLen) {
         target = w;
         minLen = len;
       }
@@ -555,9 +556,9 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
   int dir = 1;
 
   for (; dir < 128; ++dir) {
+    // The original had 0xC000, which is wrong
     if (std::abs(cossinTable[dir].x - delta.x) < 0xC00 &&
-        std::abs(cossinTable[dir].y - delta.y) <
-            0xC00)  // The original had 0xC000, which is wrong
+        std::abs(cossinTable[dir].y - delta.y) < 0xC00)
       break;
   }  // 4F93
 
@@ -582,48 +583,23 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
       }
     } else {
       if (delta.y < 0) {
-        if (adeltaY > adeltaX)
+        if (adeltaY > adeltaX) {
           dir = 48 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
-        else if (adeltaX > adeltaY)
+        } else if (adeltaX > adeltaY) {
           dir = 32 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
-        else
-          dir = 48;  // This was 56, but that seems wrong
-      } else         // deltaX <= 0 && deltaY >= 0
-      {
+        } else {
+          // This was 56, but that seems wrong
+          dir = 48;
+        }
+      } else {
+        // deltaX <= 0 && deltaY >= 0
         if (adeltaX > adeltaY)
           dir = 12 + std::uniform_int_distribution<int>(0, 16 - 1)(game.rand);
         else
           dir = 12;
       }
     }
-  }  // 50FD
-
-  /* TODO (maybe)
-     if(realdist < maxdist)
-     {
-          if(dir < 64)
-          {
-   l_510E:
-           //What the hell is wrong with this code?
-           //It is messed up totaly! Translating the correct code
-           //NOTE! Something has to be done here!
-           dir += ax; //What the hell is AX?
-           if(dir > 64)
-           {
-            dir = 64;
-           }
-          } // 5167
-          if(dir > 64)
-          {
-           //The same thing with this code! Is it encrypted or what?
-           dir -= ax; //Again
-           if(dir < 64)
-           {
-            dir = 64;
-           }
-          }
-     } // 51C6
-  */
+  }
 
   change = worm.pressed(Worm::Control::Change);
 
@@ -720,7 +696,8 @@ void DumbLieroAI::process(Game& game, Worm& worm) {
 
 void Worm::initWeapons(Game& game) {
   Common& common = *game.common;
-  currentWeapon = 0;  // It was 1 in OpenLiero A1
+  // It was 1 in OpenLiero A1
+  currentWeapon = 0;
 
   for (int j = 0; j < Settings::selectableWeapons; ++j) {
     WormWeapon& ww = weapons[j];
@@ -803,10 +780,9 @@ void Worm::doRespawning(Game& game) {
   int destY = ftoi(pos.y) - 80;
   limitXY(destX, destY, game.level.width - 158, game.level.height - 158);
 
+  // Don't spawn in quicksim
   if (logicRespawn.x < destX + 5 && logicRespawn.x > destX - 5 &&
-      logicRespawn.y < destY + 5 && logicRespawn.y > destY - 5 &&
-      ready)  // Don't spawn in quicksim
-  {
+      logicRespawn.y < destY + 5 && logicRespawn.y > destY - 5 && ready) {
     auto ipos = ftoi(pos);
     drawDirtEffect(common, game.rand, game.level, 0, ipos.x - 7, ipos.y - 7);
     if (game.settings->shadow)
@@ -854,9 +830,8 @@ void Worm::processWeapons(Game& game) {
     ww.ammo = w.ammo;
   }
 
-  if (ww.loadingLeft >
-      0)  // NOTE: computedLoadingTime is never 0, so this works
-  {
+  // NOTE: computedLoadingTime is never 0, so this works
+  if (ww.loadingLeft > 0) {
     --ww.loadingLeft;
     if (ww.loadingLeft <= 0 && w.playReloadSound) {
       game.soundPlayer->play(24);
@@ -920,37 +895,6 @@ void Worm::processMovement(Game& game) {
 
         auto digPos = dir * 2 + pos;
 
-        /* TODO
-        long iDigx = ftoi(fTempx) - 4;
-        if(iDigx < 0)    iDigx = 0;
-        if(iDigx >= levwidth) iDigx = levwidth-1;
-
-        long iDigenx = ftoi(fTempx) + 4;
-        if(iDigenx < 0)    iDigenx = 0;
-        if(iDigenx >= levwidth) iDigenx = levwidth-1;
-
-        long iDigy;
-
-        long iDigsty = ftoi(fTempy) - 4;
-        if(iDigsty < 0)    iDigsty = 0;
-        if(iDigsty >= levheight) iDigsty = levheight-1;
-
-        long iDigeny = ftoi(fTempy) + 4;
-        if(iDigeny < 0)    iDigeny = 0;
-        if(iDigeny >= levheight) iDigeny = levheight-1;
-
-        for(; iDigx <= iDigenx; iDigx++)
-        {
-                for(iDigy = iDigsty; iDigy <= iDigeny; iDigy++)
-                {
-                        //Throw away every third pixel
-                        if(materials.Dirt[lev(iDigx, iDigy)] && random(3) == 0)
-                        {
-                                CreateObject2(random(128), 0, 0, itof(iDigx),
-        itof(iDigy), lev(iDigx, iDigy), 2, BYTE(w)); } // 419A } // 41A9 } //
-        41BB
-*/
-
         digPos.x -= itof(7);
         digPos.y -= itof(7);
 
@@ -982,7 +926,8 @@ void Worm::processMovement(Game& game) {
     }
 
     if (!left && !right) {
-      animate = false;  // Don't animate the this unless he is moving
+      // Don't animate the this unless he is moving
+      animate = false;
     }  // 458C
   }
 }
@@ -1257,7 +1202,8 @@ void Worm::processSteerables(Game& game) {
         if (pressed(Worm::Control::Right))
           i->curFrame += (game.cycles & 1) + 1;
 
-        i->curFrame &= 127;  // Wrap
+        // Wrap
+        i->curFrame &= 127;
         movable = false;
 
         steerableSumX += ftoi(i->pos.x);

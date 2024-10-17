@@ -65,8 +65,8 @@ void SObjectType::create(
         int power = detectRange - std::abs(delta);
         int powerSum = power;
 
-        if (std::abs(w.vel.x) < itof(2))  // TODO: Read from EXE
-        {
+        // TODO: Read from EXE
+        if (std::abs(w.vel.x) < itof(2)) {
           if (delta > 0)
             w.vel.x += blowAway * power;
           else
@@ -77,8 +77,8 @@ void SObjectType::create(
         power = detectRange - std::abs(delta);
         powerSum = (powerSum + power) / 2;
 
-        if (std::abs(w.vel.y) < itof(2))  // TODO: Read from EXE
-        {
+        // TODO: Read from EXE
+        if (std::abs(w.vel.y) < itof(2)) {
           if (delta > 0)
             w.vel.y += blowAway * power;
           else
@@ -121,7 +121,8 @@ void SObjectType::create(
       }
     }  // for( ... worms ...
 
-    int objBlowAway = blowAway / 3;  // TODO: Read from EXE
+    // TODO: Read from EXE
+    int objBlowAway = blowAway / 3;
 
     auto wr = game.wobjects.all();
     for (WObject* i; (i = wr.next());) {

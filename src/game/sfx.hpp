@@ -11,7 +11,10 @@ struct Sfx {
   struct ChannelInfo {
     ChannelInfo() : id(0) {}
 
-    void* id;  // ID of the sound playing on this channel
+    /*
+     * ID of the sound playing on this channel.
+     */
+    void* id;
   };
 
   Sfx() : initialized(false) {}

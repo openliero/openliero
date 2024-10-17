@@ -377,7 +377,6 @@ struct WObject : ExactObjectListBase {
   void process(Game& game);
 
   fixedvec pos, vel;
-  // int id;
   Weapon const* type;
   int ownerIdx;
   int curFrame;

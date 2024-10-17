@@ -105,21 +105,24 @@ void NObject::process(Game& game) {
     if (!game.level.inside(inewPos.x, ipos.y) ||
         game.pixelMat(inewPos.x, ipos.y).dirtRock()) {
       vel.x = -vel.x * t.bounce / 100;
-      vel.y = (vel.y * 4) / 5;  // TODO: Read from EXE
+      // TODO: Read from EXE
+      vel.y = (vel.y * 4) / 5;
       bounced = true;
     }
 
     if (!game.level.inside(ipos.x, inewPos.y) ||
         game.pixelMat(ipos.x, inewPos.y).dirtRock()) {
       vel.y = -vel.y * t.bounce / 100;
-      vel.x = (vel.x * 4) / 5;  // TODO: Read from EXE
+      // TODO: Read from EXE
+      vel.x = (vel.x * 4) / 5;
       bounced = true;
     }
   }
 
   if (t.bloodTrail && t.bloodTrailDelay > 0 &&
       (game.cycles % t.bloodTrailDelay) == 0) {
-    game.createBObject(pos, vel / 4);  // TODO: Read from EXE
+    // TODO: Read from EXE
+    game.createBObject(pos, vel / 4);
   }
 
   // Yes, we do this again.
@@ -144,22 +147,22 @@ void NObject::process(Game& game) {
             common, game.level,
             common.smallSprites.spritePtr(t.startFrame + curFrame), ipos.x - 3,
             ipos.y - 3, 7, 7);
-        if (game.settings->shadow)
+
+        if (game.settings->shadow) {
+          // This seems like an overly large rectangle
           correctShadow(
               common, game.level,
-              gvl::rect(
-                  ipos.x - 8, ipos.y - 8, ipos.x + 9,
-                  ipos.y + 9));  // This seems like an overly large rectangle
+              gvl::rect(ipos.x - 8, ipos.y - 8, ipos.x + 9, ipos.y + 9));
+        }
       }
 
       doExplode = true;
     }
   } else {
-    if (!bounced && t.leaveObjDelay != 0 &&
-        t.leaveObj >=
-            0  // NOTE: AFAIK, this doesn't exist in Liero, but some TCs seem to
-               // forget to set leaveObjDelay to 0 when not using this trail
-        && (game.cycles % t.leaveObjDelay) == 0) {
+    // NOTE: AFAIK, this doesn't exist in Liero, but some TCs seem to
+    // forget to set leaveObjDelay to 0 when not using this trail
+    if (!bounced && t.leaveObjDelay != 0 && t.leaveObj >= 0 &&
+        (game.cycles % t.leaveObjDelay) == 0) {
       common.sobjectTypes[t.leaveObj].create(
           game, ftoi(pos.x), ftoi(pos.y), ownerIdx, firedBy);
     }
@@ -168,8 +171,8 @@ void NObject::process(Game& game) {
   }
 
   if (t.numFrames > 0) {
-    if ((game.cycles & 7) == 0)  // TODO: Read from EXE
-    {
+    // TODO: Read from EXE
+    if ((game.cycles & 7) == 0) {
       if (vel.x > 0) {
         ++curFrame;
         if (curFrame > t.numFrames)
@@ -203,11 +206,11 @@ void NObject::process(Game& game) {
               owner, firedBy, &w, t.hitDamage, hasHit);
           hasHit = true;
 
+          // NOTE: MUST be outside the unpredictable branch below
           if (t.hitDamage > 0 && w.health > 0 &&
               std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0) {
-            int snd = 18 + std::uniform_int_distribution<int>(0, 3 - 1)(
-                               game.rand);  // NOTE: MUST be outside the
-                                            // unpredictable branch below
+            int snd =
+                18 + std::uniform_int_distribution<int>(0, 3 - 1)(game.rand);
             if (!game.soundPlayer->isPlaying(&w)) {
               game.soundPlayer->play(snd, &w);
             }

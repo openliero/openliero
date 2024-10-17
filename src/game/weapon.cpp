@@ -202,7 +202,8 @@ void WObject::process(Game& game) {
           game.pixelMat(inewPos.x, ipos.y).dirtRock()) {
         if (w.bounce != 100) {
           vel.x = -vel.x * w.bounce / 100;
-          vel.y = (vel.y * 4) / 5;  // TODO: Read from EXE
+          // TODO: Read from EXE
+          vel.y = (vel.y * 4) / 5;
         } else
           vel.x = -vel.x;
       }
@@ -211,7 +212,8 @@ void WObject::process(Game& game) {
           game.pixelMat(ipos.x, inewPos.y).dirtRock()) {
         if (w.bounce != 100) {
           vel.y = -vel.y * w.bounce / 100;
-          vel.x = (vel.x * 4) / 5;  // TODO: Read from EXE
+          // TODO: Read from EXE
+          vel.x = (vel.x * 4) / 5;
         } else
           vel.y = -vel.y;
       }
@@ -281,8 +283,8 @@ void WObject::process(Game& game) {
         }
       }
     } else {
-      vel.y += w.gravity;  // The original tested w.gravity first, which doesn't
-                           // seem like a gain
+      // The original tested w.gravity first, which doesn't seem like a gain
+      vel.y += w.gravity;
 
       if (w.numFrames > 0) {
         if ((game.cycles & 7) == 0) {
@@ -332,8 +334,9 @@ void WObject::process(Game& game) {
 
         if (w.hitDamage > 0 && worm.health > 0 &&
             std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) == 0) {
-          int snd = std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) +
-                    18;  // NOTE: MUST be outside the unpredictable branch below
+          // NOTE: MUST be outside the unpredictable branch below
+          int snd =
+              std::uniform_int_distribution<int>(0, 3 - 1)(game.rand) + 18;
           if (!game.soundPlayer->isPlaying(&worm)) {
             game.soundPlayer->play(snd, &worm);
           }

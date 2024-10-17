@@ -46,8 +46,6 @@ struct ReplayWriter : Replay {
   void unfocus();
   void focus();
 
-  // gvl::filter_ptr str;
-  // gvl::octet_stream_writer writer;
   gvl::octet_writer writer;
   gvl::gash::value_type lastSettingsHash;
   bool settingsExpired;

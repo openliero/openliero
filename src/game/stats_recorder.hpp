@@ -26,8 +26,6 @@ struct StatsRecorder : gvl::shared {
   virtual void finish(Game& game);
 
   virtual void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
-
-  // virtual void write(Common& common, gvl::stream_ptr sink);
 };
 
 struct WeaponStats {
