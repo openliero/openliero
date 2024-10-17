@@ -594,36 +594,6 @@ void FollowAI::drawDebug(
   }
 }
 
-#if AI_THREADS
-
-struct MutateWork : Work {
-  int evaluations;
-  int maxEvaluations;
-  Plan best;
-  Worm* worm;
-  Game game;
-
-  virtual void run() {
-    while (evaluations < maxEvaluations)  // game.settings->aiMutations + 1
-    {
-      auto candidate = best;
-      EvaluateResult result(
-          mutate(*this, game, worm, target, candidate, 1, prevResult));
-      ++evaluations;
-
-      double weightedScore = result.weightedScore();
-      if (weightedScore >= bestScore) {
-        best = candidate;
-        bestScore = weightedScore;
-        prevResult = std::move(result);
-        prevResultAge = 0;
-      }
-    }
-  }
-};
-
-#endif
-
 void FollowAI::process(Game& game, Worm& worm) {
   Common& common = *game.common;
 

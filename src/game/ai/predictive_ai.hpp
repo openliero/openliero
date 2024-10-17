@@ -324,13 +324,7 @@ struct FollowAI : WormAI, AiContext {
         candPlan(candPopSize),
         best(0),
         testing(testing),
-        weights(weights)
-#if AI_THREADS
-        ,
-        workQueue(2)
-#endif
-  {
-  }
+        weights(weights) {}
 
   ~FollowAI() override {}
 
@@ -360,10 +354,6 @@ struct FollowAI : WormAI, AiContext {
   CandPlan* best;
 
   bool testing;
-
-#if AI_THREADS
-  WorkQueue workQueue;
-#endif
 
   Weights weights;
 };

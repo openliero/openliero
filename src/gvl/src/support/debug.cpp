@@ -1,5 +1,5 @@
+#ifndef NDEBUG
 #include "gvl/support/debug.hpp"
-
 #include <cstdlib>
 #include <string>
 
@@ -22,3 +22,4 @@ void gvl::passert_fail(
   fprintf(stderr, "%s\n", s.c_str());
   abort();
 }
+#endif

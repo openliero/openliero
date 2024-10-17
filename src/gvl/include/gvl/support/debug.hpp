@@ -3,11 +3,9 @@
 #include <stdexcept>
 
 namespace gvl {
-
+#ifndef NDEBUG
   void
   passert_fail(char const* cond, char const* file, int line, char const* msg);
-
-#ifndef NDEBUG
 #define GVL_PASSERT(cond, msg) \
   if (!(cond))                 \
   gvl::passert_fail(#cond, __FILE__, __LINE__, msg)

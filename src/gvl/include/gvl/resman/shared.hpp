@@ -37,7 +37,8 @@ namespace gvl {
 
     void _clear_weak_ptrs() const {}
 
-    mutable int _ref_count;  // You should be able to have shared_ptr<T const>
+    // You should be able to have shared_ptr<T const>
+    mutable int _ref_count;
     weak_ptr_common* _first;
   };
 

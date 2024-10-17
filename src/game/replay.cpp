@@ -6,8 +6,6 @@
 #include "viewport.hpp"
 #include "worm.hpp"
 
-// #define DEBUG_REPLAYS 1
-
 struct WormCreator {
   Worm* operator()(const GameSerializationContext& context) {
     return new Worm();
@@ -345,14 +343,7 @@ std::unique_ptr<Game> ReplayReader::beginPlayback(
   std::unique_ptr<Game> game(new Game(common, settings, soundPlayer));
 
   read(reader, context, *game);
-#ifdef DEBUG_REPLAYS
-  gvl::gash::value_type actualH = hash(*game);
-  gvl::gash::value_type expectedH;
-  read(reader, context, expectedH);
 
-  if (actualH != expectedH)
-    printf("Differing hashes\n");
-#endif
   return game;
 }
 
@@ -363,11 +354,6 @@ void ReplayWriter::beginRecord(Game& game) {
   write(writer, context, game);
   // We just serialized them, so they have to be up to date
   settingsExpired = false;
-
-#ifdef DEBUG_REPLAYS
-  gvl::gash::value_type h = hash(game);
-  write(writer, context, h);
-#endif
 }
 
 void ReplayWriter::endRecord() {
@@ -440,22 +426,6 @@ bool ReplayReader::playbackFrame(Renderer& renderer) {
       throw std::runtime_error("Replay has desynced");
   }
 
-#ifdef DEBUG_REPLAYS
-  uint32_t expected = gvl::read_uint32(reader);
-  uint32_t expected2 = gvl::read_uint32(reader);
-  gvl::gash::value_type actual = hash(game);
-  if (expected != static_cast<uint32_t>(actual.value[0])) {
-    std::cout << "Expected: " << expected
-              << ", was: " << static_cast<uint32_t>(actual.value[0])
-              << std::endl;
-    std::cout << "Frame: " << game.cycles << std::endl;
-    throw std::runtime_error("Desynced state");
-  }
-  if (expected2 != game.cycles) {
-    throw std::runtime_error("Descyned stream");
-  }
-#endif
-
   return true;
 }
 
@@ -507,12 +477,6 @@ void ReplayWriter::recordFrame() {
     uint32_t checksum = fastGameChecksum(game);
     gvl::write_uint32(writer, checksum);
   }
-
-#ifdef DEBUG_REPLAYS
-  gvl::gash::value_type actual = hash(game);
-  gvl::write_uint32(writer, static_cast<uint32_t>(actual.value[0]));
-  gvl::write_uint32(writer, game.cycles);
-#endif
 }
 
 void ReplayWriter::unfocus() {

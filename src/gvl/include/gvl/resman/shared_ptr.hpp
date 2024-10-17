@@ -17,8 +17,7 @@ namespace gvl {
   struct deferred_ptr;
 
   template <typename T>
-  struct shared_ptr  // : shared_ptr_common
-  {
+  struct shared_ptr {
     shared_ptr() : v(0) {}
 
     // Takes ownership, v_init assumed fresh (no add_ref!)
@@ -135,7 +134,8 @@ namespace gvl {
    private:
     // Takes ownership (no add_ref!)
     void _reset(T* v_new) {
-      sassert(v_new != v);  // self-reset is invalid
+      // self-reset is invalid
+      sassert(v_new != v);
       _release();
       v = v_new;
     }
@@ -172,8 +172,7 @@ namespace gvl {
 
   // Cheaper, ownership-passing version of shared_ptr
   template <typename T>
-  struct deferred_ptr  // : shared_ptr_common
-  {
+  struct deferred_ptr {
    private:
    public:
     template <typename T2>
@@ -270,13 +269,15 @@ namespace gvl {
 
    private:
     void _reset(T* v_new) {
-      sassert(v_new != v);  // self-reset is invalid
+      // self-reset is invalid
+      sassert(v_new != v);
       _release();
       v = v_new;
     }
 
     void _reset_shared(T* v_new) {
-      T* old = v;  // Handles self-reset.
+      // Handles self-reset.
+      T* old = v;
       _set(v_new);
       if (old)
         old->release();

@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 
+#include "gvl/support/noncopyable.hpp"
 #include "gvl/support/type_info.hpp"
 
 namespace gvl {
@@ -16,7 +17,7 @@ namespace gvl {
   };
 
   template <typename DerivedT>
-  struct serialization_context {
+  struct serialization_context : noncopyable {
     struct type {
       type() : next_id(1) {}
 
@@ -133,10 +134,6 @@ namespace gvl {
     }
 
    private:
-    // Non-copyable
-    serialization_context(serialization_context const&);
-    serialization_context& operator=(serialization_context const&);
-
     std::map<gvl::type_info, type*> types;
   };
 
