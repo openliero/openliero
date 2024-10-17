@@ -1,5 +1,6 @@
 #include "common.hpp"
 
+#include <algorithm>
 #include <gvl/io2/convert.hpp>
 #include <gvl/io2/fstream.hpp>
 #include <map>
@@ -8,7 +9,6 @@
 #include "filesystem.hpp"
 #include "gfx/blit.hpp"
 #include "worm.hpp"
-#include <algorithm>
 
 int Common::fireConeOffset
     [FIRE_CONE_OFFSET_DIRECTION][FIRE_CONE_OFFSET_ANGLE_FRAME]

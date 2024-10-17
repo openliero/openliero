@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <type_traits>
 #include <vector>
-#include <algorithm>
 
 using std::vector;
 

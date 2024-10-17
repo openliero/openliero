@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <ctime>
 
+#include <algorithm>
 #include "ai/predictive_ai.hpp"
 #include "constants.hpp"
 #include "filesystem.hpp"
@@ -11,7 +12,6 @@
 #include "viewport.hpp"
 #include "weapsel.hpp"
 #include "worm.hpp"
-#include <algorithm>
 
 Game::Game(
     std::shared_ptr<Common> common,
