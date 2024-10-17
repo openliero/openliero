@@ -203,9 +203,13 @@ void LocalController::draw(Renderer& renderer, bool useSpectatorViewports) {
  * https://pubs.opengroup.org/onlinepubs/9699919799/functions/localtime_r.html
  */
 std::tm* localtime_reentrant(time_t* timer) {
+#ifdef _WIN32
 #if _MSC_VER >= 1400
   // localtime is thread-safe as of VS8.0 (2005)
   return localtime(timer);
+#else
+#error MSVC 8.0 (2005) or newer required.
+#endif
 #else
   // POSIX
   std::tm temp;
