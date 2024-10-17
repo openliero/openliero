@@ -1,10 +1,8 @@
+#include <windows.h>
 #include <exception>
 #include <string>
 
 int gameEntry(int argc, char* argv[]);
-
-#if _WIN32
-#include <windows.h>
 
 INT WINAPI WinMain(
     HINSTANCE hInstance,
@@ -22,8 +20,3 @@ INT WINAPI WinMain(
     return 1;
   }
 }
-#else
-int main(int argc, char* argv[]) {
-  return gameEntry(argc, argv);
-}
-#endif

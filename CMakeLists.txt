@@ -62,7 +62,7 @@ add_subdirectory(src/game)
 if(APPLE)
   add_executable(openliero
     src/game/gameEntry.cpp
-    src/game/main.cpp
+    src/game/main_unix.cpp
   )
 # Commented out code creates a proper bundle, but the app does not run for ... unknown reasons?
 # Anyway, enjoy your weird CLI app, macOS users. :(
@@ -91,18 +91,18 @@ if(APPLE)
 #
 #  set(RESOURCE_FILES ${PROFILES} ${RESOURCES} ${SETUPS} ${TC} ${ICON})
 #
-#  add_executable(openliero MACOSX_BUNDLE src/game/main.cpp "${RESOURCE_FILES}")
+#  add_executable(openliero MACOSX_BUNDLE src/game/main_unix.cpp "${RESOURCE_FILES}")
 elseif(WIN32)
   add_executable(openliero
     WIN32
     src/game/gameEntry.cpp
-    src/game/main.cpp
+    src/game/main_win32.cpp
     packaging/icons/openliero.rc
   )
 else()
   add_executable(openliero
     src/game/gameEntry.cpp
-    src/game/main.cpp
+    src/game/main_unix.cpp
   )
 endif()
 
