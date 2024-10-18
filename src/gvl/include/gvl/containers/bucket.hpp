@@ -145,7 +145,7 @@ namespace gvl {
 
     void split(std::size_t point) {
       passert(size_known(), "Size is unknown");
-      passert(0 <= point && point <= size(), "Split point is out of bounds");
+      passert(point <= size(), "Split point is out of bounds");
 
       if (point == 0 || point == size())
         return;  // No need to do anything

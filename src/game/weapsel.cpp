@@ -58,8 +58,7 @@ WeaponSelection::WeaponSelection(Game& game)
 
           int w = common.weapOrder[ws.weapons[j] - 1];
 
-          if ((!enoughWeapons || !weapUsed[w]) &&
-              game.settings->weapTable[w] <= 0)
+          if (!enoughWeapons || !weapUsed[w])
             break;
         }
       }
@@ -292,8 +291,7 @@ bool WeaponSelection::processFrame() {
 
               int w = common.weapOrder[ws.weapons[j] - 1];
 
-              if ((!enoughWeapons || !weapUsed[w]) &&
-                  game.settings->weapTable[w] <= 0)
+              if (!enoughWeapons || !weapUsed[w])
                 break;
             }
 
