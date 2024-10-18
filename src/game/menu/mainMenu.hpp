@@ -6,17 +6,17 @@ struct Common;
 struct ItemBehavior;
 
 struct MainMenu : Menu {
-  enum {
-    MaResumeGame,
-    MaNewGame,
-    MaSettings,
-    MaPlayer1Settings,
-    MaPlayer2Settings,
-    MaAdvanced,
-    MaQuit,
-    MaReplays,
-    MaReplay,
-    MaTc
+  enum Option {
+    ResumeGame,
+    NewGame,
+    Settings,
+    Player1Settings,
+    Player2Settings,
+    Advanced,
+    Quit,
+    Replays,
+    Replay,
+    TC
   };
 
   MainMenu(int x, int y) : Menu(x, y) {}

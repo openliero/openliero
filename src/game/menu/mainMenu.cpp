@@ -1,5 +1,4 @@
 #include "mainMenu.hpp"
-
 #include "../gfx.hpp"
 #include "../sfx.hpp"
 
@@ -25,7 +24,7 @@ struct TcSelectBehavior : ItemBehavior {
     if (newCommon) {
       // TODO: mixer may still be using sounds from the old common
       gfx.common.reset(newCommon.release());
-      return MainMenu::MaTc;
+      return MainMenu::Option::TC;
     }
     return -1;
   }
@@ -35,10 +34,10 @@ struct TcSelectBehavior : ItemBehavior {
 
 ItemBehavior* MainMenu::getItemBehavior(Common& common, MenuItem& item) {
   switch (item.id) {
-    case MaReplays:
+    case MainMenu::Option::Replays:
       return new ReplaySelectBehavior(common);
 
-    case MaTc:
+    case MainMenu::Option::TC:
       return new TcSelectBehavior(common);
 
     default:

@@ -109,7 +109,8 @@ struct FileNode : gvl::shared {
 
   string pathName;
   bool filled;
-  FsNode fsNode;  // Starts out invalid
+  // Starts out invalid
+  FsNode fsNode;
 };
 
 struct ChildSort {
@@ -149,8 +150,8 @@ void FileNode::fill() {
 struct FileSelector {
   FileSelector(Common& common, int x = 178) : common(common) {}
 
-  void fill(string const& path, FileFilter filter)  // TODO: Get rid of this
-  {
+  // TODO: Get rid of this
+  void fill(string const& path, FileFilter filter) {
     fill(FsNode(path), filter);
   }
 
@@ -280,10 +281,6 @@ struct FileSelector {
   }
 
   Common& common;
-  // vector<pair<FileNode*, int> > history;
-
   FileNode rootNode;
   FileNode* currentNode;
-
-  // Menu menu;
 };

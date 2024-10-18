@@ -1,21 +1,18 @@
 #include "menu.hpp"
-
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include "../common.hpp"
 #include "../gfx.hpp"
 #include "../reader.hpp"
 #include "../sfx.hpp"
 #include "../text.hpp"
 
-#include "../common.hpp"
-
 void Menu::onKeys(SDL_Keysym* begin, const SDL_Keysym* end, bool contains) {
   for (; begin != end; ++begin) {
     bool isTab = begin->scancode == SDL_SCANCODE_TAB;
-    if ((begin->sym >= 32 &&
-         begin->sym <= 127)  // x >= SDLK_SPACE && x <= SDLK_DELETE
-        || isTab) {
+    // x >= SDLK_SPACE && x <= SDLK_DELETE
+    if ((begin->sym >= 32 && begin->sym <= 127) || isTab) {
       auto time = SDL_GetTicks64();
       if (!isTab && time - searchTime > 1500)
         searchPrefix.clear();
@@ -158,9 +155,10 @@ bool Menu::itemPosition(MenuItem& item, int& x, int& y) {
 }
 
 void Menu::ensureInView(int item) {
+  // Can't show items outside the menu or invisible items
   if (item < 0 || item >= static_cast<int>(items.size()) ||
       !items[item].visible)
-    return;  // Can't show items outside the menu or invisible items
+    return;
 
   int visibleIndex = visibleItemIndex(item);
 

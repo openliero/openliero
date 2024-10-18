@@ -1,12 +1,10 @@
 #pragma once
 
 #include <SDL.h>
-#include <gvl/math/rect.hpp>
-
 #include <cassert>
 #include <cstdio>
+#include <gvl/math/rect.hpp>
 #include <random>
-
 #include "common.hpp"
 #include "filesystem.hpp"
 #include "gfx/bitmap.hpp"
@@ -34,26 +32,26 @@ struct Gfx;
 struct PlayerMenu : Menu {
   PlayerMenu(int x, int y) : Menu(x, y) {}
 
-  enum {
-    PlName,
-    PlHealth,
-    PlRed,
-    PlGreen,
-    PlBlue,
-    PlUp,
-    PlDown,
-    PlLeft,
-    PlRight,
-    PlFire,
-    PlChange,
-    PlJump,
-    PlDig,
-    PlWeap0,
-    PlController = PlWeap0 + 5,
-    PlSaveProfile,
-    PlSaveProfileAs,
-    PlLoadProfile,
-    PlLoadedProfile,
+  enum Option {
+    Name,
+    Health,
+    Red,
+    Green,
+    Blue,
+    Up,
+    Down,
+    Left,
+    Right,
+    Fire,
+    Change,
+    Jump,
+    Dig,
+    Weap0,
+    Controller = Weap0 + 5,
+    SaveProfile,
+    SaveProfileAs,
+    LoadProfile,
+    LoadedProfile,
   };
 
   virtual void drawItemOverlay(
@@ -71,21 +69,21 @@ struct PlayerMenu : Menu {
 };
 
 struct SettingsMenu : Menu {
-  enum {
-    SiGameMode,
-    SiLives,
-    SiTimeToLose,  // Extra
-    SiTimeToWin,
-    SiZoneTimeout,
-    SiFlagsToWin,  // Extra
-    SiLoadingTimes,
-    SiMaxBonuses,
-    SiNamesOnBonuses,
-    SiMap,
-    SiAmountOfBlood,
-    SiLevel,
-    SiRegenerateLevel,
-    SiWeaponOptions,
+  enum Option {
+    GameMode,
+    Lives,
+    TimeToLose,  // Extra
+    TimeToWin,
+    ZoneTimeout,
+    FlagsToWin,  // Extra
+    LoadingTimes,
+    MaxBonuses,
+    NamesOnBonuses,
+    Map,
+    AmountOfBlood,
+    Level,
+    RegenerateLevel,
+    WeaponOptions,
     LoadOptions,
     SaveOptions,
     LoadChange,
@@ -245,8 +243,9 @@ struct Gfx {
 
   Menu* curMenu;
   std::string prevSelectedReplayPath;
-  FsNode settingsNode;  // Currently loaded settings file. TODO: This is only
-                        // used for display. We could just remember the name.
+  // Currently loaded settings file. TODO: This is only used for display. We
+  // could just remember the name.
+  FsNode settingsNode;
   std::shared_ptr<Settings> settings;
 
   bool dosKeys[177];

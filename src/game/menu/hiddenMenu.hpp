@@ -6,7 +6,7 @@ struct Common;
 struct ItemBehavior;
 
 struct HiddenMenu : Menu {
-  enum {
+  enum Option {
     RecordReplays,
     LoadPowerLevels,
     // ScalingFilter,

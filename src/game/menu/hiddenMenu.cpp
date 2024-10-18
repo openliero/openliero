@@ -1,10 +1,8 @@
 #include "hiddenMenu.hpp"
-
-#include "arrayEnumBehavior.hpp"
-
 #include "../filesystem.hpp"
 #include "../gfx.hpp"
 #include "../sfx.hpp"
+#include "arrayEnumBehavior.hpp"
 
 static std::string const botWeaponSel[3] = {"RANDOM", "PICK", "KEEP"};
 
@@ -64,8 +62,8 @@ void HiddenMenu::drawItemOverlay(
     int y,
     bool selected,
     bool disabled) {
-  if (item.id == PaletteSelect)  // Color settings
-  {
+  // Color settings
+  if (item.id == PaletteSelect) {
     int w = 30;
     int offsX = 44;
 

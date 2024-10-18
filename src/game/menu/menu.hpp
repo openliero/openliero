@@ -2,21 +2,18 @@
 
 #include <SDL.h>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <string>
 #include <vector>
 #include "../gfx/color.hpp"
 #include "../gfx/renderer.hpp"
-
-#include <cstdint>
-
-#include "itemBehavior.hpp"
-#include "menuItem.hpp"
-
 #include "booleanSwitchBehavior.hpp"
 #include "enumBehavior.hpp"
 #include "integerBehavior.hpp"
+#include "itemBehavior.hpp"
+#include "menuItem.hpp"
 #include "timeBehavior.hpp"
 
 struct Common;
@@ -181,8 +178,10 @@ struct Menu {
   int x, y;
   int height;
 
-  int topItem;     // Visible index
-  int bottomItem;  // Visible index
+  // Visible index
+  int topItem;
+  // Visible index
+  int bottomItem;
   // bool showScroll;
 
   int visibleItemCount;
@@ -190,5 +189,6 @@ struct Menu {
   bool centered;
 
  private:
-  int selection_;  // Global index
+  // Global index
+  int selection_;
 };

@@ -1,5 +1,4 @@
 #include "integerBehavior.hpp"
-
 #include "../common.hpp"
 #include "../gfx.hpp"
 #include "../sfx.hpp"
@@ -27,8 +26,9 @@ bool IntegerBehavior::onLeftRight(Menu& menu, MenuItem& item, int dir) {
 int IntegerBehavior::onEnter(Menu& menu, MenuItem& item) {
   sfx.play(common, 27);
 
+  // Not allowed
   if (!allowEntry)
-    return -1;  // Not allowed
+    return -1;
 
   int x, y;
   if (menu.itemPosition(item, x, y)) {

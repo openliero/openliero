@@ -416,99 +416,111 @@ void Gfx::onWindowResize(Uint32 windowID) {
 
 void Gfx::loadMenus() {
   hiddenMenu.addItem(
-      MenuItem(48, 7, "FULLSCREEN (F11)", HiddenMenu::Fullscreen));
-  hiddenMenu.addItem(MenuItem(48, 7, "DOUBLE SIZE", HiddenMenu::DoubleRes));
+      MenuItem(48, 7, "FULLSCREEN (F11)", HiddenMenu::Option::Fullscreen));
   hiddenMenu.addItem(
-      MenuItem(48, 7, "POWERLEVEL PALETTES", HiddenMenu::LoadPowerLevels));
-  hiddenMenu.addItem(MenuItem(48, 7, "SHADOWS", HiddenMenu::Shadows));
+      MenuItem(48, 7, "DOUBLE SIZE", HiddenMenu::Option::DoubleRes));
+  hiddenMenu.addItem(MenuItem(
+      48, 7, "POWERLEVEL PALETTES", HiddenMenu::Option::LoadPowerLevels));
+  hiddenMenu.addItem(MenuItem(48, 7, "SHADOWS", HiddenMenu::Option::Shadows));
+  hiddenMenu.addItem(MenuItem(
+      48, 7, "AUTO-RECORD REPLAYS", HiddenMenu::Option::RecordReplays));
   hiddenMenu.addItem(
-      MenuItem(48, 7, "AUTO-RECORD REPLAYS", HiddenMenu::RecordReplays));
-  hiddenMenu.addItem(MenuItem(48, 7, "AI FRAMES", HiddenMenu::AiFrames));
-  hiddenMenu.addItem(MenuItem(48, 7, "AI MUTATIONS", HiddenMenu::AiMutations));
-  hiddenMenu.addItem(MenuItem(48, 7, "AI PARALLELS", HiddenMenu::AiParallels));
-  hiddenMenu.addItem(MenuItem(48, 7, "AI TRACES", HiddenMenu::AiTraces));
-  hiddenMenu.addItem(MenuItem(48, 7, "PALETTE", HiddenMenu::PaletteSelect));
+      MenuItem(48, 7, "AI FRAMES", HiddenMenu::Option::AiFrames));
   hiddenMenu.addItem(
-      MenuItem(48, 7, "BOT WEAPONS", HiddenMenu::SelectBotWeapons));
+      MenuItem(48, 7, "AI MUTATIONS", HiddenMenu::Option::AiMutations));
   hiddenMenu.addItem(
-      MenuItem(48, 7, "SEE SPAWN POINT", HiddenMenu::AllowViewingSpawnPoint));
+      MenuItem(48, 7, "AI PARALLELS", HiddenMenu::Option::AiParallels));
   hiddenMenu.addItem(
-      MenuItem(48, 7, "SINGLE SCREEN REPLAY", HiddenMenu::SingleScreenReplay));
+      MenuItem(48, 7, "AI TRACES", HiddenMenu::Option::AiTraces));
   hiddenMenu.addItem(
-      MenuItem(48, 7, "SPECTATOR WINDOW", HiddenMenu::SpectatorWindow));
+      MenuItem(48, 7, "PALETTE", HiddenMenu::Option::PaletteSelect));
+  hiddenMenu.addItem(
+      MenuItem(48, 7, "BOT WEAPONS", HiddenMenu::Option::SelectBotWeapons));
+  hiddenMenu.addItem(MenuItem(
+      48, 7, "SEE SPAWN POINT", HiddenMenu::Option::AllowViewingSpawnPoint));
+  hiddenMenu.addItem(MenuItem(
+      48, 7, "SINGLE SCREEN REPLAY", HiddenMenu::Option::SingleScreenReplay));
+  hiddenMenu.addItem(
+      MenuItem(48, 7, "SPECTATOR WINDOW", HiddenMenu::Option::SpectatorWindow));
 
   playerMenu.addItem(
-      MenuItem(3, 7, "PROFILE LOADED", PlayerMenu::PlLoadedProfile));
-  playerMenu.addItem(MenuItem(3, 7, "SAVE PROFILE", PlayerMenu::PlSaveProfile));
+      MenuItem(3, 7, "PROFILE LOADED", PlayerMenu::Option::LoadedProfile));
   playerMenu.addItem(
-      MenuItem(3, 7, "SAVE PROFILE AS...", PlayerMenu::PlSaveProfileAs));
-  playerMenu.addItem(MenuItem(3, 7, "LOAD PROFILE", PlayerMenu::PlLoadProfile));
-  playerMenu.addItem(MenuItem(48, 7, "NAME", PlayerMenu::PlName));
-  playerMenu.addItem(MenuItem(48, 7, "HEALTH", PlayerMenu::PlHealth));
-  playerMenu.addItem(MenuItem(48, 7, "Red", PlayerMenu::PlRed));
-  playerMenu.addItem(MenuItem(48, 7, "Green", PlayerMenu::PlGreen));
-  playerMenu.addItem(MenuItem(48, 7, "Blue", PlayerMenu::PlBlue));
-  playerMenu.addItem(MenuItem(48, 7, "AIM UP", PlayerMenu::PlUp));
-  playerMenu.addItem(MenuItem(48, 7, "AIM DOWN", PlayerMenu::PlDown));
-  playerMenu.addItem(MenuItem(48, 7, "MOVE LEFT", PlayerMenu::PlLeft));
-  playerMenu.addItem(MenuItem(48, 7, "MOVE RIGHT", PlayerMenu::PlRight));
-  playerMenu.addItem(MenuItem(48, 7, "FIRE", PlayerMenu::PlFire));
-  playerMenu.addItem(MenuItem(48, 7, "CHANGE", PlayerMenu::PlChange));
-  playerMenu.addItem(MenuItem(48, 7, "JUMP", PlayerMenu::PlJump));
-  playerMenu.addItem(MenuItem(48, 7, "DIG", PlayerMenu::PlDig));
+      MenuItem(3, 7, "SAVE PROFILE", PlayerMenu::Option::SaveProfile));
+  playerMenu.addItem(
+      MenuItem(3, 7, "SAVE PROFILE AS...", PlayerMenu::Option::SaveProfileAs));
+  playerMenu.addItem(
+      MenuItem(3, 7, "LOAD PROFILE", PlayerMenu::Option::LoadProfile));
+  playerMenu.addItem(MenuItem(48, 7, "NAME", PlayerMenu::Option::Name));
+  playerMenu.addItem(MenuItem(48, 7, "HEALTH", PlayerMenu::Option::Health));
+  playerMenu.addItem(MenuItem(48, 7, "Red", PlayerMenu::Option::Red));
+  playerMenu.addItem(MenuItem(48, 7, "Green", PlayerMenu::Option::Green));
+  playerMenu.addItem(MenuItem(48, 7, "Blue", PlayerMenu::Option::Blue));
+  playerMenu.addItem(MenuItem(48, 7, "AIM UP", PlayerMenu::Option::Up));
+  playerMenu.addItem(MenuItem(48, 7, "AIM DOWN", PlayerMenu::Option::Down));
+  playerMenu.addItem(MenuItem(48, 7, "MOVE LEFT", PlayerMenu::Option::Left));
+  playerMenu.addItem(MenuItem(48, 7, "MOVE RIGHT", PlayerMenu::Option::Right));
+  playerMenu.addItem(MenuItem(48, 7, "FIRE", PlayerMenu::Option::Fire));
+  playerMenu.addItem(MenuItem(48, 7, "CHANGE", PlayerMenu::Option::Change));
+  playerMenu.addItem(MenuItem(48, 7, "JUMP", PlayerMenu::Option::Jump));
+  playerMenu.addItem(MenuItem(48, 7, "DIG", PlayerMenu::Option::Dig));
 
   for (int i = 0; i < 5; ++i)
     playerMenu.addItem(MenuItem(
         48, 7, std::string("WEAPON ") + (char)(i + '1'),
-        PlayerMenu::PlWeap0 + i));
+        PlayerMenu::Option::Weap0 + i));
 
-  playerMenu.addItem(MenuItem(48, 7, "CONTROLLER", PlayerMenu::PlController));
+  playerMenu.addItem(
+      MenuItem(48, 7, "CONTROLLER", PlayerMenu::Option::Controller));
 
-  settingsMenu.addItem(MenuItem(48, 7, "GAME MODE", SettingsMenu::SiGameMode));
   settingsMenu.addItem(
-      MenuItem(48, 7, "TIME TO LOSE", SettingsMenu::SiTimeToLose));
+      MenuItem(48, 7, "GAME MODE", SettingsMenu::Option::GameMode));
   settingsMenu.addItem(
-      MenuItem(48, 7, "TIME TO WIN", SettingsMenu::SiTimeToWin));
+      MenuItem(48, 7, "TIME TO LOSE", SettingsMenu::Option::TimeToLose));
   settingsMenu.addItem(
-      MenuItem(48, 7, "ZONE TIMEOUT", SettingsMenu::SiZoneTimeout));
+      MenuItem(48, 7, "TIME TO WIN", SettingsMenu::Option::TimeToWin));
   settingsMenu.addItem(
-      MenuItem(48, 7, "FLAGS TO WIN", SettingsMenu::SiFlagsToWin));
-  settingsMenu.addItem(MenuItem(48, 7, "LIVES", SettingsMenu::SiLives));
-  settingsMenu.addItem(MenuItem(48, 7, "LEVEL", SettingsMenu::SiLevel));
+      MenuItem(48, 7, "ZONE TIMEOUT", SettingsMenu::Option::ZoneTimeout));
   settingsMenu.addItem(
-      MenuItem(48, 7, "LOADING TIMES", SettingsMenu::SiLoadingTimes));
+      MenuItem(48, 7, "FLAGS TO WIN", SettingsMenu::Option::FlagsToWin));
+  settingsMenu.addItem(MenuItem(48, 7, "LIVES", SettingsMenu::Option::Lives));
+  settingsMenu.addItem(MenuItem(48, 7, "LEVEL", SettingsMenu::Option::Level));
   settingsMenu.addItem(
-      MenuItem(48, 7, "WEAPON OPTIONS", SettingsMenu::SiWeaponOptions));
+      MenuItem(48, 7, "LOADING TIMES", SettingsMenu::Option::LoadingTimes));
   settingsMenu.addItem(
-      MenuItem(48, 7, "MAX BONUSES", SettingsMenu::SiMaxBonuses));
+      MenuItem(48, 7, "WEAPON OPTIONS", SettingsMenu::Option::WeaponOptions));
   settingsMenu.addItem(
-      MenuItem(48, 7, "NAMES ON BONUSES", SettingsMenu::SiNamesOnBonuses));
-  settingsMenu.addItem(MenuItem(48, 7, "MAP", SettingsMenu::SiMap));
+      MenuItem(48, 7, "MAX BONUSES", SettingsMenu::Option::MaxBonuses));
+  settingsMenu.addItem(MenuItem(
+      48, 7, "NAMES ON BONUSES", SettingsMenu::Option::NamesOnBonuses));
+  settingsMenu.addItem(MenuItem(48, 7, "MAP", SettingsMenu::Option::Map));
   settingsMenu.addItem(
-      MenuItem(48, 7, "AMOUNT OF BLOOD", SettingsMenu::SiAmountOfBlood));
+      MenuItem(48, 7, "AMOUNT OF BLOOD", SettingsMenu::Option::AmountOfBlood));
   settingsMenu.addItem(
-      MenuItem(48, 7, "LOAD+CHANGE", SettingsMenu::LoadChange));
+      MenuItem(48, 7, "LOAD+CHANGE", SettingsMenu::Option::LoadChange));
+  settingsMenu.addItem(MenuItem(
+      48, 7, "REGENERATE LEVEL", SettingsMenu::Option::RegenerateLevel));
   settingsMenu.addItem(
-      MenuItem(48, 7, "REGENERATE LEVEL", SettingsMenu::SiRegenerateLevel));
+      MenuItem(48, 7, "SAVE SETUP AS...", SettingsMenu::Option::SaveOptions));
   settingsMenu.addItem(
-      MenuItem(48, 7, "SAVE SETUP AS...", SettingsMenu::SaveOptions));
-  settingsMenu.addItem(
-      MenuItem(48, 7, "LOAD SETUP", SettingsMenu::LoadOptions));
+      MenuItem(48, 7, "LOAD SETUP", SettingsMenu::Option::LoadOptions));
 
+  mainMenu.addItem(MenuItem(
+      10, 10, "", MainMenu::Option::ResumeGame));  // string set in menuLoop
+  mainMenu.addItem(MenuItem(
+      10, 10, "", MainMenu::Option::NewGame));  // string set in menuLoop
   mainMenu.addItem(
-      MenuItem(10, 10, "", MainMenu::MaResumeGame));  // string set in menuLoop
-  mainMenu.addItem(
-      MenuItem(10, 10, "", MainMenu::MaNewGame));  // string set in menuLoop
-  mainMenu.addItem(MenuItem(48, 48, "OPTIONS (F2)", MainMenu::MaAdvanced));
-  mainMenu.addItem(MenuItem(48, 48, "REPLAYS (F3)", MainMenu::MaReplays));
-  mainMenu.addItem(MenuItem(48, 48, "TC", MainMenu::MaTc));
-  mainMenu.addItem(MenuItem(6, 6, "QUIT TO OS", MainMenu::MaQuit));
+      MenuItem(48, 48, "OPTIONS (F2)", MainMenu::Option::Advanced));
+  mainMenu.addItem(MenuItem(48, 48, "REPLAYS (F3)", MainMenu::Option::Replays));
+  mainMenu.addItem(MenuItem(48, 48, "TC", MainMenu::Option::TC));
+  mainMenu.addItem(MenuItem(6, 6, "QUIT TO OS", MainMenu::Option::Quit));
   mainMenu.addItem(MenuItem::space());
   mainMenu.addItem(
-      MenuItem(48, 48, "LEFT PLAYER (F5)", MainMenu::MaPlayer1Settings));
+      MenuItem(48, 48, "LEFT PLAYER (F5)", MainMenu::Option::Player1Settings));
   mainMenu.addItem(
-      MenuItem(48, 48, "RIGHT PLAYER (F6)", MainMenu::MaPlayer2Settings));
-  mainMenu.addItem(MenuItem(48, 48, "MATCH SETUP (F7)", MainMenu::MaSettings));
+      MenuItem(48, 48, "RIGHT PLAYER (F6)", MainMenu::Option::Player2Settings));
+  mainMenu.addItem(
+      MenuItem(48, 48, "MATCH SETUP (F7)", MainMenu::Option::Settings));
 
   settingsMenu.valueOffsetX = 100;
   playerMenu.valueOffsetX = 95;
@@ -913,11 +925,12 @@ struct LevelSelectBehavior : ItemBehavior {
     item.hasValue = true;
     if (!gfx.settings->randomLevel) {
       item.value = '"' + getBasename(getLeaf(gfx.settings->levelFile)) + '"';
-      menu.itemFromId(SettingsMenu::SiRegenerateLevel)->string =
+      menu.itemFromId(SettingsMenu::Option::RegenerateLevel)->string =
           LS(ReloadLevel);  // Not string?
     } else {
       item.value = LS(Random2);
-      menu.itemFromId(SettingsMenu::SiRegenerateLevel)->string = LS(RegenLevel);
+      menu.itemFromId(SettingsMenu::Option::RegenerateLevel)->string =
+          LS(RegenLevel);
     }
   }
 
@@ -985,18 +998,18 @@ struct OptionsSelectBehavior : ItemBehavior {
 
 ItemBehavior* SettingsMenu::getItemBehavior(Common& common, MenuItem& item) {
   switch (item.id) {
-    case SiNamesOnBonuses:
+    case SettingsMenu::Option::NamesOnBonuses:
       return new BooleanSwitchBehavior(common, gfx.settings->namesOnBonuses);
-    case SiMap:
+    case SettingsMenu::Option::Map:
       return new BooleanSwitchBehavior(common, gfx.settings->map);
-    case SiRegenerateLevel:
+    case SettingsMenu::Option::RegenerateLevel:
       return new BooleanSwitchBehavior(common, gfx.settings->regenerateLevel);
-    case SiLoadingTimes:
+    case SettingsMenu::Option::LoadingTimes:
       return new IntegerBehavior(
           common, gfx.settings->loadingTime, 0, 9999, 1, true);
-    case SiMaxBonuses:
+    case SettingsMenu::Option::MaxBonuses:
       return new IntegerBehavior(common, gfx.settings->maxBonuses, 0, 99, 1);
-    case SiAmountOfBlood: {
+    case SettingsMenu::Option::AmountOfBlood: {
       IntegerBehavior* ret = new IntegerBehavior(
           common, gfx.settings->blood, 0, LC(BloodLimit), LC(BloodStepUp),
           true);
@@ -1004,23 +1017,23 @@ ItemBehavior* SettingsMenu::getItemBehavior(Common& common, MenuItem& item) {
       return ret;
     }
 
-    case SiLives:
+    case SettingsMenu::Option::Lives:
       return new IntegerBehavior(common, gfx.settings->lives, 1, 999, 1);
-    case SiTimeToLose:
-    case SiTimeToWin:
+    case SettingsMenu::Option::TimeToLose:
+    case SettingsMenu::Option::TimeToWin:
       return new TimeBehavior(common, gfx.settings->timeToLose, 60, 3600, 10);
-    case SiZoneTimeout:
+    case SettingsMenu::Option::ZoneTimeout:
       return new TimeBehavior(common, gfx.settings->zoneTimeout, 10, 3600, 10);
-    case SiFlagsToWin:
+    case SettingsMenu::Option::FlagsToWin:
       return new IntegerBehavior(common, gfx.settings->flagsToWin, 1, 999, 1);
 
-    case SiLevel:
+    case SettingsMenu::Option::Level:
       return new LevelSelectBehavior(common);
 
-    case SiGameMode:
+    case SettingsMenu::Option::GameMode:
       return new ArrayEnumBehavior(
           common, gfx.settings->gameMode, common.texts.gameModes);
-    case SiWeaponOptions:
+    case SettingsMenu::Option::WeaponOptions:
       return new WeaponOptionsBehavior(common);
     case LoadOptions:
       return new OptionsSelectBehavior(common);
@@ -1034,25 +1047,25 @@ ItemBehavior* SettingsMenu::getItemBehavior(Common& common, MenuItem& item) {
 }
 
 void SettingsMenu::onUpdate() {
-  setVisibility(SiLives, false);
-  setVisibility(SiTimeToLose, false);
-  setVisibility(SiTimeToWin, false);
-  setVisibility(SiZoneTimeout, false);
-  setVisibility(SiFlagsToWin, false);
+  setVisibility(SettingsMenu::Option::Lives, false);
+  setVisibility(SettingsMenu::Option::TimeToLose, false);
+  setVisibility(SettingsMenu::Option::TimeToWin, false);
+  setVisibility(SettingsMenu::Option::ZoneTimeout, false);
+  setVisibility(SettingsMenu::Option::FlagsToWin, false);
 
   switch (gfx.settings->gameMode) {
     case Settings::GameMode::KillEmAll:
     case Settings::GameMode::ScalesOfJustice:
-      setVisibility(SiLives, true);
+      setVisibility(SettingsMenu::Option::Lives, true);
       break;
 
     case Settings::GameMode::GameOfTag:
-      setVisibility(SiTimeToLose, true);
+      setVisibility(SettingsMenu::Option::TimeToLose, true);
       break;
 
     case Settings::GameMode::Holdazone:
-      setVisibility(SiTimeToWin, true);
-      setVisibility(SiZoneTimeout, true);
+      setVisibility(SettingsMenu::Option::TimeToWin, true);
+      setVisibility(SettingsMenu::Option::ZoneTimeout, true);
       break;
   }
 }
@@ -1236,7 +1249,7 @@ int Gfx::selectReplay() {
         controller.reset(
             new ReplayController(common, sel->getFsNode().toSource()));
 
-        return MainMenu::MaReplay;
+        return MainMenu::Option::Replay;
       }
     }
     menuFlip();
@@ -1574,10 +1587,10 @@ void PlayerMenu::drawItemOverlay(
     int y,
     bool selected,
     bool disabled) {
-  if (item.id >= PlayerMenu::PlRed &&
-      item.id <= PlayerMenu::PlBlue)  // Color settings
+  if (item.id >= PlayerMenu::Option::Red &&
+      item.id <= PlayerMenu::Option::Blue)  // Color settings
   {
-    int rgbcol = item.id - PlayerMenu::PlRed;
+    int rgbcol = item.id - PlayerMenu::Option::Red;
 
     if (selected) {
       drawRoundedBox(
@@ -1594,57 +1607,61 @@ void PlayerMenu::drawItemOverlay(
 }
 
 ItemBehavior* PlayerMenu::getItemBehavior(Common& common, MenuItem& item) {
-  if (item.id >= PlWeap0 && item.id < PlWeap0 + 5)
-    return new WeaponEnumBehavior(common, ws->weapons[item.id - PlWeap0]);
+  if (item.id >= PlayerMenu::Option::Weap0 &&
+      item.id < PlayerMenu::Option::Weap0 + 5)
+    return new WeaponEnumBehavior(
+        common, ws->weapons[item.id - PlayerMenu::Option::Weap0]);
 
   switch (item.id) {
-    case PlName:
+    case PlayerMenu::Option::Name:
       return new WormNameBehavior(common, *ws);
-    case PlHealth: {
+    case PlayerMenu::Option::Health: {
       auto* b = new IntegerBehavior(common, ws->health, 1, 10000, 1, true);
       b->scrollInterval = 4;
       return b;
     }
 
-    case PlRed:
-    case PlGreen:
-    case PlBlue: {
+    case PlayerMenu::Option::Red:
+    case PlayerMenu::Option::Green:
+    case PlayerMenu::Option::Blue: {
       auto* b = new IntegerBehavior(
-          common, ws->rgb[item.id - PlRed], 0, 63, 1, false);
+          common, ws->rgb[item.id - PlayerMenu::Option::Red], 0, 63, 1, false);
       b->scrollInterval = 4;
       return b;
     }
 
-    case PlUp:  // D2AB
-    case PlDown:
-    case PlLeft:
-    case PlRight:
-    case PlFire:
-    case PlChange:
-    case PlJump:
+    case PlayerMenu::Option::Up:  // D2AB
+    case PlayerMenu::Option::Down:
+    case PlayerMenu::Option::Left:
+    case PlayerMenu::Option::Right:
+    case PlayerMenu::Option::Fire:
+    case PlayerMenu::Option::Change:
+    case PlayerMenu::Option::Jump:
       return new KeyBehavior(
-          common, ws->controls[item.id - PlUp], ws->controlsEx[item.id - PlUp],
+          common, ws->controls[item.id - PlayerMenu::Option::Up],
+          ws->controlsEx[item.id - PlayerMenu::Option::Up],
           gfx.settings->extensions);
 
-    case PlDig:  // Controls Extension
+    case PlayerMenu::Option::Dig:
       return new KeyBehavior(
-          common, ws->controlsEx[item.id - PlUp],
-          ws->controlsEx[item.id - PlUp], gfx.settings->extensions);
+          common, ws->controlsEx[item.id - PlayerMenu::Option::Up],
+          ws->controlsEx[item.id - PlayerMenu::Option::Up],
+          gfx.settings->extensions);
 
-    case PlController:  // Controller
+    case PlayerMenu::Option::Controller:
       return new ArrayEnumBehavior(
           common, ws->controller, common.texts.controllers);
 
-    case PlSaveProfile:  // Save profile
+    case PlayerMenu::Option::SaveProfile:
       return new ProfileSaveBehavior(common, *ws, false);
 
-    case PlSaveProfileAs:  // Save profile as
+    case PlayerMenu::Option::SaveProfileAs:
       return new ProfileSaveBehavior(common, *ws, true);
 
-    case PlLoadProfile:
+    case PlayerMenu::Option::LoadProfile:
       return new ProfileLoadBehavior(common, *ws);
 
-    case PlLoadedProfile:
+    case PlayerMenu::Option::LoadedProfile:
       return new ProfileLoadedBehavior(common, *ws);
 
     default:
@@ -1686,7 +1703,7 @@ restart:
 
     int selection = menuLoop();
 
-    if (selection == MainMenu::MaNewGame) {
+    if (selection == MainMenu::Option::NewGame) {
       std::unique_ptr<Controller> newController(
           new LocalController(common, settings));
 
@@ -1704,18 +1721,18 @@ restart:
       }
 
       controller = std::move(newController);
-    } else if (selection == MainMenu::MaResumeGame) {
+    } else if (selection == MainMenu::Option::ResumeGame) {
       if (controller->isReplay()) {
         primaryRenderer = &singleScreenRenderer;
       }
-    } else if (selection == MainMenu::MaQuit)  // QUIT TO OS
+    } else if (selection == MainMenu::Option::Quit)  // QUIT TO OS
     {
       break;
-    } else if (selection == MainMenu::MaReplay) {
+    } else if (selection == MainMenu::Option::Replay) {
       if (settings->singleScreenReplay) {
         primaryRenderer = &singleScreenRenderer;
       }
-    } else if (selection == MainMenu::MaTc) {
+    } else if (selection == MainMenu::Option::TC) {
       goto restart;
     }
 
@@ -1848,14 +1865,15 @@ int Gfx::menuLoop() {
 
   int startItemId;
   if (controller->running()) {
-    mainMenu.setVisibility(MainMenu::MaResumeGame, true);
-    mainMenu.itemFromId(MainMenu::MaResumeGame)->string = "RESUME GAME (F1)";
-    mainMenu.itemFromId(MainMenu::MaNewGame)->string = "NEW GAME";
-    startItemId = MainMenu::MaResumeGame;
+    mainMenu.setVisibility(MainMenu::Option::ResumeGame, true);
+    mainMenu.itemFromId(MainMenu::Option::ResumeGame)->string =
+        "RESUME GAME (F1)";
+    mainMenu.itemFromId(MainMenu::Option::NewGame)->string = "NEW GAME";
+    startItemId = MainMenu::Option::ResumeGame;
   } else {
-    mainMenu.setVisibility(MainMenu::MaResumeGame, false);
-    mainMenu.itemFromId(MainMenu::MaNewGame)->string = "NEW GAME (F1)";
-    startItemId = MainMenu::MaNewGame;
+    mainMenu.setVisibility(MainMenu::Option::ResumeGame, false);
+    mainMenu.itemFromId(MainMenu::Option::NewGame)->string = "NEW GAME (F1)";
+    startItemId = MainMenu::Option::NewGame;
   }
 
   mainMenu.moveToFirstVisible();
@@ -1888,7 +1906,7 @@ int Gfx::menuLoop() {
 
     if (testSDLKeyOnce(SDL_SCANCODE_ESCAPE)) {
       if (curMenu == &mainMenu)
-        mainMenu.moveToId(MainMenu::MaQuit);
+        mainMenu.moveToId(MainMenu::Option::Quit);
       else
         curMenu = &mainMenu;
     }
@@ -1910,30 +1928,30 @@ int Gfx::menuLoop() {
 
         int s = mainMenu.selectedId();
         switch (s) {
-          case MainMenu::MaSettings: {
+          case MainMenu::Option::Settings: {
             curMenu = &settingsMenu;  // Go into settings menu
             break;
           }
 
-          case MainMenu::MaPlayer1Settings:
-          case MainMenu::MaPlayer2Settings: {
-            playerSettings(s - MainMenu::MaPlayer1Settings);
+          case MainMenu::Option::Player1Settings:
+          case MainMenu::Option::Player2Settings: {
+            playerSettings(s - MainMenu::Option::Player1Settings);
             break;
           }
 
-          case MainMenu::MaAdvanced: {
+          case MainMenu::Option::Advanced: {
             openHiddenMenu();
             break;
           }
 
-          case MainMenu::MaReplays: {
+          case MainMenu::Option::Replays: {
             selected = curMenu->onEnter(common);
             break;
           }
 
-          case MainMenu::MaTc: {
-            if (curMenu->onEnter(common) == MainMenu::MaTc)
-              return MainMenu::MaTc;
+          case MainMenu::Option::TC: {
+            if (curMenu->onEnter(common) == MainMenu::Option::TC)
+              return MainMenu::Option::TC;
             break;
           }
 
@@ -1955,25 +1973,25 @@ int Gfx::menuLoop() {
       selected = startItemId;
     }
     if (testSDLKeyOnce(SDL_SCANCODE_F2)) {
-      mainMenu.moveToId(MainMenu::MaAdvanced);
+      mainMenu.moveToId(MainMenu::Option::Advanced);
       openHiddenMenu();
     }
     if (testSDLKeyOnce(SDL_SCANCODE_F3)) {
       curMenu = &mainMenu;
-      mainMenu.moveToId(MainMenu::MaReplays);
+      mainMenu.moveToId(MainMenu::Option::Replays);
       selected = curMenu->onEnter(common);
     }
 
     if (testSDLKeyOnce(SDL_SCANCODE_F5)) {
-      mainMenu.moveToId(MainMenu::MaPlayer1Settings);
+      mainMenu.moveToId(MainMenu::Option::Player1Settings);
       playerSettings(0);
     }
     if (testSDLKeyOnce(SDL_SCANCODE_F6)) {
-      mainMenu.moveToId(MainMenu::MaPlayer2Settings);
+      mainMenu.moveToId(MainMenu::Option::Player2Settings);
       playerSettings(1);
     }
     if (testSDLKeyOnce(SDL_SCANCODE_F7)) {
-      mainMenu.moveToId(MainMenu::MaSettings);
+      mainMenu.moveToId(MainMenu::Option::Settings);
       curMenu = &settingsMenu;  // Go into settings menu
     }
 

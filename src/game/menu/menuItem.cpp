@@ -1,5 +1,4 @@
 #include "menuItem.hpp"
-
 #include "../common.hpp"
 #include "../gfx.hpp"
 

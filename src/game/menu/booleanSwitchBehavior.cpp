@@ -1,5 +1,4 @@
 #include "booleanSwitchBehavior.hpp"
-
 #include "../common.hpp"
 #include "../sfx.hpp"
 #include "menu.hpp"

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "itemBehavior.hpp"
-
 #include <cstdint>
+#include "itemBehavior.hpp"
 
 struct Common;
 struct Menu;

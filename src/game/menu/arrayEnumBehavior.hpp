@@ -1,8 +1,7 @@
 #pragma once
 
-#include "enumBehavior.hpp"
-
 #include <string>
+#include "enumBehavior.hpp"
 
 struct Common;
 struct Menu;

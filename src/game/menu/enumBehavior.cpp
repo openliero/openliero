@@ -1,5 +1,4 @@
 #include "enumBehavior.hpp"
-
 #include "../common.hpp"
 #include "../sfx.hpp"
 #include "../text.hpp"
