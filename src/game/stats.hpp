@@ -19,8 +19,7 @@ template <typename T, typename C>
 vector<T> pluck(vector<C> const& src, T(C::* a)) {
   vector<T> v;
 
-  for (auto& e : src)
-    v.push_back(e.*a);
+  std::transform(src.begin(), src.end(), std::back_inserter(v), std::mem_fn(a));
 
   return v;
 }
