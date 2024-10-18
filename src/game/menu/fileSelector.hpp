@@ -1,328 +1,286 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
+#include "../common.hpp"
 #include "../text.hpp"
 #include "menu.hpp"
-#include "../common.hpp"
 
-using std::string;
-using std::vector;
 using std::pair;
 using std::shared_ptr;
+using std::string;
+using std::vector;
 
 typedef bool (*FileFilter)(string const& name, string const& ext);
 
-struct FileNode : gvl::shared
-{
-	FileNode()
-	: folder(true)
-	, id(0)
-	, selectedChild(0)
-	, parent(0)
-	, filter(0)
-	, menu(178, 28)
-	, filled(false)
-	{
-		menu.setHeight(14);
-	}
+struct FileNode : gvl::shared {
+  FileNode()
+      : folder(true),
+        id(0),
+        selectedChild(0),
+        parent(0),
+        filter(0),
+        menu(178, 28),
+        filled(false) {
+    menu.setHeight(14);
+  }
 
-	FileNode(string const& name, string const& pathName, string const& fullPath, bool folder, FileNode* parent, FileFilter filter = 0)
-	: name(name), fullPath(fullPath)
-	, folder(folder)
-	, id(0)
-	, selectedChild(0)
-	, parent(parent)
-	, filter(filter)
-	, menu(178, 28)
-	, pathName(pathName)
-	, filled(false)
-	{
-		menu.setHeight(14);
-	}
+  FileNode(
+      string const& name,
+      string const& pathName,
+      string const& fullPath,
+      bool folder,
+      FileNode* parent,
+      FileFilter filter = 0)
+      : name(name),
+        fullPath(fullPath),
+        folder(folder),
+        id(0),
+        selectedChild(0),
+        parent(parent),
+        filter(filter),
+        menu(178, 28),
+        pathName(pathName),
+        filled(false) {
+    menu.setHeight(14);
+  }
 
-	void fill();
+  void fill();
 
-	Menu& getMenu()
-	{
-		ensureFilled();
+  Menu& getMenu() {
+    ensureFilled();
 
-		if (menu.items.empty())
-		{
-			for (auto& c : children)
-				menu.addItem(MenuItem(c->folder ? 47 : 48, 7, c->name));
+    if (menu.items.empty()) {
+      for (const auto& c : children)
+        menu.addItem(MenuItem(c->folder ? 47 : 48, 7, c->name));
 
-			menu.moveToFirstVisible();
-		}
+      menu.moveToFirstVisible();
+    }
 
-		return menu;
-	}
+    return menu;
+  }
 
-	FileNode* find(string const& path)
-	{
-		if (ciCompare(fullPath, path))
-			return this;
-		if (!ciStartsWith(path, fullPath))
-			return 0;
-		if (!folder)
-			return 0;
+  FileNode* find(string const& path) {
+    if (ciCompare(fullPath, path))
+      return this;
+    if (!ciStartsWith(path, fullPath))
+      return 0;
+    if (!folder)
+      return 0;
 
-		ensureFilled();
+    ensureFilled();
 
-		for (auto& c : children)
-		{
-			auto* r = c->find(path);
-			if (r) return r;
-		}
+    for (auto& c : children) {
+      auto* r = c->find(path);
+      if (r)
+        return r;
+    }
 
-		return 0;
-	}
+    return 0;
+  }
 
-	FsNode& getFsNode()
-	{
-		if (!fsNode)
-		{
-			assert(parent);
-			assert(parent->fsNode);
-			fsNode = parent->fsNode / pathName;
-		}
+  FsNode& getFsNode() {
+    if (!fsNode) {
+      assert(parent);
+      assert(parent->fsNode);
+      fsNode = parent->fsNode / pathName;
+    }
 
-		return fsNode;
-	}
+    return fsNode;
+  }
 
-	void ensureFilled()
-	{
-		if (!filled && parent)
-		{
-			getFsNode();
-			fill();
-		}
-	}
+  void ensureFilled() {
+    if (!filled && parent) {
+      getFsNode();
+      fill();
+    }
+  }
 
-	string name;
-	string fullPath;
-	bool folder;
-	int id;
-	FileNode* selectedChild;
-	FileNode* parent;
-	vector<shared_ptr<FileNode> > children;
-	bool (*filter)(std::string const& name, std::string const& ext);
-	Menu menu;
+  string name;
+  string fullPath;
+  bool folder;
+  int id;
+  FileNode* selectedChild;
+  FileNode* parent;
+  vector<shared_ptr<FileNode> > children;
+  bool (*filter)(std::string const& name, std::string const& ext);
+  Menu menu;
 
-	string pathName;
-	bool filled;
-	FsNode fsNode; // Starts out invalid
+  string pathName;
+  bool filled;
+  // Starts out invalid
+  FsNode fsNode;
 };
 
-struct ChildSort
-{
-	typedef shared_ptr<FileNode> type;
+struct ChildSort {
+  typedef shared_ptr<FileNode> type;
 
-	bool operator()(type const& a, type const& b) const
-	{
-		if (a->folder == b->folder)
-			return ciLess(a->name, b->name);
-		return a->folder > b->folder;
-	}
+  bool operator()(type const& a, type const& b) const {
+    if (a->folder == b->folder)
+      return ciLess(a->name, b->name);
+    return a->folder > b->folder;
+  }
 };
 
-void FileNode::fill()
-{
-	assert(fsNode);
-	DirectoryListing di(fsNode.iter());
+void FileNode::fill() {
+  assert(fsNode);
+  DirectoryListing di(fsNode.iter());
 
-	for(auto const& name : di)
-	{
-		string const& fullPath = joinPath(this->fullPath, name.name);
-		auto const& ext = getExtension(name.name);
+  for (auto const& name : di) {
+    string const& fullPath = joinPath(this->fullPath, name.name);
+    auto const& ext = getExtension(name.name);
 
-		if (name.isDir)
-		{
-			shared_ptr<FileNode> node(new FileNode(
-				name.name, name.name, fullPath, true, this, filter));
+    if (name.isDir) {
+      shared_ptr<FileNode> node(
+          new FileNode(name.name, name.name, fullPath, true, this, filter));
 
-			children.push_back(node);
-		}
-		else if (!filter || filter(name.name, ext))
-		{
-			children.push_back(shared_ptr<FileNode>(new FileNode(
-				getBasename(name.name), name.name, fullPath, false, this, filter)));
-		}
-	}
+      children.push_back(node);
+    } else if (!filter || filter(name.name, ext)) {
+      children.push_back(shared_ptr<FileNode>(new FileNode(
+          getBasename(name.name), name.name, fullPath, false, this, filter)));
+    }
+  }
 
-	std::sort(children.begin(), children.end(), ChildSort());
+  std::sort(children.begin(), children.end(), ChildSort());
 
-	filled = true;
+  filled = true;
 }
 
-struct FileSelector
-{
-	FileSelector(Common& common, int x = 178)
-	: common(common)
-	{
+struct FileSelector {
+  FileSelector(Common& common, int x = 178) : common(common) {}
 
-	}
+  // TODO: Get rid of this
+  void fill(string const& path, FileFilter filter) {
+    fill(FsNode(path), filter);
+  }
 
-	void fill(string const& path, FileFilter filter) // TODO: Get rid of this
-	{
-		fill(FsNode(path), filter);
-	}
+  void fill(FsNode node, FileFilter filter) {
+    rootNode.fsNode = std::move(node);
+    rootNode.fullPath = rootNode.fsNode.fullPath();
+    rootNode.filter = filter;
+    rootNode.fill();
+  }
 
-	void fill(FsNode node, FileFilter filter)
-	{
-		rootNode.fsNode = std::move(node);
-		rootNode.fullPath = rootNode.fsNode.fullPath();
-		rootNode.filter = filter;
-		rootNode.fill();
-	}
+  void draw() {
+    if (currentNode && currentNode->parent) {
+      common.font.drawFramedText(
+          gfx.playRenderer.bmp, "Parent directory", 28, 20, 50);
+      currentNode->parent->getMenu().draw(
+          common, gfx.playRenderer, true, 28, true);
+    }
+    menu().draw(common, gfx.playRenderer, false, 178);
+  }
 
-	void draw()
-	{
-		if (currentNode && currentNode->parent)
-		{
-			common.font.drawFramedText(gfx.playRenderer.bmp, "Parent directory", 28, 20, 50);
-			currentNode->parent->getMenu().draw(common, gfx.playRenderer, true, 28, true);
-		}
-		menu().draw(common, gfx.playRenderer, false, 178);
-	}
+  Menu& menu() { return currentNode->getMenu(); }
 
-	Menu& menu()
-	{
-		return currentNode->getMenu();
-	}
+  void setFolder(FileNode& fn) { currentNode = &fn; }
 
-	void setFolder(FileNode& fn)
-	{
-		currentNode = &fn;
-	}
+  bool select(string const& path) {
+    FileNode* fn = rootNode.find(path);
 
-	bool select(string const& path)
-	{
-		FileNode* fn = rootNode.find(path);
+    if (!fn)
+      return false;
 
-		if (!fn)
-			return false;
+    FileNode* parent = fn->parent;
+    if (parent) {
+      FileNode* p = fn;
+      while (p->parent) {
+        const FileNode* ch = p;
+        p = p->parent;
+        p->selectedChild = fn;
 
-		FileNode* parent = fn->parent;
-		if (parent)
-		{
-			FileNode* p = fn;
-			while (p->parent)
-			{
-				FileNode* ch = p;
-				p = p->parent;
-				p->selectedChild = fn;
+        for (std::size_t i = 0; i < p->children.size(); ++i) {
+          if (ch == p->children[i].get())
+            p->getMenu().moveTo(static_cast<int>(i));
+        }
+      }
 
-				for (std::size_t i = 0; i < p->children.size(); ++i)
-				{
-					if (ch == p->children[i].get())
-						p->getMenu().moveTo((int)i);
-				}
-			}
+      if (fn->folder)
+        setFolder(*fn);
+      else
+        setFolder(*parent);
+    }
 
-			if (fn->folder)
-				setFolder(*fn);
-			else
-				setFolder(*parent);
-		}
+    return true;
+  }
 
-		return true;
-	}
+  FileNode* curSel() {
+    if (!menu().isSelectionValid())
+      return 0;
 
-	FileNode* curSel()
-	{
-		if (!menu().isSelectionValid())
-			return 0;
+    auto* c = currentNode->children[menu().selection()].get();
 
-		auto* c = currentNode->children[menu().selection()].get();
+    return c;
+  }
 
-		return c;
-	}
+  FileNode* enter() {
+    auto* c = curSel();
+    if (!c) {
+      return 0;
+    }
 
-	FileNode* enter()
-	{
-		auto* c = curSel();
-		if (!c)
-		{
-			return 0;
-		}
+    if (c->folder) {
+      currentNode->selectedChild = c;
+      setFolder(*c);
+      return 0;
+    }
 
-		if (c->folder)
-		{
-			currentNode->selectedChild = c;
-			setFolder(*c);
-			return 0;
-		}
+    return c;
+  }
 
-		return c;
-	}
+  bool exit() {
+    if (currentNode->parent == 0)
+      return false;
 
-	bool exit()
-	{
-		if (currentNode->parent == 0)
-			return false;
+    setFolder(*currentNode->parent);
 
-		setFolder(*currentNode->parent);
+    return true;
+  }
 
-		return true;
-	}
+  bool process() {
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_UP)) {
+      sfx.play(common, 26);
 
-	bool process()
-	{
-		if(gfx.testSDLKeyOnce(SDL_SCANCODE_UP))
-		{
-			sfx.play(common, 26);
+      menu().movement(-1);
+    }
 
-			menu().movement(-1);
-		}
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_DOWN)) {
+      sfx.play(common, 25);
 
-		if(gfx.testSDLKeyOnce(SDL_SCANCODE_DOWN))
-		{
-			sfx.play(common, 25);
+      menu().movement(1);
+    }
 
-			menu().movement(1);
-		}
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_PAGEUP)) {
+      sfx.play(common, 26);
 
-		if(gfx.testSDLKeyOnce(SDL_SCANCODE_PAGEUP))
-		{
-			sfx.play(common, 26);
+      menu().movementPage(-1);
+    }
 
-			menu().movementPage(-1);
-		}
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN)) {
+      sfx.play(common, 25);
 
-		if(gfx.testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN))
-		{
-			sfx.play(common, 25);
+      menu().movementPage(1);
+    }
 
-			menu().movementPage(1);
-		}
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_ESCAPE)) {
+      return false;
+    }
 
-		if (gfx.testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
-		{
-			return false;
-		}
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_LEFT)) {
+      exit();
+    }
 
-		if (gfx.testSDLKeyOnce(SDL_SCANCODE_LEFT))
-		{
-			exit();
-		}
+    if (gfx.testSDLKeyOnce(SDL_SCANCODE_RIGHT)) {
+      enter();
+    }
 
-		if (gfx.testSDLKeyOnce(SDL_SCANCODE_RIGHT))
-		{
-			enter();
-		}
+    menu().onKeys(gfx.keyBuf, gfx.keyBufPtr, true);
 
-		menu().onKeys(gfx.keyBuf, gfx.keyBufPtr, true);
+    return true;
+  }
 
-		return true;
-	}
-
-	Common& common;
-	//vector<pair<FileNode*, int> > history;
-
-	FileNode rootNode;
-	FileNode* currentNode;
-
-	//Menu menu;
+  Common& common;
+  FileNode rootNode;
+  FileNode* currentNode;
 };

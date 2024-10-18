@@ -1,5 +1,6 @@
 #include "common.hpp"
 
+#include <algorithm>
 #include <gvl/io2/convert.hpp>
 #include <gvl/io2/fstream.hpp>
 #include <map>
@@ -7,7 +8,6 @@
 #include "common_model.hpp"
 #include "filesystem.hpp"
 #include "gfx/blit.hpp"
-#include "rand.hpp"
 #include "worm.hpp"
 
 int Common::fireConeOffset
@@ -200,10 +200,10 @@ char const* Texts::keyNames[177] = {
 };
 
 Texts::Texts() {
-  gameModes[Settings::GameModes::GMKillEmAll] = "Kill'em All";
-  gameModes[Settings::GameModes::GMGameOfTag] = "Game of Tag";
-  gameModes[Settings::GameModes::GMHoldazone] = "Holdazone";
-  gameModes[Settings::GameModes::GMScalesOfJustice] = "Scales of Justice";
+  gameModes[Settings::GameMode::KillEmAll] = "Kill'em All";
+  gameModes[Settings::GameMode::GameOfTag] = "Game of Tag";
+  gameModes[Settings::GameMode::Holdazone] = "Holdazone";
+  gameModes[Settings::GameMode::ScalesOfJustice] = "Scales of Justice";
 
   onoff[0] = "OFF";
   onoff[1] = "ON";
@@ -219,7 +219,7 @@ Texts::Texts() {
   copyrightBarFormat = 64;
 }
 
-void Common::drawTextSmall(Bitmap& scr, char const* str, int x, int y) {
+void Common::drawTextSmall(const Bitmap& scr, char const* str, int x, int y) {
   for (; *str; ++str) {
     unsigned char c = *str - 'A';
 
@@ -287,7 +287,7 @@ int readSpriteTga(
   // Bottom to top
   for (std::size_t y = (std::size_t)imageHeight; y-- > 0;) {
     auto* src = &data[y * imageWidth];
-    r.get((uint8_t*)src, imageWidth);
+    r.get(src, imageWidth);
   }
 
   return 1;
@@ -304,8 +304,8 @@ int readSpriteTga(gvl::octet_reader& r, SpriteSet& ss, Palette* pal) {
 #undef CHECK
 
 inline uint32_t quad(char a, char b, char c, char d) {
-  return (uint32_t)a + ((uint32_t)b << 8) + ((uint32_t)c << 16) +
-         ((uint32_t)d << 24);
+  return static_cast<uint32_t>(a) + (static_cast<uint32_t>(b) << 8) +
+         (static_cast<uint32_t>(c) << 16) + (static_cast<uint32_t>(d) << 24);
 }
 
 void Common::load(FsNode node) {
@@ -333,8 +333,7 @@ void Common::load(FsNode node) {
 
         s.originalData.resize(dataSize);
 
-        for (auto& z : s.originalData)
-          z = r.get() - 128;
+        std::fill(s.originalData.begin(), s.originalData.end(), r.get() - 128);
 
         s.sound = sfx_new_sound(dataSize * 2);
 
@@ -372,8 +371,8 @@ void Common::load(FsNode node) {
       std::vector<uint8_t> data(font.chars.size() * 7 * 8, 10);
 
       readSpriteTga(
-          r, 7, (int)font.chars.size() * 8, (int)font.chars.size(), &data[0],
-          0);
+          r, 7, static_cast<int>(font.chars.size()) * 8,
+          static_cast<int>(font.chars.size()), &data[0], 0);
 
       for (std::size_t i = 0; i < font.chars.size(); ++i) {
         Font::Char& ch = font.chars[i];
@@ -389,7 +388,7 @@ void Common::load(FsNode node) {
             } else if (p == 50) {
               ch.data[y * 7 + x] = 8;
             } else {
-              ch.width = (int)x;
+              ch.width = static_cast<int>(x);
               break;
             }
           }
@@ -423,7 +422,7 @@ void Common::load(FsNode node) {
 
 void Common::precompute() {
   weapOrder.resize(weapons.size());
-  for (int i = 0; i < (int)weapons.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(weapons.size()); ++i) {
     weapOrder[i] = i;
     weapons[i].id = i;
   }
@@ -432,11 +431,11 @@ void Common::precompute() {
     return this->weapons[a].name < this->weapons[b].name;
   });
 
-  for (int i = 0; i < (int)nobjectTypes.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(nobjectTypes.size()); ++i) {
     nobjectTypes[i].id = i;
   }
 
-  for (int i = 0; i < (int)sobjectTypes.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(sobjectTypes.size()); ++i) {
     sobjectTypes[i].id = i;
   }
 
@@ -512,39 +511,3 @@ void SfxSample::createSound() {
 
   samples.push_back(prev);
 }
-
-#if ENABLE_TRACING
-void Common::ltrace(
-    char const* category,
-    uint32 object,
-    char const* attribute,
-    uint32 value) {
-  uint32 cat = *(uint32*)(category);
-  uint32 attr = *(uint32*)(attribute);
-
-  if (writeTrace) {
-    gvl::write_uint32_le(trace_writer, cat);
-    gvl::write_uint32_le(trace_writer, object);
-    gvl::write_uint32_le(trace_writer, attr);
-    gvl::write_uint32_le(trace_writer, value);
-  } else {
-    uint32 fcat = gvl::read_uint32_le(trace_reader);
-    uint32 fobject = gvl::read_uint32_le(trace_reader);
-    uint32 fattr = gvl::read_uint32_le(trace_reader);
-    uint32 fvalue = gvl::read_uint32_le(trace_reader);
-
-    if (fcat != cat) {
-      throw std::exception();
-    }
-    if (fobject != object) {
-      throw std::exception();
-    }
-    if (fattr != attr) {
-      throw std::exception();
-    }
-    if (fvalue != value) {
-      throw std::exception();
-    }
-  }
-}
-#endif

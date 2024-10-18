@@ -1,100 +1,79 @@
 #include "sfx.hpp"
-#include "reader.hpp"
-#include "console.hpp"
-#include "common.hpp"
-#include <vector>
+#include <SDL.h>
 #include <cassert>
-#if !DISABLE_SOUND
-#	include <SDL.h>
-#endif
+#include <vector>
+#include "common.hpp"
+#include "console.hpp"
+#include "reader.hpp"
 
 Sfx sfx;
 
-extern "C" void SDLCALL Sfx_callback(void *userdata, Uint8 *stream, int len)
-{
-	uint32_t frame_count = len / 2;
+extern "C" void SDLCALL Sfx_callback(void* userdata, Uint8* stream, int len) {
+  uint32_t frame_count = len / 2;
 
-	sfx_mixer_mix((sfx_mixer*)userdata, stream, frame_count);
+  sfx_mixer_mix(static_cast<sfx_mixer*>(userdata), stream, frame_count);
 }
 
-void Sfx::init()
-{
-#if !DISABLE_SOUND
-	if(initialized)
-		return;
+void Sfx::init() {
+  if (initialized)
+    return;
 
-	SDL_InitSubSystem(SDL_INIT_AUDIO);
+  SDL_InitSubSystem(SDL_INIT_AUDIO);
 
-	mixer = sfx_mixer_create();
+  mixer = sfx_mixer_create();
 
-	SDL_AudioSpec spec;
-	memset(&spec, 0, sizeof(spec));
-	spec.channels = 1;
-	spec.freq = 44100;
-	spec.format = AUDIO_S16SYS;
-	spec.size = 4*512;
-	spec.callback = Sfx_callback;
-	spec.userdata = mixer;
+  SDL_AudioSpec spec;
+  memset(&spec, 0, sizeof(spec));
+  spec.channels = 1;
+  spec.freq = 44100;
+  spec.format = AUDIO_S16SYS;
+  spec.size = 4 * 512;
+  spec.callback = Sfx_callback;
+  spec.userdata = mixer;
 
-	int ret = SDL_OpenAudio(&spec, NULL);
+  int ret = SDL_OpenAudio(&spec, NULL);
 
-	if(ret == 0)
-	{
-		initialized = true;
-		SDL_PauseAudio(0);
-	}
-	else
-	{
-		Console::writeWarning(std::string("SDL_OpenAudio returned error: ") + SDL_GetError());
-	}
-#endif
+  if (ret == 0) {
+    initialized = true;
+    SDL_PauseAudio(0);
+  } else {
+    Console::writeWarning(
+        std::string("SDL_OpenAudio returned error: ") + SDL_GetError());
+  }
 }
 
-void Sfx::deinit()
-{
-#if !DISABLE_SOUND
-	if(!initialized)
-		return;
-	initialized = false;
+void Sfx::deinit() {
+  if (!initialized)
+    return;
+  initialized = false;
 
-	SDL_CloseAudio();
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-#endif
+  SDL_CloseAudio();
+  SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-void Sfx::play(Common& common, int sound, void* id, int loops)
-{
-#if !DISABLE_SOUND
-	if(!initialized)
-		return;
+void Sfx::play(const Common& common, int sound, void* id, int loops) {
+  if (!initialized)
+    return;
 
-	sfx_mixer_add(mixer, common.sounds[sound].sound, sfx_mixer_now(mixer), id, loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
-#endif
+  sfx_mixer_add(
+      mixer, common.sounds[sound].sound, sfx_mixer_now(mixer), id,
+      loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
 }
 
-void Sfx::stop(void* id)
-{
-#if !DISABLE_SOUND
-	if(!initialized)
-		return;
+void Sfx::stop(const void* id) {
+  if (!initialized)
+    return;
 
-	sfx_mixer_stop(mixer, id);
-#endif
+  sfx_mixer_stop(mixer, id);
 }
 
-bool Sfx::isPlaying(void* id)
-{
-#if !DISABLE_SOUND
-	if(!initialized)
-		return false;
+bool Sfx::isPlaying(const void* id) {
+  if (!initialized)
+    return false;
 
-	return sfx_is_playing(mixer, id) != 0;
-#else
-	return false;
-#endif
+  return sfx_is_playing(mixer, id) != 0;
 }
 
-Sfx::~Sfx()
-{
-	deinit();
+Sfx::~Sfx() {
+  deinit();
 }
