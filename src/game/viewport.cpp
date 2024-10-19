@@ -8,7 +8,7 @@
 #include "text.hpp"
 
 struct PreserveClipRect {
-  PreserveClipRect(Bitmap& bmp) : bmp(bmp) { rect = bmp.clip_rect; }
+  PreserveClipRect(Bitmap& bmp) : bmp(bmp), rect(bmp.clip_rect) {}
 
   ~PreserveClipRect() { bmp.clip_rect = rect; }
 

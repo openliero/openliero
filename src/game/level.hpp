@@ -16,9 +16,8 @@ struct Settings;
 struct Common;
 
 struct Level {
-  Level(const Common& common) : width(0), height(0) {
-    zeroMaterial = common.materials[0];
-  }
+  Level(const Common& common)
+      : width(0), height(0), zeroMaterial(common.materials[0]) {}
 
   bool
   load(const Common& common, Settings const& settings, gvl::octet_reader r);
