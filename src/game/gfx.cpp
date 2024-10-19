@@ -120,7 +120,6 @@ struct ProfileSaveBehavior : ItemBehavior {
     if (saveAs) {
       std::string name;
       if (gfx.inputString(name, 30, x, y) && !name.empty()) {
-        // ws.saveProfile(joinPath(joinPath(configRoot, "Profiles"), name));
         ws.saveProfile(gfx.getConfigNode() / "Profiles" / (name + ".lpf"));
       }
 
@@ -669,8 +668,8 @@ void Gfx::processEvent(SDL_Event& ev, Controller* controller) {
     } break;
 
     case SDL_JOYBUTTONDOWN:
-    case SDL_JOYBUTTONUP: /* Fall-through */
-    {
+      // [[fallthrough]]; C++17
+    case SDL_JOYBUTTONUP: {
       Joystick& js = joysticks[ev.jbutton.which];
       int jbtn = 16 + ev.jbutton.button;
       js.btnState[jbtn] = (ev.jbutton.state == SDL_PRESSED);
@@ -701,7 +700,8 @@ SDL_Keysym Gfx::waitForKey() {
     }
   }
 
-  return SDL_Keysym();  // Dummy
+  // Dummy
+  return SDL_Keysym();
 }
 
 uint32_t Gfx::waitForKeyEx() {
@@ -737,7 +737,8 @@ uint32_t Gfx::waitForKeyEx() {
     }
   }
 
-  return 0;  // Dummy
+  // Dummy
+  return 0;
 }
 
 std::string Gfx::getKeyName(uint32_t key) {
@@ -964,7 +965,6 @@ struct OptionsSaveBehavior : ItemBehavior {
 
     std::string name = getBasename(getLeaf(gfx.settingsNode.fullPath()));
     if (gfx.inputString(name, 30, x, y) && !name.empty()) {
-      // gfx.saveSettings(joinPath(configRoot, name + ".cfg"));
       gfx.saveSettings(gfx.getConfigNode() / "Setups" / (name + ".cfg"));
     }
 
@@ -1055,14 +1055,13 @@ void SettingsMenu::onUpdate() {
 
   switch (gfx.settings->gameMode) {
     case Settings::GameMode::KillEmAll:
+    // [[fallthrough]]; C++17
     case Settings::GameMode::ScalesOfJustice:
       setVisibility(SettingsMenu::Option::Lives, true);
       break;
-
     case Settings::GameMode::GameOfTag:
       setVisibility(SettingsMenu::Option::TimeToLose, true);
       break;
-
     case Settings::GameMode::Holdazone:
       setVisibility(SettingsMenu::Option::TimeToWin, true);
       setVisibility(SettingsMenu::Option::ZoneTimeout, true);
@@ -1441,8 +1440,9 @@ void Gfx::weaponOptions() {
           ++count;
       }
 
+      // Enough weapons available
       if (count > 0)
-        break;  // Enough weapons available
+        break;
 
       infoBox(LS(NoWeaps), 223, 68, false);
     }
@@ -1500,6 +1500,8 @@ bool Gfx::inputString(
     SDL_Event ev;
 
     // int offset = clrX + y*320; // TODO: Unhardcode 320
+    // TODO: honestly, all the references to window size *need* to be
+    // unhardcoded.
 
     blitImageNoKeyColour(
         playRenderer.bmp, &frozenScreen.getPixel(clrX, y), clrX, y,
@@ -1524,6 +1526,7 @@ bool Gfx::inputString(
             break;
 
           case SDL_SCANCODE_RETURN:
+          // [[fallthrough]]; C++17
           case SDL_SCANCODE_KP_ENTER:
             dest = buffer;
             sfx.play(*common, 27);
@@ -1587,9 +1590,9 @@ void PlayerMenu::drawItemOverlay(
     int y,
     bool selected,
     bool disabled) {
+  // Color settings
   if (item.id >= PlayerMenu::Option::Red &&
-      item.id <= PlayerMenu::Option::Blue)  // Color settings
-  {
+      item.id <= PlayerMenu::Option::Blue) {
     int rgbcol = item.id - PlayerMenu::Option::Red;
 
     if (selected) {
@@ -1622,7 +1625,9 @@ ItemBehavior* PlayerMenu::getItemBehavior(Common& common, MenuItem& item) {
     }
 
     case PlayerMenu::Option::Red:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Green:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Blue: {
       auto* b = new IntegerBehavior(
           common, ws->rgb[item.id - PlayerMenu::Option::Red], 0, 63, 1, false);
@@ -1631,11 +1636,17 @@ ItemBehavior* PlayerMenu::getItemBehavior(Common& common, MenuItem& item) {
     }
 
     case PlayerMenu::Option::Up:  // D2AB
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Down:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Left:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Right:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Fire:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Change:
+    // [[fallthrough]]; C++17
     case PlayerMenu::Option::Jump:
       return new KeyBehavior(
           common, ws->controls[item.id - PlayerMenu::Option::Up],
@@ -1725,8 +1736,7 @@ restart:
       if (controller->isReplay()) {
         primaryRenderer = &singleScreenRenderer;
       }
-    } else if (selection == MainMenu::Option::Quit)  // QUIT TO OS
-    {
+    } else if (selection == MainMenu::Option::Quit) {
       break;
     } else if (selection == MainMenu::Option::Replay) {
       if (settings->singleScreenReplay) {
@@ -1929,11 +1939,13 @@ int Gfx::menuLoop() {
         int s = mainMenu.selectedId();
         switch (s) {
           case MainMenu::Option::Settings: {
-            curMenu = &settingsMenu;  // Go into settings menu
+            // Go into settings menu
+            curMenu = &settingsMenu;
             break;
           }
 
           case MainMenu::Option::Player1Settings:
+          // [[fallthrough]]; C++17
           case MainMenu::Option::Player2Settings: {
             playerSettings(s - MainMenu::Option::Player1Settings);
             break;

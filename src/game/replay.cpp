@@ -324,8 +324,6 @@ ReplayReader::ReplayReader(gvl::source str_init) {
   reader.attach(gvl::to_source(new gvl::deflate_source(str_init, false)));
 }
 
-// #define DEBUG_REPLAYS
-
 uint32_t const replayMagic = ('L' << 24) | ('R' << 16) | ('P' << 8) | 'F';
 
 std::unique_ptr<Game> ReplayReader::beginPlayback(

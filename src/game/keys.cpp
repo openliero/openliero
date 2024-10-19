@@ -83,7 +83,9 @@ Uint32 SDLToDOSKey(SDL_Scancode scancode) {
 Uint32 SDLToDOSKey(SDL_Keysym const& keysym) {
   Uint32 key = SDLToDOSKey(keysym.scancode);
 
-  if (key >= 177)  // Liero doesn't have keys >= 177
-    return 89;     // Arbitrarily translate it to 89
+  // Liero doesn't have keys >= 177, arbitrarily translate it to 89
+  if (key >= 177)
+    return 89;
+
   return key;
 }

@@ -2,9 +2,6 @@
 
 #include <SDL.h>
 
-// extern int SDLToLieroKeys[SDL_SCANCODE_LAST];
-// extern int lieroToSDLKeys[177];
-
 void initKeys();
 
 Uint32 SDLToDOSKey(SDL_Keysym const& keysym);

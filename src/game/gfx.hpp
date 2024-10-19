@@ -72,10 +72,10 @@ struct SettingsMenu : Menu {
   enum Option {
     GameMode,
     Lives,
-    TimeToLose,  // Extra
+    TimeToLose,
     TimeToWin,
     ZoneTimeout,
-    FlagsToWin,  // Extra
+    FlagsToWin,
     LoadingTimes,
     MaxBonuses,
     NamesOnBonuses,
@@ -278,8 +278,10 @@ struct Gfx {
   uint64_t lastFrame;
   unsigned menuCycles;
   int windowW, windowH;
-  int prevMag;               // Previous magnification used for drawing
-  gvl::rect lastUpdateRect;  // Last region that was updated when flipping
+  // Previous magnification used for drawing
+  int prevMag;
+  // Last region that was updated when flipping
+  gvl::rect lastUpdateRect;
   std::shared_ptr<Common> common;
   std::unique_ptr<Controller> controller;
 

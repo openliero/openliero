@@ -6,8 +6,9 @@ fixedvec cossinTable[128];
 
 uint32_t sqr(uint32_t op) {
   uint32_t res = 0;
-  uint32_t one = 1uL << 30;  // The second-to-top bit is set: use 1u << 14 for
-                             // uint16_t type; use 1uL<<30 for uint32_t type
+  // The second-to-top bit is set: use 1u << 14 for uint16_t type; use 1uL<<30
+  // for uint32_t type
+  uint32_t one = 1uL << 30;
 
   // "one" starts at the highest power of four <= than the argument.
   while (one > op)
@@ -57,7 +58,8 @@ struct FP {
 
 void precomputeTables() {
   int scalebits = 28;
-  int32_t scale = 13176795;  // (2pi / 128) << scalebits
+  // (2pi / 128) << scalebits
+  int32_t scale = 13176795;
 
   for (int i = 0; i < 128; ++i) {
     int64_t rf = 0;
@@ -84,7 +86,8 @@ void precomputeTables() {
 
     int shift = 60 - 16;
 
-    rf += (1LL << (shift - 1));  // Correct rounding
+    // Correct rounding
+    rf += (1LL << (shift - 1));
 
     int32_t r = (int32_t)(rf >> shift);
 

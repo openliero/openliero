@@ -1,12 +1,10 @@
 #include "level.hpp"
-
+#include <cstring>
+#include <random>
 #include "filesystem.hpp"
 #include "game.hpp"
 #include "gfx.hpp"
 #include "gfx/color.hpp"
-
-#include <cstring>
-#include <random>
 
 void Level::generateDirtPattern(Common& common, std::mt19937& rand) {
   resize(504, 350);

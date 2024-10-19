@@ -3,7 +3,7 @@
 #include <cstdint>
 
 struct Material {
-  enum {
+  enum Type {
     Dirt = 1 << 0,
     Dirt2 = 1 << 1,
     Rock = 1 << 2,
@@ -12,17 +12,25 @@ struct Material {
     WormM = 1 << 5
   };
 
-  bool dirt() { return (flags & Dirt) != 0; }
-  bool dirt2() { return (flags & Dirt2) != 0; }
-  bool rock() { return (flags & Rock) != 0; }
-  bool background() { return (flags & Background) != 0; }
-  bool seeShadow() { return (flags & SeeShadow) != 0; }
+  bool dirt() { return (flags & Material::Type::Dirt) != 0; }
+  bool dirt2() { return (flags & Material::Type::Dirt2) != 0; }
+  bool rock() { return (flags & Material::Type::Rock) != 0; }
+  bool background() { return (flags & Material::Type::Background) != 0; }
+  bool seeShadow() { return (flags & Material::Type::SeeShadow) != 0; }
 
   // Constructed
-  bool dirtRock() { return (flags & (Dirt | Dirt2 | Rock)) != 0; }
-  bool anyDirt() { return (flags & (Dirt | Dirt2)) != 0; }
-  bool dirtBack() { return (flags & (Dirt | Dirt2 | Background)) != 0; }
-  bool worm() { return (flags & WormM) != 0; }
+  bool dirtRock() {
+    return (flags & (Material::Type::Dirt | Material::Type::Dirt2 |
+                     Material::Type::Rock)) != 0;
+  }
+  bool anyDirt() {
+    return (flags & (Material::Type::Dirt | Material::Type::Dirt2)) != 0;
+  }
+  bool dirtBack() {
+    return (flags & (Material::Type::Dirt | Material::Type::Dirt2 |
+                     Material::Type::Background)) != 0;
+  }
+  bool worm() { return (flags & Material::Type::WormM) != 0; }
 
   uint8_t flags;
 };
