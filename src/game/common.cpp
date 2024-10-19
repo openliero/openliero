@@ -333,7 +333,9 @@ void Common::load(FsNode node) {
 
         s.originalData.resize(dataSize);
 
-        std::fill(s.originalData.begin(), s.originalData.end(), r.get() - 128);
+        // replacing below loop with std::fill is a regression
+        for (auto& z : s.originalData)
+          z = r.get() - 128;
 
         s.sound = sfx_new_sound(dataSize * 2);
 
