@@ -68,9 +68,7 @@ struct SfxSample : gvl::noncopyable {
   SfxSample(SfxSample&& other)
       : name(std::move(other.name)),
         sound(other.sound),
-        originalData(std::move(other.originalData)) {
-    other.sound = 0;
-  }
+        originalData(std::move(other.originalData)) {}
 
   SfxSample& operator=(SfxSample&& other) {
     name = std::move(other.name);
