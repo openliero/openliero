@@ -281,7 +281,8 @@ int readSpriteTga(
       entry.r = r.get() >> 2;
     }
   } else {
-    r.try_skip(256 * 3);  // Ignore palette
+    // Ignore palette
+    r.try_skip(256 * 3);
   }
 
   // Bottom to top
@@ -450,20 +451,25 @@ void Common::precompute() {
         PalIdx pix = (largeSprites.spritePtr(16 + i) + y * 16)[x];
 
         (wormSprite(i, 1, 0) + y * 16)[x] = pix;
-        if (x == 15)
+        if (x == 15) {
           (wormSprite(i, 0, 0) + y * 16)[15] = 0;
-        else
+        } else {
           (wormSprite(i, 0, 0) + y * 16)[14 - x] = pix;
+        }
 
-        if (pix >= 30 && pix <= 34)
-          pix += 9;  // Change worm color
+        if (pix >= 30 && pix <= 34) {
+          // Change worm color
+          pix += 9;
+        }
 
         (wormSprite(i, 1, 1) + y * 16)[x] = pix;
 
-        if (x == 15)
-          (wormSprite(i, 0, 1) + y * 16)[15] = 0;  // A bit haxy, but works
-        else
+        if (x == 15) {
+          // A bit haxy, but works
+          (wormSprite(i, 0, 1) + y * 16)[15] = 0;
+        } else {
           (wormSprite(i, 0, 1) + y * 16)[14 - x] = pix;
+        }
       }
   }
 
