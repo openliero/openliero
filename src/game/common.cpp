@@ -202,7 +202,7 @@ char const* Texts::keyNames[177] = {
 Texts::Texts() {
   gameModes[Settings::GameMode::KillEmAll] = "Kill'em All";
   gameModes[Settings::GameMode::GameOfTag] = "Game of Tag";
-  gameModes[Settings::GameMode::Holdazone] = "Holdazone";
+  gameModes[Settings::GameMode::Holdazone] = "Hold a Zone";
   gameModes[Settings::GameMode::ScalesOfJustice] = "Scales of Justice";
 
   onoff[0] = "OFF";
