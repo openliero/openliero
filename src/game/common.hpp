@@ -100,8 +100,6 @@ struct SfxSample : gvl::noncopyable {
 struct Bitmap;
 struct FsNode;
 
-using std::vector;
-
 struct Common {
   Common();
 
@@ -130,15 +128,15 @@ struct Common {
 
   // Computed
   Texts texts;
-  vector<int> weapOrder;
+  std::vector<int> weapOrder;
   SpriteSet wormSprites;
   SpriteSet fireConeSprites;
 
   Material materials[MAX_MATERIALS];
   Texture textures[NUM_TEXTURES];
-  vector<Weapon> weapons;
-  vector<SObjectType> sobjectTypes;
-  vector<NObjectType> nobjectTypes;
+  std::vector<Weapon> weapons;
+  std::vector<SObjectType> sobjectTypes;
+  std::vector<NObjectType> nobjectTypes;
   /* Randomized timer values for Bonus SObjects. Sourced from
    * [[constants.bonuses]] in tc.cfg (timer/timerV) */
   int bonusRandTimer[NUM_BONUS_SOBJECTS][NUM_BONUS_TIMER_VALUES];
@@ -151,14 +149,15 @@ struct Common {
   ColourAnim colorAnim[NUM_COLOR_ANIM];
   /* Bonus frames. Sourced from [[constants.bonuses]] in tc.cfg (frame) */
   int bonusFrames[NUM_BONUS_SOBJECTS];
-  // all sprite sets sourced from TC/$NAME/sprites
 
+  // all sprite sets sourced from TC/$NAME/sprites
   SpriteSet smallSprites;
   SpriteSet largeSprites;
   SpriteSet textSprites;
+
   Palette exepal;
   Font font;
-  vector<SfxSample> sounds;
+  std::vector<SfxSample> sounds;
 
   int32_t C[CONST_DEF_T::MaxC];
   std::string S[STRING_DEF_T::MaxS];

@@ -6,7 +6,8 @@
 
 template <typename T>
 struct ObjectResolver {
-  ObjectResolver(Common& common, vector<T>& vec) : common(common), vec(vec) {}
+  ObjectResolver(Common& common, std::vector<T>& vec)
+      : common(common), vec(vec) {}
 
   void r2v(int& v) { v = -1; }
 
@@ -30,7 +31,7 @@ struct ObjectResolver {
   }
 
   Common& common;
-  vector<T>& vec;
+  std::vector<T>& vec;
 };
 
 template <typename Archive>
