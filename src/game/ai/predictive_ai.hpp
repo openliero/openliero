@@ -10,7 +10,6 @@
 #include "../math.hpp"
 #include "../worm.hpp"
 #include "dijkstra.hpp"
-#include "work_queue.hpp"
 
 struct InputState {
   enum Type {
