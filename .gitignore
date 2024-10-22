@@ -12,6 +12,9 @@ tmp/
 src/game/metadata.cpp
 CMakeUserPresets.json
 
+# miscellaneous
+*.log
+
 # vcpkg git repository
 tools/vcpkg/vcpkg/
 
