@@ -79,10 +79,6 @@ namespace gvl {
     gvl_list_link_before(x, p);
   }
 
-  inline void relink_before(gvl_list_node* x, gvl_list_node* p) {
-    gvl_list_link_before(x, p);
-  }
-
   inline void relink_after(gvl_list_node* x, gvl_list_node* p) {
     gvl_list_link_after(x, p);
   }
@@ -259,8 +255,6 @@ namespace gvl {
 
       iterator next() const { return iterator(ptr_->next); }
 
-      iterator prev() const { return iterator(ptr_->prev); }
-
       bool operator==(iterator const& b) { return b.ptr_ == ptr_; }
 
       bool operator!=(iterator const& b) { return b.ptr_ != ptr_; }
@@ -344,11 +338,6 @@ namespace gvl {
       return iterator(list_common::relink_back(upcast(el)));
     }
 
-    iterator push_front(T* el) {
-      el = static_cast<T*>(Ownership::take(el));
-      return iterator(list_common::relink_front(upcast(el)));
-    }
-
     iterator relink_back(T* el) {
       return iterator(list_common::relink_back(upcast(el)));
     }
@@ -356,10 +345,6 @@ namespace gvl {
     void pop_back() { erase(iterator(list_common::last())); }
 
     void pop_front() { erase(iterator(list_common::first())); }
-
-    void unlink_back() { list_common::unlink(list_common::last()); }
-
-    void unlink_front() { list_common::unlink(list_common::first()); }
 
     iterator erase(iterator i) {
       iterator n(list_common::unlink(i.ptr_));
@@ -383,17 +368,11 @@ namespace gvl {
 
     iterator end() { return iterator(&sentinel_); }
 
-    reverse_iterator rbegin() { return reverse_iterator(list_common::last()); }
-
-    reverse_iterator rend() { return reverse_iterator(&sentinel_); }
-
     range all() { return range(list_common::first(), &sentinel_); }
 
     T& front() { return *first(); }
 
     T& back() { return *last(); }
-
-    bool is_end(T* p) { return upcast(p) == &sentinel_; }
 
     iterator unlink(T* i) { return iterator(list_common::unlink(upcast(i))); }
 
@@ -401,12 +380,6 @@ namespace gvl {
       T* f = &r.front();
       r.pop_front();
       unlink(f);
-    }
-
-    void erase_front(range& r) {
-      T* f = &r.front();
-      r.pop_front();
-      erase(f);
     }
 
     iterator relink(iterator b, T* el) {
@@ -427,18 +400,6 @@ namespace gvl {
       return relink(b, el);
     }
 
-    template <typename Compare>
-    iterator insert_sorted(T* el, Compare compare) {
-      el = static_cast<T*>(Ownership::take(el));
-
-      gvl_list_node* after = &sentinel_.next;
-      while (after != &sentinel_ && compare(*downcast(after), *el)) {
-        after = after->next;
-      }
-
-      return iterator(list_common::relink(after, upcast(el)));
-    }
-
     void move_to(iterator i, list& dest) {
       list_common::unlink(i.ptr_);
       dest.list_common::relink_back(i.ptr_);
@@ -452,54 +413,6 @@ namespace gvl {
       }
 
       list_common::unlink_all();
-    }
-
-    void splice(list& b) {
-      if (!b.empty()) {
-        b.sentinel_.next->prev = sentinel_.prev;
-        b.sentinel_.prev->next = &sentinel_;
-
-        sentinel_.prev->next = b.sentinel_.next;
-        sentinel_.prev = b.sentinel_.prev;
-
-        b.list_common::unlink_all();
-      }
-    }
-
-    void splice_front(list& b) {
-      if (!b.empty()) {
-        b.sentinel_.prev->next = sentinel_.next;
-        b.sentinel_.next->prev = &sentinel_;
-
-        sentinel_.next->prev = b.sentinel_.prev;
-        sentinel_.next = b.sentinel_.next;
-
-        b.list_common::unlink_all();
-      }
-    }
-
-    void split(iterator i, list& b) {
-      if (i.ptr_ == &sentinel_)
-        return;  // Nothing to do
-
-      sassert(sentinel_.prev != &sentinel_);
-
-      gvl_list_node* new_last = i.ptr_->prev;
-      i.ptr_->prev = b.sentinel_.prev;
-      b.sentinel_.prev->next = i.ptr_;
-      b.sentinel_.prev = sentinel_.prev;
-
-      sentinel_.prev = new_last;
-      new_last->next = &sentinel_;
-    }
-
-    template <typename Op>
-    void merge(list& b, Op op) {
-      forward_decycle_();
-      b.forward_decycle_();
-      sentinel_.next = _merge(sentinel_.next, b.sentinel_.next, op);
-      stitch_up_();
-      b.unlink_all();
     }
 
     template <typename Op>
@@ -543,42 +456,6 @@ namespace gvl {
       sentinel_.next = binlist[max_bin - 1];
 
       stitch_up_();
-    }
-
-    template <typename Op>
-    void insertion_sort(Op op) {
-      gvl_list_node* sent = &sentinel_;
-      gvl_list_node* lprev = sent;
-      gvl_list_node* cur = lprev->next;
-
-      while (cur != sent) {
-        gvl_list_node* lnext = cur->next;
-        T const* curt = downcast(cur);
-        if (lprev != sent && op(*curt, *downcast(lprev))) {
-          // Unlink
-          lprev->next = lnext;
-          lnext->prev = lprev;
-
-          gvl_list_node* before = lprev->prev;
-          gvl_list_node* after = lprev;
-
-          while (before != sent && op(*curt, *downcast(before))) {
-            after = before;
-            before = after->prev;
-          }
-
-          cur->next = after;
-          cur->prev = before;
-
-          before->next = cur;
-          after->prev = cur;
-
-          // prev stays the same here
-        } else
-          lprev = cur;  // No move, prev will be cur
-
-        cur = lnext;
-      }
     }
 
    protected:

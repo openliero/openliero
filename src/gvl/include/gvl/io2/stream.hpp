@@ -243,11 +243,6 @@ namespace gvl {
     source_result::status next_piece_(uint32_t amount = 0);
     void set_bucket_(shared_ptr<bucket_data_mem> bucket);
 
-    void check_head() {
-      if (!head_)
-        throw runtime_error("No head assigned to octet_stream_reader");
-    }
-
     uint8_t const* cur_;  // Pointer into head_->data
     uint8_t const* end_;  // End of data in head_->data
     shared_ptr<stream_piece> head_;
@@ -319,19 +314,6 @@ namespace gvl {
         return overflow_put_(p, len);
       }
     }
-
-    shared_ptr<bucket_pipe> detach() {
-      if (has_sink()) {
-        flush_buffer();
-
-        // Buffer any remaining buckets
-        // partial_flush already does this: sink_->write_buffered(mem_buckets_);
-      }
-
-      return sink_.release();
-    }
-
-    bucket_pipe& sink() { return *sink_; }
 
     bool has_sink() const { return sink_.get() != 0; }
 

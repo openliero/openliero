@@ -79,16 +79,6 @@ namespace gvl {
 
     size_type size() const { return size_; }
 
-    void unsafe_push_back(uint8_t el) {
-      data[size_] = el;
-      ++size_;
-    }
-
-    void unsafe_push_back(uint8_t const* p, bucket_size len) {
-      std::memcpy(&data[size_], p, len);
-      size_ += len;
-    }
-
     bucket_data_mem* enlarge(bucket_size n) {
       bucket_data_mem* new_data = create(n, size_);
       std::memcpy(new_data->data, data, size_);
@@ -158,26 +148,6 @@ namespace gvl {
     }
 
     inline uint8_t const* get_ptr();
-
-    void cut_front(size_type amount) {
-      passert(size_known(), "Size is unknown");
-      begin_ += amount;
-      passert(begin_ <= end_, "Underflow");
-    }
-
-    void cut_back(size_type amount) {
-      passert(size_known(), "Size is unknown");
-      end_ -= amount;
-      passert(begin_ <= end_, "Underflow");
-    }
-
-    shared_ptr<bucket_data_mem> release_data() {
-      begin_ = 0;
-      end_ = 0;
-      return data_.release();
-    }
-
-    bool bucket_begins_at_zero() const { return begin_ == 0; }
 
     bucket* clone() const { return new bucket(*this, begin_, end_); }
 

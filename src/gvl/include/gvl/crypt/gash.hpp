@@ -157,8 +157,6 @@ namespace gvl {
 
     hash_accumulator() : bit_n(64), word_n(0), cur(0) {}
 
-    Hash& hash() { return hash_; }
-
     Hash hash_;
     uint64_t buf[Hash::block_size];
     int bit_n;

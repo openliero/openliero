@@ -112,23 +112,6 @@ namespace gvl {
 
     void swap(shared_ptr& b) { std::swap(v, b.v); }
 
-    template <typename DestT>
-    shared_ptr<DestT> cast() {
-      return shared_ptr<DestT>(dynamic_cast<DestT*>(get()), shared_ownership());
-    }
-
-    template <typename DestT>
-    shared_ptr<DestT> static_cast_() {
-      return shared_ptr<DestT>(static_cast<DestT*>(get()), shared_ownership());
-    }
-
-    T& cow() {
-      sassert(v);
-      if (v->ref_count() > 1)
-        reset(get()->clone());
-      return *get();
-    }
-
     T* get() const { return static_cast<T*>(v); }
 
    private:
@@ -157,12 +140,6 @@ namespace gvl {
       v = v_new;
       if (v)
         v->add_ref();
-    }
-
-    void _set_non_zero(T* v_new) {
-      v = v_new;
-      sassert(v);
-      v->add_ref();
     }
 
     T* v;
@@ -251,20 +228,6 @@ namespace gvl {
 
     void swap(deferred_ptr& b) { std::swap(v, b.v); }
 
-    template <typename DestT>
-    deferred_ptr<DestT> cast() {
-      deferred_ptr<DestT> ret(dynamic_cast<DestT*>(get()));
-      v = 0;
-      return ret;
-    }
-
-    template <typename DestT>
-    deferred_ptr<DestT> static_cast_() {
-      deferred_ptr<DestT> ret(static_cast<DestT*>(get()));
-      v = 0;
-      return ret;
-    }
-
     T* get() const { return static_cast<T*>(v); }
 
    private:
@@ -294,19 +257,8 @@ namespace gvl {
         v->add_ref();
     }
 
-    void _set_non_zero(T* v_new) {
-      v = v_new;
-      sassert(v);
-      v->add_ref();
-    }
-
     mutable T* v;
   };
-
-  template <typename T>
-  deferred_ptr<T> share_ownership(T* ptr) {
-    return deferred_ptr<T>(ptr, shared_ownership());
-  }
 
   template <typename T>
   shared_ptr<T>::shared_ptr(deferred_ptr<T> const& b) {

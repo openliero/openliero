@@ -98,7 +98,6 @@ namespace gvl {
   }
 
   struct endl_tag_ {};
-  inline void endl(endl_tag_) {}
 
   template <typename D>
   inline D& operator<<(basic_text_writer<D>& self_, void (*)(endl_tag_)) {

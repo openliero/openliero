@@ -46,18 +46,6 @@ namespace gvl {
 
     void swap(pairing_heap& b) { std::swap(root, b.root); }
 
-    void meld(pairing_heap& b) {
-      // comparison_link_ assumes non-zero pointers
-      if (root && b.root) {
-        root = comparison_link_(root, b.root);
-      } else if (!root) {
-        // root is 0, but b.root may not be
-        root = b.root;
-      }
-      // If root is non-zero and b.root is zero, we leave root as is
-      b.root = 0;
-    }
-
     // NOTE: TODO: Does root->prev have to have a defined value?
     void insert(T* el_) {
       pairing_node_common* el = upcast(el_);
@@ -134,11 +122,6 @@ namespace gvl {
         unlink_min();
 
       return el_;
-    }
-
-    void erase_min() {
-      passert(root, "Empty heap");
-      Deleter::operator()(unlink_min());
     }
 
     void erase(T* el) {
@@ -263,53 +246,6 @@ namespace gvl {
         first = comparison_link_(first, second);
         second = second_next;
       } while (second);
-
-      return first;
-    }
-
-    // NOTE: Return node has undefined right_sibling and prev!
-    pairing_node_common* combine_siblings_multipass_(pairing_node_common* el) {
-      pairing_node_common* first = el;
-
-      while (true) {
-        pairing_node_common* second = first->right_sibling;
-
-        // Only one sub-tree
-        if (!second)
-          return first;
-
-        // We're fast-tracking the case with two children
-        pairing_node_common* next = second->right_sibling;
-        first = comparison_link_(first, second);
-
-        if (!next)
-          return first;
-
-        pairing_node_common* prev = first;
-
-        do {
-          pairing_node_common* a = next;
-          pairing_node_common* b = a->right_sibling;
-          if (!b) {
-            prev->right_sibling = a;
-            sassert(prev->right_sibling != prev);
-            prev = a;
-            break;
-          }
-
-          next = b->right_sibling;
-
-          pairing_node_common* tree = comparison_link_(a, b);
-
-          // Append tree
-          prev->right_sibling = tree;
-          sassert(prev->right_sibling != prev);
-          prev = tree;
-        } while (next);
-
-        // Terminate list
-        prev->right_sibling = 0;
-      }
 
       return first;
     }
