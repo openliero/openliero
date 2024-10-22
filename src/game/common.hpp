@@ -12,11 +12,6 @@
 #include "sobject.hpp"
 #include "weapon.hpp"
 
-#if ENABLE_TRACING
-#include <gvl/io2/fstream.hpp>
-#include <gvl/serialization/archive.hpp>
-#endif
-
 #define NUM_AIPARAMS_KEYS 7
 #define NUM_AIPARAMS_VALUES 2
 #define MAX_MATERIALS 256
@@ -44,7 +39,7 @@ struct Texture {
 struct Texts {
   Texts();
 
-  std::string gameModes[Settings::GameModes::MaxGameModes];
+  std::string gameModes[Settings::GameMode::MaxGameModes];
   std::string onoff[NUM_ON_OFF];
   std::string controllers[3];
 
@@ -63,27 +58,25 @@ struct ColourAnim {
 
 /* AI parameters sourced from [[constants.aiparams]] in tc.cfg */
 struct AIParams {
-  int k[NUM_AIPARAMS_VALUES][NUM_AIPARAMS_KEYS];  // 0x1AEEE, contiguous words
+  // 0x1AEEE, contiguous words
+  int k[NUM_AIPARAMS_VALUES][NUM_AIPARAMS_KEYS];
 };
 
 struct SfxSample : gvl::noncopyable {
-  // SfxSample(SfxSample const&) = delete;
-  // SfxSample& operator=(SfxSample const&) = delete;
-
   SfxSample() : sound(0) {}
 
   SfxSample(SfxSample&& other)
       : name(std::move(other.name)),
         sound(other.sound),
-        originalData(std::move(other.originalData)) {
-    other.sound = 0;
-  }
+        originalData(std::move(other.originalData)) {}
 
   SfxSample& operator=(SfxSample&& other) {
     name = std::move(other.name);
-    sound = other.sound;
-    sound = 0;
     originalData = std::move(other.originalData);
+    // TODO the below code was originally zero'd out could be a bug or
+    // something. noted for future reference.
+    sound = other.sound;
+
     return *this;
   }
 
@@ -107,17 +100,6 @@ struct SfxSample : gvl::noncopyable {
 struct Bitmap;
 struct FsNode;
 
-using std::vector;
-
-#if ENABLE_TRACING
-#define LTRACE(category, object, attribute, value) \
-  common.ltrace(#category, (uint32)(object), #attribute, value)
-#define IF_ENABLE_TRACING(...) __VA_ARGS__
-#else
-#define LTRACE(category, object, attribute, value) ((void)0)
-#define IF_ENABLE_TRACING(x) ((void)0)
-#endif
-
 struct Common {
   Common();
 
@@ -127,7 +109,7 @@ struct Common {
                            [FIRE_CONE_OFFSET_ANGLE_FRAME][FIRE_CONE_OFFSET_XY];
 
   void load(FsNode node);
-  void drawTextSmall(Bitmap& scr, char const* str, int x, int y);
+  void drawTextSmall(const Bitmap& scr, char const* str, int x, int y);
   void precompute();
 
   std::string guessName() const;
@@ -146,15 +128,15 @@ struct Common {
 
   // Computed
   Texts texts;
-  vector<int> weapOrder;
+  std::vector<int> weapOrder;
   SpriteSet wormSprites;
   SpriteSet fireConeSprites;
 
   Material materials[MAX_MATERIALS];
   Texture textures[NUM_TEXTURES];
-  vector<Weapon> weapons;
-  vector<SObjectType> sobjectTypes;
-  vector<NObjectType> nobjectTypes;
+  std::vector<Weapon> weapons;
+  std::vector<SObjectType> sobjectTypes;
+  std::vector<NObjectType> nobjectTypes;
   /* Randomized timer values for Bonus SObjects. Sourced from
    * [[constants.bonuses]] in tc.cfg (timer/timerV) */
   int bonusRandTimer[NUM_BONUS_SOBJECTS][NUM_BONUS_TIMER_VALUES];
@@ -167,29 +149,17 @@ struct Common {
   ColourAnim colorAnim[NUM_COLOR_ANIM];
   /* Bonus frames. Sourced from [[constants.bonuses]] in tc.cfg (frame) */
   int bonusFrames[NUM_BONUS_SOBJECTS];
-  // all sprite sets sourced from TC/$NAME/sprites
 
+  // all sprite sets sourced from TC/$NAME/sprites
   SpriteSet smallSprites;
   SpriteSet largeSprites;
   SpriteSet textSprites;
+
   Palette exepal;
   Font font;
-  vector<SfxSample> sounds;
+  std::vector<SfxSample> sounds;
 
   int32_t C[CONST_DEF_T::MaxC];
   std::string S[STRING_DEF_T::MaxS];
   bool H[HACK_DEF_T::MaxH];
-
-#if ENABLE_TRACING
-  void ltrace(
-      char const* category,
-      uint32 object,
-      char const* attribute,
-      uint32 value);
-
-  gvl::octet_writer trace_writer;
-  gvl::octet_reader trace_reader;
-
-  bool writeTrace;
-#endif
 };

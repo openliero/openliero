@@ -2,90 +2,44 @@
 
 #include <algorithm>
 
-namespace gvl
-{
+namespace gvl {
 
-struct weak_ptr_common;
+  struct weak_ptr_common;
 
-struct shared
-{
-	friend struct weak_ptr_common;
+  struct shared {
+    friend struct weak_ptr_common;
 
-	shared()
-	: _ref_count(1), _first(0)
-	{
+    shared() : _ref_count(1), _first(0) {}
 
-	}
+    // const to allow shared_ptr<T const>
+    void add_ref() const { ++_ref_count; }
 
-	// const to allow shared_ptr<T const>
-	void add_ref() const
-	{
-#if GVL_THREADSAFE
-		#error "Not finished"
-		// TODO: Interlocked increment
-#else
-		++_ref_count;
-#endif
-	}
+    // const to allow shared_ptr<T const>
+    void release() const {
+      --_ref_count;
+      if (_ref_count == 0) {
+        _clear_weak_ptrs();
+        _delete();
+      }
+    }
 
-	// const to allow shared_ptr<T const>
-	void release() const
-	{
-#if GVL_THREADSAFE
-		#error "Not finished"
-		if(_ref_count == 1) // 1 means it has to become 0, nobody can increment it after this read
-			_delete();
-		else
-		{
-			// TODO: Implement CAS
-			int read_ref_count;
-			do
-			{
-				read_ref_count = _ref_count;
-			}
-			while(!cas(&_ref_count, read_ref_count, read_ref_count - 1));
+    void swap(shared& b) {
+      std::swap(_ref_count, b._ref_count);
+      std::swap(_first, b._first);
+    }
 
-			if(read_ref_count - 1 == 0)
-			{
-				_clear_weak_ptrs();
-				_delete();
-			}
-		}
-#else
-		--_ref_count;
-		if(_ref_count == 0)
-		{
-			_clear_weak_ptrs();
-			_delete();
-		}
-#endif
-	}
+    int ref_count() const { return _ref_count; }
 
-	void swap(shared& b)
-	{
-		std::swap(_ref_count, b._ref_count);
-		std::swap(_first, b._first);
-	}
+    virtual ~shared() {}
 
-	int ref_count() const
-	{ return _ref_count; }
+   private:
+    void _delete() const { delete this; }
 
-	virtual ~shared()
-	{
-	}
+    void _clear_weak_ptrs() const {}
 
-private:
-	void _delete() const
-	{
-		delete this;
-	}
-
-	void _clear_weak_ptrs() const
-	{
-	}
-
-	mutable int _ref_count; // You should be able to have shared_ptr<T const>
-	weak_ptr_common* _first;
-};
+    // You should be able to have shared_ptr<T const>
+    mutable int _ref_count;
+    weak_ptr_common* _first;
+  };
 
 }

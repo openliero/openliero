@@ -37,14 +37,12 @@ struct Extensions {
   std::string tc;
 };
 
-struct Rand;
-
 struct Settings : gvl::shared, Extensions {
-  enum GameModes {
-    GMKillEmAll,
-    GMGameOfTag,
-    GMHoldazone,
-    GMScalesOfJustice,
+  enum GameMode {
+    KillEmAll,
+    GameOfTag,
+    Holdazone,
+    ScalesOfJustice,
     MaxGameModes
   };
 
@@ -55,12 +53,10 @@ struct Settings : gvl::shared, Extensions {
 
   Settings();
 
-  bool load(FsNode node, Rand& rand);
-  bool loadLegacy(FsNode node, Rand& rand);
-  void save(FsNode node, Rand& rand);
+  bool load(FsNode node);
+  bool loadLegacy(FsNode node);
+  void save(FsNode node);
   gvl::gash::value_type& updateHash();
-
-  static void generateName(WormSettings& ws, Rand& rand);
 
   uint32_t weapTable[40];
   int32_t maxBonuses;
@@ -95,7 +91,7 @@ inline T limit(T v) {
 }
 
 template <typename Archive>
-void archive_liero(Archive ar, Settings& settings, Rand& rand) {
+void archive_liero(Archive ar, Settings& settings) {
   ar.ui8(settings.maxBonuses)
       .ui16_le(settings.loadingTime)
       .ui16_le(settings.lives)
@@ -112,10 +108,10 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand) {
       .b(settings.regenerateLevel)
       .b(settings.shadow);
 
-  if (ar.in)
+  if (ar.in) {
     settings.wormSettings[0]->controller %= 3;
-  if (ar.in)
     settings.wormSettings[1]->controller %= 3;
+  }
 
   for (int i = 0; i < 40; ++i) {
     ar.ui8(settings.weapTable[i]);
@@ -147,7 +143,7 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand) {
       ar.pascal_str(settings.wormSettings[i]->name, 21);
       if (ar.in) {
         if (settings.wormSettings[i]->name.empty())
-          settings.generateName(*settings.wormSettings[i], rand);
+          settings.wormSettings[i]->randomName = true;
         else
           settings.wormSettings[i]->randomName = false;
       }
@@ -201,7 +197,8 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand) {
       ar.b(extDummy);
 
     for (int i = 0; i < 2; ++i) {
-      for (int c = 0; c < WormSettings::MaxControl; ++c) {
+      for (int c = 0; c < static_cast<int>(WormSettings::Control::MaxControl);
+           ++c) {
         int dummy = 0;
         gvl::enable_when(ar, fileExtensionVersion >= 2)
             .ui8(dummy, 255)
@@ -211,7 +208,8 @@ void archive_liero(Archive ar, Settings& settings, Rand& rand) {
 
     for (int i = 0; i < 2; ++i) {
       WormSettings& ws = *settings.wormSettings[i];
-      for (int c = 0; c < WormSettings::MaxControlEx; ++c) {
+      for (int c = 0; c < static_cast<int>(WormSettings::Control::MaxControlEx);
+           ++c) {
         gvl::enable_when(ar, fileExtensionVersion >= 3)
             .ui32(ws.controlsEx[c], ws.controls[c]);
       }

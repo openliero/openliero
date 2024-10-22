@@ -5,39 +5,37 @@
 struct Common;
 struct ItemBehavior;
 
-struct HiddenMenu : Menu
-{
-	enum
-	{
-		RecordReplays,
-		LoadPowerLevels,
-		//ScalingFilter,
-		DoubleRes,
-		Fullscreen,
-		AiFrames,
-		AiMutations,
-		PaletteSelect,
-		Shadows,
-		ScreenSync,
-		SelectBotWeapons,
-		AiTraces,
-		AiParallels,
-		AllowViewingSpawnPoint,
-		SingleScreenReplay,
-		SpectatorWindow,
-	};
+struct HiddenMenu : Menu {
+  enum Option {
+    RecordReplays,
+    LoadPowerLevels,
+    // ScalingFilter,
+    DoubleRes,
+    Fullscreen,
+    AiFrames,
+    AiMutations,
+    PaletteSelect,
+    Shadows,
+    ScreenSync,
+    SelectBotWeapons,
+    AiTraces,
+    AiParallels,
+    AllowViewingSpawnPoint,
+    SingleScreenReplay,
+    SpectatorWindow,
+  };
 
-	HiddenMenu(int x, int y)
-	: Menu(x, y)
-	, paletteColor(0)
-	{
-	}
+  HiddenMenu(int x, int y) : Menu(x, y), paletteColor(0) {}
 
-	virtual ItemBehavior* getItemBehavior(Common& common, MenuItem& item);
+  ItemBehavior* getItemBehavior(Common& common, MenuItem& item) override;
 
-	virtual void drawItemOverlay(Common& common, MenuItem& item, int x, int y, bool selected, bool disabled);
+  void drawItemOverlay(
+      Common& common,
+      MenuItem& item,
+      int x,
+      int y,
+      bool selected,
+      bool disabled) override;
 
-	virtual void onUpdate();
-
-	int paletteColor;
+  int paletteColor;
 };

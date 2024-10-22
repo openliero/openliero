@@ -12,16 +12,10 @@
 				"CMAKE_CXX_STANDARD": "11",
 				"CMAKE_CXX_STANDARD_REQUIRED": "ON",
 				"CMAKE_CXX_EXTENSIONS": "OFF",
+				"CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG": "OFF",
+				"CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE": "ON",
 				"OPENLIERO_USE_VCPKG": "ON",
 				"OPENLIERO_BUILD_TCTOOL": "ON"
-			}
-		},
-		{
-			"name": "arm64",
-			"hidden": true,
-			"architecture": {
-				"value": "arm64",
-				"strategy": "external"
 			}
 		},
 		{
@@ -33,15 +27,31 @@
 			}
 		},
 		{
-			"name": "arch-arm64-macos",
+			"name": "arm64",
+			"hidden": true,
+			"architecture": {
+				"value": "arm64",
+				"strategy": "external"
+			}
+		},
+		{
+			"name": "arch-x64-linux",
 			"hidden": true,
 			"inherits": [
-				"arm64",
-				"macos"
+				"x64"
 			],
 			"cacheVariables": {
-				"CMAKE_OSX_ARCHITECTURES": "arm64",
-				"VCPKG_TARGET_TRIPLET": "arm64-osx"
+				"VCPKG_TARGET_TRIPLET": "x64-linux"
+			}
+		},
+		{
+			"name": "arch-arm64-linux",
+			"hidden": true,
+			"inherits": [
+				"arm64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-linux"
 			}
 		},
 		{
@@ -57,33 +67,15 @@
 			}
 		},
 		{
-			"name": "arch-arm64-linux",
+			"name": "arch-arm64-macos",
 			"hidden": true,
 			"inherits": [
-				"arm64"
+				"arm64",
+				"macos"
 			],
 			"cacheVariables": {
-				"VCPKG_TARGET_TRIPLET": "arm64-linux"
-			}
-		},
-		{
-			"name": "arch-x64-linux",
-			"hidden": true,
-			"inherits": [
-				"x64"
-			],
-			"cacheVariables": {
-				"VCPKG_TARGET_TRIPLET": "x64-linux"
-			}
-		},
-		{
-			"name": "arch-arm64-windows",
-			"hidden": true,
-			"inherits": [
-				"arm64"
-			],
-			"cacheVariables": {
-				"VCPKG_TARGET_TRIPLET": "arm64-windows"
+				"CMAKE_OSX_ARCHITECTURES": "arm64",
+				"VCPKG_TARGET_TRIPLET": "arm64-osx"
 			}
 		},
 		{
@@ -97,11 +89,49 @@
 			}
 		},
 		{
+			"name": "arch-arm64-windows",
+			"hidden": true,
+			"inherits": [
+				"arm64"
+			],
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-windows"
+			}
+		},
+		{
 			"name": "ci",
 			"hidden": true,
 			"cacheVariables": {
 				"CMAKE_C_COMPILER_LAUNCHER": "sccache",
 				"CMAKE_CXX_COMPILER_LAUNCHER": "sccache"
+			}
+		},
+		{
+			"name": "condition-linux",
+			"hidden": true,
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Linux"
+			}
+		},
+		{
+			"name": "condition-linux-ci",
+			"hidden": true,
+			"condition": {
+				"type": "allOf",
+				"conditions": [
+					{
+						"type": "equals",
+						"lhs": "${hostSystemName}",
+						"rhs": "Linux"
+					},
+					{
+						"type": "equals",
+						"lhs": "$penv{CI}",
+						"rhs": "true"
+					}
+				]
 			}
 		},
 		{
@@ -130,34 +160,6 @@
 						"type": "equals",
 						"lhs": "${hostSystemName}",
 						"rhs": "Darwin"
-					},
-					{
-						"type": "equals",
-						"lhs": "$penv{CI}",
-						"rhs": "true"
-					}
-				]
-			}
-		},
-		{
-			"name": "condition-linux",
-			"hidden": true,
-			"condition": {
-				"type": "equals",
-				"lhs": "${hostSystemName}",
-				"rhs": "Linux"
-			}
-		},
-		{
-			"name": "condition-linux-ci",
-			"hidden": true,
-			"condition": {
-				"type": "allOf",
-				"conditions": [
-					{
-						"type": "equals",
-						"lhs": "${hostSystemName}",
-						"rhs": "Linux"
 					},
 					{
 						"type": "equals",

@@ -2,10 +2,10 @@
 
 #include <memory>
 #include <string>
-#include "game/common.hpp"
+#include "common.hpp"
 
 void replayToVideo(
-	std::shared_ptr<Common> const& common,
+    std::shared_ptr<Common> const& common,
     bool spectator,
-	std::string const& fullPath,
-	std::string const& replayVideoName);
+    std::string const& fullPath,
+    std::string const& replayVideoName);
