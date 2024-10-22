@@ -26,8 +26,4 @@ extern fixedvec cossinTable[128];
 
 int vectorLength(int x, int y);
 
-inline int distanceTo(int x1, int y1, int x2, int y2) {
-  return vectorLength(x1 - x2, y1 - y2);
-}
-
 void precomputeTables();

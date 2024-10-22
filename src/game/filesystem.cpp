@@ -11,22 +11,6 @@
 #include <unistd.h>
 #endif
 
-std::string changeLeaf(std::string const& path, std::string const& newLeaf) {
-  std::size_t lastSep = path.find_last_of("\\/");
-
-  if (lastSep == std::string::npos)
-    return newLeaf;  // We assume there's only a leaf in the path
-  return path.substr(0, lastSep + 1) + newLeaf;
-}
-
-std::string getRoot(std::string const& path) {
-  std::size_t lastSep = path.find_last_of("\\/");
-
-  if (lastSep == std::string::npos)
-    return "";
-  return path.substr(0, lastSep);
-}
-
 std::string getLeaf(std::string const& path) {
   std::size_t lastSep = path.find_last_of("\\/");
 
@@ -88,14 +72,6 @@ FILE* tolerantFOpen(std::string const& name, char const* mode) {
     return f;
 
   return 0;
-}
-
-std::size_t fileLength(FILE* f) {
-  long old = ftell(f);
-  fseek(f, 0, SEEK_END);
-  long len = ftell(f);
-  fseek(f, old, SEEK_SET);
-  return len;
 }
 
 #if _WIN32
@@ -528,9 +504,7 @@ struct FsNodeFilesystem : FsNodeImp {
     std::string fullPath(joinPath(path, name));
     std::shared_ptr<FsNodeImp> imp;
 
-    {
-      imp.reset(new FsNodeFilesystem(fullPath));
-    }
+    { imp.reset(new FsNodeFilesystem(fullPath)); }
 
     std::string zipPath(fullPath + ".zip");
 

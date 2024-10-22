@@ -492,18 +492,6 @@ void Common::precompute() {
 
 Common::Common() {}
 
-std::string Common::guessName() const {
-  std::string const& cp = S[SCopyright2];
-  auto p = cp.find('(');
-  if (p == std::string::npos)
-    p = cp.size();
-
-  while (p > 0 && cp[p - 1] == ' ')
-    --p;
-
-  return cp.substr(0, p);
-}
-
 void SfxSample::createSound() {
   std::vector<int16_t>& samples = sfx_sound_data(sound);
 

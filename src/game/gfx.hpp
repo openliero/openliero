@@ -135,14 +135,6 @@ struct Gfx {
 
   bool testKey(Uint32 key) { return dosKeys[key]; }
 
-  void releaseKey(Uint32 key) { dosKeys[key] = false; }
-
-  void pressKey(Uint32 key) { dosKeys[key] = true; }
-
-  void setKey(Uint32 key, bool state) { dosKeys[key] = state; }
-
-  void toggleKey(Uint32 key) { dosKeys[key] = !dosKeys[key]; }
-
   bool testSDLKeyOnce(SDL_Scancode key) {
     Uint32 k = SDLToDOSKey(key);
     return k ? testKeyOnce(k) : false;

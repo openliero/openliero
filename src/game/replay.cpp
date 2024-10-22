@@ -152,34 +152,6 @@ void archive(Archive ar, Viewport& vp) {
   ar.ui32(dummy);
 }
 
-struct mtf {
-  uint8_t order[256];
-
-  mtf() {
-    for (int i = 0; i < 256; ++i)
-      order[i] = i;
-  }
-
-  uint8_t byte_to_rank(uint8_t v) {
-    for (int i = 0; i < 256; ++i) {
-      if (order[i] == v)
-        return i;
-    }
-
-    return 0;  // Will never reach here
-  }
-
-  uint8_t rank_to_byte(uint8_t v) { return order[v]; }
-
-  void promote_rank(uint8_t rank) {
-    uint8_t byte = order[rank];
-    for (uint32_t i = rank; i-- > 0;) {
-      order[i + 1] = order[i];
-    }
-    order[0] = byte;
-  }
-};
-
 template <typename Archive>
 void archive(Archive ar, Palette& pal) {
   for (int i = 0; i < 256; ++i) {

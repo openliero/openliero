@@ -7,8 +7,6 @@
 #include <memory>
 #include <string>
 
-std::string changeLeaf(std::string const& path, std::string const& newLeaf);
-std::string getRoot(std::string const& path);
 std::string getLeaf(std::string const& path);
 std::string getBasename(std::string const& path);
 std::string getExtension(std::string const& path);
@@ -17,7 +15,6 @@ std::string joinPath(std::string const& root, std::string const& leaf);
 
 FILE* tolerantFOpen(std::string const& name, char const* mode);
 
-std::size_t fileLength(FILE* f);
 bool create_directories(std::string const& dir);
 
 struct NodeName {

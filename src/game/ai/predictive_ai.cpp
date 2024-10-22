@@ -51,17 +51,6 @@ int readyWeapons(const Game& game, Worm* w) {
   return count;
 }
 
-bool hasUsableWeapon(const Game& game, Worm* w) {
-  for (int i = 0; i < 5; ++i) {
-    const WormWeapon& weap = w->weapons[i];
-
-    if (weap.loadingLeft <= 0)
-      return true;
-  }
-
-  return false;
-}
-
 int wormDistance(Worm* from, Worm* to) {
   return vectorLength(
       ftoi(to->pos.x) - ftoi(from->pos.x), ftoi(to->pos.y) - ftoi(from->pos.y));

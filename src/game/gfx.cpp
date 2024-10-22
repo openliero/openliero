@@ -858,27 +858,9 @@ void Gfx::flip() {
   lastFrame = wantedTime;
 }
 
-void playChangeSound(const Common& common, int change) {
-  if (change > 0) {
-    sfx.play(common, 25);
-  } else {
-    sfx.play(common, 26);
-  }
-}
-
 void resetLeftRight() {
   gfx.releaseSDLKey(SDL_SCANCODE_LEFT);
   gfx.releaseSDLKey(SDL_SCANCODE_RIGHT);
-}
-
-template <typename T>
-void changeVariable(T& var, T change, T min, T max, T scale) {
-  if (change < 0 && var > min) {
-    var += change * scale;
-  }
-  if (change > 0 && var < max) {
-    var += change * scale;
-  }
 }
 
 struct ProfileLoadBehavior : ItemBehavior {
@@ -1838,17 +1820,6 @@ void Gfx::drawSpectatorInfo() {
     common.font.drawCenteredText(
         singleScreenRenderer.bmp, "SETUP", centerX, centerY + 48, 7, 2);
   }
-}
-
-int upperCaseOnly(int k) {
-  k = std::toupper(k);
-
-  if ((k >= 'A' && k <= 'Z') ||
-      (k == 0x8f || k == 0x8e || k == 0x99)  // � �and �
-      || (k >= '0' && k <= '9'))
-    return k;
-
-  return 0;
 }
 
 void Gfx::openHiddenMenu() {
