@@ -22,7 +22,7 @@ struct NObjectType
 
 	/*
 	Additional worm detect distance for the bullet. This setting affects the distance at which an object hits a worm. Add more for "bigger" bullets or things like proximity detonators.
-	Note: unlike in wObject, detectDistance does not determine the starting distance from the player).
+	Note: unlike in wObject, detectDistance here does not determine the starting distance from the player.
 	Note: if detectDistance < 0, then the worm will not receive damage from the object and also blowAway parameter will not work.
 	*/
 	int detectDistance;
@@ -132,7 +132,7 @@ struct NObjectType
 	*/
 	int splinterColour;
 	/*
-	Type of nObjects used when an explosion occurs. This refers to index of the nObject in the array (counting started from 0), so if you change the order of nObjects, something else will be used.
+	Type of nObject to create when the object explodes.
 	*/
 	int splinterType;
 	/*
