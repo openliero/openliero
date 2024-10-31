@@ -47,7 +47,7 @@ struct Weapon
 	*/
 	int blowAway;
 	/*
-	Gravity of the object.
+	Gravity of the object. Can also be negative.
 	*/
 	fixed gravity;
 	/*
@@ -118,7 +118,7 @@ struct Weapon
 	*/
 	int createOnExp;
 	/*
-	Which dirt mask to use on object explosion. Set -1 is none.
+	Which dirt mask to use on object explosion. Set -1 for none.
 	*/
 	int dirtEffect;
 	/*
@@ -159,7 +159,7 @@ struct Weapon
 	bool collideWithObjects;
 	/*
 	Whether the object is affected by explosions' push force (on collision with sObject).
-	Note: works only if the colliding sObject has got detectRange > 0 and damage ≠ 0 and blowAway ≠ 0!
+	Note: works only if the colliding sObject has got detectRange > 0 and damage > 0 and blowAway ≠ 0!
 	*/
 	bool affectByExplosions;
 	/*
@@ -205,7 +205,7 @@ struct Weapon
 	int numFrames;
 	/*
 	Whether the animation should be looped.
-	Note: loopAnim parameter is affected by bulletSpeed parameter, which means that if you set it "true", then the animation cycle of the wObject will work only if the object is moving (when wObject stops moving, the animation cycle stops too).
+	Note: loopAnim parameter is affected by "speed" parameter, which means that if you set it "true", then the animation cycle of the wObject will work only if the object is moving (when wObject stops moving, the animation cycle stops too).
 	Note: if loopAnim is set to "false" and numFrames > 0, then the object will be still animated; in that case, the animation cycle of the wObject will work also if the object is not moving (the animation cycle keeps going even when the bullet is not moving) - unless the bullet stops moving on collision with ground (dirt / rock / edge of the map; in that case, the animation cycle always stops).
 	Note: if loopAnim is set to "true" and numFrames: 0 and shotType: 0, then the wObject will have randomly either the sprite indicated in startFrame or the next one in spritesheet (e.g. if you set startFrame 115, then the wObject will appear as sprite 115 or as 116; this is actually how booby trap shoots weapon packs or health packs by default).
 	Note: works properly only for shotType 0, 1 and 4 (it's recommended to set this parameter to "false" for shotType 2 and 3).
@@ -227,16 +227,16 @@ struct Weapon
 	int colorBullets;
 	/*
 	Amount of nObjects to create on explosion. The wObject must actually explode, for example if "wormExplode" is set to false and "wormCollide" is set to true, no nObjects will be created.
-        Note: NEVER set splinterAmount > 0 and splinterType to "null" for the same weapon object, otherwise the game will freeze!
+	Note: NEVER set splinterAmount > 0 and splinterType to "null" for the same weapon object, otherwise the game will freeze!
 	*/
 	int splinterAmount;
 	/*
 	Color used on nObjects (produced as splinters) when they are a single pixel (startFrame -1 or 0). If splinterColour is set to 0 or 1, then splinters will have a colour indicated in nObject "colorBullets" property.
-	Note: if splinterColour is set to 2 or more, nObject splinter will actually use two colours: the one indicated in this parameter, and also the previous one. So, in this case, splinters will use colour 13 and 12.
+	Note: if splinterColour is set to 2 or more, nObject splinter will actually use two colours: the one indicated in this parameter, and also the previous one.
 	*/
 	int splinterColour;
 	/*
-	Type of nObjects to create when the object explodes.
+	Type of nObject to create when the object explodes.
 	*/
 	int splinterType;
 	/*
