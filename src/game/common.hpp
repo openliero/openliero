@@ -34,11 +34,15 @@
 extern int stoneTab[3][4];
 
 /* Textures sourced from [[constants.textures]] in tc.cfg */
+/* 
+Textures have the reference in nObject, wObject and sObject as dirtEffect.
+By changing Textures values in tc.cfg (nDrawBack, mFrame, sFrame and rFrame), you can control how all objects (wObjects, nObjects, sObjects) and worm (via dirtEffect 0 and 7) interact with all materials on the map (especially with dirt).
+*/
 struct Texture {
-  bool nDrawBack;  // 1C208
-  int mFrame;      // 1C1EA
-  int sFrame;      // 1C1F4
-  int rFrame;      // 1C1FE
+  bool nDrawBack;  // 1C208; causes Liero not to draw the anti-alias edges on the background. Normally turned "false" for creating dirt and rock & turned "true" for cleaning dirt.
+  int mFrame;      // 1C1EA; controls which sprite is used to cut a hole (= determines the size and shape of the hole).
+  int sFrame;      // 1C1F4; the texture the map change will leave behind (= which sprite is used to fill the hole).
+  int rFrame;      // 1C1FE; the amount of sprites to use to fill the hole (starting from sFrame). Note: if you set 0 or 1, then only 1 sprite will be used to fill the hole (the one indicated in sFrame).
 };
 
 struct Texts {
@@ -56,7 +60,7 @@ struct Texts {
 };
 
 /* Colour animations sourced from [[constants.colorAnim]] in tc.cfg */
-struct ColourAnim {
+struct ColourAnim { // sets arrays of colours which will be animated (colours will shine).
   int from;
   int to;
 };
@@ -162,16 +166,15 @@ struct Common {
   int bonusSObjects[NUM_BONUS_SOBJECTS];
   /* AI parameters. Sourced from [[constants.aiparams.$KEY]] in tc.cfg */
   AIParams aiParams;
-  /* Colour Animations. Sourced from [[constants.colorAnim]] in tc.cfg (from/to)
-   */
+  /* Colour Animations. Sourced from [[constants.colorAnim]] in tc.cfg (from/to) */
   ColourAnim colorAnim[NUM_COLOR_ANIM];
   /* Bonus frames. Sourced from [[constants.bonuses]] in tc.cfg (frame) */
   int bonusFrames[NUM_BONUS_SOBJECTS];
   // all sprite sets sourced from TC/$NAME/sprites
 
-  SpriteSet smallSprites;
-  SpriteSet largeSprites;
-  SpriteSet textSprites;
+  SpriteSet smallSprites; // 7x7, sprites 110-239
+  SpriteSet largeSprites; // 16x16, sprites 0-109
+  SpriteSet textSprites; // 4x4, sprites 240-265
   Palette exepal;
   Font font;
   vector<SfxSample> sounds;
