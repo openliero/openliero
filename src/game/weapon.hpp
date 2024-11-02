@@ -36,59 +36,57 @@ struct Weapon
 	Note: if detectDistance < 0, then the worm will not receive damage from the object and also blowAway/wormCollide parameters will not work.
 	*/
 	int detectDistance;
+	/*
+	Whether the movement of the player affects the initial speed and direction of the object.
+	*/
 	bool affectByWorm;
 	/*
 	Force affecting the worm on hit.
-	Note: this will also work if the object has "wormCollide" set to false; in such case, it will simply not disappear and push the worm continuously.
+	Note: this will also work if the object has "wormCollide" set to false; in such case, the object will not disappear but push the worm continuously.
 	Note: works only if the object is moving and detectDistance ⩾ 0!
 	*/
 	int blowAway;
 	/*
-	Gravity of the projectile.
+	Gravity of the object. Can also be negative.
 	*/
 	fixed gravity;
 	/*
-	Whether the sObject should create a shadow.
+	Whether the object should create a shadow.
 	*/
 	bool shadow;
 	/*
-	Whether a weapon has the flickering, red laser sight. It cannot be configured in any way, except for changing its colour (this requires palette changing though).
+	Whether a wObject has the flickering, red laser sight. It cannot be configured in any way, except for changing its colour (this requires palette changing though).
 	Note: laser sight is not displayed on special rock (undefined) on the map (or after it), however the bullet itself passes through such type of material.
 	*/
 	bool laserSight;
 	/*
-	Sound to use when shooting (taken from soundpack). Set -1 for none.
+	Sound played when the weapon is fired. Set -1 for none.
 	*/
 	int launchSound;
 	/*
-	Sound to use when ??? (taken from soundpack). Set -1 for none.
+	Loop sound while fire key is pressed and cut off sound as soon as fire key is released. Buggy.
 	*/
 	int loopSound;
 	/*
-	Sound to use when ??? (taken from soundpack). Set -1 for none.
+	Sound played when the object explodes. Set -1 for none.
 	*/
 	int exploSound;
 	/*
-	Initial speed of the bullet. 6 is about the max playable value for usual weapons.
+	Initial speed of the bullet. 600 is about the max playable value for usual weapons.
 	Note: if you set too high value for it, the bullet might pass through worms and even through thinner walls.
-	Note: To make very fast gauss-like weapons, use "repeat" property.
-	Note: if you set negative value for it, the bullet will go in the opposite direction the worm is aiming.
-
-	Base speed used for missile-type weapons ("shotType" = 2). Use "addSpeed" property to define additional speed when pressing "up" button while flying.
+	Note: this parameter defines also base speed used for missile-type weapons ("shotType" = 2). Use "addSpeed" property to define additional speed when pressing "up" button while flying.
 	*/
 	int speed;
 	/*
 	Works in two modes:
-	a) for shotType = 3, this is additional speed added each frame. Use it for constant accelerating weapons.
+	a) for shotType = 3, this is additional speed added each frame. Use it for constant accelerating bullets (like in e.g. bazooka).
 	b) for shotType = 2 (directional player-controlled missile), this is an additional speed added to the missile when pressing up.
 	It has no impact on other shotType (0, 1 and 4).
 	*/
 	fixed addSpeed;
 	/*
-	Spread of the weapon. This works by adding a random direction vector of random length to current speed vector of the projectile.
+	Spread of the bullet. This works by adding a random direction vector of random length to current speed vector of the projectile.
 	Note: if you set its value to > 1 or < -1, then more than 1 direction vector will be applied, so that the projectiles will have a variable initial velocity after firing.
-
-	weapon: This parameter doesn't do anything - only the wObject distribution property matters for bullets. Probably a bug.
 	*/
 	int distribution;
 	/*
@@ -100,7 +98,7 @@ struct Weapon
 	*/
 	int recoil;
 	/*
-	Speed multiplication each frame. Use it to have a weapons which accelerate or decelerate non-linearly, like proxy mine from promode.
+	Speed multiplication each frame. Use it to have a weapon which accelerates or decelerates non-linearly, like proxy mine from promode.
 	*/
 	int multSpeed;
 	/*
@@ -112,7 +110,7 @@ struct Weapon
 	*/
 	int loadingTime;
 	/*
-	Number of shots before weapon needs to be reloaded.
+	Number of shots before the weapon needs to be reloaded.
 	*/
 	int ammo;
 	/*
@@ -120,7 +118,7 @@ struct Weapon
 	*/
 	int createOnExp;
 	/*
-	Which dirt mask to use on object explosion. Set -1 is none.
+	Which dirt mask to use on object explosion. Set -1 for none.
 	*/
 	int dirtEffect;
 	/*
@@ -132,7 +130,7 @@ struct Weapon
 	*/
 	int leaveShellDelay;
 	/*
-	Play reload sound when weapon is reloaded or not.
+	Play reload sound when the weapon is reloaded or not.
 	*/
 	bool playReloadSound;
 	/*
@@ -161,18 +159,18 @@ struct Weapon
 	bool collideWithObjects;
 	/*
 	Whether the object is affected by explosions' push force (on collision with sObject).
-	Note: works only if the colliding sObject has got detectRange > 0 and damage ≠ 0 and blowAway ≠ 0!
+	Note: works only if the colliding sObject has got detectRange > 0 and damage > 0 and blowAway ≠ 0!
 	*/
 	bool affectByExplosions;
 	/*
 	Speed multiply on hitting rock/dirt obstacle or the edge of the map. After every bounce, the projectile will get this percentage of its original speed.
-	Note: if you set it to -1, then the bullet will pass through rock / dirt (this "wallhack" feature works only for wObject, it doesn't work for nObject).
+	Note: if you set it to -100, then the bullet will pass through rock / dirt (this "wallhack" feature works only for wObject, it doesn't work for nObject).
 	*/
 	int bounce;
 	/*
-	Time to explode in frames. When set to 0 there will be no explosion at all.
+	Time to explode in frames (the duration time of the object before it gets removed from the map). When set to 0 there will be no explosion at all.
 	Any positive value will cause creation of a designated sObject indicated in createOnExp parameter (if not -1) and playing explosion sound indicated in exploSound (if not -1).
-	Note: this parameter is affected by "repeat", which means that the higher the "repeat" value is set, the duration time before the object explodes will be proportionally shorter.
+	Note: the duration of the object is shortened inversely proportional to the "repeat" value encoded for shottype: 4 (which is 1000 for wObject 28 and 8 for other wObjects).
 	Note: it is not recommended to set negative value for this property.
 	Note: it is not recommended to set timeToExplo > 32767.
 	*/
@@ -184,7 +182,6 @@ struct Weapon
 	/*
 	Damage inflicted on worm which was hit.
 	Note: If the object has "wormCollide" property set to "false", this will be applied each frame the collision still occurs, leading to potentially huge damage values.
-	Note: if you set negative value for it, you will have healing effect.
 	*/
 	int hitDamage;
 	/*
@@ -203,45 +200,43 @@ struct Weapon
 	Amount of sprites to use to animate the object, starting with "startFrame".
 	Note: Animation begins on random frame, so it is suitable really only for objects which have animation cycle which looks good regardless of what frame it starts. Think things like spinning grenades, mines, pulsing items, etc.
 	Note: works properly only for shotType 0, 1 and 4 (it's recommended to set this parameter to 0 for shotType 2 and 3).
-	Note: the animation cycle is affected by "repeat" property, which means that the higher the "repeat" value is set, the faster the animation speed (the speed at which sprites change) will be (the delay before advancing to next frame will be lower).
+	Note: the animation cycle is affected by "repeat" value encoded for shottype: 4, which means that the higher the "repeat" value is, the delay before advancing to next frame will be lower.
 	*/
 	int numFrames;
 	/*
 	Whether the animation should be looped.
-	Note: loopAnim parameter is affected by bulletSpeed parameter, which means that if you set it "true", then the animation cycle of the wObject will work only if the object is moving (when wObject stops moving, the animation cycle stops too).
+	Note: loopAnim parameter is affected by "speed" parameter, which means that if you set it "true", then the animation cycle of the wObject will work only if the object is moving (when wObject stops moving, the animation cycle stops too).
 	Note: if loopAnim is set to "false" and numFrames > 0, then the object will be still animated; in that case, the animation cycle of the wObject will work also if the object is not moving (the animation cycle keeps going even when the bullet is not moving) - unless the bullet stops moving on collision with ground (dirt / rock / edge of the map; in that case, the animation cycle always stops).
-	Note: if loopAnim is set to "true" and numFrames: 0 and shotType: 0, then the wObject will have randomly either the sprite indicated in startFrame or the next one in spritesheet (e.g. if you set startFrame 210, then the wObject will appear as sprite 210 or as 211; this is actually how booby trap shoots weapon packs or health packs by default).
+	Note: if loopAnim is set to "true" and numFrames: 0 and shotType: 0, then the wObject will have randomly either the sprite indicated in startFrame or the next one in spritesheet (e.g. if you set startFrame 115, then the wObject will appear as sprite 115 or as 116; this is actually how booby trap shoots weapon packs or health packs by default).
 	Note: works properly only for shotType 0, 1 and 4 (it's recommended to set this parameter to "false" for shotType 2 and 3).
 	*/
 	bool loopAnim;
 	/*
-	Which bullet type (wObject) to use.
-	Bullets (wObjects) are stored in an ordered array in "wObjects" section (counting is started from 0).
-	So, if you have e.g. a chaingun bullet stored in third position, you need to set "bulletType: 2" here.
-	Defines general type of the weapon object.
+	Defines general type of the weapon object (wObject).
 	0 - a standard object being either a colored pixel or animated sprite.
 	1 - a missile-type object which uses different frames in the animation depending on its direction (when the bullet is turned in different angles), but only if "numFrames" paramterer is set to 0; in that case,"startFrame" defines the start of directional sprite range in the spritesheet (full sprite range is 13 sprites including the one indicated in "startFrame" parameter). In this shotType, wObject is not affected by addSpeed parameter.
 	2 - a player-controllable missile. It is animated like shotType: 1 (however, full sprite range is 16 sprites, including the one indicated in "startFrame" parameter, but only if "numFrames" paramterer is set to 0).
 	3 - a missile-type object with "drunk" behavior when "distribution" is set to non-zero value. It is animated like shotType: 1 (full sprite range is 13 sprites including the one indicated in "startFrame" parameter, but only if "numFrames" paramterer is set to 0). In this shotType, wObject is affected by addSpeed parameter.
-	4 - in original Liero this was a "Laser-type" weapon (the bullets were very fast; to achieve this effect, shotType: 4 was affected by "repeat" parameter and this was hardcoded, i.e. if shotType was set to 4, then wObject 28 had "repeat" set to 1000, and other wObjects to 8).
+	4 - a type used to create very fast "laser-type" or "gauss gun" bullets, with hardcoded "repeat" value (for wObject 28 it has "repeat" set to 1000, and for other wObjects set to 8).
 	*/
 	int shotType;
 	/*
-	Color of the object. Works only if u use a pixel (startFrame: -1) for a wObject.
-	Note: this parameter also affects the colour of a laser beam created with "laserBeam" parameter.
+	Color of the object. Works only if you set a pixel (startFrame: -1) for a bullet.
+	Note: this parameter also affects the colour of a laser beam used for a laser weapon (wObject 28).
 	*/
 	int colorBullets;
 	/*
 	Amount of nObjects to create on explosion. The wObject must actually explode, for example if "wormExplode" is set to false and "wormCollide" is set to true, no nObjects will be created.
+	Note: NEVER set splinterAmount > 0 and splinterType to "null" for the same weapon object, otherwise the game will freeze!
 	*/
 	int splinterAmount;
 	/*
 	Color used on nObjects (produced as splinters) when they are a single pixel (startFrame -1 or 0). If splinterColour is set to 0 or 1, then splinters will have a colour indicated in nObject "colorBullets" property.
-	Note: if splinterColour is set to 2 or more, nObject splinter will actually use two colours: the one indicated in this parameter, and also the previous one. So, in this case, splinters will use colour 13 and 12.
+	Note: if splinterColour is set to 2 or more, nObject splinter will actually use two colours: the one indicated in this parameter, and also the previous one.
 	*/
 	int splinterColour;
 	/*
-	Type of nObjects used when an explosion occurs. This refers to index of the nObject in the array (counting started from 0), so if you change the order of nObjects, something else will be used.
+	Type of nObject to create when the object explodes.
 	*/
 	int splinterType;
 	/*
@@ -251,26 +246,23 @@ struct Weapon
 	*/
 	int splinterScatter;
 	/*
-	sObject (special Object) used as a trail. Set -1 for none.
+	Defines which sObject (special Object) is created as a trail. Set -1 for none.
 	Note: wObject keeps creating sObjects on its trail even when it stops moving (and even when it's spawned or "trapped" inside rock or dirt on the map).
 	*/
 	int objTrailType;
 	/*
 	Delay time (in frames) between creating trailing sObjects.
 	Note: the delay is not referred to object's lifetime but game ticks, which means that it is measured in relation to the time elapsed since the game started, not since the object was created.
-	Note: If "repeat" is set to greater than 1, sObjects will be created in "batches", creating intermittent lines instead of denser lines. This is probably a bug or unintended behavior.
 	*/
 	int objTrailDelay;
 	/*
-	This is NOT a type of object used for trailing something.
-	"partTrail" here refers to nObject trail, however partTrailType defines how will it be dropped:
+	Defines the way in which the weapon should drop nObjects (created on its trail):
 	0 - crackler-type non-directional trail (objects are dropped in all directions); in this case, the speed of nObject is affected by "SplinterCracklerVelDiv" parameter (section "constants");
 	1 - larpa-type directional trail (objects are dropped in the direction the wObject is moving); in this case, the speed of nObject is affected by "SplinterLarpaVelDiv" parameter (section "constants").
 	*/
 	int partTrailType;
 	/*
-	This is the type of nObject trailed by the wObject. Set -1 for none.
-	So, if you have e.g. smoke nObject stored in third position in the nObjects array and you want your wObject to create this smoke nObject as a trail, you need to set "2" here.
+	Defines which nObject is created as a trail. Set -1 for none.
 	Note: wObject keeps creating nObjects on its trail even when it stops moving (and even when it's spawned or "trapped" inside rock or dirt on the map).
 	*/
 	int partTrailObj;
@@ -279,6 +271,10 @@ struct Weapon
 	Note: the delay is not referred to object's lifetime but game ticks, which means that it is measured in relation to the time elapsed since the game started, not since the object was created.
 	*/
 	int partTrailDelay;
+	/*
+	Defines whether the object would behave like bonuses or booby trap (i.e. whether the object would get removed on a collision with sObject).
+	Note: works only if you set affectByExplosions parameter of the wObject to "true" AND if the colliding sObject has detectRange > 0 and damage > 0.
+	*/
 	bool chainExplosion;
 
 	int computedLoadingTime(Settings& settings) const;

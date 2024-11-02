@@ -19,8 +19,8 @@ struct SObjectType
 	void create(Game& game, int x, int y, int ownedIdx, WormWeapon* firedBy, WObject* from = 0);
 
 	/*
-	which sound (taken from soundpack) will be played on sObject creation (explosion); use -1 for no sound.
-	Start sound is first index used...
+	which sound will be played when the object is created; set -1 for no sound.
+	startSound is first index used...
 	*/
 	int startSound;
 	/*
@@ -28,13 +28,13 @@ struct SObjectType
 	*/
 	int numSounds;
 	/*
-	Delay time (in frames) before advancing to next frame.
+	Delay time (in frames) before advancing to next frame during object animation.
 	*/
 	int animDelay;
 	/*
-	First sprite of animation used for this object.
+	First sprite of animation used for the object.
 	Note: unlike for wObjects and nObjects, sObjects always start at proper startFrame.
-	So if you set it -1, weird things are gonna happen on sObject animation and the game can even freeze.
+	So if you set it to -1, weird things are gonna happen on sObject animation and the game can even freeze.
 	*/
 	int startFrame;
 	/*
@@ -51,11 +51,11 @@ struct SObjectType
 	Damage applied to the worm if it's in explosion range (vide detectRange parameter).
 	Note: this is affected by how far the worm is from the epicenter of the explosion (the position of sObject) - the closer the sObject is created to the worm, the more damage the worm will get; the further the sObject is created to the worm, the less damage the worm will get.
 	Note: it is very rare for an explosion to be in exact point where the worm is. This means, usually the damage will be noticeably smaller than the number indicate in this parameter. Use about 2/3 of its value as a rough estimate of the damage usually given to a worm.
-	Note: if you set negative value for it, you will have healing effect.
 	*/
 	int damage;
 	/*
-	Force applied on the worm as pushback. Works only if detectRange > 0 and damage ≠ 0!
+	Force applied on the worm as pushback. Can also be negative.
+	Note: works only if detectRange > 0 and damage > 0.
 	*/
 	int blowAway;
 	/*
@@ -71,7 +71,7 @@ struct SObjectType
 	*/
 	int flash;
 	/*
-	Which dirt mask to use on object explosion. Set -1 is none.
+	Which dirt mask to use on object creation. Set -1 for none.
 	*/
 	int dirtEffect;
 

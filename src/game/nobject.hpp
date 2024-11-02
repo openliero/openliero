@@ -21,12 +21,13 @@ struct NObjectType
 	void create2(Game& game, int angle, fixedvec vel, fixedvec pos, int color, int ownerIdx, WormWeapon* firedBy);
 
 	/*
-	Additional worm detect distance for the bullet. This setting affects the distance at which an object hits a worm (but - unlike in wObject - it does not determine the starting distance from the player). Add more for "bigger" bullets or things like proximity detonators.
+	Additional worm detect distance for the bullet. This setting affects the distance at which an object hits a worm. Add more for "bigger" bullets or things like proximity detonators.
+	Note: unlike in wObject, detectDistance here does not determine the starting distance from the player.
 	Note: if detectDistance < 0, then the worm will not receive damage from the object and also blowAway parameter will not work.
 	*/
 	int detectDistance;
 	/*
-	Gravity of the particle.
+	Gravity of the particle. Can also be negative.
 	*/
 	fixed gravity;
 	/*
@@ -48,24 +49,22 @@ struct NObjectType
 	int distribution;
 	/*
 	Force affecting the hit worm. This will also work if the object has "wormDestroy" set to false; it will simply not disappear and push the worm continuously.
-	Note: works only if the particle is moving and detectDistance ⩾ 0 and hitDamage ≠ 0!
+	Note: works only if the particle is moving and detectDistance ⩾ 0 and hitDamage > 0.
 	*/
 	int blowAway;
 	/*
 	Speed multiply on hitting rock/dirt obstacle or the edge of the map. After every bounce, the projectile will get this percentage of its original speed.
-	Note: lack of "bounceFriction" property here!
 	Note: unlike in wObject, setting negative value for bounce will not make nObject pass through walls.
 	*/
 	int bounce;
 	/*
 	Damage inflicted on worm which was hit.
 	Note: If the object has "wormDestroy" property set to "false", this will be applied each frame the collision still occurs, leading to potentially huge damage values.
-	Note: if you set negative value for it, you will have healing effect.
 	*/
 	int hitDamage;
 	/*
 	Whether the object should explode (produce a sObject) on worm collision. Works independently of "wormDestroy" parameter, which means that the object will explode also even if "wormDestroy" is set to "false".
-	Note: this property doesn't work if nObject "hitDamage" parameter equals 0!
+	Note: this property doesn't work if nObject "hitDamage" parameter equals 0.
 	*/
 	bool wormExplode;
 	/*
@@ -75,13 +74,13 @@ struct NObjectType
 	bool explGround;
 	/*
 	Whether the object should collide with the worm and get removed.
-	Note: this property doesn't work if nObject "hitDamage" parameter equals 0!
+	Note: this property doesn't work if nObject "hitDamage" parameter equals 0.
 	*/
 	bool wormDestroy;
 	/*
 	How many blood particles (nObject6) should be created on worm hit, divided by 2.
 	So, if you set it to "10", then 5 blood particles will be created on worm hit (per each frame - which means that the amount of blood particles is affected by "wormDestroy" parameter).
-	Note: this property doesn't work if nObject "hitDamage" parameter equals 0!
+	Note: this property doesn't work if nObject "hitDamage" parameter equals 0.
 	*/
 	int bloodOnHit;
 	/*
@@ -114,24 +113,26 @@ struct NObjectType
 	int createOnExp;
 	/*
 	Whether the object is affected by explosions' push force (on collision with sObject).
-	Note: works only if the colliding sObject has got detectRange > 0 and damage ≠ 0 and blowAway ≠ 0!
+	Note: works only if the colliding sObject has got detectRange > 0 and damage > 0 and blowAway ≠ 0!
 	*/
 	bool affectByExplosions;
 	/*
-	Which dirt mask to use on object explosion. Set -1 is none.
+	Which dirt mask to use on object explosion. Set -1 for none.
 	*/
 	int dirtEffect;
 	/*
-	Amount of nObjects to create on explosion. The wObject must actually explode, for example if "wormExplode" is set to false and "wormCollide" is set to true, no nObjects will be created.
+	Amount of nObjects to create on explosion.
+	Note: the object must actually explode, for example if "wormExplode" is set to false and "wormDestroy" is set to true, no nObjects will be created.
+	Note: NEVER set splinterAmount > 0 and splinterType to "null" for the same object, otherwise the game will freeze!
 	*/
 	int splinterAmount;
 	/*
 	Color used on nObjects (produced as splinters) when they are a single pixel (startFrame -1 or 0). If splinterColour is set to 0 or 1, then splinters will have a colour indicated in nObject "colorBullets" property.
-	Note: if splinterColour is set 2 or more, nObject splinter will actually use two colours: the one indicated in this parameter, and also the previous one. So, in this case, splinters will use colour 13 and 12.
+	Note: if splinterColour is set 2 or more, nObject splinter will actually use two colours: the one indicated in this parameter, and also the previous one.
 	*/
 	int splinterColour;
 	/*
-	Type of nObjects used when an explosion occurs. This refers to index of the nObject in the array (counting started from 0), so if you change the order of nObjects, something else will be used.
+	Type of nObject to create when the object explodes.
 	*/
 	int splinterType;
 	/*
@@ -151,7 +152,6 @@ struct NObjectType
 	/*
 	Delay time (in frames) between creating trailing sObjects.
 	Note: the delay is not referred to object's lifetime but game ticks, which means that it is measured in relation to the time elapsed since the game started, not since the object was created.
-	Note: If "repeat" is set to greater than 1, sObjects will be created in "batches", creating intermittent lines instead of denser lines. This is probably a bug or unintended behavior.
 	Note: notice that nObjects cannot trail other nObjects.
 	*/
 	int leaveObjDelay;
