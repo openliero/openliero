@@ -1,7 +1,0 @@
-/home/runner/work/openliero/openliero/install/emscripten/./openliero.html
-/home/runner/work/openliero/openliero/install/emscripten/./openliero.js
-/home/runner/work/openliero/openliero/install/emscripten/./openliero.wasm
-/home/runner/work/openliero/openliero/install/emscripten/./openliero.data
-/home/runner/work/openliero/openliero/install/emscripten/./README.md
-/home/runner/work/openliero/openliero/install/emscripten/LICENSES/LICENSE
-/home/runner/work/openliero/openliero/install/emscripten/LICENSES/LICENSE.SOUNDS
