@@ -1,0 +1,12 @@
+{
+	"Configs" : 
+	[
+		"Debug"
+	],
+	"InstallScripts" : 
+	[
+		"/home/runner/work/openliero/openliero/build/emscripten/cmake_install.cmake",
+		"/home/runner/work/openliero/openliero/build/emscripten/src/gvl/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

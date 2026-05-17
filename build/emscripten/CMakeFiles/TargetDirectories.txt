@@ -1,0 +1,13 @@
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/game.dir
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/openliero.dir
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/edit_cache.dir
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/rebuild_cache.dir
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/install.dir
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/install/local.dir
+/home/runner/work/openliero/openliero/build/emscripten/CMakeFiles/install/strip.dir
+/home/runner/work/openliero/openliero/build/emscripten/src/gvl/CMakeFiles/gvl.dir
+/home/runner/work/openliero/openliero/build/emscripten/src/gvl/CMakeFiles/edit_cache.dir
+/home/runner/work/openliero/openliero/build/emscripten/src/gvl/CMakeFiles/rebuild_cache.dir
+/home/runner/work/openliero/openliero/build/emscripten/src/gvl/CMakeFiles/install.dir
+/home/runner/work/openliero/openliero/build/emscripten/src/gvl/CMakeFiles/install/local.dir
+/home/runner/work/openliero/openliero/build/emscripten/src/gvl/CMakeFiles/install/strip.dir

@@ -1,1 +1,10 @@
-{"releases":[],"dev":[]}
+{
+  "releases": [],
+  "dev": [
+    {
+      "name": "cac3a84",
+      "dir": "dev/cac3a84",
+      "timestamp": "2026-05-17T10:43:08+02:00"
+    }
+  ]
+}
