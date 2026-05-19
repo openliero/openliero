@@ -131,6 +131,8 @@ set(GAME_SOURCES ${SOURCES}
   src/game/net/memoryFs.cpp
   src/game/net/localaddr.cpp
   src/game/net/stun.cpp
+  src/game/net/signaling.cpp
+  src/game/net/holepunch.cpp
   src/game/netConnectState.cpp
   src/game/statsState.cpp
   src/game/rematchState.cpp
