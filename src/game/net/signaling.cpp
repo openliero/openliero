@@ -48,6 +48,10 @@ bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (sock == ENET_SOCKET_NULL) return false;
 
+  // Enable dual-stack (IPv4 via mapped addresses on IPv6 socket)
+  // Required on Windows where IPV6_V6ONLY defaults to 1
+  enet_socket_set_option(sock, ENET_SOCKOPT_IPV6_V6ONLY, 0);
+
   // Bind to any local port — required on Windows for receiving replies
   ENetAddress anyAddr = {};
   anyAddr.port = 0;
