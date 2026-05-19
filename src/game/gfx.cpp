@@ -543,8 +543,8 @@ void Gfx::loadMenus()
 
 	mainMenu.addItem(MenuItem(10, 10, "", MainMenu::MaResumeGame)); // string set in MainMenuState::enter()
 	mainMenu.addItem(MenuItem(10, 10, "", MainMenu::MaNewGame)); // string set in MainMenuState::enter()
-	mainMenu.addItem(MenuItem(48, 48, "HOST GAME", MainMenu::MaHostGame));
-	mainMenu.addItem(MenuItem(48, 48, "JOIN GAME", MainMenu::MaJoinGame));
+	mainMenu.addItem(MenuItem(48, 48, "HOST LAN GAME", MainMenu::MaHostGame));
+	mainMenu.addItem(MenuItem(48, 48, "JOIN LAN GAME", MainMenu::MaJoinGame));
 	mainMenu.addItem(MenuItem(48, 48, "HOST ONLINE", MainMenu::MaHostOnline));
 	mainMenu.addItem(MenuItem(48, 48, "JOIN ONLINE", MainMenu::MaJoinOnline));
 	mainMenu.addItem(MenuItem(48, 48, "OPTIONS (F2)", MainMenu::MaAdvanced));
