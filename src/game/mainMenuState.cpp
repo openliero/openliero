@@ -239,7 +239,7 @@ bool MainMenuState::update()
 				{
 					sfx.play(common, 27);
 					gfx->stateStack.push(std::make_unique<InputStringState>(
-						"", 6, 10, 80, nullptr, "ROOM CODE: ", false,
+						"", 6, 10, 80, ::toupper, "ROOM CODE: ", false,
 						[this](bool accepted, std::string const& result) {
 							if (accepted && result.size() == 6)
 							{
