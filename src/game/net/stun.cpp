@@ -39,6 +39,11 @@ void StunQuery::start() {
   thread_ = std::thread(&StunQuery::run, this);
 }
 
+void StunQuery::start(uint16_t localPort) {
+  localPort_ = localPort;
+  thread_ = std::thread(&StunQuery::run, this);
+}
+
 StunQuery::~StunQuery() {
   if (thread_.joinable())
     thread_.join();
@@ -49,7 +54,7 @@ StunResult StunQuery::result() const {
   return result_;
 }
 
-static StunQuery::StunAddress parseResponse(const uint8_t* data, size_t len,
+static StunMappedAddress parseResponse(const uint8_t* data, size_t len,
                                   const StunHeader& req) {
   if (len < sizeof(StunHeader)) return {};
 
@@ -73,9 +78,10 @@ static StunQuery::StunAddress parseResponse(const uint8_t* data, size_t len,
 
     if (attrType == STUN_ATTR_XOR_MAPPED_ADDRESS && attrLen >= 8) {
       uint8_t family = attrs[offset + 1];
+      uint16_t xorPort = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
+      uint16_t mappedPort = xorPort ^ (uint16_t)(STUN_MAGIC_COOKIE >> 16);
+
       if (family == 0x01 && attrLen >= 8) { // IPv4
-        uint16_t xorPort = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
-        uint16_t port = xorPort ^ (uint16_t)(STUN_MAGIC_COOKIE >> 16);
         uint32_t xorAddr;
         std::memcpy(&xorAddr, attrs + offset + 4, 4);
         uint32_t addr = ntohl(xorAddr) ^ STUN_MAGIC_COOKIE;
@@ -83,11 +89,8 @@ static StunQuery::StunAddress parseResponse(const uint8_t* data, size_t len,
         snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
                  (addr >> 24) & 0xFF, (addr >> 16) & 0xFF,
                  (addr >> 8) & 0xFF, addr & 0xFF);
-        return {buf, port};
+        return {buf, mappedPort};
       } else if (family == 0x02 && attrLen >= 20) { // IPv6
-        uint16_t xorPort = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
-        uint16_t port = xorPort ^ (uint16_t)(STUN_MAGIC_COOKIE >> 16);
-        // XOR with magic cookie (4 bytes) + transaction ID (12 bytes)
         uint8_t addrBytes[16];
         std::memcpy(addrBytes, attrs + offset + 4, 16);
         uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
@@ -97,12 +100,13 @@ static StunQuery::StunAddress parseResponse(const uint8_t* data, size_t len,
           addrBytes[4 + i] ^= req.transactionId[i];
         char buf[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, addrBytes, buf, sizeof(buf));
-        return {buf, port};
+        return {buf, mappedPort};
       }
     } else if (attrType == STUN_ATTR_MAPPED_ADDRESS && attrLen >= 8) {
       uint8_t family = attrs[offset + 1];
+      uint16_t mappedPort = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
+
       if (family == 0x01) { // IPv4
-        uint16_t port = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
         uint32_t addr;
         std::memcpy(&addr, attrs + offset + 4, 4);
         addr = ntohl(addr);
@@ -110,7 +114,7 @@ static StunQuery::StunAddress parseResponse(const uint8_t* data, size_t len,
         snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
                  (addr >> 24) & 0xFF, (addr >> 16) & 0xFF,
                  (addr >> 8) & 0xFF, addr & 0xFF);
-        return {buf, port};
+        return {buf, mappedPort};
       }
     }
 
@@ -120,9 +124,21 @@ static StunQuery::StunAddress parseResponse(const uint8_t* data, size_t len,
   return {};
 }
 
-StunQuery::StunAddress StunQuery::queryServer(const char* serverAddr, uint16_t port) {
+StunMappedAddress StunQuery::queryServer(const char* serverAddr, uint16_t port,
+                                          uint16_t localPort) {
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (sock == ENET_SOCKET_NULL) return {};
+
+  // Bind to specific local port if requested (for hole-punching: NAT mapping
+  // must correspond to the game's listening port)
+  if (localPort != 0) {
+    ENetAddress localAddr = {};
+    localAddr.port = localPort;
+    memset(&localAddr.host, 0, sizeof(localAddr.host));
+    if (enet_socket_bind(sock, &localAddr) != 0) {
+      // Fall back to ephemeral port if bind fails
+    }
+  }
 
   ENetAddress addr = {};
   addr.port = port;
@@ -150,7 +166,7 @@ StunQuery::StunAddress StunQuery::queryServer(const char* serverAddr, uint16_t p
   recvBuf.data = recvData;
   recvBuf.dataLength = sizeof(recvData);
 
-  StunAddress result;
+  StunMappedAddress result;
   for (int attempt = 0; attempt < STUN_RETRIES && result.ip.empty(); ++attempt) {
     int sent = enet_socket_send(sock, &addr, &sendBuf, 1);
     if (sent < 0) break;
@@ -174,10 +190,10 @@ StunQuery::StunAddress StunQuery::queryServer(const char* serverAddr, uint16_t p
 
 void StunQuery::run() {
   StunResult res;
-  auto v4 = queryServer(STUN_SERVER_IPV4, STUN_PORT);
+  auto v4 = queryServer(STUN_SERVER_IPV4, STUN_PORT, localPort_);
   res.ipv4 = v4.ip;
   res.ipv4Port = v4.port;
-  auto v6 = queryServer(STUN_SERVER_IPV6, STUN_PORT);
+  auto v6 = queryServer(STUN_SERVER_IPV6, STUN_PORT, localPort_);
   res.ipv6 = v6.ip;
   res.ipv6Port = v6.port;
 

@@ -38,7 +38,7 @@ void NetConnectState::enter()
 		{
 			localAddresses_ = getLocalAddresses();
 			stunQuery_ = std::make_unique<StunQuery>();
-			stunQuery_->start();
+			stunQuery_->start(port_);
 		}
 	}
 	else
@@ -190,14 +190,16 @@ void NetConnectState::draw()
 
 		if (!externalIPs_.ipv4.empty())
 		{
-			std::string d = externalIPs_.ipv4 + ":" + std::to_string(port_) + " (EXTERNAL)";
+			uint16_t extPort = externalIPs_.ipv4Port ? externalIPs_.ipv4Port : port_;
+			std::string d = externalIPs_.ipv4 + ":" + std::to_string(extPort) + " (EXTERNAL)";
 			int wd = font.getDims(d);
 			font.drawText(gfx->playRenderer.bmp, d, cx - wd / 2, addrY, 45);
 			addrY += 10;
 		}
 		if (!externalIPs_.ipv6.empty())
 		{
-			std::string d = "[" + externalIPs_.ipv6 + "]:" + std::to_string(port_) + " (EXTERNAL)";
+			uint16_t extPort = externalIPs_.ipv6Port ? externalIPs_.ipv6Port : port_;
+			std::string d = "[" + externalIPs_.ipv6 + "]:" + std::to_string(extPort) + " (EXTERNAL)";
 			int wd = font.getDims(d);
 			font.drawText(gfx->playRenderer.bmp, d, cx - wd / 2, addrY, 45);
 			addrY += 10;
