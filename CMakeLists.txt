@@ -134,6 +134,7 @@ set(GAME_SOURCES ${SOURCES}
   src/game/net/signaling.cpp
   src/game/net/holepunch.cpp
   src/game/netConnectState.cpp
+  src/game/onlineConnectState.cpp
   src/game/statsState.cpp
   src/game/rematchState.cpp
   src/game/menu/booleanSwitchBehavior.cpp

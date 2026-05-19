@@ -1,0 +1,215 @@
+#include "onlineConnectState.hpp"
+
+#include "gfx.hpp"
+#include "text.hpp"
+#include "keys.hpp"
+#include "common.hpp"
+#include "netConnectState.hpp"
+
+#include <memory>
+#include <string>
+
+OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCode)
+: role_(role)
+, roomCode_(std::move(roomCode))
+{
+}
+
+void OnlineConnectState::enter()
+{
+	statusLine1_ = (role_ == NetSession::Host)
+		? "CREATING ONLINE ROOM..."
+		: "JOINING ROOM " + roomCode_ + "...";
+	statusLine2_ = "DISCOVERING EXTERNAL ADDRESS...";
+
+	// Start STUN query from the game port
+	stunQuery_ = std::make_unique<StunQuery>();
+	stunQuery_->start(localPort_);
+
+	// Wire up signaling callbacks
+	signaling_.onRoomCreated = [this](const std::string& code) {
+		roomCode_ = code;
+		statusLine1_ = "ROOM CODE: " + code;
+		statusLine2_ = "SHARE THIS CODE WITH YOUR PEER";
+	};
+
+	signaling_.onPeerJoined = [this]() {
+		statusLine2_ = "PEER JOINED! CONNECTING...";
+	};
+
+	signaling_.onStartPunch = [this]() {
+		startPunching();
+	};
+
+	signaling_.onUseRelay = [this](uint16_t relayPort) {
+		// Relay fallback — connect to signaling server's relay port
+		statusLine2_ = "USING RELAY (HIGHER LATENCY)";
+		connectDirect(signalingServer_, relayPort);
+	};
+
+	signaling_.onError = [this](const std::string& msg) {
+		statusLine2_ = "ERROR: " + msg;
+		cancel_ = true;
+	};
+
+	signaling_.onRoomExpired = [this]() {
+		statusLine2_ = "ROOM EXPIRED";
+		cancel_ = true;
+	};
+}
+
+void OnlineConnectState::handleEvent(SDL_Event& ev)
+{
+	gfx->processEvent(ev);
+}
+
+bool OnlineConnectState::update()
+{
+	if (cancel_)
+	{
+		if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE) || gfx->testSDLKeyOnce(SDL_SCANCODE_RETURN))
+		{
+			signaling_.disconnect();
+			if (holePunch_) holePunch_->stop();
+			return false;
+		}
+		return true;
+	}
+
+	if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
+	{
+		signaling_.disconnect();
+		if (holePunch_) holePunch_->stop();
+		gfx->clearKeys();
+		return false;
+	}
+
+	// Phase 1: Wait for STUN
+	if (!stunDone_ && stunQuery_ && stunQuery_->done())
+	{
+		stunDone_ = true;
+		stunResult_ = stunQuery_->result();
+
+		// Start signaling
+		if (role_ == NetSession::Host)
+		{
+			if (!signaling_.createRoom(signalingServer_, signalingPort_))
+			{
+				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
+				cancel_ = true;
+				return true;
+			}
+		}
+		else
+		{
+			if (!signaling_.joinRoom(signalingServer_, signalingPort_, roomCode_))
+			{
+				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
+				cancel_ = true;
+				return true;
+			}
+		}
+
+		// Report our STUN addresses
+		if (!stunResult_.ipv4.empty())
+			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
+		if (!stunResult_.ipv6.empty())
+			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+
+		statusLine2_ = (role_ == NetSession::Host)
+			? "WAITING FOR PEER..."
+			: "WAITING FOR HOST ADDRESSES...";
+	}
+
+	// Poll signaling
+	signaling_.poll();
+
+	// Poll hole-punch if active
+	if (holePunch_)
+		holePunch_->poll();
+
+	return true;
+}
+
+void OnlineConnectState::startPunching()
+{
+	if (startedPunch_) return;
+	startedPunch_ = true;
+
+	statusLine2_ = "HOLE-PUNCHING...";
+
+	holePunch_ = std::make_unique<HolePunch>();
+	holePunch_->onSuccess = [this](const HolePunch::Result& r) {
+		onPunchSuccess(r);
+	};
+	holePunch_->onTimeout = [this]() {
+		onPunchFailed();
+	};
+
+	holePunch_->start(localPort_, signaling_.peerCandidates());
+}
+
+void OnlineConnectState::onPunchSuccess(const HolePunch::Result& result)
+{
+	signaling_.reportPunchOK();
+	signaling_.disconnect();
+
+	statusLine2_ = "CONNECTED! STARTING GAME...";
+
+	// Transition to the normal direct-connect flow with the punched address
+	connectDirect(result.peerIP, result.peerPort);
+}
+
+void OnlineConnectState::onPunchFailed()
+{
+	signaling_.reportPunchFail();
+	statusLine2_ = "HOLE-PUNCH FAILED, WAITING FOR RELAY...";
+	// Server will send UseRelay if both peers report failure
+}
+
+void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
+{
+	// Replace this state with a direct NetConnectState to the punched/relay address
+	if (role_ == NetSession::Host)
+	{
+		// Host still listens — peer connects to us
+		gfx->stateStack.scheduleReplaceTop(
+			std::make_unique<NetConnectState>(NetSession::Host, "", localPort_));
+	}
+	else
+	{
+		gfx->stateStack.scheduleReplaceTop(
+			std::make_unique<NetConnectState>(NetSession::Client, addr, port));
+	}
+}
+
+void OnlineConnectState::draw()
+{
+	Common& common = *gfx->common;
+	Font& font = common.font;
+
+	gfx->playRenderer.pal = common.exepal;
+	fill(gfx->playRenderer.bmp, 0);
+
+	int cx = 160;
+	int cy = 60;
+
+	int w1 = font.getDims(statusLine1_);
+	font.drawText(gfx->playRenderer.bmp, statusLine1_, cx - w1 / 2, cy, 50);
+
+	int w2 = font.getDims(statusLine2_);
+	font.drawText(gfx->playRenderer.bmp, statusLine2_, cx - w2 / 2, cy + 14, 7);
+
+	// Show room code prominently for host
+	if (role_ == NetSession::Host && !roomCode_.empty()
+	    && signaling_.state() == SignalingClient::Hosting)
+	{
+		std::string codeStr = "CODE: " + roomCode_;
+		int wc = font.getDims(codeStr);
+		font.drawText(gfx->playRenderer.bmp, codeStr, cx - wc / 2, cy + 30, 45);
+	}
+
+	std::string esc = "PRESS ESC TO CANCEL";
+	int we = font.getDims(esc);
+	font.drawText(gfx->playRenderer.bmp, esc, cx - we / 2, 170, 7);
+}

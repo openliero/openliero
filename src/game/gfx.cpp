@@ -34,6 +34,7 @@
 #include "mainMenuState.hpp"
 #include "gamePlayState.hpp"
 #include "netConnectState.hpp"
+#include "onlineConnectState.hpp"
 
 #include "gfx/macros.hpp"
 
@@ -544,6 +545,8 @@ void Gfx::loadMenus()
 	mainMenu.addItem(MenuItem(10, 10, "", MainMenu::MaNewGame)); // string set in MainMenuState::enter()
 	mainMenu.addItem(MenuItem(48, 48, "HOST GAME", MainMenu::MaHostGame));
 	mainMenu.addItem(MenuItem(48, 48, "JOIN GAME", MainMenu::MaJoinGame));
+	mainMenu.addItem(MenuItem(48, 48, "HOST ONLINE", MainMenu::MaHostOnline));
+	mainMenu.addItem(MenuItem(48, 48, "JOIN ONLINE", MainMenu::MaJoinOnline));
 	mainMenu.addItem(MenuItem(48, 48, "OPTIONS (F2)", MainMenu::MaAdvanced));
 	mainMenu.addItem(MenuItem(48, 48, "REPLAYS (F3)", MainMenu::MaReplays));
 	mainMenu.addItem(MenuItem(48, 48, "TC", MainMenu::MaTc));
@@ -1545,6 +1548,19 @@ bool Gfx::runOneFrame()
 
 				stateStack.push(std::make_unique<NetConnectState>(
 					NetSession::Client, std::move(addr), port), this);
+				return true;
+			}
+			else if (menuSelection == MainMenu::MaHostOnline)
+			{
+				stateStack.push(std::make_unique<OnlineConnectState>(
+					NetSession::Host), this);
+				return true;
+			}
+			else if (menuSelection == MainMenu::MaJoinOnline)
+			{
+				std::string code = std::move(pendingNetAddress);
+				stateStack.push(std::make_unique<OnlineConnectState>(
+					NetSession::Client, std::move(code)), this);
 				return true;
 			}
 
