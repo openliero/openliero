@@ -54,9 +54,6 @@ bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort
   memset(&anyAddr.host, 0, sizeof(anyAddr.host));
   enet_socket_bind(sock, &anyAddr);
 
-  // Set non-blocking
-  enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
-
   // Resolve server address once
   ENetAddress resolved = {};
   resolved.port = serverPort;
@@ -161,6 +158,13 @@ void SignalingClient::sendKeepalive() {
 
 void SignalingClient::poll() {
   if (sock_ < 0) return;
+
+  // Check if data is available (non-blocking via zero timeout wait)
+  enet_uint32 waitCondition = ENET_SOCKET_WAIT_RECEIVE;
+  if (enet_socket_wait((ENetSocket)sock_, &waitCondition, 0) != 0)
+    return;
+  if (!(waitCondition & ENET_SOCKET_WAIT_RECEIVE))
+    return;
 
   uint8_t recvData[512];
   ENetBuffer recvBuf;
