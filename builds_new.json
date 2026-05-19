@@ -2,6 +2,11 @@
   "releases": [],
   "dev": [
     {
+      "name": "build-784b7fe",
+      "dir": "dev/build-784b7fe",
+      "timestamp": "2026-05-19T21:06:07Z"
+    },
+    {
       "name": "build-c42f1ae",
       "dir": "dev/build-c42f1ae",
       "timestamp": "2026-05-19T19:30:17Z"
