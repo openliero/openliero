@@ -31,6 +31,12 @@ void OnlineConnectState::enter()
 		roomCode_ = code;
 		statusLine1_ = "ROOM CODE: " + code;
 		statusLine2_ = "SHARE THIS CODE WITH YOUR PEER";
+
+		// Now that we have a room code, report our STUN addresses
+		if (!stunResult_.ipv4.empty())
+			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
+		if (!stunResult_.ipv6.empty())
+			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
 	};
 
 	signaling_.onPeerJoined = [this]() {
@@ -110,11 +116,14 @@ bool OnlineConnectState::update()
 			}
 		}
 
-		// Report our STUN addresses
-		if (!stunResult_.ipv4.empty())
-			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
-		if (!stunResult_.ipv6.empty())
-			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+		// Report our STUN addresses (client only — host defers until room is created)
+		if (role_ == NetSession::Client)
+		{
+			if (!stunResult_.ipv4.empty())
+				signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
+			if (!stunResult_.ipv6.empty())
+				signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+		}
 
 		statusLine2_ = (role_ == NetSession::Host)
 			? "WAITING FOR PEER..."
