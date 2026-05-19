@@ -27,6 +27,8 @@ HolePunch::~HolePunch() {
 bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& candidates) {
   if (candidates.empty()) return false;
 
+  enet_initialize();
+
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (sock == ENET_SOCKET_NULL) return false;
 

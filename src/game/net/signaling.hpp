@@ -81,4 +81,7 @@ private:
   uint16_t serverPort_;
   std::vector<PeerCandidate> peerCandidates_;
   uint16_t relayPort_;
+
+  // Cached resolved server address (opaque storage for ENetAddress)
+  alignas(8) uint8_t resolvedAddrStorage_[128] = {};
 };

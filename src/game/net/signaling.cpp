@@ -42,15 +42,28 @@ SignalingClient::~SignalingClient() {
 }
 
 bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort) {
+  // Ensure ENet is initialized (needed for WSAStartup on Windows)
+  enet_initialize();
+
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (sock == ENET_SOCKET_NULL) return false;
 
   // Set non-blocking
   enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
 
+  // Resolve server address once
+  ENetAddress resolved = {};
+  resolved.port = serverPort;
+  if (enet_address_set_host(&resolved, serverAddr.c_str()) != 0) {
+    enet_socket_destroy(sock);
+    return false;
+  }
+
   sock_ = (int)sock;
   serverAddr_ = serverAddr;
   serverPort_ = serverPort;
+  static_assert(sizeof(resolvedAddrStorage_) >= sizeof(ENetAddress));
+  std::memcpy(resolvedAddrStorage_, &resolved, sizeof(ENetAddress));
   return true;
 }
 
@@ -68,14 +81,11 @@ void SignalingClient::disconnect() {
 void SignalingClient::send(const void* data, size_t len) {
   if (sock_ < 0) return;
 
-  ENetAddress addr = {};
-  addr.port = serverPort_;
-  enet_address_set_host(&addr, serverAddr_.c_str());
-
   ENetBuffer buf;
   buf.data = const_cast<void*>(data);
   buf.dataLength = len;
-  enet_socket_send((ENetSocket)sock_, &addr, &buf, 1);
+  auto* addr = reinterpret_cast<ENetAddress*>(resolvedAddrStorage_);
+  enet_socket_send((ENetSocket)sock_, addr, &buf, 1);
 }
 
 bool SignalingClient::createRoom(const std::string& serverAddr, uint16_t serverPort) {
