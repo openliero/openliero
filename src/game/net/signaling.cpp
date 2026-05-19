@@ -48,6 +48,12 @@ bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (sock == ENET_SOCKET_NULL) return false;
 
+  // Bind to any local port — required on Windows for receiving replies
+  ENetAddress anyAddr = {};
+  anyAddr.port = 0;
+  memset(&anyAddr.host, 0, sizeof(anyAddr.host));
+  enet_socket_bind(sock, &anyAddr);
+
   // Set non-blocking
   enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
 
