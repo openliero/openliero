@@ -2,6 +2,7 @@
 
 #include <enet.h>
 #include <cstring>
+#include <cstdio>
 #include <chrono>
 
 #ifdef _WIN32
@@ -25,12 +26,31 @@ HolePunch::~HolePunch() {
 }
 
 bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& candidates) {
-  if (candidates.empty()) return false;
+  fprintf(stderr, "[holepunch] starting with localPort=%u, %zu candidates\n",
+          localPort, candidates.size());
+  for (size_t i = 0; i < candidates.size(); i++) {
+    fprintf(stderr, "[holepunch]   candidate %zu: %s %s:%u\n",
+            i, candidates[i].type == 4 ? "IPv4" : "IPv6",
+            candidates[i].ip.c_str(), candidates[i].port);
+  }
+
+  if (candidates.empty()) {
+    fprintf(stderr, "[holepunch] ERROR: no candidates\n");
+    return false;
+  }
 
   enet_initialize();
 
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
-  if (sock == ENET_SOCKET_NULL) return false;
+  if (sock == ENET_SOCKET_NULL) {
+    fprintf(stderr, "[holepunch] ERROR: enet_socket_create failed\n");
+    return false;
+  }
+  fprintf(stderr, "[holepunch] socket created (fd=%d)\n", (int)sock);
+
+  // Enable dual-stack
+  int v6result = enet_socket_set_option(sock, ENET_SOCKOPT_IPV6_V6ONLY, 0);
+  fprintf(stderr, "[holepunch] IPV6_V6ONLY=0 result: %d\n", v6result);
 
   // Bind to the same port as the game's ENet host
   ENetAddress localAddr = {};
@@ -40,9 +60,12 @@ bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& cand
   // Allow address reuse so we can share the port with ENet
   enet_socket_set_option(sock, ENET_SOCKOPT_REUSEADDR, 1);
 
-  if (enet_socket_bind(sock, &localAddr) != 0) {
-    // Try without binding — NAT may still work if the OS assigns the same port
-    // (common on Linux with SO_REUSEADDR)
+  int bindResult = enet_socket_bind(sock, &localAddr);
+  if (bindResult != 0) {
+    fprintf(stderr, "[holepunch] WARNING: bind to port %u failed (result=%d), using ephemeral\n",
+            localPort, bindResult);
+  } else {
+    fprintf(stderr, "[holepunch] bound to port %u\n", localPort);
   }
 
   enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
@@ -74,7 +97,13 @@ void HolePunch::sendProbes() {
     ENetAddress addr = {};
     addr.port = cand.port;
     enet_address_set_host(&addr, cand.ip.c_str());
-    enet_socket_send((ENetSocket)sock_, &addr, &buf, 1);
+
+    char resolvedIP[INET6_ADDRSTRLEN] = {};
+    enet_address_get_host_ip(&addr, resolvedIP, sizeof(resolvedIP));
+
+    int sent = enet_socket_send((ENetSocket)sock_, &addr, &buf, 1);
+    fprintf(stderr, "[holepunch] probe sent to %s:%u (resolved=%s) result=%d\n",
+            cand.ip.c_str(), cand.port, resolvedIP, sent);
   }
 
   lastProbeMs_ = nowMs();
@@ -87,6 +116,7 @@ void HolePunch::poll() {
 
   // Check timeout
   if (now - startTimeMs_ > (uint64_t)timeoutMs_) {
+    fprintf(stderr, "[holepunch] TIMEOUT after %u ms\n", timeoutMs_);
     state_ = Failed;
     if (onTimeout) onTimeout();
     return;
@@ -107,14 +137,22 @@ void HolePunch::poll() {
   int recvLen = enet_socket_receive((ENetSocket)sock_, &fromAddr, &recvBuf, 1);
   if (recvLen < 4) return;
 
+  // Log any received data
+  char fromIP[INET6_ADDRSTRLEN] = {};
+  enet_address_get_host_ip(&fromAddr, fromIP, sizeof(fromIP));
+  fprintf(stderr, "[holepunch] received %d bytes from %s:%u\n", recvLen, fromIP, fromAddr.port);
+
   // Verify magic
-  if (std::memcmp(recvData, PROBE_MAGIC, 4) != 0) return;
+  if (std::memcmp(recvData, PROBE_MAGIC, 4) != 0) {
+    fprintf(stderr, "[holepunch] received data does NOT match probe magic (first 4 bytes: %02x %02x %02x %02x)\n",
+            recvData[0], recvData[1], recvData[2], recvData[3]);
+    return;
+  }
 
   // Got a valid probe from peer — hole is punched!
-  char ipStr[INET6_ADDRSTRLEN] = {};
-  enet_address_get_host_ip(&fromAddr, ipStr, sizeof(ipStr));
+  fprintf(stderr, "[holepunch] SUCCESS! Valid probe from %s:%u\n", fromIP, fromAddr.port);
 
-  result_.peerIP = ipStr;
+  result_.peerIP = fromIP;
   result_.peerPort = fromAddr.port;
   state_ = Succeeded;
 
@@ -123,6 +161,7 @@ void HolePunch::poll() {
 
 void HolePunch::stop() {
   if (sock_ >= 0) {
+    fprintf(stderr, "[holepunch] stopping (fd=%d)\n", sock_);
     enet_socket_destroy((ENetSocket)sock_);
     sock_ = -1;
   }

@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <cstdio>
 
 OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCode)
 : role_(role)
@@ -17,6 +18,9 @@ OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCo
 
 void OnlineConnectState::enter()
 {
+	fprintf(stderr, "[online] enter: role=%s localPort=%u roomCode='%s'\n",
+	        role_ == NetSession::Host ? "Host" : "Client", localPort_, roomCode_.c_str());
+
 	statusLine1_ = (role_ == NetSession::Host)
 		? "CREATING ONLINE ROOM..."
 		: "JOINING ROOM " + roomCode_ + "...";
@@ -25,14 +29,19 @@ void OnlineConnectState::enter()
 	// Start STUN query from the game port
 	stunQuery_ = std::make_unique<StunQuery>();
 	stunQuery_->start(localPort_);
+	fprintf(stderr, "[online] STUN query started from port %u\n", localPort_);
 
 	// Wire up signaling callbacks
 	signaling_.onRoomCreated = [this](const std::string& code) {
+		fprintf(stderr, "[online] onRoomCreated: code=%s\n", code.c_str());
 		roomCode_ = code;
 		statusLine1_ = "ROOM CODE: " + code;
 		statusLine2_ = "SHARE THIS CODE WITH YOUR PEER";
 
 		// Now that we have a room code, report our STUN addresses
+		fprintf(stderr, "[online] reporting STUN results: ipv4='%s':%u ipv6='%s':%u\n",
+		        stunResult_.ipv4.c_str(), stunResult_.ipv4Port,
+		        stunResult_.ipv6.c_str(), stunResult_.ipv6Port);
 		if (!stunResult_.ipv4.empty())
 			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
 		if (!stunResult_.ipv6.empty())
@@ -40,25 +49,30 @@ void OnlineConnectState::enter()
 	};
 
 	signaling_.onPeerJoined = [this]() {
+		fprintf(stderr, "[online] onPeerJoined\n");
 		statusLine2_ = "PEER JOINED! CONNECTING...";
 	};
 
 	signaling_.onStartPunch = [this]() {
+		fprintf(stderr, "[online] onStartPunch — %zu peer candidates\n",
+		        signaling_.peerCandidates().size());
 		startPunching();
 	};
 
 	signaling_.onUseRelay = [this](uint16_t relayPort) {
-		// Relay fallback — connect to signaling server's relay port
+		fprintf(stderr, "[online] onUseRelay: port=%u\n", relayPort);
 		statusLine2_ = "USING RELAY (HIGHER LATENCY)";
 		connectDirect(signalingServer_, relayPort);
 	};
 
 	signaling_.onError = [this](const std::string& msg) {
+		fprintf(stderr, "[online] onError: %s\n", msg.c_str());
 		statusLine2_ = "ERROR: " + msg;
 		cancel_ = true;
 	};
 
 	signaling_.onRoomExpired = [this]() {
+		fprintf(stderr, "[online] onRoomExpired\n");
 		statusLine2_ = "ROOM EXPIRED";
 		cancel_ = true;
 	};
@@ -95,12 +109,18 @@ bool OnlineConnectState::update()
 	{
 		stunDone_ = true;
 		stunResult_ = stunQuery_->result();
+		fprintf(stderr, "[online] STUN done: ipv4='%s':%u ipv6='%s':%u\n",
+		        stunResult_.ipv4.c_str(), stunResult_.ipv4Port,
+		        stunResult_.ipv6.c_str(), stunResult_.ipv6Port);
 
 		// Start signaling
+		fprintf(stderr, "[online] connecting to signaling server %s:%u\n",
+		        signalingServer_.c_str(), signalingPort_);
 		if (role_ == NetSession::Host)
 		{
 			if (!signaling_.createRoom(signalingServer_, signalingPort_))
 			{
+				fprintf(stderr, "[online] ERROR: createRoom failed\n");
 				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
 				cancel_ = true;
 				return true;
@@ -110,6 +130,7 @@ bool OnlineConnectState::update()
 		{
 			if (!signaling_.joinRoom(signalingServer_, signalingPort_, roomCode_))
 			{
+				fprintf(stderr, "[online] ERROR: joinRoom failed\n");
 				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
 				cancel_ = true;
 				return true;
@@ -119,6 +140,7 @@ bool OnlineConnectState::update()
 		// Report our STUN addresses (client only — host defers until room is created)
 		if (role_ == NetSession::Client)
 		{
+			fprintf(stderr, "[online] client reporting addresses immediately\n");
 			if (!stunResult_.ipv4.empty())
 				signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
 			if (!stunResult_.ipv6.empty())
@@ -145,6 +167,10 @@ void OnlineConnectState::startPunching()
 	if (startedPunch_) return;
 	startedPunch_ = true;
 
+	auto& candidates = signaling_.peerCandidates();
+	fprintf(stderr, "[online] startPunching with %zu candidates from port %u\n",
+	        candidates.size(), localPort_);
+
 	statusLine2_ = "HOLE-PUNCHING...";
 
 	holePunch_ = std::make_unique<HolePunch>();
@@ -155,11 +181,12 @@ void OnlineConnectState::startPunching()
 		onPunchFailed();
 	};
 
-	holePunch_->start(localPort_, signaling_.peerCandidates());
+	holePunch_->start(localPort_, candidates);
 }
 
 void OnlineConnectState::onPunchSuccess(const HolePunch::Result& result)
 {
+	fprintf(stderr, "[online] onPunchSuccess: peer=%s:%u\n", result.peerIP.c_str(), result.peerPort);
 	signaling_.reportPunchOK();
 	signaling_.disconnect();
 
@@ -171,6 +198,7 @@ void OnlineConnectState::onPunchSuccess(const HolePunch::Result& result)
 
 void OnlineConnectState::onPunchFailed()
 {
+	fprintf(stderr, "[online] onPunchFailed — requesting relay\n");
 	signaling_.reportPunchFail();
 	statusLine2_ = "HOLE-PUNCH FAILED, WAITING FOR RELAY...";
 	// Server will send UseRelay if both peers report failure
@@ -178,6 +206,8 @@ void OnlineConnectState::onPunchFailed()
 
 void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
 {
+	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s\n",
+	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client");
 	// Replace this state with a direct NetConnectState to the punched/relay address
 	if (role_ == NetSession::Host)
 	{
