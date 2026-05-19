@@ -33,7 +33,7 @@ private:
 	uint16_t localPort_ = 19532;
 
 	// Signaling server config (TODO: make configurable)
-	std::string signalingServer_ = "127.0.0.1";
+	std::string signalingServer_ = "liero-server.orbmit.org";
 	uint16_t signalingPort_ = 19533;
 
 	std::unique_ptr<StunQuery> stunQuery_;
