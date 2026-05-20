@@ -10,6 +10,7 @@
 #include <string>
 #include <chrono>
 #include <cstdio>
+#include <random>
 
 OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCode)
 : role_(role)
@@ -196,7 +197,14 @@ void OnlineConnectState::startPunching()
 		onPunchFailed();
 	};
 
-	holePunch_->start(localPort_, candidates);
+	// Generate a random nonce to identify our probes (prevents accepting
+	// our own reflected packets as success). peerNonce=0 means accept any
+	// non-self nonce (full nonce exchange via signaling is a future improvement).
+	std::random_device rd;
+	uint32_t localNonce = ((uint32_t)rd() & 0xFFFF0000) | ((uint32_t)rd() & 0xFFFF);
+	if (localNonce == 0) localNonce = 1; // ensure non-zero
+
+	holePunch_->start(localPort_, candidates, localNonce, 0);
 }
 
 void OnlineConnectState::onPunchSuccess(const HolePunch::Result& result)

@@ -31,7 +31,9 @@ public:
 
   // Start hole-punching from localPort to all candidate addresses.
   // localPort should be the game's ENet listening port.
-  bool start(uint16_t localPort, const std::vector<PeerCandidate>& candidates);
+  // localNonce identifies this peer; peerNonce is the expected peer's nonce.
+  bool start(uint16_t localPort, const std::vector<PeerCandidate>& candidates,
+             uint32_t localNonce, uint32_t peerNonce);
 
   // Poll for incoming probes. Call once per frame.
   // Returns true while still active.
@@ -60,6 +62,8 @@ private:
   int timeoutMs_;
   uint64_t startTimeMs_;
   uint64_t lastProbeMs_;
+  uint32_t localNonce_;
+  uint32_t peerNonce_;
 
   // Magic bytes to identify our probes vs random traffic
   static constexpr uint8_t PROBE_MAGIC[4] = {0x4F, 0x4C, 0x48, 0x50}; // "OLHP"

@@ -19,15 +19,17 @@ static uint64_t nowMs() {
 }
 
 HolePunch::HolePunch()
-    : sock_(ENET_SOCKET_NULL), state_(Idle), timeoutMs_(5000), startTimeMs_(0), lastProbeMs_(0) {}
+    : sock_(ENET_SOCKET_NULL), state_(Idle), timeoutMs_(5000),
+      startTimeMs_(0), lastProbeMs_(0), localNonce_(0), peerNonce_(0) {}
 
 HolePunch::~HolePunch() {
   stop();
 }
 
-bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& candidates) {
-  fprintf(stderr, "[holepunch] starting with localPort=%u, %zu candidates\n",
-          localPort, candidates.size());
+bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& candidates,
+                      uint32_t localNonce, uint32_t peerNonce) {
+  fprintf(stderr, "[holepunch] starting with localPort=%u, %zu candidates, nonce=%08x peer=%08x\n",
+          localPort, candidates.size(), localNonce, peerNonce);
   for (size_t i = 0; i < candidates.size(); i++) {
     fprintf(stderr, "[holepunch]   candidate %zu: %s %s:%u\n",
             i, candidates[i].type == 4 ? "IPv4" : "IPv6",
@@ -72,6 +74,8 @@ bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& cand
 
   sock_ = sock;
   candidates_ = candidates;
+  localNonce_ = localNonce;
+  peerNonce_ = peerNonce;
   state_ = Punching;
   startTimeMs_ = nowMs();
   lastProbeMs_ = 0;
@@ -84,10 +88,13 @@ bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& cand
 void HolePunch::sendProbes() {
   if (sock_ == ENET_SOCKET_NULL) return;
 
-  // Probe packet: 4 bytes magic + 2 bytes local port (for verification)
-  uint8_t probe[6];
+  // Probe packet: 4 bytes magic + 4 bytes sender nonce
+  uint8_t probe[8];
   std::memcpy(probe, PROBE_MAGIC, 4);
-  // Leave port bytes as 0 — peer doesn't need them to validate
+  probe[4] = (uint8_t)(localNonce_ >> 24);
+  probe[5] = (uint8_t)(localNonce_ >> 16);
+  probe[6] = (uint8_t)(localNonce_ >> 8);
+  probe[7] = (uint8_t)(localNonce_);
 
   ENetBuffer buf;
   buf.data = probe;
@@ -135,7 +142,7 @@ void HolePunch::poll() {
 
   ENetAddress fromAddr = {};
   int recvLen = enet_socket_receive(sock_, &fromAddr, &recvBuf, 1);
-  if (recvLen < 4) return;
+  if (recvLen < 8) return;
 
   // Log any received data
   char fromIP[INET6_ADDRSTRLEN] = {};
@@ -149,8 +156,22 @@ void HolePunch::poll() {
     return;
   }
 
+  // Verify nonce — must be from the expected peer, not our own reflected probe
+  uint32_t recvNonce = ((uint32_t)recvData[4] << 24) | ((uint32_t)recvData[5] << 16) |
+                       ((uint32_t)recvData[6] << 8) | (uint32_t)recvData[7];
+  if (recvNonce == localNonce_) {
+    fprintf(stderr, "[holepunch] ignoring reflected probe (our own nonce)\n");
+    return;
+  }
+  if (peerNonce_ != 0 && recvNonce != peerNonce_) {
+    fprintf(stderr, "[holepunch] ignoring probe with unknown nonce %08x (expected %08x)\n",
+            recvNonce, peerNonce_);
+    return;
+  }
+
   // Got a valid probe from peer — hole is punched!
-  fprintf(stderr, "[holepunch] SUCCESS! Valid probe from %s:%u\n", fromIP, fromAddr.port);
+  fprintf(stderr, "[holepunch] SUCCESS! Valid probe from %s:%u (nonce=%08x)\n",
+          fromIP, fromAddr.port, recvNonce);
 
   result_.peerIP = fromIP;
   result_.peerPort = fromAddr.port;
