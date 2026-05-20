@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/binary"
 	"log"
 	"net"
@@ -384,7 +385,7 @@ func (s *Server) runRelay(code string, port int, token []byte) {
 		// Authentication: peers must present the token in their first packet.
 		// The token is stripped before forwarding.
 		if peerA == nil {
-			if n < tokenLen || !bytesEqual(buf[:tokenLen], token) {
+			if n < tokenLen || subtle.ConstantTimeCompare(buf[:tokenLen], token) != 1 {
 				log.Printf("Room %s: relay rejecting unauthenticated peer from %s", code, from)
 				continue
 			}
@@ -393,7 +394,7 @@ func (s *Server) runRelay(code string, port int, token []byte) {
 			copy(buf, buf[tokenLen:n])
 			n -= tokenLen
 		} else if peerB == nil && !udpAddrEqual(from, peerA) {
-			if n < tokenLen || !bytesEqual(buf[:tokenLen], token) {
+			if n < tokenLen || subtle.ConstantTimeCompare(buf[:tokenLen], token) != 1 {
 				log.Printf("Room %s: relay rejecting unauthenticated peer from %s", code, from)
 				continue
 			}
@@ -417,18 +418,6 @@ func (s *Server) runRelay(code string, port int, token []byte) {
 			conn.WriteToUDP(buf[:n], dest)
 		}
 	}
-}
-
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func udpAddrEqual(a, b *net.UDPAddr) bool {
