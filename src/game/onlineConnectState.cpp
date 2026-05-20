@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <chrono>
 #include <cstdio>
 
 OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCode)
@@ -62,6 +63,8 @@ void OnlineConnectState::enter()
 	signaling_.onUseRelay = [this](uint16_t relayPort) {
 		fprintf(stderr, "[online] onUseRelay: port=%u\n", relayPort);
 		statusLine2_ = "USING RELAY (HIGHER LATENCY)";
+		// Release hole-punch socket before transitioning
+		if (holePunch_) { holePunch_->stop(); holePunch_.reset(); }
 		connectDirect(signalingServer_, relayPort);
 	};
 
@@ -155,6 +158,18 @@ bool OnlineConnectState::update()
 	// Poll signaling
 	signaling_.poll();
 
+	// Send keepalive every 5 seconds to prevent room expiry
+	if (signaling_.state() != SignalingClient::Idle &&
+	    signaling_.state() != SignalingClient::Failed)
+	{
+		auto now = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now().time_since_epoch()).count();
+		if (now - lastKeepaliveMs_ > 5000) {
+			signaling_.sendKeepalive();
+			lastKeepaliveMs_ = now;
+		}
+	}
+
 	// Poll hole-punch if active
 	if (holePunch_)
 		holePunch_->poll();
@@ -190,6 +205,10 @@ void OnlineConnectState::onPunchSuccess(const HolePunch::Result& result)
 	signaling_.reportPunchOK();
 	signaling_.disconnect();
 
+	// Release the hole-punch socket before ENet binds to the same port
+	holePunch_->stop();
+	holePunch_.reset();
+
 	statusLine2_ = "CONNECTED! STARTING GAME...";
 
 	// Transition to the normal direct-connect flow with the punched address
@@ -206,12 +225,22 @@ void OnlineConnectState::onPunchFailed()
 
 void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
 {
-	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s\n",
-	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client");
-	// Replace this state with a direct NetConnectState to the punched/relay address
-	if (role_ == NetSession::Host)
+	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s relay=%d\n",
+	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client",
+	        signaling_.state() == SignalingClient::Relaying ? 1 : 0);
+
+	bool useRelay = (signaling_.state() == SignalingClient::Relaying);
+
+	if (useRelay)
 	{
-		// Host still listens — peer connects to us
+		// In relay mode, both peers connect as Client to the relay server.
+		// The relay forwards traffic between the two participants.
+		gfx->stateStack.scheduleReplaceTop(
+			std::make_unique<NetConnectState>(NetSession::Client, addr, port));
+	}
+	else if (role_ == NetSession::Host)
+	{
+		// Host still listens — peer connects to us via punched address
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Host, "", localPort_));
 	}
