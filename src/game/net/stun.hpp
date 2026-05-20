@@ -67,6 +67,7 @@ private:
 
   std::thread thread_;
   std::atomic<bool> done_{false};
+  std::atomic<bool> started_{false};
   mutable std::mutex mutex_;
   StunResult result_;
   uint16_t localPort_{0};

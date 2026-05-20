@@ -20,11 +20,15 @@ static constexpr int STUN_TIMEOUT_MS = 2000;
 static constexpr int STUN_RETRIES = 2;
 
 void StunQuery::start() {
+  // Guard against double-call: assigning a new thread without joining
+  // the old one would cause std::terminate.
+  if (started_.exchange(true)) return;
   thread_ = std::thread(&StunQuery::run, this);
 }
 
 void StunQuery::start(uint16_t localPort) {
   localPort_ = localPort;
+  if (started_.exchange(true)) return;
   thread_ = std::thread(&StunQuery::run, this);
 }
 
