@@ -57,6 +57,11 @@ StunMappedAddress stun::parseResponse(const uint8_t* data, size_t len,
   const uint8_t* attrs = data + sizeof(stun::Header);
   size_t offset = 0;
 
+  // RFC 5389: prefer XOR-MAPPED-ADDRESS over MAPPED-ADDRESS.
+  // Do a full scan collecting both, return XOR if available.
+  StunMappedAddress xorResult;
+  StunMappedAddress plainResult;
+
   while (offset + 4 <= attrTotalLen) {
     uint16_t attrType = (uint16_t)(attrs[offset] << 8 | attrs[offset + 1]);
     uint16_t attrLen = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
@@ -77,7 +82,7 @@ StunMappedAddress stun::parseResponse(const uint8_t* data, size_t len,
         snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
                  (addr >> 24) & 0xFF, (addr >> 16) & 0xFF,
                  (addr >> 8) & 0xFF, addr & 0xFF);
-        return {buf, mappedPort};
+        xorResult = {buf, mappedPort};
       } else if (family == 0x02 && attrLen >= 20) { // IPv6
         uint8_t addrBytes[16];
         std::memcpy(addrBytes, attrs + offset + 4, 16);
@@ -88,7 +93,7 @@ StunMappedAddress stun::parseResponse(const uint8_t* data, size_t len,
           addrBytes[4 + i] ^= req.transactionId[i];
         char buf[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, addrBytes, buf, sizeof(buf));
-        return {buf, mappedPort};
+        xorResult = {buf, mappedPort};
       }
     } else if (attrType == stun::ATTR_MAPPED_ADDRESS && attrLen >= 8) {
       uint8_t family = attrs[offset + 1];
@@ -102,14 +107,17 @@ StunMappedAddress stun::parseResponse(const uint8_t* data, size_t len,
         snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
                  (addr >> 24) & 0xFF, (addr >> 16) & 0xFF,
                  (addr >> 8) & 0xFF, addr & 0xFF);
-        return {buf, mappedPort};
+        plainResult = {buf, mappedPort};
       }
     }
 
     // Attributes are padded to 4-byte boundaries
     offset += (attrLen + 3) & ~3u;
   }
-  return {};
+
+  // Prefer XOR-MAPPED-ADDRESS per RFC 5389
+  if (!xorResult.ip.empty()) return xorResult;
+  return plainResult;
 }
 
 StunMappedAddress StunQuery::queryServer(const char* serverAddr, uint16_t port,

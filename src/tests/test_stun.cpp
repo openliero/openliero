@@ -210,12 +210,10 @@ TEST_CASE("parseResponse prefers XOR-MAPPED-ADDRESS over MAPPED-ADDRESS", "[stun
 
   auto result = stun::parseResponse(pkt.data(), pkt.size(), req);
 
-  // Note: the current implementation returns the first matching attribute it finds.
-  // MAPPED-ADDRESS comes first, so it returns that. This test documents the actual behavior.
-  // If XOR-MAPPED-ADDRESS preference is desired, the parser would need reordering.
-  // For now, we just verify it parses *something* correctly.
-  REQUIRE_FALSE(result.ip.empty());
-  REQUIRE(result.port != 0);
+  // RFC 5389: XOR-MAPPED-ADDRESS is preferred over MAPPED-ADDRESS.
+  // Even though MAPPED-ADDRESS comes first, we should get the XOR result.
+  REQUIRE(result.ip == "203.0.113.42");
+  REQUIRE(result.port == 54321);
 }
 
 TEST_CASE("parseResponse rejects wrong transaction ID", "[stun]") {
