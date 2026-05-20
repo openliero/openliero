@@ -19,7 +19,7 @@ static uint64_t nowMs() {
 }
 
 HolePunch::HolePunch()
-    : sock_(-1), state_(Idle), timeoutMs_(5000), startTimeMs_(0), lastProbeMs_(0) {}
+    : sock_(ENET_SOCKET_NULL), state_(Idle), timeoutMs_(5000), startTimeMs_(0), lastProbeMs_(0) {}
 
 HolePunch::~HolePunch() {
   stop();
@@ -70,7 +70,7 @@ bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& cand
 
   enet_socket_set_option(sock, ENET_SOCKOPT_NONBLOCK, 1);
 
-  sock_ = (int)sock;
+  sock_ = sock;
   candidates_ = candidates;
   state_ = Punching;
   startTimeMs_ = nowMs();
@@ -82,7 +82,7 @@ bool HolePunch::start(uint16_t localPort, const std::vector<PeerCandidate>& cand
 }
 
 void HolePunch::sendProbes() {
-  if (sock_ < 0) return;
+  if (sock_ == ENET_SOCKET_NULL) return;
 
   // Probe packet: 4 bytes magic + 2 bytes local port (for verification)
   uint8_t probe[6];
@@ -101,7 +101,7 @@ void HolePunch::sendProbes() {
     char resolvedIP[INET6_ADDRSTRLEN] = {};
     enet_address_get_host_ip(&addr, resolvedIP, sizeof(resolvedIP));
 
-    int sent = enet_socket_send((ENetSocket)sock_, &addr, &buf, 1);
+    int sent = enet_socket_send(sock_, &addr, &buf, 1);
     fprintf(stderr, "[holepunch] probe sent to %s:%u (resolved=%s) result=%d\n",
             cand.ip.c_str(), cand.port, resolvedIP, sent);
   }
@@ -110,7 +110,7 @@ void HolePunch::sendProbes() {
 }
 
 void HolePunch::poll() {
-  if (state_ != Punching || sock_ < 0) return;
+  if (state_ != Punching || sock_ == ENET_SOCKET_NULL) return;
 
   uint64_t now = nowMs();
 
@@ -134,7 +134,7 @@ void HolePunch::poll() {
   recvBuf.dataLength = sizeof(recvData);
 
   ENetAddress fromAddr = {};
-  int recvLen = enet_socket_receive((ENetSocket)sock_, &fromAddr, &recvBuf, 1);
+  int recvLen = enet_socket_receive(sock_, &fromAddr, &recvBuf, 1);
   if (recvLen < 4) return;
 
   // Log any received data
@@ -160,10 +160,10 @@ void HolePunch::poll() {
 }
 
 void HolePunch::stop() {
-  if (sock_ >= 0) {
-    fprintf(stderr, "[holepunch] stopping (fd=%d)\n", sock_);
-    enet_socket_destroy((ENetSocket)sock_);
-    sock_ = -1;
+  if (sock_ != ENET_SOCKET_NULL) {
+    fprintf(stderr, "[holepunch] stopping (fd=%d)\n", (int)sock_);
+    enet_socket_destroy(sock_);
+    sock_ = ENET_SOCKET_NULL;
   }
   if (state_ == Punching)
     state_ = Failed;

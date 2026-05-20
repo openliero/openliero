@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <enet.h>
 #include "signaling.hpp"
 
 // UDP hole-punch implementation.
@@ -52,7 +53,7 @@ public:
 private:
   void sendProbes();
 
-  int sock_;  // ENetSocket
+  ENetSocket sock_;
   State state_;
   Result result_;
   std::vector<PeerCandidate> candidates_;

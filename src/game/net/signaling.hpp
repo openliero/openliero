@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-struct _ENetSocket;
+#include <enet.h>
 
 // Candidate address for a peer (discovered via STUN or reported by signaling).
 struct PeerCandidate {
@@ -74,7 +74,7 @@ private:
   void send(const void* data, size_t len);
   void handleMessage(const uint8_t* data, size_t len);
 
-  int sock_;  // ENetSocket (stored as int to avoid enet include in header)
+  ENetSocket sock_;
   State state_;
   std::string roomCode_;
   std::string serverAddr_;
@@ -83,6 +83,6 @@ private:
   uint16_t relayPort_;
   int pollErrCount_ = 0;
 
-  // Cached resolved server address (opaque storage for ENetAddress)
-  alignas(8) uint8_t resolvedAddrStorage_[128] = {};
+  // Cached resolved server address
+  ENetAddress resolvedAddr_ = {};
 };

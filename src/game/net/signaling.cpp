@@ -55,7 +55,7 @@ namespace proto {
 }
 
 SignalingClient::SignalingClient()
-    : sock_(-1), state_(Idle), serverPort_(0), relayPort_(0) {}
+    : sock_(ENET_SOCKET_NULL), state_(Idle), serverPort_(0), relayPort_(0) {}
 
 SignalingClient::~SignalingClient() {
   disconnect();
@@ -99,21 +99,20 @@ bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort
   enet_address_get_host_ip(&resolved, resolvedIP, sizeof(resolvedIP));
   fprintf(stderr, "[signaling] resolved server to %s:%u\n", resolvedIP, serverPort);
 
-  sock_ = (int)sock;
+  sock_ = sock;
   serverAddr_ = serverAddr;
   serverPort_ = serverPort;
-  static_assert(sizeof(resolvedAddrStorage_) >= sizeof(ENetAddress));
-  std::memcpy(resolvedAddrStorage_, &resolved, sizeof(ENetAddress));
+  resolvedAddr_ = resolved;
 
   fprintf(stderr, "[signaling] connection setup complete\n");
   return true;
 }
 
 void SignalingClient::disconnect() {
-  if (sock_ >= 0) {
-    fprintf(stderr, "[signaling] disconnecting (fd=%d)\n", sock_);
-    enet_socket_destroy((ENetSocket)sock_);
-    sock_ = -1;
+  if (sock_ != ENET_SOCKET_NULL) {
+    fprintf(stderr, "[signaling] disconnecting (fd=%d)\n", (int)sock_);
+    enet_socket_destroy(sock_);
+    sock_ = ENET_SOCKET_NULL;
   }
   state_ = Idle;
   roomCode_.clear();
@@ -122,7 +121,7 @@ void SignalingClient::disconnect() {
 }
 
 void SignalingClient::send(const void* data, size_t len) {
-  if (sock_ < 0) return;
+  if (sock_ == ENET_SOCKET_NULL) return;
 
   const uint8_t* bytes = (const uint8_t*)data;
   fprintf(stderr, "[signaling] SEND %s (%zu bytes)\n",
@@ -131,8 +130,7 @@ void SignalingClient::send(const void* data, size_t len) {
   ENetBuffer buf;
   buf.data = const_cast<void*>(data);
   buf.dataLength = len;
-  auto* addr = reinterpret_cast<ENetAddress*>(resolvedAddrStorage_);
-  int sent = enet_socket_send((ENetSocket)sock_, addr, &buf, 1);
+  int sent = enet_socket_send(sock_, &resolvedAddr_, &buf, 1);
   if (sent < 0) {
     fprintf(stderr, "[signaling] ERROR: send failed (returned %d)\n", sent);
   } else {
@@ -219,11 +217,11 @@ void SignalingClient::sendKeepalive() {
 }
 
 void SignalingClient::poll() {
-  if (sock_ < 0) return;
+  if (sock_ == ENET_SOCKET_NULL) return;
 
   // Check if data is available (non-blocking via zero timeout wait)
   enet_uint32 waitCondition = ENET_SOCKET_WAIT_RECEIVE;
-  int waitResult = enet_socket_wait((ENetSocket)sock_, &waitCondition, 0);
+  int waitResult = enet_socket_wait(sock_, &waitCondition, 0);
   if (waitResult != 0) {
     if (pollErrCount_++ < 3)
       fprintf(stderr, "[signaling] poll: enet_socket_wait returned error %d\n", waitResult);
@@ -238,7 +236,7 @@ void SignalingClient::poll() {
   recvBuf.dataLength = sizeof(recvData);
 
   ENetAddress fromAddr = {};
-  int recvLen = enet_socket_receive((ENetSocket)sock_, &fromAddr, &recvBuf, 1);
+  int recvLen = enet_socket_receive(sock_, &fromAddr, &recvBuf, 1);
   if (recvLen <= 0) {
     fprintf(stderr, "[signaling] poll: receive returned %d (wait said data available)\n", recvLen);
     return;
