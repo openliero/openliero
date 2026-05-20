@@ -27,8 +27,8 @@ void StunQuery::start() {
 }
 
 void StunQuery::start(uint16_t localPort) {
-  localPort_ = localPort;
   if (started_.exchange(true)) return;
+  localPort_ = localPort;
   thread_ = std::thread(&StunQuery::run, this);
 }
 
