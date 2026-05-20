@@ -299,10 +299,13 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
       break;
     }
     case proto::UseRelay: {
-      if (len < 1 + proto::RoomCodeLen + 2) break;
+      if (len < 1 + proto::RoomCodeLen + 2 + 8) break;
       relayPort_ = (uint16_t)(data[1 + proto::RoomCodeLen] << 8 |
                                data[1 + proto::RoomCodeLen + 1]);
-      fprintf(stderr, "[signaling] received UseRelay — relay port %u\n", relayPort_);
+      relayToken_.assign(data + 1 + proto::RoomCodeLen + 2,
+                         data + 1 + proto::RoomCodeLen + 2 + 8);
+      fprintf(stderr, "[signaling] received UseRelay — relay port %u (token %zu bytes)\n",
+              relayPort_, relayToken_.size());
       state_ = Relaying;
       if (onUseRelay) onUseRelay(relayPort_);
       break;

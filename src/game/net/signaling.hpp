@@ -59,6 +59,7 @@ public:
   const std::string& roomCode() const { return roomCode_; }
   const std::vector<PeerCandidate>& peerCandidates() const { return peerCandidates_; }
   uint16_t relayPort() const { return relayPort_; }
+  const std::vector<uint8_t>& relayToken() const { return relayToken_; }
 
   // Callbacks
   std::function<void(const std::string& code)> onRoomCreated;
@@ -81,6 +82,7 @@ private:
   uint16_t serverPort_;
   std::vector<PeerCandidate> peerCandidates_;
   uint16_t relayPort_;
+  std::vector<uint8_t> relayToken_;
   int pollErrCount_ = 0;
 
   // Cached resolved server address

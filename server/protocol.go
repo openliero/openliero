@@ -16,7 +16,7 @@ package main
 //   PeerJoined  [0x82] + [6 bytes: room code]
 //   PeerAddr    [0x83] + [6 bytes: room code] + [1 byte: addr_type] + [2 bytes: port BE] + [N bytes: IP]
 //   StartPunch  [0x84] + [6 bytes: room code]
-//   UseRelay    [0x85] + [6 bytes: room code] + [2 bytes: relay port BE]
+//   UseRelay    [0x85] + [6 bytes: room code] + [2 bytes: relay port BE] + [8 bytes: relay auth token]
 //   Error       [0x8F] + [1 byte: error code] + [N bytes: message]
 //   RoomExpired [0x86] + [6 bytes: room code]
 //

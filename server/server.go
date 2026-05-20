@@ -32,12 +32,13 @@ type Peer struct {
 
 // Room holds two peers trying to connect.
 type Room struct {
-	Code      [RoomCodeLen]byte
-	Host      *Peer
-	Client    *Peer
-	CreatedAt time.Time
-	LastSeen  time.Time
-	RelayPort int // 0 = not allocated
+	Code       [RoomCodeLen]byte
+	Host       *Peer
+	Client     *Peer
+	CreatedAt  time.Time
+	LastSeen   time.Time
+	RelayPort  int    // 0 = not allocated
+	RelayToken []byte // 8-byte token for relay authentication
 }
 
 type Server struct {
@@ -289,16 +290,22 @@ func (s *Server) offerRelay(room *Room, code string) {
 	}
 	room.RelayPort = port
 
+	// Generate relay authentication token
+	token := make([]byte, 8)
+	rand.Read(token)
+	room.RelayToken = token
+
 	log.Printf("Room %s: offering relay on port %d", code, port)
 
 	// Start relay goroutine
-	go s.runRelay(room, code, port)
+	go s.runRelay(room, code, port, token)
 
-	// Tell both peers to use the relay
-	msg := make([]byte, 1+RoomCodeLen+2)
+	// Tell both peers to use the relay (include token for authentication)
+	msg := make([]byte, 1+RoomCodeLen+2+8)
 	msg[0] = MsgUseRelay
 	copy(msg[1:], code)
 	binary.BigEndian.PutUint16(msg[1+RoomCodeLen:], uint16(port))
+	copy(msg[1+RoomCodeLen+2:], token)
 
 	s.conn.WriteToUDP(msg, room.Host.Addr)
 	if room.Client != nil {
@@ -306,7 +313,7 @@ func (s *Server) offerRelay(room *Room, code string) {
 	}
 }
 
-func (s *Server) runRelay(room *Room, code string, port int) {
+func (s *Server) runRelay(room *Room, code string, port int, token []byte) {
 	addr := &net.UDPAddr{Port: port}
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
@@ -329,6 +336,7 @@ func (s *Server) runRelay(room *Room, code string, port int) {
 
 	buf := make([]byte, 2048)
 	var peerA, peerB *net.UDPAddr
+	tokenLen := len(token)
 
 	for {
 		n, from, err := conn.ReadFromUDP(buf)
@@ -336,11 +344,25 @@ func (s *Server) runRelay(room *Room, code string, port int) {
 			return
 		}
 
-		// First two senders become the two relay peers
+		// Authentication: peers must present the token in their first packet.
+		// The token is stripped before forwarding.
 		if peerA == nil {
+			if n < tokenLen || !bytesEqual(buf[:tokenLen], token) {
+				log.Printf("Room %s: relay rejecting unauthenticated peer from %s", code, from)
+				continue
+			}
 			peerA = from
+			// Strip token, forward remaining data if any
+			copy(buf, buf[tokenLen:n])
+			n -= tokenLen
 		} else if peerB == nil && !udpAddrEqual(from, peerA) {
+			if n < tokenLen || !bytesEqual(buf[:tokenLen], token) {
+				log.Printf("Room %s: relay rejecting unauthenticated peer from %s", code, from)
+				continue
+			}
 			peerB = from
+			copy(buf, buf[tokenLen:n])
+			n -= tokenLen
 		}
 
 		// Forward to the other peer
@@ -349,12 +371,27 @@ func (s *Server) runRelay(room *Room, code string, port int) {
 			dest = peerB
 		} else if udpAddrEqual(from, peerB) {
 			dest = peerA
+		} else {
+			// Unknown sender after both peers established — ignore
+			continue
 		}
 
-		if dest != nil {
+		if dest != nil && n > 0 {
 			conn.WriteToUDP(buf[:n], dest)
 		}
 	}
+}
+
+func bytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func udpAddrEqual(a, b *net.UDPAddr) bool {
