@@ -118,8 +118,10 @@ StunMappedAddress StunQuery::queryServer(const char* serverAddr, uint16_t port,
   if (sock == ENET_SOCKET_NULL) return {};
 
   // Bind to specific local port if requested (for hole-punching: NAT mapping
-  // must correspond to the game's listening port)
+  // must correspond to the game's listening port).
+  // SO_REUSEADDR is needed so both IPv4 and IPv6 queries can bind the same port.
   if (localPort != 0) {
+    enet_socket_set_option(sock, ENET_SOCKOPT_REUSEADDR, 1);
     ENetAddress localAddr = {};
     localAddr.port = localPort;
     memset(&localAddr.host, 0, sizeof(localAddr.host));
