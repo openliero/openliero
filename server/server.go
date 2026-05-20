@@ -291,63 +291,52 @@ func (s *Server) handlePunchResult(code string, from *net.UDPAddr, ok bool) {
 		return
 	}
 
+	var shouldRelay bool
 	if ok {
 		peer.PunchOK = true
-		s.mu.Unlock()
 		log.Printf("Room %s: punch OK from %s", code, from)
 	} else {
 		peer.PunchFail = true
 		log.Printf("Room %s: punch FAILED from %s", code, from)
+		shouldRelay = room.Host.PunchFail && room.Client != nil && room.Client.PunchFail
+	}
 
-		// If both failed, offer relay
-		if room.Host.PunchFail && room.Client != nil && room.Client.PunchFail {
-			// offerRelay expects the lock to be held
-			s.offerRelay(room, code)
-			// offerRelay releases the lock
-		} else {
-			s.mu.Unlock()
+	// Collect relay data while still holding the lock
+	var relayPort int
+	var relayToken []byte
+	var hostAddr, clientAddr *net.UDPAddr
+	if shouldRelay {
+		relayPort = s.allocateRelayPort()
+		if relayPort != 0 {
+			room.RelayPort = relayPort
+			relayToken = make([]byte, 8)
+			rand.Read(relayToken)
+			room.RelayToken = relayToken
+			hostAddr = room.Host.Addr
+			if room.Client != nil {
+				clientAddr = room.Client.Addr
+			}
 		}
-	}
-}
-
-// offerRelay must be called with s.mu held; it releases s.mu before sending.
-func (s *Server) offerRelay(room *Room, code string) {
-	port := s.allocateRelayPort()
-	if port == 0 {
-		s.mu.Unlock()
-		log.Printf("Room %s: no relay ports available", code)
-		return
-	}
-	room.RelayPort = port
-
-	// Generate relay authentication token
-	token := make([]byte, 8)
-	rand.Read(token)
-	room.RelayToken = token
-
-	hostAddr := room.Host.Addr
-	var clientAddr *net.UDPAddr
-	if room.Client != nil {
-		clientAddr = room.Client.Addr
 	}
 
 	s.mu.Unlock()
 
-	log.Printf("Room %s: offering relay on port %d", code, port)
+	// Send relay offer outside the lock
+	if shouldRelay && relayPort != 0 {
+		log.Printf("Room %s: offering relay on port %d", code, relayPort)
+		go s.runRelay(code, relayPort, relayToken)
 
-	// Start relay goroutine
-	go s.runRelay(code, port, token)
-
-	// Tell both peers to use the relay (include token for authentication)
-	msg := make([]byte, 1+RoomCodeLen+2+8)
-	msg[0] = MsgUseRelay
-	copy(msg[1:], code)
-	binary.BigEndian.PutUint16(msg[1+RoomCodeLen:], uint16(port))
-	copy(msg[1+RoomCodeLen+2:], token)
-
-	s.conn.WriteToUDP(msg, hostAddr)
-	if clientAddr != nil {
-		s.conn.WriteToUDP(msg, clientAddr)
+		msg := make([]byte, 1+RoomCodeLen+2+8)
+		msg[0] = MsgUseRelay
+		copy(msg[1:], code)
+		binary.BigEndian.PutUint16(msg[1+RoomCodeLen:], uint16(relayPort))
+		copy(msg[1+RoomCodeLen+2:], relayToken)
+		s.conn.WriteToUDP(msg, hostAddr)
+		if clientAddr != nil {
+			s.conn.WriteToUDP(msg, clientAddr)
+		}
+	} else if shouldRelay {
+		log.Printf("Room %s: no relay ports available", code)
 	}
 }
 
