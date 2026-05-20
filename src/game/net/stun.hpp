@@ -4,6 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <cstdint>
 
 struct StunResult {
   std::string ipv4;        // External IPv4, or empty if unavailable
@@ -16,6 +17,27 @@ struct StunMappedAddress {
   std::string ip;
   uint16_t port = 0;
 };
+
+// STUN protocol constants (RFC 5389) — exposed for testing
+namespace stun {
+  constexpr uint16_t BINDING_REQUEST = 0x0001;
+  constexpr uint16_t BINDING_RESPONSE = 0x0101;
+  constexpr uint32_t MAGIC_COOKIE = 0x2112A442;
+  constexpr uint16_t ATTR_XOR_MAPPED_ADDRESS = 0x0020;
+  constexpr uint16_t ATTR_MAPPED_ADDRESS = 0x0001;
+
+  struct Header {
+    uint16_t type;
+    uint16_t length;
+    uint32_t magicCookie;
+    uint8_t transactionId[12];
+  };
+  static_assert(sizeof(Header) == 20);
+
+  // Parse a STUN Binding Response, extracting the mapped address.
+  // req is the original request header (needed for XOR unmasking).
+  StunMappedAddress parseResponse(const uint8_t* data, size_t len, const Header& req);
+}
 
 // Minimal STUN client (RFC 5389) for discovering external IP addresses.
 // Queries a public STUN server over both IPv4 and IPv6 to discover

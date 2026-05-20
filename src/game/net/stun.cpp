@@ -12,28 +12,12 @@
 #include <arpa/inet.h>
 #endif
 
-// STUN constants (RFC 5389)
-static constexpr uint16_t STUN_BINDING_REQUEST = 0x0001;
-static constexpr uint16_t STUN_BINDING_RESPONSE = 0x0101;
-static constexpr uint32_t STUN_MAGIC_COOKIE = 0x2112A442;
-static constexpr uint16_t STUN_ATTR_XOR_MAPPED_ADDRESS = 0x0020;
-static constexpr uint16_t STUN_ATTR_MAPPED_ADDRESS = 0x0001;
-
 // Google's STUN server has well-known IPv4 and IPv6 addresses
 static constexpr const char* STUN_SERVER_IPV4 = "74.125.250.129";
 static constexpr const char* STUN_SERVER_IPV6 = "2001:4860:4864:5:8000::1";
 static constexpr uint16_t STUN_PORT = 19302;
 static constexpr int STUN_TIMEOUT_MS = 2000;
 static constexpr int STUN_RETRIES = 2;
-
-struct StunHeader {
-  uint16_t type;
-  uint16_t length;
-  uint32_t magicCookie;
-  uint8_t transactionId[12];
-};
-
-static_assert(sizeof(StunHeader) == 20);
 
 void StunQuery::start() {
   thread_ = std::thread(&StunQuery::run, this);
@@ -54,19 +38,19 @@ StunResult StunQuery::result() const {
   return result_;
 }
 
-static StunMappedAddress parseResponse(const uint8_t* data, size_t len,
-                                  const StunHeader& req) {
-  if (len < sizeof(StunHeader)) return {};
+StunMappedAddress stun::parseResponse(const uint8_t* data, size_t len,
+                                  const stun::Header& req) {
+  if (len < sizeof(stun::Header)) return {};
 
-  auto* resp = (const StunHeader*)data;
-  if (ntohs(resp->type) != STUN_BINDING_RESPONSE) return {};
-  if (ntohl(resp->magicCookie) != STUN_MAGIC_COOKIE) return {};
+  auto* resp = (const stun::Header*)data;
+  if (ntohs(resp->type) != stun::BINDING_RESPONSE) return {};
+  if (ntohl(resp->magicCookie) != stun::MAGIC_COOKIE) return {};
   if (std::memcmp(resp->transactionId, req.transactionId, 12) != 0) return {};
 
   uint16_t attrTotalLen = ntohs(resp->length);
-  if (sizeof(StunHeader) + attrTotalLen > len) return {};
+  if (sizeof(stun::Header) + attrTotalLen > len) return {};
 
-  const uint8_t* attrs = data + sizeof(StunHeader);
+  const uint8_t* attrs = data + sizeof(stun::Header);
   size_t offset = 0;
 
   while (offset + 4 <= attrTotalLen) {
@@ -76,15 +60,15 @@ static StunMappedAddress parseResponse(const uint8_t* data, size_t len,
 
     if (offset + attrLen > attrTotalLen) break;
 
-    if (attrType == STUN_ATTR_XOR_MAPPED_ADDRESS && attrLen >= 8) {
+    if (attrType == stun::ATTR_XOR_MAPPED_ADDRESS && attrLen >= 8) {
       uint8_t family = attrs[offset + 1];
       uint16_t xorPort = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
-      uint16_t mappedPort = xorPort ^ (uint16_t)(STUN_MAGIC_COOKIE >> 16);
+      uint16_t mappedPort = xorPort ^ (uint16_t)(stun::MAGIC_COOKIE >> 16);
 
       if (family == 0x01 && attrLen >= 8) { // IPv4
         uint32_t xorAddr;
         std::memcpy(&xorAddr, attrs + offset + 4, 4);
-        uint32_t addr = ntohl(xorAddr) ^ STUN_MAGIC_COOKIE;
+        uint32_t addr = ntohl(xorAddr) ^ stun::MAGIC_COOKIE;
         char buf[64];
         snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
                  (addr >> 24) & 0xFF, (addr >> 16) & 0xFF,
@@ -93,7 +77,7 @@ static StunMappedAddress parseResponse(const uint8_t* data, size_t len,
       } else if (family == 0x02 && attrLen >= 20) { // IPv6
         uint8_t addrBytes[16];
         std::memcpy(addrBytes, attrs + offset + 4, 16);
-        uint32_t cookie = htonl(STUN_MAGIC_COOKIE);
+        uint32_t cookie = htonl(stun::MAGIC_COOKIE);
         for (int i = 0; i < 4; i++)
           addrBytes[i] ^= ((uint8_t*)&cookie)[i];
         for (int i = 0; i < 12; i++)
@@ -102,7 +86,7 @@ static StunMappedAddress parseResponse(const uint8_t* data, size_t len,
         inet_ntop(AF_INET6, addrBytes, buf, sizeof(buf));
         return {buf, mappedPort};
       }
-    } else if (attrType == STUN_ATTR_MAPPED_ADDRESS && attrLen >= 8) {
+    } else if (attrType == stun::ATTR_MAPPED_ADDRESS && attrLen >= 8) {
       uint8_t family = attrs[offset + 1];
       uint16_t mappedPort = (uint16_t)(attrs[offset + 2] << 8 | attrs[offset + 3]);
 
@@ -148,10 +132,10 @@ StunMappedAddress StunQuery::queryServer(const char* serverAddr, uint16_t port,
   }
 
   // Build STUN Binding Request
-  StunHeader req = {};
-  req.type = htons(STUN_BINDING_REQUEST);
+  stun::Header req = {};
+  req.type = htons(stun::BINDING_REQUEST);
   req.length = 0;
-  req.magicCookie = htonl(STUN_MAGIC_COOKIE);
+  req.magicCookie = htonl(stun::MAGIC_COOKIE);
 
   std::random_device rd;
   for (int i = 0; i < 12; i++)
@@ -179,9 +163,9 @@ StunMappedAddress StunQuery::queryServer(const char* serverAddr, uint16_t port,
 
     ENetAddress fromAddr = {};
     int recvLen = enet_socket_receive(sock, &fromAddr, &recvBuf, 1);
-    if (recvLen < (int)sizeof(StunHeader)) continue;
+    if (recvLen < (int)sizeof(stun::Header)) continue;
 
-    result = parseResponse(recvData, (size_t)recvLen, req);
+    result = stun::parseResponse(recvData, (size_t)recvLen, req);
   }
 
   enet_socket_destroy(sock);
