@@ -149,6 +149,9 @@ set(GAME_SOURCES ${SOURCES}
 
 # game
 add_library(game ${GAME_SOURCES})
+if(WIN32)
+  target_compile_definitions(game PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
 target_link_libraries(game
   PUBLIC
   miniz::miniz
