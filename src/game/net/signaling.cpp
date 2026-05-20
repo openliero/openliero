@@ -225,8 +225,7 @@ void SignalingClient::poll() {
   enet_uint32 waitCondition = ENET_SOCKET_WAIT_RECEIVE;
   int waitResult = enet_socket_wait((ENetSocket)sock_, &waitCondition, 0);
   if (waitResult != 0) {
-    static int errCount = 0;
-    if (errCount++ < 3)
+    if (pollErrCount_++ < 3)
       fprintf(stderr, "[signaling] poll: enet_socket_wait returned error %d\n", waitResult);
     return;
   }
