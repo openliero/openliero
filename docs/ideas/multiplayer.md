@@ -69,17 +69,29 @@ The game's replay system already implements lockstep: deterministic sim + per-fr
 
 ## How to Play
 
+### LAN / Direct IP
+
 1. Both players configure match settings (Match Setup) before connecting
-2. Player A: select **HOST GAME** from the main menu — shows "HOSTING ON PORT 19532"
-3. Player B: select **JOIN GAME**, type the host's IP address, press Enter
+2. Player A: select **HOST LAN GAME** from the main menu — shows "HOSTING ON PORT 19532"
+3. Player B: select **JOIN LAN GAME**, type the host's IP address, press Enter
 4. Both see connection status, then the game starts automatically
 5. Press Escape during gameplay to disconnect and return to menu
+
+### Online (NAT traversal)
+
+1. Player A: select **HOST ONLINE** — discovers external IP via STUN, creates a room on the signaling server, and displays a 6-character room code
+2. Player B: select **JOIN ONLINE**, type the room code, press Enter
+3. Both peers perform STUN to learn their external address+port, then report addresses to the signaling server
+4. The server signals both peers to begin UDP hole-punching simultaneously
+5. If hole-punch succeeds → direct peer-to-peer connection (same as LAN)
+6. If hole-punch fails → server allocates a UDP relay port and both peers connect through it (higher latency)
+7. Press Escape at any point to cancel and return to menu
 
 ## Not Doing (and Why)
 
 - **Rollback/prediction** — Adds massive complexity; lockstep with delay is sufficient for alpha and LAN play
 - **More than 2 players** — The original game is 2-player; network protocol can be designed to allow expansion later but not implementing now
-- **Matchmaking server** — Alpha uses direct IP connection; relay/STUN comes later
+- ~~**Matchmaking server**~~ — Signaling server implemented (Go, `server/`); provides room codes, NAT traversal coordination, and relay fallback
 - **Spectator mode** — Nice-to-have, not core
 - **Web/Emscripten multiplayer** — WebRTC adds complexity; desktop-only for now
 - **AI in network games** — Threading non-determinism makes this hard; punt to later
@@ -182,21 +194,25 @@ together. It manages the full connection lifecycle:
   rejection, and actual frame-advancing over real localhost UDP sockets with deterministic
   state verification.
 
-### Multiplayer UI (2026-05-17)
+### Multiplayer UI (2026-05-17, updated 2026-05-20)
 
 The UI integration uses the existing state stack and menu system:
 
-- **Menu items:** `HOST GAME` and `JOIN GAME` added to `MainMenu` enum and loaded in
-  `Gfx::loadMenus()`.
-- **Host flow:** Select HOST GAME → fades out → `Gfx::runOneFrame()` pushes
+- **Menu items:** `HOST LAN GAME`, `JOIN LAN GAME`, `HOST ONLINE`, `JOIN ONLINE` added to
+  `MainMenu` enum and loaded in `Gfx::loadMenus()`.
+- **LAN host flow:** Select HOST LAN GAME → fades out → `Gfx::runOneFrame()` pushes
   `NetConnectState(Host)` which creates a `NetSession`, calls `hostGame(19532)`, and
   shows "HOSTING ON PORT 19532 / WAITING FOR PEER...". When the peer connects and
   handshake completes, `NetConnectState` releases the controller to `gfx->controller`
   and replaces itself with `GamePlayState` via `scheduleReplaceTop()`.
-- **Join flow:** Select JOIN GAME → pushes `InputStringState` for the IP address →
+- **LAN join flow:** Select JOIN LAN GAME → pushes `InputStringState` for the IP address →
   callback stores the address in `gfx->pendingNetAddress` and sets
   `gfx->pendingMenuSelection = MaJoinGame` → menu fades out → `runOneFrame()` pushes
   `NetConnectState(Client, address)` → connects to host → same flow as above.
+- **Online host flow:** Select HOST ONLINE → pushes `OnlineConnectState(Host)` →
+  STUN → signaling → hole-punch → transitions to `NetConnectState` (see Online Connect Flow).
+- **Online join flow:** Select JOIN ONLINE → input room code → pushes
+  `OnlineConnectState(Client, code)` → same flow as host but joins existing room.
 - **Error handling:** Connection failures and disconnects are shown via `InfoBoxState`.
   During gameplay, `GamePlayState::update()` polls `gfx->netSession->update()` and
   detects disconnection, showing "PEER DISCONNECTED" if the peer drops.
@@ -211,7 +227,7 @@ The UI integration uses the existing state stack and menu system:
 - Should the input delay be adaptive (based on measured RTT) or fixed?
 - How to handle disconnection more gracefully? Currently disconnects immediately; could add pause + timeout + reconnect.
 - ~~How should weapon selection work in multiplayer?~~ **Answered:** Both players select locally in lockstep; inputs exchanged via the same frame-synced protocol.
-- Port configuration — currently hardcoded to 19532. Could add a port input field.
+- ~~Port configuration — currently hardcoded to 19532. Could add a port input field.~~ Low priority: works as default; signaling server makes port forwarding unnecessary for most users.
 
 ### Weapon selection in multiplayer (2026-05-17)
 
@@ -242,7 +258,7 @@ Two issues had to be resolved:
 - ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `fastGameChecksum()` sent every frame, compared on receipt
 - **Replay recording of network games** — the data is already available (frame inputs)
 - **Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play
-- ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ Partial: STUN-based external IP discovery implemented (see below); hole-punching and TURN pending
+- ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ ✅ Implemented: STUN + signaling + hole-punch + relay fallback (see Online Connect Flow below)
 - **Graceful disconnection** — pause + timeout + forfeit instead of immediate exit
 
 ### Map transfer (2026-05-17)
@@ -382,7 +398,53 @@ addresses alongside local addresses, discovered via STUN (RFC 5389).
 - Direct IP literals for the STUN servers avoid DNS resolution (one fewer failure mode)
 - Background thread avoids blocking the UI — external IPs appear asynchronously
 - Extracts both external IP and port from XOR-MAPPED-ADDRESS (port needed for endpoint-dependent NAT mapping detection)
-- This is the foundation for future NAT hole-punching (STUN request/response parsing is reusable)
+- STUN query binds to the game's local port (19532) so the NAT mapping corresponds to the same port ENet will use — critical for hole-punching to work
+
+### Online connect flow (2026-05-20)
+
+The online multiplayer flow is coordinated by `OnlineConnectState` (`src/game/onlineConnectState.hpp/cpp`),
+using a signaling server for rendezvous and UDP hole-punching for NAT traversal.
+
+**Components:**
+- `StunQuery` — discovers external IP+port via STUN (background thread)
+- `SignalingClient` (`src/game/net/signaling.hpp/cpp`) — UDP-based signaling protocol for room management and peer address exchange
+- `HolePunch` (`src/game/net/holepunch.hpp/cpp`) — simultaneous UDP probe exchange to punch NAT holes
+- Go signaling/relay server (`server/`) — coordinates rooms, distributes addresses, provides relay fallback
+
+**Host flow:**
+1. STUN query from game port → learn external IP+port
+2. `SignalingClient::createRoom()` → server returns 6-char room code
+3. Report STUN-discovered addresses to server
+4. Wait for peer to join
+5. Server sends `StartPunch` → begin hole-punching
+6. On punch success → report `PunchOK`, transition to `NetConnectState(Host)` listening on game port
+7. On punch failure → report `PunchFail`, wait for `UseRelay` → transition to `NetConnectState(Client)` connecting to relay
+
+**Client flow:**
+1. STUN query from game port → learn external IP+port
+2. `SignalingClient::joinRoom()` with room code → report addresses immediately
+3. Receive peer addresses from server
+4. Server sends `StartPunch` → begin hole-punching
+5. On punch success → report `PunchOK`, transition to `NetConnectState(Client)` connecting to punched address
+6. On punch failure → report `PunchFail`, wait for `UseRelay` → transition to `NetConnectState(Client)` connecting to relay
+
+**Relay mode:** When hole-punching fails for both peers, the server allocates a relay port and
+sends `UseRelay` to both. Both peers connect as ENet clients to the relay, which forwards
+UDP traffic between them. This adds latency but guarantees connectivity.
+
+**Protocol** (binary UDP, must match `server/protocol.go`):
+- Client→Server: `CreateRoom(0x01)`, `JoinRoom(0x02)`, `ReportAddr(0x03)`, `PunchOK(0x04)`, `PunchFail(0x05)`, `Keepalive(0x06)`
+- Server→Client: `RoomCreated(0x81)`, `PeerJoined(0x82)`, `PeerAddr(0x83)`, `StartPunch(0x84)`, `UseRelay(0x85)`, `RoomExpired(0x86)`, `Error(0x8F)`
+
+**Keepalive:** The client sends `Keepalive` every 5 seconds to prevent server-side room
+expiry during the waiting period.
+
+**Key design decisions:**
+- STUN binds to game port so NAT mapping is consistent with ENet's later bind
+- Hole-punch socket uses `REUSEADDR` to share the port with ENet, but is explicitly closed before ENet binds
+- Signaling uses enet's raw UDP socket API (not an ENet host) to avoid protocol interference
+- Dual-stack sockets (`IPV6_V6ONLY=0`) for IPv4/IPv6 transparency
+- Default signaling server: `liero-server.orbmit.org:19533`
 
 ### Relay server known limitations (2026-05-20)
 
@@ -416,5 +478,5 @@ ports this is fine. If relay-port-count is increased significantly, replace with
 |------|-----------|--------|------------|--------|
 | Hidden non-determinism | ~~Medium~~ **Low** | Critical (desync) | Determinism + death fuzz test (5000+ frames per seed, 5 seeds) | ✅ Validated with fix |
 | Input delay feels bad at >80ms RTT | High | Medium (UX) | Document as "alpha limitation", plan rollback for Phase 2 | Pending |
-| NAT/firewall blocks connections | High | High (unusable) | Alpha = direct IP only; document port forwarding; Phase 2 adds hole-punching | Pending |
+| NAT/firewall blocks connections | ~~High~~ **Medium** | High (unusable) | STUN + hole-punch + relay fallback implemented; symmetric NATs still problematic | ✅ Mitigated |
 | Platform-specific fixed-point behavior | Low | Critical | Fixed-point is integer-based, should be identical; verify in harness | Pending (cross-platform CI) |
