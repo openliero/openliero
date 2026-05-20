@@ -122,6 +122,10 @@ StunMappedAddress stun::parseResponse(const uint8_t* data, size_t len,
 
 StunMappedAddress StunQuery::queryServer(const char* serverAddr, uint16_t port,
                                           uint16_t localPort) {
+  // enet_initialize() is required on Windows (calls WSAStartup).
+  // Safe to call multiple times — ENet uses a reference count.
+  enet_initialize();
+
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (sock == ENET_SOCKET_NULL) return {};
 
