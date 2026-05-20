@@ -144,15 +144,16 @@ func (s *Server) handlePacket(data []byte, from *net.UDPAddr) {
 
 func (s *Server) handleCreateRoom(from *net.UDPAddr) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	if len(s.rooms) >= maxRooms {
+		s.mu.Unlock()
 		s.sendError(from, ErrRoomFull, "server full")
 		return
 	}
 
 	code := s.generateRoomCode()
 	if code == "" {
+		s.mu.Unlock()
 		s.sendError(from, ErrRoomFull, "server full")
 		return
 	}
@@ -165,6 +166,8 @@ func (s *Server) handleCreateRoom(from *net.UDPAddr) {
 	copy(room.Code[:], code)
 	s.rooms[code] = room
 
+	s.mu.Unlock()
+
 	log.Printf("Room %s created by %s", code, from)
 
 	// Send RoomCreated
@@ -176,20 +179,26 @@ func (s *Server) handleCreateRoom(from *net.UDPAddr) {
 
 func (s *Server) handleJoinRoom(code string, from *net.UDPAddr) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	room, ok := s.rooms[code]
 	if !ok {
+		s.mu.Unlock()
 		s.sendError(from, ErrRoomNotFound, "no such room")
 		return
 	}
 	if room.Client != nil {
+		s.mu.Unlock()
 		s.sendError(from, ErrRoomFull, "room full")
 		return
 	}
 
 	room.Client = &Peer{Addr: from}
 	room.LastSeen = time.Now()
+	hostAddr := room.Host.Addr
+	hostAddresses := append([]PeerAddr{}, room.Host.Addresses...)
+	shouldStartPunch := len(hostAddresses) > 0
+
+	s.mu.Unlock()
 
 	log.Printf("Room %s: client joined from %s", code, from)
 
@@ -197,25 +206,25 @@ func (s *Server) handleJoinRoom(code string, from *net.UDPAddr) {
 	msg := make([]byte, 1+RoomCodeLen)
 	msg[0] = MsgPeerJoined
 	copy(msg[1:], code)
-	s.conn.WriteToUDP(msg, room.Host.Addr)
+	s.conn.WriteToUDP(msg, hostAddr)
 
 	// Send any addresses the host already reported to the new client
-	for _, a := range room.Host.Addresses {
+	for _, a := range hostAddresses {
 		s.sendPeerAddr(from, code, a)
 	}
 
 	// If host has addresses, tell both to start punching
-	if len(room.Host.Addresses) > 0 {
-		s.sendStartPunch(room, code)
+	if shouldStartPunch {
+		s.sendStartPunchTo(hostAddr, from, code)
 	}
 }
 
 func (s *Server) handleReportAddr(code string, from *net.UDPAddr, addr PeerAddr) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	room, ok := s.rooms[code]
 	if !ok {
+		s.mu.Unlock()
 		log.Printf("Room %s: ReportAddr from %s but room not found", code, from)
 		s.sendError(from, ErrRoomNotFound, "no such room")
 		return
@@ -229,30 +238,43 @@ func (s *Server) handleReportAddr(code string, from *net.UDPAddr, addr PeerAddr)
 		if room.Client != nil {
 			log.Printf("  client addr: %s", room.Client.Addr)
 		}
+		s.mu.Unlock()
 		s.sendError(from, ErrInvalidMsg, "not in room")
 		return
 	}
 
 	peer.Addresses = append(peer.Addresses, addr)
 
-	// Forward this address to the other peer
+	// Determine what to send after releasing the lock
 	other := s.otherPeer(room, peer)
+	var otherAddr *net.UDPAddr
+	var shouldStartPunch bool
+	var hostAddr, clientAddr *net.UDPAddr
 	if other != nil {
-		s.sendPeerAddr(other.Addr, code, addr)
-
-		// If both have reported addresses, signal start punch
+		otherAddr = other.Addr
 		if len(room.Host.Addresses) > 0 && room.Client != nil && len(room.Client.Addresses) > 0 {
-			s.sendStartPunch(room, code)
+			shouldStartPunch = true
+			hostAddr = room.Host.Addr
+			clientAddr = room.Client.Addr
 		}
+	}
+
+	s.mu.Unlock()
+
+	if otherAddr != nil {
+		s.sendPeerAddr(otherAddr, code, addr)
+	}
+	if shouldStartPunch {
+		s.sendStartPunchTo(hostAddr, clientAddr, code)
 	}
 }
 
 func (s *Server) handlePunchResult(code string, from *net.UDPAddr, ok bool) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	room, exists := s.rooms[code]
 	if !exists {
+		s.mu.Unlock()
 		log.Printf("Room %s: PunchResult from %s but room not found", code, from)
 		return
 	}
@@ -264,27 +286,34 @@ func (s *Server) handlePunchResult(code string, from *net.UDPAddr, ok bool) {
 		if room.Client != nil {
 			log.Printf("  client addr: %s", room.Client.Addr)
 		}
+		s.mu.Unlock()
 		return
 	}
 
 	if ok {
 		peer.PunchOK = true
+		s.mu.Unlock()
 		log.Printf("Room %s: punch OK from %s", code, from)
-		// Both succeeded — room served its purpose, will be cleaned up
 	} else {
 		peer.PunchFail = true
 		log.Printf("Room %s: punch FAILED from %s", code, from)
 
 		// If both failed, offer relay
 		if room.Host.PunchFail && room.Client != nil && room.Client.PunchFail {
+			// offerRelay expects the lock to be held
 			s.offerRelay(room, code)
+			// offerRelay releases the lock
+		} else {
+			s.mu.Unlock()
 		}
 	}
 }
 
+// offerRelay must be called with s.mu held; it releases s.mu before sending.
 func (s *Server) offerRelay(room *Room, code string) {
 	port := s.allocateRelayPort()
 	if port == 0 {
+		s.mu.Unlock()
 		log.Printf("Room %s: no relay ports available", code)
 		return
 	}
@@ -295,10 +324,18 @@ func (s *Server) offerRelay(room *Room, code string) {
 	rand.Read(token)
 	room.RelayToken = token
 
+	hostAddr := room.Host.Addr
+	var clientAddr *net.UDPAddr
+	if room.Client != nil {
+		clientAddr = room.Client.Addr
+	}
+
+	s.mu.Unlock()
+
 	log.Printf("Room %s: offering relay on port %d", code, port)
 
 	// Start relay goroutine
-	go s.runRelay(room, code, port, token)
+	go s.runRelay(code, port, token)
 
 	// Tell both peers to use the relay (include token for authentication)
 	msg := make([]byte, 1+RoomCodeLen+2+8)
@@ -307,13 +344,13 @@ func (s *Server) offerRelay(room *Room, code string) {
 	binary.BigEndian.PutUint16(msg[1+RoomCodeLen:], uint16(port))
 	copy(msg[1+RoomCodeLen+2:], token)
 
-	s.conn.WriteToUDP(msg, room.Host.Addr)
-	if room.Client != nil {
-		s.conn.WriteToUDP(msg, room.Client.Addr)
+	s.conn.WriteToUDP(msg, hostAddr)
+	if clientAddr != nil {
+		s.conn.WriteToUDP(msg, clientAddr)
 	}
 }
 
-func (s *Server) runRelay(room *Room, code string, port int, token []byte) {
+func (s *Server) runRelay(code string, port int, token []byte) {
 	addr := &net.UDPAddr{Port: port}
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
@@ -431,13 +468,13 @@ func (s *Server) sendPeerAddr(to *net.UDPAddr, code string, addr PeerAddr) {
 	s.conn.WriteToUDP(msg, to)
 }
 
-func (s *Server) sendStartPunch(room *Room, code string) {
+func (s *Server) sendStartPunchTo(host, client *net.UDPAddr, code string) {
 	msg := make([]byte, 1+RoomCodeLen)
 	msg[0] = MsgStartPunch
 	copy(msg[1:], code)
-	s.conn.WriteToUDP(msg, room.Host.Addr)
-	if room.Client != nil {
-		s.conn.WriteToUDP(msg, room.Client.Addr)
+	s.conn.WriteToUDP(msg, host)
+	if client != nil {
+		s.conn.WriteToUDP(msg, client)
 	}
 }
 
@@ -487,24 +524,43 @@ func (s *Server) cleanupLoop() {
 	ticker := time.NewTicker(cleanupPeriod)
 	defer ticker.Stop()
 	for range ticker.C {
+		// Collect expired rooms under lock
+		type expiredRoom struct {
+			code     string
+			hostAddr *net.UDPAddr
+			clientAddr *net.UDPAddr
+		}
+		var expired []expiredRoom
+
 		s.mu.Lock()
 		now := time.Now()
 		for code, room := range s.rooms {
 			if now.Sub(room.LastSeen) > roomTTL {
 				log.Printf("Room %s expired", code)
-				// Notify peers
-				msg := make([]byte, 1+RoomCodeLen)
-				msg[0] = MsgRoomExpired
-				copy(msg[1:], code)
+				er := expiredRoom{code: code}
 				if room.Host != nil {
-					s.conn.WriteToUDP(msg, room.Host.Addr)
+					er.hostAddr = room.Host.Addr
 				}
 				if room.Client != nil {
-					s.conn.WriteToUDP(msg, room.Client.Addr)
+					er.clientAddr = room.Client.Addr
 				}
+				expired = append(expired, er)
 				delete(s.rooms, code)
 			}
 		}
 		s.mu.Unlock()
+
+		// Send notifications outside the lock
+		for _, er := range expired {
+			msg := make([]byte, 1+RoomCodeLen)
+			msg[0] = MsgRoomExpired
+			copy(msg[1:], er.code)
+			if er.hostAddr != nil {
+				s.conn.WriteToUDP(msg, er.hostAddr)
+			}
+			if er.clientAddr != nil {
+				s.conn.WriteToUDP(msg, er.clientAddr)
+			}
+		}
 	}
 }
