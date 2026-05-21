@@ -65,6 +65,7 @@ public:
   // Callbacks
   std::function<void(const std::string& code)> onRoomCreated;
   std::function<void()> onPeerJoined;
+  std::function<void()> onJoinAcked;  // Client: server confirmed we're in the room
   std::function<void(const PeerCandidate&)> onPeerAddr;
   std::function<void()> onStartPunch;
   std::function<void(uint16_t relayPort)> onUseRelay;
@@ -85,6 +86,12 @@ private:
   uint16_t relayPort_;
   std::vector<uint8_t> relayToken_;
   int pollErrCount_ = 0;
+
+  // Retry state for unacknowledged messages
+  uint64_t lastSendMs_ = 0;
+  int retryCount_ = 0;
+  static constexpr int kRetryIntervalMs = 2000;
+  static constexpr int kMaxRetries = 5;
 
   // Cached resolved server address
   ENetAddress resolvedAddr_ = {};

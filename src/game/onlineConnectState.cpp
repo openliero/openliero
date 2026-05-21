@@ -55,6 +55,15 @@ void OnlineConnectState::enter()
 		statusLine2_ = "PEER JOINED! CONNECTING...";
 	};
 
+	signaling_.onJoinAcked = [this]() {
+		fprintf(stderr, "[online] join acknowledged, reporting addresses\n");
+		statusLine2_ = "JOINED! WAITING FOR HOST ADDRESSES...";
+		if (!stunResult_.ipv4.empty())
+			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
+		if (!stunResult_.ipv6.empty())
+			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+	};
+
 	signaling_.onStartPunch = [this]() {
 		fprintf(stderr, "[online] onStartPunch — %zu peer candidates\n",
 		        signaling_.peerCandidates().size());
@@ -141,19 +150,9 @@ bool OnlineConnectState::update()
 			}
 		}
 
-		// Report our STUN addresses (client only — host defers until room is created)
-		if (role_ == NetSession::Client)
-		{
-			fprintf(stderr, "[online] client reporting addresses immediately\n");
-			if (!stunResult_.ipv4.empty())
-				signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
-			if (!stunResult_.ipv6.empty())
-				signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
-		}
-
 		statusLine2_ = (role_ == NetSession::Host)
 			? "WAITING FOR PEER..."
-			: "WAITING FOR HOST ADDRESSES...";
+			: "JOINING ROOM...";
 	}
 
 	// Poll signaling

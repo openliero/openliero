@@ -1,6 +1,7 @@
 #include "signaling.hpp"
 
 #include <enet.h>
+#include <chrono>
 #include <cstring>
 #include <cstdio>
 
@@ -52,6 +53,11 @@ namespace proto {
       default: return "Unknown";
     }
   }
+}
+
+static uint64_t nowMs() {
+  return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+    std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 SignalingClient::SignalingClient()
@@ -146,6 +152,8 @@ bool SignalingClient::createRoom(const std::string& serverAddr, uint16_t serverP
   msg[0] = proto::CreateRoom;
   send(msg, sizeof(msg));
   state_ = Creating;
+  lastSendMs_ = nowMs();
+  retryCount_ = 0;
   return true;
 }
 
@@ -166,6 +174,8 @@ bool SignalingClient::joinRoom(const std::string& serverAddr, uint16_t serverPor
   send(msg, sizeof(msg));
   roomCode_ = roomCode;
   state_ = Joining;
+  lastSendMs_ = nowMs();
+  retryCount_ = 0;
   return true;
 }
 
@@ -219,6 +229,23 @@ void SignalingClient::sendKeepalive() {
 void SignalingClient::poll() {
   if (sock_ == ENET_SOCKET_NULL) return;
 
+  // Retry unacknowledged CreateRoom/JoinRoom if no response
+  if ((state_ == Creating || state_ == Joining) && retryCount_ < kMaxRetries) {
+    uint64_t elapsed = nowMs() - lastSendMs_;
+    if (elapsed >= (uint64_t)kRetryIntervalMs) {
+      retryCount_++;
+      fprintf(stderr, "[signaling] retrying %s (attempt %d/%d)\n",
+              state_ == Creating ? "CreateRoom" : "JoinRoom",
+              retryCount_, kMaxRetries);
+      uint8_t msg[1 + proto::RoomCodeLen] = {};
+      msg[0] = (state_ == Creating) ? proto::CreateRoom : proto::JoinRoom;
+      if (state_ == Joining)
+        std::memcpy(msg + 1, roomCode_.data(), proto::RoomCodeLen);
+      send(msg, sizeof(msg));
+      lastSendMs_ = nowMs();
+    }
+  }
+
   // Check if data is available (non-blocking via zero timeout wait)
   enet_uint32 waitCondition = ENET_SOCKET_WAIT_RECEIVE;
   int waitResult = enet_socket_wait(sock_, &waitCondition, 0);
@@ -269,6 +296,7 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
         // Server acknowledges our join — we're now in the room
         fprintf(stderr, "[signaling] join acknowledged by server\n");
         state_ = WaitingForPeer;
+        if (onJoinAcked) onJoinAcked();
       } else {
         fprintf(stderr, "[signaling] peer joined our room\n");
         if (onPeerJoined) onPeerJoined();
