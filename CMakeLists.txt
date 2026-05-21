@@ -133,6 +133,7 @@ set(GAME_SOURCES ${SOURCES}
   src/game/net/localaddr.cpp
   src/game/net/stun.cpp
   src/game/net/signaling.cpp
+  src/game/net/iceAgent.cpp
 
   src/game/netConnectState.cpp
   src/game/onlineConnectState.cpp
