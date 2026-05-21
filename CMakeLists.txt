@@ -61,6 +61,7 @@ find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 find_package(SDL3_image REQUIRED CONFIG)
 find_package(miniz CONFIG REQUIRED)
 find_package(enet CONFIG REQUIRED PATHS "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/lib/cmake/enet")
+find_package(LibJuice CONFIG REQUIRED)
 
 # local dependencies
 add_subdirectory(src/gvl)
@@ -159,6 +160,7 @@ target_link_libraries(game
   SDL3::SDL3
   SDL3_image::SDL3_image
   enet::enet_static
+  LibJuice::LibJuice
 )
 
 if(APPLE)
