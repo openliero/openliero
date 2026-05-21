@@ -109,6 +109,7 @@ struct IceAgent {
     uint16_t turnPort = 3478;
     std::string turnUser;
     std::string turnPassword;
+    // Uses JUICE_CONCURRENCY_MODE_THREAD (default) — required for TURN support
   };
 
   void start(const Config& config);
@@ -177,11 +178,12 @@ private:
 **How the bridge works:**
 1. `create()` binds two UDP sockets to `127.0.0.1` with ephemeral ports, `connect()`s
    each to the other's address (so send/recv work without specifying addresses)
-2. `enetSocket_` is given to ENet (replace `host->socket` after `enet_host_create`)
-3. IceAgent's `cb_recv` callback writes received data to `enetSocket_` via
-   `sendto(bridgeSocket_, data, len, 0, enetAddr)` — UDP writes are atomic, safe from any thread
-4. `poll()` reads from `bridgeSocket_` (non-blocking) and calls `agent->send()` for each datagram
-5. ENet sees a normal UDP socket and works unmodified
+2. Both sockets configured: non-blocking, SO_RCVBUF=256KB, SO_SNDBUF=256KB (matching ENet defaults)
+3. `enetSocket_` is given to ENet (replace `host->socket` after `enet_host_create`)
+4. IceAgent's `cb_recv` callback writes received data to `enetSocket_` via
+   `sendto(bridgeSocket_, data, len, 0, enetAddr)` — safe from any thread (separate socket objects)
+5. `poll()` reads from `bridgeSocket_` (non-blocking) and calls `agent->send()` for each datagram
+6. ENet sees a normal UDP socket and works unmodified
 
 **Build system:**
 - Add `"libjuice"` to `vcpkg.json`
@@ -389,17 +391,74 @@ The server becomes a pure message relay (~150 lines).
 5. **Development order:** Implement client (Phases 1-4) and server (Phase 8) in parallel since both sides are needed for integration testing. Use a local Go server for development. Phase 2-3 (signaling protocol) should be implemented on both sides simultaneously.
 6. **Trickle ICE vs full gather:** If gathering completes before the peer joins the room, all candidates are sent at once (effectively non-trickle). This is valid ICE behavior and simpler — no need to delay gathering for the peer.
 
+## Design Decisions (Investigated)
+
+### ICE Role Assignment
+
+libjuice has **no explicit role configuration API**. Roles are determined automatically by call order:
+
+- The agent that calls `juice_gather_candidates()` before `juice_set_remote_description()` becomes **CONTROLLING** (offerer).
+- The agent that calls `juice_set_remote_description()` first becomes **CONTROLLED** (answerer).
+
+If both agents end up with the same role (e.g., race condition), libjuice implements full RFC 8445 §7.3.1.1 tiebreaker-based conflict resolution automatically using a random 64-bit tiebreaker value.
+
+**For our implementation:** The host (room creator) should call `juice_gather_candidates()` immediately on agent creation. The joiner should call `juice_set_remote_description()` with the host's credentials before calling `juice_gather_candidates()`. This naturally produces host=CONTROLLING, joiner=CONTROLLED. Even if both gather first (since we start gathering before signaling completes), the tiebreaker resolves it.
+
+### TURN Allocation Refresh
+
+libjuice **automatically refreshes TURN allocations**. Internally:
+
+- `TURN_LIFETIME = 600000ms` (10 minutes)
+- `TURN_REFRESH_PERIOD = 540000ms` (9 minutes — 1 minute before expiry)
+
+The bookkeeping loop sends `STUN_METHOD_REFRESH` requests automatically on the nominated relay candidate. TURN permissions and channel bindings are also refreshed internally. Applications do not need to manage any keepalives.
+
+If the connection uses a direct path (not relayed), libjuice stops refreshing the unused TURN allocation and lets it expire naturally.
+
+**Note:** TURN is only supported in `JUICE_CONCURRENCY_MODE_THREAD` (default) or `JUICE_CONCURRENCY_MODE_POLL`, **not** `JUICE_CONCURRENCY_MODE_MUX`. We'll use the default thread mode.
+
+### ENet Socket Replacement Safety
+
+Verified by inspecting ENet 2.6.5 source (`enet.h:4542-4585`). After `enet_host_create()`:
+
+- ENet only stores `host->socket` and `host->address` as socket-specific state
+- `enet_host_service()` uses `host->socket` at call time — no cached fd elsewhere
+- `enet_host_create()` applies socket options (NONBLOCK, BROADCAST, RCVBUF/SNDBUF, IPV6_V6ONLY) to the original socket
+
+**Safe to replace before first `enet_host_service()` call**, provided the bridge socket is pre-configured with:
+- Non-blocking mode
+- Adequate SO_RCVBUF/SO_SNDBUF (ENet sets 256KB each)
+
+We do NOT need BROADCAST or IPV6_V6ONLY on a localhost socket. The bridge's `create()` method should set NONBLOCK and buffer sizes to match ENet's expectations.
+
+### Bridge Thread Safety (`cb_recv` → `sendto` from libjuice thread)
+
+**Confirmed safe on all platforms.** The bridge uses two separate sockets:
+- Socket B (bridge side): libjuice's `cb_recv` calls `sendto(socketB, ...)` from its internal thread
+- Socket A (ENet side): main thread calls `recvfrom(socketA, ...)` via `enet_host_service()`
+
+Since these are different kernel objects, there is zero lock contention:
+- **Linux:** Send path is lockless (fast path). Receive uses per-queue spinlock on socketA. No shared locks.
+- **macOS/BSD:** Each socket has its own `so_lock` mutex. Different sockets = different mutexes.
+- **Windows:** Winsock/AFD handles concurrent I/O on different handles independently.
+
+Loopback delivery between the two sockets is handled by kernel-internal synchronization (spinlocks on the receive queue). No user-space synchronization is needed.
+
+**Edge case:** If socketA's `SO_RCVBUF` fills up, datagrams are silently dropped (standard UDP behavior). Mitigated by setting adequate buffer sizes and the fact that loopback delivery is near-instant.
+
 ## Risk Assessment
 
 | Risk | Mitigation |
 |---|---|
 | libjuice doesn't expose socket fd | Loopback bridge pattern: ENet talks to localhost, bridge proxies to/from `juice_send()`/`cb_recv()`. Adds <0.1ms latency. |
-| libjuice callbacks fire from internal thread | Thread-safe event queue for state/candidate events. `cb_recv` writes directly to bridge socket (atomic UDP writes). Main thread polls queue each frame. |
-| ENet doesn't natively support custom transport | Replace `host->socket` after creation with bridge socket. ENet uses `sendto()`/`recvfrom()` on it unmodified. |
+| libjuice callbacks fire from internal thread | Thread-safe event queue for state/candidate events. `cb_recv` writes directly to bridge socket (atomic UDP writes, safe cross-platform — see above). Main thread polls queue each frame. |
+| ENet doesn't natively support custom transport | Replace `host->socket` after creation with bridge socket. ENet uses `sendto()`/`recvfrom()` on it unmodified. Bridge socket must be pre-configured NONBLOCK + adequate buffer sizes. |
 | TURN adds latency | Expected ~20-50ms extra RTT vs direct. Acceptable for lockstep with 3-frame delay. Better than no connection at all. |
 | coturn operational complexity | Docker one-liner. Can also use free public TURN servers (e.g., Metered.ca free tier) for testing. |
 | libjuice doesn't support IPv6 TURN | libjuice supports IPv6 for host/srflx candidates. TURN over IPv4 is sufficient as fallback. |
 | Bridge adds complexity vs direct socket | ~40 lines of code total. Uniform path for all connection types (no special-casing direct vs relay). |
+| ICE role conflict | Handled automatically by libjuice via RFC 8445 tiebreaker. No application logic needed. |
+| TURN allocation expires mid-game | libjuice refreshes automatically every 9 minutes. No application logic needed. |
 
 ## Files Changed Summary
 
