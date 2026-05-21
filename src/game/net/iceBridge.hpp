@@ -4,6 +4,7 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <netinet/in.h>
 #endif
@@ -47,7 +48,7 @@ private:
   int enetSocket_ = -1;
   int bridgeSocket_ = -1;
   uint16_t bridgePort_ = 0;
-  sockaddr_in enetAddr_{};
-  sockaddr_in bridgeAddr_{};
+  sockaddr_in6 enetAddr_{};
+  sockaddr_in6 bridgeAddr_{};
   IceAgent* agent_ = nullptr;
 };

@@ -211,8 +211,6 @@ void NetTransport::attachIce(std::unique_ptr<IceBridge> bridge, std::unique_ptr<
 bool NetTransport::poll() {
   if (!enetHost_) return false;
 
-  // Forward ENet outgoing packets through ICE bridge (if attached)
-  if (iceBridge_) iceBridge_->poll();
   if (iceAgent_) iceAgent_->poll();
 
   ENetEvent event;
@@ -339,6 +337,10 @@ bool NetTransport::poll() {
         break;
     }
   }
+
+  // Forward ENet outgoing packets through ICE bridge AFTER enet_host_service
+  // (ENet sends during service, bridge picks up and forwards to libjuice)
+  if (iceBridge_) iceBridge_->poll();
 
   return state_ == Connected || state_ == Listening || state_ == Connecting;
 }

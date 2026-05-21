@@ -255,14 +255,14 @@ void OnlineConnectState::transitionToGame()
 
 	// Transition to NetConnectState with the bridge-backed transport.
 	// For host: ENet listens on bridge socket, peer connects.
-	// For client: ENet connects to bridge port (localhost).
+	// For client: ENet connects to bridge port (IPv6 localhost).
 	if (role_ == NetSession::Host) {
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Host, std::move(transport)));
 	} else {
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Client, std::move(transport),
-			                                  "127.0.0.1", bport));
+			                                  "::1", bport));
 	}
 }
 

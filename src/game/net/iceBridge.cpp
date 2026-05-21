@@ -45,24 +45,29 @@ IceBridge::~IceBridge() { destroy(); }
 int IceBridge::create(IceAgent& agent) {
   agent_ = &agent;
 
-  // Create two UDP sockets on localhost
-  enetSocket_ = socket(AF_INET, SOCK_DGRAM, 0);
-  bridgeSocket_ = socket(AF_INET, SOCK_DGRAM, 0);
+  // Create two UDP sockets on localhost — must be AF_INET6 to match ENet's dual-stack sockets
+  enetSocket_ = socket(AF_INET6, SOCK_DGRAM, 0);
+  bridgeSocket_ = socket(AF_INET6, SOCK_DGRAM, 0);
   if (enetSocket_ < 0 || bridgeSocket_ < 0) {
     destroy();
     return -1;
   }
 
-  // Bind both to localhost with ephemeral ports
-  sockaddr_in addrA{};
-  addrA.sin_family = AF_INET;
-  addrA.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addrA.sin_port = 0;
+  // Disable IPV6_V6ONLY so the sockets accept IPv4-mapped addresses (matching ENet)
+  int off = 0;
+  setsockopt(enetSocket_, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+  setsockopt(bridgeSocket_, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
 
-  sockaddr_in addrB{};
-  addrB.sin_family = AF_INET;
-  addrB.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addrB.sin_port = 0;
+  // Bind both to IPv6 localhost (::1) with ephemeral ports
+  sockaddr_in6 addrA{};
+  addrA.sin6_family = AF_INET6;
+  addrA.sin6_addr = in6addr_loopback;
+  addrA.sin6_port = 0;
+
+  sockaddr_in6 addrB{};
+  addrB.sin6_family = AF_INET6;
+  addrB.sin6_addr = in6addr_loopback;
+  addrB.sin6_port = 0;
 
   if (bind(enetSocket_, reinterpret_cast<sockaddr*>(&addrA), sizeof(addrA)) < 0 ||
       bind(bridgeSocket_, reinterpret_cast<sockaddr*>(&addrB), sizeof(addrB)) < 0) {
@@ -75,7 +80,7 @@ int IceBridge::create(IceAgent& agent) {
   getsockname(enetSocket_, reinterpret_cast<sockaddr*>(&addrA), &len);
   len = sizeof(addrB);
   getsockname(bridgeSocket_, reinterpret_cast<sockaddr*>(&addrB), &len);
-  bridgePort_ = ntohs(addrB.sin_port);
+  bridgePort_ = ntohs(addrB.sin6_port);
   enetAddr_ = addrA;
   bridgeAddr_ = addrB;
 
@@ -90,7 +95,6 @@ int IceBridge::create(IceAgent& agent) {
 
   // Wire IceAgent's onRecv: write incoming data to enetSocket_ via bridgeSocket_
   agent_->onRecv = [this](const uint8_t* data, size_t len) {
-    // sendto bridgeSocket_ → enetSocket_ (using enetSocket_'s bound address)
     ::sendto(bridgeSocket_, reinterpret_cast<const char*>(data), len, 0,
              reinterpret_cast<const sockaddr*>(&enetAddr_), sizeof(enetAddr_));
   };
@@ -101,7 +105,6 @@ int IceBridge::create(IceAgent& agent) {
 void IceBridge::poll() {
   if (bridgeSocket_ < 0 || !agent_) return;
 
-  // Read outgoing datagrams from ENet (arriving at bridgeSocket_) and forward to IceAgent
   uint8_t buf[2048];
   for (;;) {
     auto n = ::recvfrom(bridgeSocket_, reinterpret_cast<char*>(buf), sizeof(buf), 0,

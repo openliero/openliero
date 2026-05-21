@@ -270,10 +270,10 @@ TEST_CASE("IceBridge proxies data bidirectionally", "[ice][bridge]") {
   // Send from ENet side of A → should arrive on ENet side of B
   const uint8_t msg[] = "Bridge test data";
   // Write to ENet socket A (as if ENet is sending via sendto to bridge address)
-  sockaddr_in bridgeAddrA{};
-  bridgeAddrA.sin_family = AF_INET;
-  bridgeAddrA.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  bridgeAddrA.sin_port = htons(bridgeA.bridgePort());
+  sockaddr_in6 bridgeAddrA{};
+  bridgeAddrA.sin6_family = AF_INET6;
+  bridgeAddrA.sin6_addr = in6addr_loopback;
+  bridgeAddrA.sin6_port = htons(bridgeA.bridgePort());
   ::sendto(fdA, reinterpret_cast<const char*>(msg), sizeof(msg), 0,
            reinterpret_cast<const sockaddr*>(&bridgeAddrA), sizeof(bridgeAddrA));
 
