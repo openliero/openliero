@@ -170,7 +170,7 @@ struct NetTransport {
   void setupIntercept();
 
   // Hole-punch internals
-  enum PunchState { PunchIdle, Punching, PunchSucceeded, PunchFailed };
+  enum PunchState { PunchIdle, Punching, PunchGrace, PunchSucceeded, PunchFailed };
   void sendProbes();
   void punchPoll();
 
@@ -191,6 +191,7 @@ struct NetTransport {
   uint64_t punchStartMs_;
   uint64_t punchLastProbeMs_;
   int punchTimeoutMs_;
+  uint64_t punchGraceStartMs_ = 0;
   PunchResult punchResult_;
 
   // Relay state

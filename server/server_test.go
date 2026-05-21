@@ -197,9 +197,27 @@ func TestStartPunchWhenBothHaveAddresses(t *testing.T) {
 	copy(joinMsg[1:], code)
 	client.Write(joinMsg)
 
-	// Drain client messages until we find StartPunch or run out
-	// (host has address, join triggers StartPunch to both if host has addrs)
-	// Actually: StartPunch is sent when host has addresses at join time
+	// Client receives PeerJoined ack and host's PeerAddr — NOT StartPunch
+	// (StartPunch only fires once both sides have reported addresses)
+	msg := readMsg(t, client) // PeerJoined ack
+	if msg[0] != MsgPeerJoined {
+		t.Fatalf("expected PeerJoined, got %02x", msg[0])
+	}
+	msg = readMsg(t, client) // PeerAddr from host
+	if msg[0] != MsgPeerAddr {
+		t.Fatalf("expected PeerAddr, got %02x", msg[0])
+	}
+
+	// Client reports address — NOW both sides have addresses, triggering StartPunch
+	clientAddr := make([]byte, 1+RoomCodeLen+1+2+4)
+	clientAddr[0] = MsgReportAddr
+	copy(clientAddr[1:], code)
+	clientAddr[1+RoomCodeLen] = AddrIPv4
+	binary.BigEndian.PutUint16(clientAddr[1+RoomCodeLen+1:], 19533)
+	copy(clientAddr[1+RoomCodeLen+3:], net.IPv4(5, 6, 7, 8).To4())
+	client.Write(clientAddr)
+
+	// Both should now receive StartPunch
 	foundStartPunch := false
 	for i := 0; i < 5; i++ {
 		msg := readMsg(t, client)
@@ -212,7 +230,7 @@ func TestStartPunchWhenBothHaveAddresses(t *testing.T) {
 		t.Fatal("client never received StartPunch")
 	}
 
-	// Host should also get StartPunch
+	// Host should also get StartPunch (plus PeerJoined, PeerAddr)
 	foundStartPunch = false
 	for i := 0; i < 5; i++ {
 		msg := readMsg(t, host)

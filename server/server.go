@@ -193,7 +193,6 @@ func (s *Server) handleJoinRoom(code string, from *net.UDPAddr) {
 	room.LastSeen = time.Now()
 	hostAddr := room.Host.Addr
 	hostAddresses := append([]PeerAddr{}, room.Host.Addresses...)
-	shouldStartPunch := len(hostAddresses) > 0
 
 	s.mu.Unlock()
 
@@ -216,9 +215,8 @@ func (s *Server) handleJoinRoom(code string, from *net.UDPAddr) {
 		s.sendPeerAddr(from, code, a)
 	}
 
-	if shouldStartPunch {
-		s.sendStartPunchTo(hostAddr, from, code)
-	}
+	// Don't send StartPunch here — wait until client reports its own addresses.
+	// handleReportAddr will trigger StartPunch once both sides have addresses.
 }
 
 func (s *Server) handleReportAddr(code string, from *net.UDPAddr, addr PeerAddr) {

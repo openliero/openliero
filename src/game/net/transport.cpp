@@ -150,7 +150,7 @@ int NetTransport::interceptCallback(_ENetHost* host, void* /*event*/) {
 
   // Check for hole-punch probe (magic: OLHP)
   if (len >= 8 && std::memcmp(data, PROBE_MAGIC, 4) == 0) {
-    if (self->punchState_ == Punching) {
+    if (self->punchState_ == Punching || self->punchState_ == PunchGrace) {
       uint32_t recvNonce = ((uint32_t)data[4] << 24) | ((uint32_t)data[5] << 16) |
                            ((uint32_t)data[6] << 8) | (uint32_t)data[7];
 
@@ -163,17 +163,20 @@ int NetTransport::interceptCallback(_ENetHost* host, void* /*event*/) {
         return 1;
       }
 
-      // Valid probe from peer!
-      char fromIP[INET6_ADDRSTRLEN] = {};
-      enet_address_get_host_ip(&host->receivedAddress, fromIP, sizeof(fromIP));
+      // Valid probe from peer! Enter grace period (keep sending probes
+      // so the other side also detects us) before declaring success.
+      if (self->punchState_ == Punching) {
+        char fromIP[INET6_ADDRSTRLEN] = {};
+        enet_address_get_host_ip(&host->receivedAddress, fromIP, sizeof(fromIP));
 
-      fprintf(stderr, "[transport] punch SUCCESS from %s:%u (nonce=%08x)\n",
-              fromIP, host->receivedAddress.port, recvNonce);
+        fprintf(stderr, "[transport] punch DETECTED from %s:%u (nonce=%08x), entering grace period\n",
+                fromIP, host->receivedAddress.port, recvNonce);
 
-      self->punchResult_.peerIP = fromIP;
-      self->punchResult_.peerPort = host->receivedAddress.port;
-      self->punchState_ = PunchSucceeded;
-      if (self->onPunchSuccess) self->onPunchSuccess(self->punchResult_);
+        self->punchResult_.peerIP = fromIP;
+        self->punchResult_.peerPort = host->receivedAddress.port;
+        self->punchState_ = PunchGrace;
+        self->punchGraceStartMs_ = nowMs();
+      }
     }
     return 1; // consumed (don't pass to ENet)
   }
@@ -385,7 +388,7 @@ bool NetTransport::startPunch(const std::vector<PunchCandidate>& candidates,
 }
 
 void NetTransport::stopPunch() {
-  if (punchState_ == Punching)
+  if (punchState_ == Punching || punchState_ == PunchGrace)
     punchState_ = PunchFailed;
   punchCandidates_.clear();
 }
@@ -415,9 +418,25 @@ void NetTransport::sendProbes() {
 }
 
 void NetTransport::punchPoll() {
-  if (punchState_ != Punching) return;
+  if (punchState_ != Punching && punchState_ != PunchGrace) return;
 
   uint64_t now = nowMs();
+
+  // Grace period: keep sending probes for 2s after first detection
+  // so the other side also receives our probes and detects success.
+  if (punchState_ == PunchGrace) {
+    if (now - punchGraceStartMs_ > 2000) {
+      fprintf(stderr, "[transport] punch SUCCESS (grace period complete)\n");
+      punchState_ = PunchSucceeded;
+      if (onPunchSuccess) onPunchSuccess(punchResult_);
+      return;
+    }
+    // Keep sending probes during grace period
+    if (now - punchLastProbeMs_ > 200) {
+      sendProbes();
+    }
+    return;
+  }
 
   if (now - punchStartMs_ > (uint64_t)punchTimeoutMs_) {
     fprintf(stderr, "[transport] punch TIMEOUT after %d ms\n", punchTimeoutMs_);
