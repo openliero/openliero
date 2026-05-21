@@ -68,6 +68,8 @@ void OnlineConnectState::enter()
 	signaling_.onJoinAcked = [this]() {
 		fprintf(stderr, "[online] join acknowledged, reporting addresses\n");
 		statusLine2_ = "JOINED! WAITING FOR HOST ADDRESSES...";
+		peerJoinedMs_ = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now().time_since_epoch()).count();
 		if (!stunResult_.ipv4.empty())
 			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
 		if (!stunResult_.ipv6.empty())
