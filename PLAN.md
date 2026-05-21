@@ -322,14 +322,64 @@ This creates the ENet host with `address=NULL`, then swaps `host->socket` with
 the provided bridge socket (closing the auto-created one). ENet is unaware that
 its "network" is actually a localhost proxy to libjuice.
 
-### Phase 6: Remove Old STUN Code
+### Phase 6: Tests for IceAgent + IceBridge
+
+**Files to create:**
+- `src/tests/test_ice_agent.cpp`
+- `src/tests/test_ice_bridge.cpp`
+- `src/tests/test_ice_integration.cpp`
+
+**test_ice_agent.cpp — Unit tests for IceAgent wrapper:**
+
+| Test | Description |
+|------|-------------|
+| Agent starts and gathers candidates | Create agent with STUN config, verify state transitions New→Gathering, verify at least one host candidate is emitted via `onLocalCandidate`, verify `onGatheringDone` fires |
+| Local credentials are available after start | Call `localUfrag()` and `localPwd()` after `start()`, verify non-empty and reasonable length |
+| Two local agents connect directly | Create two agents (no STUN/TURN, host candidates only on 127.0.0.1), exchange credentials and candidates manually, poll both, verify both reach `Connected` state |
+| Remote credentials + candidates wiring | Set remote credentials and add remote candidate, verify no crash and state progresses toward Connecting |
+| Agent stop is clean | Start agent, stop it, verify no callbacks fire after stop, verify double-stop is safe |
+| Poll drains event queue correctly | Start agent, let callbacks accumulate, call `poll()`, verify all events delivered in order on calling thread |
+| State transitions fire onStateChange | Wire `onStateChange`, drive agent through lifecycle, verify expected state sequence |
+| Failed state on invalid TURN | Configure agent with unreachable TURN server, verify it reaches `Failed` (not hung) within timeout |
+
+**test_ice_bridge.cpp — Unit tests for IceBridge loopback proxy:**
+
+| Test | Description |
+|------|-------------|
+| Bridge creates valid socket pair | Call `create()`, verify returned ENet socket is valid, verify both internal sockets are bound to 127.0.0.1 |
+| Data sent on ENet socket arrives at bridge poll | Write a datagram to the ENet-side socket, call `poll()`, verify `agent->send()` is called with the same data (use a mock/spy IceAgent) |
+| Data from IceAgent cb_recv arrives on ENet socket | Simulate `cb_recv` by writing to the bridge socket from another thread, verify `recvfrom()` on the ENet socket returns the data |
+| Large datagrams (MTU boundary) | Send 1200-byte and 1500-byte datagrams through bridge in both directions, verify no truncation or corruption |
+| Multiple datagrams in one poll cycle | Write N datagrams to ENet socket before calling `poll()`, verify all N are forwarded via `agent->send()` |
+| Bridge destroy closes both sockets | Call `destroy()`, verify both sockets are invalid afterwards, verify double-destroy is safe |
+| Non-blocking behavior | Verify `poll()` returns immediately when no data is pending (doesn't block) |
+
+**test_ice_integration.cpp — End-to-end ICE connection over localhost:**
+
+| Test | Description |
+|------|-------------|
+| Two peers connect and exchange data via bridge | Full flow: two IceAgents + two IceBridges, exchange credentials/candidates, wait for Connected, send datagrams through bridges in both directions, verify arrival |
+| ENet over ICE bridge | Two IceAgents + bridges, create ENet hosts on bridge sockets, `enet_host_connect`/accept, send reliable packets, verify delivery |
+| Full NetTransport over ICE | Simulate the real flow: IceAgent connect → bridge → `createHostOnBridgeSocket()` → NetTransport handshake completes (same pattern as test_session.cpp but over ICE) |
+| Connection survives sustained traffic | After ICE connect + bridge setup, send 1000 datagrams at 70/sec rate, verify all arrive (no silent drops on loopback) |
+| ICE failure propagates to ENet | Start ICE connection, forcibly destroy one agent mid-session, verify the other side's ENet detects disconnection within timeout |
+| Candidate ordering doesn't matter | Exchange candidates before credentials for one peer, verify connection still succeeds (tests buffering) |
+| Gathering completes before peer joins | One agent fully gathers, then exchanges credentials. Verify trickle-after-gather works correctly |
+
+**Test infrastructure notes:**
+- Use Catch2 (same as existing tests)
+- For IceBridge unit tests, create a minimal mock `IceAgent` that records `send()` calls and allows injecting `cb_recv` data
+- Integration tests use real libjuice agents over localhost (no network dependency)
+- All tests must complete within 5 seconds (ICE over localhost should connect in <500ms)
+
+### Phase 7: Remove Old STUN Code
 
 **Delete:**
 - `src/game/net/stun.hpp`
 - `src/game/net/stun.cpp`
 - `src/tests/test_stun.cpp`
 
-### Phase 7: Deploy coturn (Server-Side)
+### Phase 8: Deploy coturn (Server-Side)
 
 Replace the Go relay with a standard coturn deployment:
 
@@ -370,7 +420,7 @@ func generateTurnCredentials(secret string) (user, pass string) {
 
 The signaling server sends TURN credentials to clients in the `RoomCreated`/`PeerJoined` response so they can configure their ICE agent.
 
-### Phase 8: Update Signaling Server (Go)
+### Phase 9: Update Signaling Server (Go)
 
 **Simplify:** `server/server.go`, `server/protocol.go`
 
@@ -479,6 +529,9 @@ Loopback delivery between the two sockets is handled by kernel-internal synchron
 | `src/game/onlineConnectState.hpp` | Modify — use IceAgent + IceBridge |
 | `src/game/onlineConnectState.cpp` | Modify — new ICE-based flow |
 | `src/tests/test_stun.cpp` | **Delete** |
+| `src/tests/test_ice_agent.cpp` | **Create** — IceAgent unit tests |
+| `src/tests/test_ice_bridge.cpp` | **Create** — IceBridge loopback proxy tests |
+| `src/tests/test_ice_integration.cpp` | **Create** — End-to-end ICE + ENet integration tests |
 | `server/relay.go` | **Delete** |
 | `server/server.go` | Simplify — remove relay, add ICE forwarding + TURN cred generation |
 | `server/protocol.go` | Update message types |
@@ -489,11 +542,13 @@ Loopback delivery between the two sockets is handled by kernel-internal synchron
 - Phase 1 (IceAgent wrapper): ~2 hours
 - Phase 2-3 (Signaling protocol): ~2 hours
 - Phase 4 (OnlineConnectState): ~2 hours
-- Phase 5-6 (Transport cleanup): ~1 hour
-- Phase 7-8 (Server): ~2 hours
-- Testing & debugging: ~3 hours
+- Phase 5 (Transport cleanup): ~1 hour
+- Phase 6 (Tests): ~3 hours
+- Phase 7 (Remove old STUN): ~15 minutes
+- Phase 8-9 (Server): ~2 hours
+- Integration testing & debugging: ~2 hours
 
-**Total: ~12 hours** (vs maintaining/debugging the current custom stack indefinitely)
+**Total: ~14 hours** (vs maintaining/debugging the current custom stack indefinitely)
 
 ## Success Criteria
 
