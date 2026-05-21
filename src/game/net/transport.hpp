@@ -87,6 +87,10 @@ struct NetTransport {
   // The host must already be created.
   bool connectExisting(const std::string& address, uint16_t port);
 
+  // Create ENet host using a pre-existing socket (from IceBridge).
+  // The socket should be non-blocking with adequate buffer sizes.
+  bool createHostOnBridgeSocket(int bridgeSocket);
+
   // Connect via relay. Sends auth token (with retry), then ENet connects.
   // For host: creates ENet host on localPort, authenticates with relay.
   // For client: creates ENet host on ephemeral port, authenticates with relay.

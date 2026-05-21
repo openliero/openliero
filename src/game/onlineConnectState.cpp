@@ -10,7 +10,6 @@
 #include <memory>
 #include <string>
 #include <cstdio>
-#include <random>
 
 using netutil::nowMs;
 
@@ -22,103 +21,107 @@ OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCo
 
 void OnlineConnectState::enter()
 {
-	localPort_ = gfx->onlinePort;
-	fprintf(stderr, "[online] enter: role=%s localPort=%u roomCode='%s'\n",
-	        role_ == NetSession::Host ? "Host" : "Client", localPort_, roomCode_.c_str());
+	fprintf(stderr, "[online] enter: role=%s roomCode='%s'\n",
+	        role_ == NetSession::Host ? "Host" : "Client", roomCode_.c_str());
 
 	statusLine1_ = (role_ == NetSession::Host)
 		? "CREATING ONLINE ROOM..."
 		: "JOINING ROOM " + roomCode_ + "...";
-	statusLine2_ = "DISCOVERING EXTERNAL ADDRESS...";
+	statusLine2_ = "SETTING UP ICE...";
 
-	// Step 1: Create ENet host on game port FIRST (single-socket architecture)
-	if (!transport_.host(localPort_)) {
-		fprintf(stderr, "[online] ERROR: failed to create ENet host on port %u\n", localPort_);
-		statusLine2_ = "FAILED TO BIND GAME PORT";
-		cancel_ = true;
-		return;
-	}
-	fprintf(stderr, "[online] ENet host created on port %u\n", transport_.listeningPort());
-
-	// Wire the intercept callback for STUN responses
-	transport_.onInterceptedPacket = [this](const uint8_t* data, size_t len) -> bool {
-		return stunViaHost_.feedResponse(data, len);
+	// Wire IceAgent callbacks
+	iceAgent_.onLocalCandidate = [this](const std::string& candidate) {
+		if (signalingReady_) {
+			signaling_.sendIceCandidate(candidate);
+		} else {
+			bufferedCandidates_.push_back(candidate);
+		}
 	};
 
-	// Wire punch callbacks
-	transport_.onPunchSuccess = [this](const NetTransport::PunchResult& r) {
-		onPunchSuccess(r);
-	};
-	transport_.onPunchTimeout = [this]() {
-		onPunchFailed();
+	iceAgent_.onGatheringDone = [this]() {
+		gatheringDone_ = true;
+		if (signalingReady_) {
+			signaling_.sendIceGatherDone();
+		}
 	};
 
-	// Step 2: Start STUN through the ENet socket
-	stunViaHost_.start(transport_.enetHost());
+	iceAgent_.onStateChange = [this](IceAgent::State state) {
+		fprintf(stderr, "[online] ICE state: %d\n", (int)state);
+		switch (state) {
+			case IceAgent::State::Gathering:
+				statusLine2_ = "GATHERING CANDIDATES...";
+				break;
+			case IceAgent::State::Connecting:
+				statusLine2_ = "ICE CONNECTING...";
+				break;
+			case IceAgent::State::Connected:
+				iceConnected_ = true;
+				statusLine2_ = "CONNECTED! STARTING GAME...";
+				break;
+			case IceAgent::State::Failed:
+				statusLine2_ = "CONNECTION FAILED";
+				cancel_ = true;
+				break;
+			default:
+				break;
+		}
+	};
 
+	// Start ICE agent (begins gathering immediately)
+	IceAgent::Config iceCfg;
+	iceCfg.stunServer = "stun.l.google.com";
+	iceCfg.stunPort = 19302;
+	// TURN credentials will be set after signaling responds
+	iceAgent_.start(iceCfg);
+
+	// Start signaling immediately (don't wait for STUN — ICE handles it)
+	startSignaling();
+}
+
+void OnlineConnectState::startSignaling()
+{
 	// Wire signaling callbacks
 	signaling_.onRoomCreated = [this](const std::string& code) {
 		fprintf(stderr, "[online] onRoomCreated: code=%s\n", code.c_str());
 		roomCode_ = code;
 		statusLine1_ = "ROOM CODE: " + code;
-		statusLine2_ = "SHARE THIS CODE WITH YOUR PEER";
+		statusLine2_ = "WAITING FOR PEER...";
 
-		auto res = stunViaHost_.result();
-		if (!res.ipv4.empty())
-			signaling_.reportAddress(4, res.ipv4, res.ipv4Port);
-		if (!res.ipv6.empty())
-			signaling_.reportAddress(6, res.ipv6, res.ipv6Port);
+		// Room created but peer hasn't joined yet — don't send ICE yet
 	};
 
 	signaling_.onPeerJoined = [this]() {
 		fprintf(stderr, "[online] onPeerJoined\n");
-		statusLine2_ = "PEER JOINED! CONNECTING...";
-		peerJoinedMs_ = nowMs();
+		statusLine2_ = "PEER JOINED! EXCHANGING ICE...";
 
-		auto res = stunViaHost_.result();
-		if (res.ipv4.empty() && res.ipv6.empty()) {
-			fprintf(stderr, "[online] no STUN addresses — requesting relay\n");
-			reportedPunchFail_ = true;
-			signaling_.reportPunchFail();
-		}
+		// Now send our ICE credentials and buffered candidates
+		signalingReady_ = true;
+		signaling_.sendIceCredentials(iceAgent_.localUfrag(), iceAgent_.localPwd());
+		sendBufferedCandidates();
 	};
 
 	signaling_.onJoinAcked = [this]() {
 		fprintf(stderr, "[online] join acknowledged\n");
-		statusLine2_ = "JOINED! WAITING FOR HOST ADDRESSES...";
-		peerJoinedMs_ = nowMs();
+		statusLine2_ = "JOINED! EXCHANGING ICE...";
 
-		auto res = stunViaHost_.result();
-		if (!res.ipv4.empty())
-			signaling_.reportAddress(4, res.ipv4, res.ipv4Port);
-		if (!res.ipv6.empty())
-			signaling_.reportAddress(6, res.ipv6, res.ipv6Port);
-
-		if (res.ipv4.empty() && res.ipv6.empty()) {
-			fprintf(stderr, "[online] no STUN addresses — requesting relay\n");
-			reportedPunchFail_ = true;
-			signaling_.reportPunchFail();
-		}
+		// Send our ICE credentials and buffered candidates
+		signalingReady_ = true;
+		signaling_.sendIceCredentials(iceAgent_.localUfrag(), iceAgent_.localPwd());
+		sendBufferedCandidates();
 	};
 
-	signaling_.onStartPunch = [this]() {
-		fprintf(stderr, "[online] onStartPunch — %zu candidates\n",
-		        signaling_.peerCandidates().size());
-		punchRequested_ = true;
-		if (!signaling_.peerCandidates().empty())
-			startPunching();
+	// ICE callbacks from signaling
+	signaling_.onPeerCredentials = [this](const std::string& ufrag, const std::string& pwd) {
+		fprintf(stderr, "[online] onPeerCredentials: ufrag=%s\n", ufrag.c_str());
+		iceAgent_.setRemoteCredentials(ufrag, pwd);
 	};
 
-	signaling_.onPeerAddr = [this](const PeerCandidate&) {
-		if (punchRequested_ && !startedPunch_)
-			startPunching();
+	signaling_.onPeerCandidate = [this](const std::string& candidate) {
+		iceAgent_.addRemoteCandidate(candidate);
 	};
 
-	signaling_.onUseRelay = [this](uint16_t relayPort) {
-		fprintf(stderr, "[online] onUseRelay: port=%u\n", relayPort);
-		statusLine2_ = "USING RELAY (HIGHER LATENCY)";
-		transport_.stopPunch();
-		connectRelay();
+	signaling_.onPeerGatherDone = [this]() {
+		iceAgent_.setRemoteGatheringDone();
 	};
 
 	signaling_.onError = [this](const std::string& msg) {
@@ -132,6 +135,29 @@ void OnlineConnectState::enter()
 		statusLine2_ = "ROOM EXPIRED";
 		cancel_ = true;
 	};
+
+	// Connect to signaling server
+	if (role_ == NetSession::Host) {
+		if (!signaling_.createRoom(signalingServer_, signalingPort_)) {
+			statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
+			cancel_ = true;
+		}
+	} else {
+		if (!signaling_.joinRoom(signalingServer_, signalingPort_, roomCode_)) {
+			statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
+			cancel_ = true;
+		}
+	}
+}
+
+void OnlineConnectState::sendBufferedCandidates()
+{
+	for (auto& c : bufferedCandidates_)
+		signaling_.sendIceCandidate(c);
+	bufferedCandidates_.clear();
+
+	if (gatheringDone_)
+		signaling_.sendIceGatherDone();
 }
 
 void OnlineConnectState::handleEvent(SDL_Event& ev)
@@ -145,8 +171,8 @@ bool OnlineConnectState::update()
 	{
 		if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE) || gfx->testSDLKeyOnce(SDL_SCANCODE_RETURN))
 		{
+			iceAgent_.stop();
 			signaling_.disconnect();
-			transport_.disconnect();
 			return false;
 		}
 		return true;
@@ -154,48 +180,14 @@ bool OnlineConnectState::update()
 
 	if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
 	{
+		iceAgent_.stop();
 		signaling_.disconnect();
-		transport_.disconnect();
 		gfx->clearKeys();
 		return false;
 	}
 
-	// Update STUN-via-host (retries)
-	stunViaHost_.update();
-
-	// Poll transport (processes intercept for STUN + punch probes)
-	transport_.poll();
-
-	// Check if STUN completed — start signaling
-	if (!stunDone_ && stunViaHost_.done())
-	{
-		stunDone_ = true;
-		auto res = stunViaHost_.result();
-		fprintf(stderr, "[online] STUN done: ipv4='%s':%u ipv6='%s':%u\n",
-		        res.ipv4.c_str(), res.ipv4Port, res.ipv6.c_str(), res.ipv6Port);
-
-		// Start signaling
-		if (role_ == NetSession::Host)
-		{
-			if (!signaling_.createRoom(signalingServer_, signalingPort_))
-			{
-				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
-				cancel_ = true;
-				return true;
-			}
-		}
-		else
-		{
-			if (!signaling_.joinRoom(signalingServer_, signalingPort_, roomCode_))
-			{
-				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
-				cancel_ = true;
-				return true;
-			}
-		}
-
-		statusLine2_ = (role_ == NetSession::Host) ? "WAITING FOR PEER..." : "JOINING ROOM...";
-	}
+	// Poll ICE agent (drains event queue, fires callbacks on main thread)
+	iceAgent_.poll();
 
 	// Poll signaling
 	signaling_.poll();
@@ -211,108 +203,52 @@ bool OnlineConnectState::update()
 		}
 	}
 
-	// Timeout: if peer joined but no punch started, request relay
-	if (peerJoinedMs_ != 0 && !startedPunch_ && !reportedPunchFail_)
-	{
-		if (nowMs() - peerJoinedMs_ > 10000) {
-			fprintf(stderr, "[online] punch never started after 10s — requesting relay\n");
-			reportedPunchFail_ = true;
-			signaling_.reportPunchFail();
-		}
+	// Transition to game when ICE connects
+	if (iceConnected_) {
+		transitionToGame();
+		iceConnected_ = false; // prevent re-entry
 	}
-
-	// Check if punch succeeded (handled via callback, transitions happen there)
 
 	return true;
 }
 
-void OnlineConnectState::startPunching()
+void OnlineConnectState::transitionToGame()
 {
-	if (startedPunch_) return;
-	startedPunch_ = true;
+	fprintf(stderr, "[online] ICE connected — creating bridge and transitioning to game\n");
 
-	auto& candidates = signaling_.peerCandidates();
-	fprintf(stderr, "[online] startPunching with %zu candidates\n", candidates.size());
+	// Disconnect signaling (no longer needed)
+	signaling_.disconnect();
 
-	if (candidates.empty()) {
-		onPunchFailed();
+	// Create the loopback bridge
+	int bridgeFd = iceBridge_.create(iceAgent_);
+	if (bridgeFd < 0) {
+		fprintf(stderr, "[online] ERROR: failed to create ICE bridge\n");
+		statusLine2_ = "BRIDGE CREATION FAILED";
+		cancel_ = true;
 		return;
 	}
 
-	statusLine2_ = "HOLE-PUNCHING...";
-
-	// Convert PeerCandidate to PunchCandidate
-	std::vector<NetTransport::PunchCandidate> punchCandidates;
-	for (auto& c : candidates)
-		punchCandidates.push_back({c.type, c.ip, c.port});
-
-	std::random_device rd;
-	uint32_t localNonce = ((uint32_t)rd() & 0xFFFF0000) | ((uint32_t)rd() & 0xFFFF);
-	if (localNonce == 0) localNonce = 1;
-
-	transport_.startPunch(punchCandidates, localNonce, 0);
-}
-
-void OnlineConnectState::onPunchSuccess(const NetTransport::PunchResult& result)
-{
-	fprintf(stderr, "[online] punch SUCCESS: peer=%s:%u\n", result.peerIP.c_str(), result.peerPort);
-	signaling_.reportPunchOK();
-	signaling_.disconnect();
-
-	statusLine2_ = "CONNECTED! STARTING GAME...";
-
-	// Transition to game using the same ENet host (socket preserved!)
-	// For host: we're already listening. Peer will connect to us.
-	// For client: connect to the punched address.
-	connectDirect(result.peerIP, result.peerPort);
-}
-
-void OnlineConnectState::onPunchFailed()
-{
-	fprintf(stderr, "[online] punch FAILED — requesting relay\n");
-	if (!reportedPunchFail_) {
-		reportedPunchFail_ = true;
-		signaling_.reportPunchFail();
+	// Create a NetTransport using the bridge socket
+	NetTransport transport;
+	if (!transport.createHostOnBridgeSocket(bridgeFd)) {
+		fprintf(stderr, "[online] ERROR: failed to create ENet host on bridge socket\n");
+		statusLine2_ = "ENET BRIDGE SETUP FAILED";
+		cancel_ = true;
+		return;
 	}
-	statusLine2_ = "HOLE-PUNCH FAILED, WAITING FOR RELAY...";
-}
 
-void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
-{
-	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s\n",
-	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client");
-
-	// Clear punch/STUN callbacks before transferring transport
-	transport_.onInterceptedPacket = nullptr;
-	transport_.onPunchSuccess = nullptr;
-	transport_.onPunchTimeout = nullptr;
-
-	// Transfer the transport to NetConnectState — preserves the NAT-mapped socket!
+	// Transition to NetConnectState with the bridge-backed transport.
+	// For host: ENet listens on bridge socket, peer connects.
+	// For client: ENet connects to bridge port (localhost).
 	if (role_ == NetSession::Host) {
 		gfx->stateStack.scheduleReplaceTop(
-			std::make_unique<NetConnectState>(NetSession::Host, std::move(transport_)));
+			std::make_unique<NetConnectState>(NetSession::Host, std::move(transport)));
 	} else {
+		// Client connects to bridge's own port (loopback)
 		gfx->stateStack.scheduleReplaceTop(
-			std::make_unique<NetConnectState>(NetSession::Client, std::move(transport_), addr, port));
+			std::make_unique<NetConnectState>(NetSession::Client, std::move(transport),
+			                                  "127.0.0.1", iceBridge_.bridgePort()));
 	}
-}
-
-void OnlineConnectState::connectRelay()
-{
-	fprintf(stderr, "[online] connectRelay: port=%u\n", signaling_.relayPort());
-
-	auto token = signaling_.relayToken();
-	uint16_t relayPort = signaling_.relayPort();
-
-	// For relay, we disconnect and let NetConnectState create a new transport
-	// bound to the same local port. The relay doesn't care about NAT mappings
-	// since it's a server with a public IP.
-	uint16_t boundPort = transport_.listeningPort();
-	transport_.disconnect();
-
-	gfx->stateStack.scheduleReplaceTop(
-		std::make_unique<NetConnectState>(role_, signalingServer_, relayPort,
-		                                  boundPort, std::move(token)));
 }
 
 void OnlineConnectState::draw()

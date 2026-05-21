@@ -261,6 +261,22 @@ bool NetTransport::connectExisting(const std::string& address, uint16_t port) {
   return true;
 }
 
+bool NetTransport::createHostOnBridgeSocket(int bridgeSocket) {
+  if (enetHost_) return false;
+
+  // Create ENet host with no address (won't bind a new socket)
+  enetHost_ = enet_host_create(nullptr, 1, NUM_CHANNELS, 0, 0);
+  if (!enetHost_) return false;
+
+  // Replace ENet's auto-created socket with the bridge socket
+  enet_socket_destroy(enetHost_->socket);
+  enetHost_->socket = (ENetSocket)bridgeSocket;
+
+  setupIntercept();
+  state_ = Listening;
+  return true;
+}
+
 bool NetTransport::hostViaRelay(uint16_t localPort, const std::string& relayAddr,
                                 uint16_t relayPort, const std::vector<uint8_t>& token) {
   if (enetHost_) return false;

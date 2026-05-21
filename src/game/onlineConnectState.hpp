@@ -3,22 +3,22 @@
 #include "state.hpp"
 #include "net/session.hpp"
 #include "net/signaling.hpp"
-#include "net/stun.hpp"
-#include "net/transport.hpp"
+#include "net/iceAgent.hpp"
+#include "net/iceBridge.hpp"
 
 #include <string>
 #include <memory>
 #include <cstdint>
+#include <vector>
 
-// Manages the "online" connection flow via signaling server + hole-punching.
+// Manages the "online" connection flow via signaling server + ICE (libjuice).
 //
-// Architecture: Single-socket design.
-// 1. Create ENet host on game port FIRST
-// 2. STUN through ENet socket (via intercept callback)
-// 3. Signaling (separate ephemeral socket — doesn't need NAT mapping)
-// 4. Hole-punch through ENet socket (via intercept callback)
-// 5. On punch success: peer connects via ENet on same socket — NAT mapping preserved
-// 6. On failure: relay (token sent via ENet socket, then ENet connects to relay)
+// Flow:
+// 1. Create IceAgent with STUN + TURN config
+// 2. Connect to signaling server (create/join room)
+// 3. Exchange ICE credentials + candidates via signaling
+// 4. libjuice performs ICE connectivity checks (all candidate pairs)
+// 5. On success → create IceBridge, hand socket to NetConnectState
 struct OnlineConnectState : AppState
 {
 	OnlineConnectState(NetSession::Role role, std::string roomCode = "");
@@ -29,32 +29,31 @@ struct OnlineConnectState : AppState
 	void draw() override;
 
 private:
-	void startPunching();
-	void onPunchSuccess(const NetTransport::PunchResult& result);
-	void onPunchFailed();
-	void connectDirect(const std::string& addr, uint16_t port);
-	void connectRelay();
+	void startSignaling();
+	void sendBufferedCandidates();
+	void transitionToGame();
 
 	NetSession::Role role_;
 	std::string roomCode_;
-	uint16_t localPort_ = 19532;
 
 	std::string signalingServer_ = "liero-server.orbmit.org";
 	uint16_t signalingPort_ = 19533;
+	std::string turnServer_ = "liero-server.orbmit.org";
+	uint16_t turnPort_ = 3478;
 
-	// ENet host created FIRST for single-socket
-	NetTransport transport_;
-	StunViaHost stunViaHost_;
-	bool stunDone_ = false;
-
+	IceAgent iceAgent_;
+	IceBridge iceBridge_;
 	SignalingClient signaling_;
+
+	// Buffered candidates gathered before signaling is ready
+	std::vector<std::string> bufferedCandidates_;
+	bool gatheringDone_ = false;
+	bool signalingReady_ = false;
+	bool iceConnected_ = false;
 
 	std::string statusLine1_;
 	std::string statusLine2_;
 	bool cancel_ = false;
-	bool startedPunch_ = false;
-	bool punchRequested_ = false;
-	bool reportedPunchFail_ = false;
 	uint64_t lastKeepaliveMs_ = 0;
-	uint64_t peerJoinedMs_ = 0;
 };
+
