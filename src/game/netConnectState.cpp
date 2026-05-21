@@ -19,17 +19,6 @@ NetConnectState::NetConnectState(NetSession::Role role, std::string address, uin
 {
 }
 
-NetConnectState::NetConnectState(NetSession::Role role, std::string relayAddr, uint16_t relayPort,
-                                 uint16_t localPort, std::vector<uint8_t> token)
-: role_(role)
-, address_(std::move(relayAddr))
-, port_(relayPort)
-, localPort_(localPort)
-, relayToken_(std::move(token))
-, relay_(true)
-{
-}
-
 NetConnectState::NetConnectState(NetSession::Role role, NetTransport&& transport,
                                  std::string peerAddr, uint16_t peerPort)
 : role_(role)
@@ -54,18 +43,11 @@ void NetConnectState::enter()
 	bool ok = false;
 	if (hasTransport_)
 	{
-		// Use the existing transport (preserves NAT mapping from hole-punch)
+		// Use the existing transport (from ICE bridge)
 		if (role_ == NetSession::Host)
 			ok = session->hostWithTransport(std::move(existingTransport_));
 		else
 			ok = session->connectWithTransport(std::move(existingTransport_), address_, port_);
-	}
-	else if (relay_)
-	{
-		if (role_ == NetSession::Host)
-			ok = session->hostViaRelay(localPort_, address_, port_, relayToken_);
-		else
-			ok = session->joinViaRelay(address_, port_, relayToken_);
 	}
 	else if (role_ == NetSession::Host)
 	{

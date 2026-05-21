@@ -10,10 +10,6 @@ struct _ENetPeer;
 
 // Handles UDP communication between two peers using ENet.
 // Provides reliable ordered delivery of input packets.
-//
-// NEW: Integrates hole-punch and STUN via ENet's intercept callback.
-// The same socket is used for STUN queries, hole-punch probes, and game traffic,
-// ensuring NAT mappings are preserved throughout the connection lifecycle.
 struct NetTransport {
   // Packet types
   enum PacketType : uint8_t {
@@ -83,42 +79,13 @@ struct NetTransport {
   // Connect to a host directly.
   bool connect(const std::string& address, uint16_t port);
 
-  // Connect to a peer using the existing host (after hole-punch).
+  // Connect to a peer using the existing host.
   // The host must already be created.
   bool connectExisting(const std::string& address, uint16_t port);
 
   // Create ENet host using a pre-existing socket (from IceBridge).
   // The socket should be non-blocking with adequate buffer sizes.
   bool createHostOnBridgeSocket(int bridgeSocket);
-
-  // Connect via relay. Sends auth token (with retry), then ENet connects.
-  // For host: creates ENet host on localPort, authenticates with relay.
-  // For client: creates ENet host on ephemeral port, authenticates with relay.
-  bool hostViaRelay(uint16_t localPort, const std::string& relayAddr,
-                    uint16_t relayPort, const std::vector<uint8_t>& token);
-  bool connectViaRelay(const std::string& relayAddr, uint16_t relayPort,
-                       const std::vector<uint8_t>& token);
-
-  // --- Hole-punch support (single-socket) ---
-  // Start hole-punching to candidates through the ENet host's socket.
-  // The host must already be created (via host() call).
-  // localNonce identifies us; peerNonce is expected peer (0 = accept any non-self).
-  struct PunchCandidate {
-    uint8_t type;      // 4=IPv4, 6=IPv6
-    std::string ip;
-    uint16_t port;
-  };
-  bool startPunch(const std::vector<PunchCandidate>& candidates,
-                  uint32_t localNonce, uint32_t peerNonce);
-  void stopPunch();
-
-  struct PunchResult {
-    std::string peerIP;
-    uint16_t peerPort;
-  };
-  bool punchSucceeded() const { return punchState_ == PunchSucceeded; }
-  bool punchFailed() const { return punchState_ == PunchFailed; }
-  const PunchResult& punchResult() const { return punchResult_; }
 
   // --- General ---
   // Poll for events. Call once per frame.
@@ -162,8 +129,6 @@ struct NetTransport {
   std::function<void(const void* data, size_t len)> onTcData;
   std::function<void()> onConnected;
   std::function<void()> onDisconnected;
-  std::function<void(const PunchResult&)> onPunchSuccess;
-  std::function<void()> onPunchTimeout;
   // Called for each non-ENet packet intercepted (STUN, etc.)
   // Return true if consumed.
   std::function<bool(const uint8_t* data, size_t len)> onInterceptedPacket;
@@ -173,39 +138,9 @@ struct NetTransport {
   bool createHost(uint16_t port);
   void setupIntercept();
 
-  // Hole-punch internals
-  enum PunchState { PunchIdle, Punching, PunchGrace, PunchSucceeded, PunchFailed };
-  void sendProbes();
-  void punchPoll();
-
-  // Relay internals
-  void sendRelayToken();
-
   static int interceptCallback(_ENetHost* host, void* event);
 
   _ENetHost* enetHost_;
   _ENetPeer* peer_;
   State state_;
-
-  // Hole-punch state
-  PunchState punchState_;
-  std::vector<PunchCandidate> punchCandidates_;
-  uint32_t punchLocalNonce_;
-  uint32_t punchPeerNonce_;
-  uint64_t punchStartMs_;
-  uint64_t punchLastProbeMs_;
-  int punchTimeoutMs_;
-  uint64_t punchGraceStartMs_ = 0;
-  PunchResult punchResult_;
-
-  // Relay state
-  std::vector<uint8_t> relayToken_;
-  std::string relayHost_;        // resolved IP (not hostname)
-  uint16_t relayPort_ = 0;
-  bool relayAuthenticated_;
-  uint64_t relayLastTokenMs_;
-  int relayTokenAttempts_;
-
-  static constexpr uint8_t PROBE_MAGIC[4] = {0x4F, 0x4C, 0x48, 0x50}; // "OLHP"
-  static constexpr uint8_t RELAY_ACK = 0x01;
 };

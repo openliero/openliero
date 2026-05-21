@@ -1,9 +1,7 @@
 #include "transport.hpp"
-#include "netutil.hpp"
 
 #include <cstring>
 #include <cstdio>
-#include <vector>
 #include <atomic>
 
 #define ENET_IMPLEMENTATION
@@ -15,13 +13,9 @@
 #include <arpa/inet.h>
 #endif
 
-using netutil::nowMs;
-
 static constexpr int NUM_CHANNELS = 2;
 static constexpr int CHANNEL_RELIABLE = 0;
 static constexpr int CHANNEL_UNRELIABLE = 1;
-
-constexpr uint8_t NetTransport::PROBE_MAGIC[4];
 
 // Single active transport pointer. Only one ENet host exists per process.
 static std::atomic<NetTransport*> sActiveTransport{nullptr};
@@ -39,22 +33,12 @@ static NetTransport* getTransportFromHost(_ENetHost*) {
 }
 
 NetTransport::NetTransport()
-    : enetHost_(nullptr), peer_(nullptr), state_(Disconnected),
-      punchState_(PunchIdle), punchLocalNonce_(0), punchPeerNonce_(0),
-      punchStartMs_(0), punchLastProbeMs_(0), punchTimeoutMs_(5000),
-      relayAuthenticated_(false), relayLastTokenMs_(0), relayTokenAttempts_(0) {
+    : enetHost_(nullptr), peer_(nullptr), state_(Disconnected) {
   enet_initialize();
 }
 
 NetTransport::NetTransport(NetTransport&& other) noexcept
-    : enetHost_(other.enetHost_), peer_(other.peer_), state_(other.state_),
-      punchState_(other.punchState_), punchCandidates_(std::move(other.punchCandidates_)),
-      punchLocalNonce_(other.punchLocalNonce_), punchPeerNonce_(other.punchPeerNonce_),
-      punchStartMs_(other.punchStartMs_), punchLastProbeMs_(other.punchLastProbeMs_),
-      punchTimeoutMs_(other.punchTimeoutMs_), punchResult_(std::move(other.punchResult_)),
-      relayToken_(std::move(other.relayToken_)), relayHost_(std::move(other.relayHost_)),
-      relayPort_(other.relayPort_), relayAuthenticated_(other.relayAuthenticated_),
-      relayLastTokenMs_(other.relayLastTokenMs_), relayTokenAttempts_(other.relayTokenAttempts_) {
+    : enetHost_(other.enetHost_), peer_(other.peer_), state_(other.state_) {
   // Update registry to point to new instance
   if (enetHost_) {
     registerTransport(enetHost_, this);
@@ -63,7 +47,6 @@ NetTransport::NetTransport(NetTransport&& other) noexcept
   other.enetHost_ = nullptr;
   other.peer_ = nullptr;
   other.state_ = Disconnected;
-  other.punchState_ = PunchIdle;
 }
 
 NetTransport& NetTransport::operator=(NetTransport&& other) noexcept {
@@ -72,27 +55,12 @@ NetTransport& NetTransport::operator=(NetTransport&& other) noexcept {
     enetHost_ = other.enetHost_;
     peer_ = other.peer_;
     state_ = other.state_;
-    punchState_ = other.punchState_;
-    punchCandidates_ = std::move(other.punchCandidates_);
-    punchLocalNonce_ = other.punchLocalNonce_;
-    punchPeerNonce_ = other.punchPeerNonce_;
-    punchStartMs_ = other.punchStartMs_;
-    punchLastProbeMs_ = other.punchLastProbeMs_;
-    punchTimeoutMs_ = other.punchTimeoutMs_;
-    punchResult_ = std::move(other.punchResult_);
-    relayToken_ = std::move(other.relayToken_);
-    relayHost_ = std::move(other.relayHost_);
-    relayPort_ = other.relayPort_;
-    relayAuthenticated_ = other.relayAuthenticated_;
-    relayLastTokenMs_ = other.relayLastTokenMs_;
-    relayTokenAttempts_ = other.relayTokenAttempts_;
     if (enetHost_) {
       registerTransport(enetHost_, this);
     }
     other.enetHost_ = nullptr;
     other.peer_ = nullptr;
     other.state_ = Disconnected;
-    other.punchState_ = PunchIdle;
   }
   return *this;
 }
@@ -103,7 +71,6 @@ NetTransport::~NetTransport() {
 }
 
 void NetTransport::disconnect() {
-  stopPunch();
   if (peer_) {
     enet_peer_disconnect_now(peer_, 0);
     peer_ = nullptr;
@@ -114,8 +81,6 @@ void NetTransport::disconnect() {
     enetHost_ = nullptr;
   }
   state_ = Disconnected;
-  relayAuthenticated_ = false;
-  relayToken_.clear();
 }
 
 uint16_t NetTransport::listeningPort() const {
@@ -145,50 +110,6 @@ int NetTransport::interceptCallback(_ENetHost* host, void* /*event*/) {
 
   uint8_t* data = host->receivedData;
   size_t len = host->receivedDataLength;
-
-  if (len < 4) return 0;
-
-  // Check for hole-punch probe (magic: OLHP)
-  if (len >= 8 && std::memcmp(data, PROBE_MAGIC, 4) == 0) {
-    if (self->punchState_ == Punching || self->punchState_ == PunchGrace) {
-      uint32_t recvNonce = ((uint32_t)data[4] << 24) | ((uint32_t)data[5] << 16) |
-                           ((uint32_t)data[6] << 8) | (uint32_t)data[7];
-
-      if (recvNonce == self->punchLocalNonce_) {
-        // Our own reflected probe — ignore
-        return 1;
-      }
-      if (self->punchPeerNonce_ != 0 && recvNonce != self->punchPeerNonce_) {
-        // Unknown nonce
-        return 1;
-      }
-
-      // Valid probe from peer! Enter grace period (keep sending probes
-      // so the other side also detects us) before declaring success.
-      if (self->punchState_ == Punching) {
-        char fromIP[INET6_ADDRSTRLEN] = {};
-        enet_address_get_host_ip(&host->receivedAddress, fromIP, sizeof(fromIP));
-
-        fprintf(stderr, "[transport] punch DETECTED from %s:%u (nonce=%08x), entering grace period\n",
-                fromIP, host->receivedAddress.port, recvNonce);
-
-        self->punchResult_.peerIP = fromIP;
-        self->punchResult_.peerPort = host->receivedAddress.port;
-        self->punchState_ = PunchGrace;
-        self->punchGraceStartMs_ = nowMs();
-      }
-    }
-    return 1; // consumed (don't pass to ENet)
-  }
-
-  // Check for relay ACK (single byte 0x01)
-  if (len == 1 && data[0] == RELAY_ACK) {
-    if (!self->relayAuthenticated_) {
-      fprintf(stderr, "[transport] relay ACK received — authenticated\n");
-      self->relayAuthenticated_ = true;
-    }
-    return 1;
-  }
 
   // Let user-provided handler try (e.g., STUN responses)
   if (self->onInterceptedPacket && self->onInterceptedPacket(data, len)) {
@@ -277,211 +198,10 @@ bool NetTransport::createHostOnBridgeSocket(int bridgeSocket) {
   return true;
 }
 
-bool NetTransport::hostViaRelay(uint16_t localPort, const std::string& relayAddr,
-                                uint16_t relayPort, const std::vector<uint8_t>& token) {
-  if (enetHost_) return false;
-
-  if (!createHost(localPort)) {
-    state_ = Failed;
-    return false;
-  }
-
-  // Resolve relay address once (avoid DNS on every retry)
-  ENetAddress resolved = {};
-  resolved.port = relayPort;
-  if (enet_address_set_host(&resolved, relayAddr.c_str()) != 0) {
-    unregisterTransport(enetHost_);
-    enet_host_destroy(enetHost_);
-    enetHost_ = nullptr;
-    state_ = Failed;
-    return false;
-  }
-  char resolvedIP[INET6_ADDRSTRLEN] = {};
-  enet_address_get_host_ip(&resolved, resolvedIP, sizeof(resolvedIP));
-
-  // Store relay info for token retry
-  relayToken_ = token;
-  relayHost_ = resolvedIP;
-  relayPort_ = relayPort;
-
-  relayAuthenticated_ = false;
-  relayTokenAttempts_ = 0;
-  relayLastTokenMs_ = 0;
-
-  // Send initial token
-  sendRelayToken();
-
-  state_ = Listening;
-  return true;
-}
-
-bool NetTransport::connectViaRelay(const std::string& relayAddr, uint16_t relayPort,
-                                   const std::vector<uint8_t>& token) {
-  if (enetHost_) return false;
-
-  if (!createHost(0)) {
-    state_ = Failed;
-    return false;
-  }
-
-  // Resolve relay address once
-  ENetAddress resolved = {};
-  resolved.port = relayPort;
-  if (enet_address_set_host(&resolved, relayAddr.c_str()) != 0) {
-    unregisterTransport(enetHost_);
-    enet_host_destroy(enetHost_);
-    enetHost_ = nullptr;
-    state_ = Failed;
-    return false;
-  }
-  char resolvedIP[INET6_ADDRSTRLEN] = {};
-  enet_address_get_host_ip(&resolved, resolvedIP, sizeof(resolvedIP));
-
-  // Store relay info
-  relayToken_ = token;
-  relayHost_ = resolvedIP;
-  relayPort_ = relayPort;
-
-  relayAuthenticated_ = false;
-  relayTokenAttempts_ = 0;
-  relayLastTokenMs_ = 0;
-
-  // Send initial token
-  sendRelayToken();
-
-  // Connect to relay via ENet (after token)
-  peer_ = enet_host_connect(enetHost_, &resolved, NUM_CHANNELS, 0);
-  if (!peer_) {
-    unregisterTransport(enetHost_);
-    enet_host_destroy(enetHost_);
-    enetHost_ = nullptr;
-    state_ = Failed;
-    return false;
-  }
-
-  state_ = Connecting;
-  return true;
-}
-
-void NetTransport::sendRelayToken() {
-  if (!enetHost_ || relayToken_.empty()) return;
-
-  ENetAddress addr = {};
-  addr.port = relayPort_;
-  if (enet_address_set_host(&addr, relayHost_.c_str()) != 0) return;
-
-  relayTokenAttempts_++;
-  relayLastTokenMs_ = nowMs();
-
-  ENetBuffer buf;
-  buf.data = relayToken_.data();
-  buf.dataLength = relayToken_.size();
-  int sent = enet_socket_send(enetHost_->socket, &addr, &buf, 1);
-  fprintf(stderr, "[transport] relay token sent (attempt %d, %d bytes, result=%d)\n",
-          relayTokenAttempts_, (int)relayToken_.size(), sent);
-}
-
-// --- Hole-punch ---
-
-bool NetTransport::startPunch(const std::vector<PunchCandidate>& candidates,
-                              uint32_t localNonce, uint32_t peerNonce) {
-  if (!enetHost_) return false;
-  if (candidates.empty()) return false;
-
-  fprintf(stderr, "[transport] startPunch: %zu candidates, nonce=%08x peer=%08x\n",
-          candidates.size(), localNonce, peerNonce);
-
-  punchCandidates_ = candidates;
-  punchLocalNonce_ = localNonce;
-  punchPeerNonce_ = peerNonce;
-  punchState_ = Punching;
-  punchStartMs_ = nowMs();
-  punchLastProbeMs_ = 0;
-  punchTimeoutMs_ = 5000;
-
-  sendProbes();
-  return true;
-}
-
-void NetTransport::stopPunch() {
-  if (punchState_ == Punching || punchState_ == PunchGrace)
-    punchState_ = PunchFailed;
-  punchCandidates_.clear();
-}
-
-void NetTransport::sendProbes() {
-  if (!enetHost_) return;
-
-  uint8_t probe[8];
-  std::memcpy(probe, PROBE_MAGIC, 4);
-  probe[4] = (uint8_t)(punchLocalNonce_ >> 24);
-  probe[5] = (uint8_t)(punchLocalNonce_ >> 16);
-  probe[6] = (uint8_t)(punchLocalNonce_ >> 8);
-  probe[7] = (uint8_t)(punchLocalNonce_);
-
-  ENetBuffer buf;
-  buf.data = probe;
-  buf.dataLength = sizeof(probe);
-
-  for (auto& cand : punchCandidates_) {
-    ENetAddress addr = {};
-    addr.port = cand.port;
-    if (enet_address_set_host(&addr, cand.ip.c_str()) != 0) continue;
-    enet_socket_send(enetHost_->socket, &addr, &buf, 1);
-  }
-
-  punchLastProbeMs_ = nowMs();
-}
-
-void NetTransport::punchPoll() {
-  if (punchState_ != Punching && punchState_ != PunchGrace) return;
-
-  uint64_t now = nowMs();
-
-  // Grace period: keep sending probes for 2s after first detection
-  // so the other side also receives our probes and detects success.
-  if (punchState_ == PunchGrace) {
-    if (now - punchGraceStartMs_ > 2000) {
-      fprintf(stderr, "[transport] punch SUCCESS (grace period complete)\n");
-      punchState_ = PunchSucceeded;
-      if (onPunchSuccess) onPunchSuccess(punchResult_);
-      return;
-    }
-    // Keep sending probes during grace period
-    if (now - punchLastProbeMs_ > 200) {
-      sendProbes();
-    }
-    return;
-  }
-
-  if (now - punchStartMs_ > (uint64_t)punchTimeoutMs_) {
-    fprintf(stderr, "[transport] punch TIMEOUT after %d ms\n", punchTimeoutMs_);
-    punchState_ = PunchFailed;
-    if (onPunchTimeout) onPunchTimeout();
-    return;
-  }
-
-  // Send probes every 200ms
-  if (now - punchLastProbeMs_ > 200) {
-    sendProbes();
-  }
-}
-
 // --- Poll ---
 
 bool NetTransport::poll() {
   if (!enetHost_) return false;
-
-  // Retry relay token if not yet authenticated
-  if (!relayToken_.empty() && !relayAuthenticated_) {
-    uint64_t now = nowMs();
-    if (now - relayLastTokenMs_ > 1000 && relayTokenAttempts_ < 10) {
-      sendRelayToken();
-    }
-  }
-
-  // Poll hole-punch
-  punchPoll();
 
   ENetEvent event;
   while (enet_host_service(enetHost_, &event, 0) > 0) {

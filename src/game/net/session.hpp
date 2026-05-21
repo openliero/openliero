@@ -35,16 +35,8 @@ struct NetSession {
   // Start as client. Connects to host at address:port.
   bool joinGame(const std::string& address, uint16_t port);
 
-  // Start as host via relay. Listens on localPort, sends token to relay.
-  bool hostViaRelay(uint16_t localPort, const std::string& relayAddr,
-                    uint16_t relayPort, const std::vector<uint8_t>& token);
-
-  // Start as client via relay. Sends token, then connects to relay.
-  bool joinViaRelay(const std::string& relayAddr, uint16_t relayPort,
-                    const std::vector<uint8_t>& token);
-
   // Start with an existing transport (already connected or listening).
-  // Used after hole-punch succeeds to preserve the NAT-mapped socket.
+  // Used after ICE succeeds to hand the bridge-backed transport to the session.
   // For host: transport is already listening, peer will connect.
   // For client: initiates ENet connect to peerAddr:peerPort through existing host.
   bool hostWithTransport(NetTransport&& transport);

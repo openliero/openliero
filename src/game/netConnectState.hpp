@@ -16,10 +16,7 @@
 struct NetConnectState : AppState
 {
 	NetConnectState(NetSession::Role role, std::string address, uint16_t port);
-	// Relay mode constructor
-	NetConnectState(NetSession::Role role, std::string relayAddr, uint16_t relayPort,
-	                uint16_t localPort, std::vector<uint8_t> token);
-	// Direct connection with existing transport (preserves NAT mapping after punch)
+	// Direct connection with existing transport (after ICE)
 	NetConnectState(NetSession::Role role, NetTransport&& transport,
 	                std::string peerAddr = "", uint16_t peerPort = 0);
 
@@ -32,9 +29,6 @@ private:
 	NetSession::Role role_;
 	std::string address_;
 	uint16_t port_;
-	uint16_t localPort_ = 0;
-	std::vector<uint8_t> relayToken_;
-	bool relay_ = false;
 	bool hasTransport_ = false;
 	bool cancel_ = false;
 	std::vector<LocalAddress> localAddresses_;

@@ -6,8 +6,6 @@
 #include <mutex>
 #include <cstdint>
 
-#include <enet.h>
-
 struct StunResult {
   std::string ipv4;
   uint16_t ipv4Port = 0;
@@ -71,39 +69,3 @@ private:
   uint16_t localPort_{0};
 };
 
-// Synchronous STUN query through an existing ENet host socket.
-// Sends STUN request and relies on the caller to feed received packets
-// via feedResponse(). This is the single-socket approach.
-class StunViaHost {
-public:
-  // Start a STUN query through the given ENet host socket.
-  // The query sends a binding request to the STUN server.
-  void start(ENetHost* host);
-
-  // Feed a received packet (from the intercept callback).
-  // Returns true if this packet was a STUN response and was consumed.
-  bool feedResponse(const uint8_t* data, size_t len);
-
-  // Returns result. Check done() first.
-  StunResult result() const { return result_; }
-  bool done() const { return done_; }
-
-  // Call periodically to retry if no response yet.
-  void update();
-
-private:
-  ENetHost* host_ = nullptr;
-  stun::Header ipv4Req_{};
-  stun::Header ipv6Req_{};
-  bool gotIPv4_ = false;
-  bool gotIPv6_ = false;
-  bool done_ = false;
-  int attempts_ = 0;
-  uint64_t lastSendMs_ = 0;
-  StunResult result_;
-
-  static constexpr int kMaxAttempts = 3;
-  static constexpr int kTimeoutMs = 2000;
-
-  void sendRequests();
-};
