@@ -249,10 +249,11 @@ void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
 
 	if (useRelay)
 	{
-		// In relay mode, both peers connect as Client to the relay server.
-		// The relay forwards traffic between the two participants.
+		// In relay mode: host listens on localPort and registers with relay,
+		// client connects to relay. Both send auth token first.
+		auto token = signaling_.relayToken();
 		gfx->stateStack.scheduleReplaceTop(
-			std::make_unique<NetConnectState>(NetSession::Client, addr, port));
+			std::make_unique<NetConnectState>(role_, addr, port, localPort_, std::move(token)));
 	}
 	else if (role_ == NetSession::Host)
 	{

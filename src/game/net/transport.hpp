@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 struct _ENetHost;
 struct _ENetPeer;
@@ -75,6 +76,14 @@ struct NetTransport {
 
   // Connect to a host. Returns true if connection attempt started.
   bool connect(const std::string& address, uint16_t port);
+
+  // Connect via relay: sends auth token first, then connects.
+  // For host: listens on localPort, sends token to relay so relay knows us.
+  // For client: connects to relay after authenticating.
+  bool hostViaRelay(uint16_t localPort, const std::string& relayAddr,
+                    uint16_t relayPort, const std::vector<uint8_t>& token);
+  bool connectViaRelay(const std::string& relayAddr, uint16_t relayPort,
+                       const std::vector<uint8_t>& token);
 
   // Poll for events and deliver received inputs. Call once per frame.
   // Returns true if still connected.

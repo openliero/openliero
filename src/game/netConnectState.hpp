@@ -15,6 +15,9 @@
 struct NetConnectState : AppState
 {
 	NetConnectState(NetSession::Role role, std::string address, uint16_t port);
+	// Relay mode constructor
+	NetConnectState(NetSession::Role role, std::string relayAddr, uint16_t relayPort,
+	                uint16_t localPort, std::vector<uint8_t> token);
 
 	void enter() override;
 	void handleEvent(SDL_Event& ev) override;
@@ -25,6 +28,9 @@ private:
 	NetSession::Role role_;
 	std::string address_;
 	uint16_t port_;
+	uint16_t localPort_ = 0;
+	std::vector<uint8_t> relayToken_;
+	bool relay_ = false;
 	bool cancel_ = false;
 	std::vector<LocalAddress> localAddresses_;
 	std::unique_ptr<StunQuery> stunQuery_;

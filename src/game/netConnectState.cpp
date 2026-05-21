@@ -19,6 +19,17 @@ NetConnectState::NetConnectState(NetSession::Role role, std::string address, uin
 {
 }
 
+NetConnectState::NetConnectState(NetSession::Role role, std::string relayAddr, uint16_t relayPort,
+                                 uint16_t localPort, std::vector<uint8_t> token)
+: role_(role)
+, address_(std::move(relayAddr))
+, port_(relayPort)
+, localPort_(localPort)
+, relayToken_(std::move(token))
+, relay_(true)
+{
+}
+
 void NetConnectState::enter()
 {
 	FsNode tcRoot = gfx->getConfigNode() / "TC" / gfx->settings->tc;
@@ -31,7 +42,14 @@ void NetConnectState::enter()
 	};
 
 	bool ok = false;
-	if (role_ == NetSession::Host)
+	if (relay_)
+	{
+		if (role_ == NetSession::Host)
+			ok = session->hostViaRelay(localPort_, address_, port_, relayToken_);
+		else
+			ok = session->joinViaRelay(address_, port_, relayToken_);
+	}
+	else if (role_ == NetSession::Host)
 	{
 		ok = session->hostGame(port_);
 		if (ok)

@@ -86,6 +86,81 @@ bool NetTransport::connect(const std::string& address, uint16_t port) {
   return true;
 }
 
+bool NetTransport::hostViaRelay(uint16_t localPort, const std::string& relayAddr,
+                                uint16_t relayPort, const std::vector<uint8_t>& token) {
+  if (enetHost_) return false;
+
+  // Create host listening on localPort
+  ENetAddress listenAddr = {};
+  listenAddr.port = localPort;
+  enetHost_ = enet_host_create(&listenAddr, 1, NUM_CHANNELS, 0, 0);
+  if (!enetHost_) {
+    state_ = Failed;
+    return false;
+  }
+
+  // Send auth token to relay so it registers us as a peer
+  ENetAddress relay = {};
+  relay.port = relayPort;
+  if (enet_address_set_host(&relay, relayAddr.c_str()) != 0) {
+    enet_host_destroy(enetHost_);
+    enetHost_ = nullptr;
+    state_ = Failed;
+    return false;
+  }
+
+  ENetBuffer buf;
+  buf.data = const_cast<uint8_t*>(token.data());
+  buf.dataLength = token.size();
+  enet_socket_send(enetHost_->socket, &relay, &buf, 1);
+  fprintf(stderr, "[transport] sent relay token (%zu bytes) to %s:%u\n",
+          token.size(), relayAddr.c_str(), relayPort);
+
+  state_ = Listening;
+  return true;
+}
+
+bool NetTransport::connectViaRelay(const std::string& relayAddr, uint16_t relayPort,
+                                   const std::vector<uint8_t>& token) {
+  if (enetHost_) return false;
+
+  // Create client host (no incoming connections)
+  enetHost_ = enet_host_create(nullptr, 1, NUM_CHANNELS, 0, 0);
+  if (!enetHost_) {
+    state_ = Failed;
+    return false;
+  }
+
+  ENetAddress relay = {};
+  relay.port = relayPort;
+  if (enet_address_set_host(&relay, relayAddr.c_str()) != 0) {
+    enet_host_destroy(enetHost_);
+    enetHost_ = nullptr;
+    state_ = Failed;
+    return false;
+  }
+
+  // Send auth token first — relay needs this before any ENet traffic
+  ENetBuffer buf;
+  buf.data = const_cast<uint8_t*>(token.data());
+  buf.dataLength = token.size();
+  enet_socket_send(enetHost_->socket, &relay, &buf, 1);
+  fprintf(stderr, "[transport] sent relay token (%zu bytes) to %s:%u\n",
+          token.size(), relayAddr.c_str(), relayPort);
+
+  // Now connect via ENet — handshake packets go through the relay
+  peer_ = enet_host_connect(enetHost_, &relay, NUM_CHANNELS, 0);
+  if (!peer_) {
+    enet_host_destroy(enetHost_);
+    enetHost_ = nullptr;
+    state_ = Failed;
+    return false;
+  }
+
+  state_ = Connecting;
+  return true;
+}
+
 bool NetTransport::poll() {
   if (!enetHost_) return false;
 

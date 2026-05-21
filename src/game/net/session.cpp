@@ -78,6 +78,40 @@ bool NetSession::joinGame(const std::string& address, uint16_t port) {
   return true;
 }
 
+bool NetSession::hostViaRelay(uint16_t localPort, const std::string& relayAddr,
+                              uint16_t relayPort, const std::vector<uint8_t>& token) {
+  if (sessionState_ != Idle)
+    return false;
+
+  role_ = Host;
+  gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
+  controller_ = std::make_unique<NetworkController>(common_, settings_, 0);
+
+  if (!transport_.hostViaRelay(localPort, relayAddr, relayPort, token)) {
+    sessionState_ = Failed;
+    return false;
+  }
+  sessionState_ = WaitingForPeer;
+  return true;
+}
+
+bool NetSession::joinViaRelay(const std::string& relayAddr, uint16_t relayPort,
+                              const std::vector<uint8_t>& token) {
+  if (sessionState_ != Idle)
+    return false;
+
+  role_ = Client;
+  gameSeed_ = 0;
+  controller_ = std::make_unique<NetworkController>(common_, settings_, 1);
+
+  if (!transport_.connectViaRelay(relayAddr, relayPort, token)) {
+    sessionState_ = Failed;
+    return false;
+  }
+  sessionState_ = WaitingForPeer;
+  return true;
+}
+
 void NetSession::update() {
   if (sessionState_ == Idle || sessionState_ == Failed ||
       sessionState_ == Disconnected)
