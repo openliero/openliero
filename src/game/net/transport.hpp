@@ -2,11 +2,14 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
 struct _ENetHost;
 struct _ENetPeer;
+struct IceBridge;
+struct IceAgent;
 
 // Handles UDP communication between two peers using ENet.
 // Provides reliable ordered delivery of input packets.
@@ -87,6 +90,10 @@ struct NetTransport {
   // The socket should be non-blocking with adequate buffer sizes.
   bool createHostOnBridgeSocket(int bridgeSocket);
 
+  // Attach ICE bridge and agent — transport takes ownership and polls them.
+  // Must be called after createHostOnBridgeSocket.
+  void attachIce(std::unique_ptr<IceBridge> bridge, std::unique_ptr<IceAgent> agent);
+
   // --- General ---
   // Poll for events. Call once per frame.
   bool poll();
@@ -143,4 +150,6 @@ struct NetTransport {
   _ENetHost* enetHost_;
   _ENetPeer* peer_;
   State state_;
+  std::unique_ptr<IceBridge> iceBridge_;
+  std::unique_ptr<IceAgent> iceAgent_;
 };

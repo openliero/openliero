@@ -41,8 +41,8 @@ private:
 	std::string turnServer_ = "liero-server.orbmit.org";
 	uint16_t turnPort_ = 3478;
 
-	IceAgent iceAgent_;
-	IceBridge iceBridge_;
+	std::unique_ptr<IceAgent> iceAgent_;
+	std::unique_ptr<IceBridge> iceBridge_;
 	SignalingClient signaling_;
 
 	// Buffered candidates gathered before signaling is ready

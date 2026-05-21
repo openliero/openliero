@@ -1,4 +1,6 @@
 #include "transport.hpp"
+#include "iceBridge.hpp"
+#include "iceAgent.hpp"
 
 #include <cstring>
 #include <cstdio>
@@ -38,12 +40,11 @@ NetTransport::NetTransport()
 }
 
 NetTransport::NetTransport(NetTransport&& other) noexcept
-    : enetHost_(other.enetHost_), peer_(other.peer_), state_(other.state_) {
-  // Update registry to point to new instance
+    : enetHost_(other.enetHost_), peer_(other.peer_), state_(other.state_),
+      iceBridge_(std::move(other.iceBridge_)), iceAgent_(std::move(other.iceAgent_)) {
   if (enetHost_) {
     registerTransport(enetHost_, this);
   }
-  // Nullify source
   other.enetHost_ = nullptr;
   other.peer_ = nullptr;
   other.state_ = Disconnected;
@@ -55,6 +56,8 @@ NetTransport& NetTransport::operator=(NetTransport&& other) noexcept {
     enetHost_ = other.enetHost_;
     peer_ = other.peer_;
     state_ = other.state_;
+    iceBridge_ = std::move(other.iceBridge_);
+    iceAgent_ = std::move(other.iceAgent_);
     if (enetHost_) {
       registerTransport(enetHost_, this);
     }
@@ -198,10 +201,19 @@ bool NetTransport::createHostOnBridgeSocket(int bridgeSocket) {
   return true;
 }
 
+void NetTransport::attachIce(std::unique_ptr<IceBridge> bridge, std::unique_ptr<IceAgent> agent) {
+  iceBridge_ = std::move(bridge);
+  iceAgent_ = std::move(agent);
+}
+
 // --- Poll ---
 
 bool NetTransport::poll() {
   if (!enetHost_) return false;
+
+  // Forward ENet outgoing packets through ICE bridge (if attached)
+  if (iceBridge_) iceBridge_->poll();
+  if (iceAgent_) iceAgent_->poll();
 
   ENetEvent event;
   while (enet_host_service(enetHost_, &event, 0) > 0) {

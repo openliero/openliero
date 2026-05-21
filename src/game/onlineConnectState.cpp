@@ -29,8 +29,11 @@ void OnlineConnectState::enter()
 		: "JOINING ROOM " + roomCode_ + "...";
 	statusLine2_ = "SETTING UP ICE...";
 
+	iceAgent_ = std::make_unique<IceAgent>();
+	iceBridge_ = std::make_unique<IceBridge>();
+
 	// Wire IceAgent callbacks
-	iceAgent_.onLocalCandidate = [this](const std::string& candidate) {
+	iceAgent_->onLocalCandidate = [this](const std::string& candidate) {
 		if (signalingReady_) {
 			signaling_.sendIceCandidate(candidate);
 		} else {
@@ -38,14 +41,14 @@ void OnlineConnectState::enter()
 		}
 	};
 
-	iceAgent_.onGatheringDone = [this]() {
+	iceAgent_->onGatheringDone = [this]() {
 		gatheringDone_ = true;
 		if (signalingReady_) {
 			signaling_.sendIceGatherDone();
 		}
 	};
 
-	iceAgent_.onStateChange = [this](IceAgent::State state) {
+	iceAgent_->onStateChange = [this](IceAgent::State state) {
 		fprintf(stderr, "[online] ICE state: %d\n", (int)state);
 		switch (state) {
 			case IceAgent::State::Gathering:
@@ -72,7 +75,7 @@ void OnlineConnectState::enter()
 	iceCfg.stunServer = "stun.l.google.com";
 	iceCfg.stunPort = 19302;
 	// TURN credentials will be set after signaling responds
-	iceAgent_.start(iceCfg);
+	iceAgent_->start(iceCfg);
 
 	// Start signaling immediately (don't wait for STUN — ICE handles it)
 	startSignaling();
@@ -96,7 +99,7 @@ void OnlineConnectState::startSignaling()
 
 		// Now send our ICE credentials and buffered candidates
 		signalingReady_ = true;
-		signaling_.sendIceCredentials(iceAgent_.localUfrag(), iceAgent_.localPwd());
+		signaling_.sendIceCredentials(iceAgent_->localUfrag(), iceAgent_->localPwd());
 		sendBufferedCandidates();
 	};
 
@@ -106,18 +109,18 @@ void OnlineConnectState::startSignaling()
 
 		// Send our ICE credentials and buffered candidates
 		signalingReady_ = true;
-		signaling_.sendIceCredentials(iceAgent_.localUfrag(), iceAgent_.localPwd());
+		signaling_.sendIceCredentials(iceAgent_->localUfrag(), iceAgent_->localPwd());
 		sendBufferedCandidates();
 	};
 
 	// ICE callbacks from signaling
 	signaling_.onPeerCredentials = [this](const std::string& ufrag, const std::string& pwd) {
 		fprintf(stderr, "[online] onPeerCredentials: ufrag=%s\n", ufrag.c_str());
-		iceAgent_.setRemoteCredentials(ufrag, pwd);
+		iceAgent_->setRemoteCredentials(ufrag, pwd);
 	};
 
 	signaling_.onPeerCandidate = [this](const std::string& candidate) {
-		iceAgent_.addRemoteCandidate(candidate);
+		iceAgent_->addRemoteCandidate(candidate);
 	};
 
 	signaling_.onPeerGatherDone = [this]() {
@@ -175,7 +178,7 @@ bool OnlineConnectState::update()
 	{
 		if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE) || gfx->testSDLKeyOnce(SDL_SCANCODE_RETURN))
 		{
-			iceAgent_.stop();
+			if (iceAgent_) iceAgent_->stop();
 			signaling_.disconnect();
 			return false;
 		}
@@ -184,14 +187,14 @@ bool OnlineConnectState::update()
 
 	if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
 	{
-		iceAgent_.stop();
+		if (iceAgent_) iceAgent_->stop();
 		signaling_.disconnect();
 		gfx->clearKeys();
 		return false;
 	}
 
 	// Poll ICE agent (drains event queue, fires callbacks on main thread)
-	iceAgent_.poll();
+	if (iceAgent_) iceAgent_->poll();
 
 	// Poll signaling
 	signaling_.poll();
@@ -224,13 +227,15 @@ void OnlineConnectState::transitionToGame()
 	signaling_.disconnect();
 
 	// Create the loopback bridge
-	int bridgeFd = iceBridge_.create(iceAgent_);
+	int bridgeFd = iceBridge_->create(*iceAgent_);
 	if (bridgeFd < 0) {
 		fprintf(stderr, "[online] ERROR: failed to create ICE bridge\n");
 		statusLine2_ = "BRIDGE CREATION FAILED";
 		cancel_ = true;
 		return;
 	}
+
+	uint16_t bport = iceBridge_->bridgePort();
 
 	// Create a NetTransport using the bridge socket
 	NetTransport transport;
@@ -241,6 +246,9 @@ void OnlineConnectState::transitionToGame()
 		return;
 	}
 
+	// Transfer ICE ownership to the transport (keeps them alive after this state is destroyed)
+	transport.attachIce(std::move(iceBridge_), std::move(iceAgent_));
+
 	// Transition to NetConnectState with the bridge-backed transport.
 	// For host: ENet listens on bridge socket, peer connects.
 	// For client: ENet connects to bridge port (localhost).
@@ -248,10 +256,9 @@ void OnlineConnectState::transitionToGame()
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Host, std::move(transport)));
 	} else {
-		// Client connects to bridge's own port (loopback)
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Client, std::move(transport),
-			                                  "127.0.0.1", iceBridge_.bridgePort()));
+			                                  "127.0.0.1", bport));
 	}
 }
 

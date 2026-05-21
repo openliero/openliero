@@ -120,10 +120,9 @@ void IceBridge::destroy() {
     agent_->onRecv = nullptr;
     agent_ = nullptr;
   }
-  if (enetSocket_ >= 0) {
-    BRIDGE_CLOSE(enetSocket_);
-    enetSocket_ = -1;
-  }
+  // Don't close enetSocket_ — ownership transferred to ENet via enet_host_create.
+  // ENet closes it when enet_host_destroy is called.
+  enetSocket_ = -1;
   if (bridgeSocket_ >= 0) {
     BRIDGE_CLOSE(bridgeSocket_);
     bridgeSocket_ = -1;
