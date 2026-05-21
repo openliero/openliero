@@ -1,5 +1,27 @@
 # Plan: Replace Custom NAT Traversal with libjuice + coturn
 
+## Status: IMPLEMENTED ✓
+
+All phases complete. Branch: `stun-support`
+
+### Commits
+1. `5e7dd33` — Add libjuice vcpkg dependency
+2. `245fe61` — Add IceAgent wrapper (~150 lines)
+3. `73a31a8` — Add IceBridge loopback proxy (~120 lines)
+4. `a255b9b` — Add ICE unit tests (8 test cases)
+5. `e3fdf5f` — Add ICE signaling protocol messages
+6. `18d6f86` — Rewrite OnlineConnectState for ICE flow
+7. `5472122` — Rewrite Go signaling server for ICE
+8. `cc45a62` — Remove dead punch/relay/StunViaHost code (-548 lines)
+
+### Notes
+- **StunQuery retained** — Still used by LAN host screen to show external IP
+- **test_stun.cpp retained** — Tests RFC 5389 parsing utilities (still used)
+- **Tests combined** — IceAgent + IceBridge tests in single `test_ice.cpp` (not split across 3 files as originally planned)
+- **TURN deployment** — Requires coturn server with shared secret matching `TURN_SECRET` env var on signaling server
+
+---
+
 ## Problem
 
 The current online P2P implementation uses a custom STUN/hole-punch/relay stack that fails in many real-world NAT scenarios:
