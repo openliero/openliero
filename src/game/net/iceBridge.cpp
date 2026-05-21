@@ -70,19 +70,17 @@ int IceBridge::create(IceAgent& agent) {
     return -1;
   }
 
-  // Get the assigned ports
+  // Get the assigned addresses
   socklen_t len = sizeof(addrA);
   getsockname(enetSocket_, reinterpret_cast<sockaddr*>(&addrA), &len);
   len = sizeof(addrB);
   getsockname(bridgeSocket_, reinterpret_cast<sockaddr*>(&addrB), &len);
   bridgePort_ = ntohs(addrB.sin_port);
+  enetAddr_ = addrA;
+  bridgeAddr_ = addrB;
 
-  // Connect each socket to the other's address (so send/recv work without specifying addr)
-  if (connect(enetSocket_, reinterpret_cast<sockaddr*>(&addrB), sizeof(addrB)) < 0 ||
-      connect(bridgeSocket_, reinterpret_cast<sockaddr*>(&addrA), sizeof(addrA)) < 0) {
-    destroy();
-    return -1;
-  }
+  // NOT calling connect() — ENet uses sendto() with explicit addresses,
+  // which returns EISCONN on Linux if the socket is connected.
 
   // Configure sockets
   setNonBlocking(enetSocket_);
@@ -90,11 +88,11 @@ int IceBridge::create(IceAgent& agent) {
   setBufferSizes(enetSocket_);
   setBufferSizes(bridgeSocket_);
 
-  // Wire IceAgent's onRecv to write to enetSocket_ via bridgeSocket_
-  // (bridgeSocket_ is connected to enetSocket_, so send() delivers to ENet)
+  // Wire IceAgent's onRecv: write incoming data to enetSocket_ via bridgeSocket_
   agent_->onRecv = [this](const uint8_t* data, size_t len) {
-    // Safe from any thread — separate socket objects, no shared state
-    ::send(bridgeSocket_, reinterpret_cast<const char*>(data), len, 0);
+    // sendto bridgeSocket_ → enetSocket_ (using enetSocket_'s bound address)
+    ::sendto(bridgeSocket_, reinterpret_cast<const char*>(data), len, 0,
+             reinterpret_cast<const sockaddr*>(&enetAddr_), sizeof(enetAddr_));
   };
 
   return enetSocket_;
@@ -103,10 +101,11 @@ int IceBridge::create(IceAgent& agent) {
 void IceBridge::poll() {
   if (bridgeSocket_ < 0 || !agent_) return;
 
-  // Read outgoing datagrams from ENet (via bridge socket) and forward to IceAgent
+  // Read outgoing datagrams from ENet (arriving at bridgeSocket_) and forward to IceAgent
   uint8_t buf[2048];
   for (;;) {
-    auto n = ::recv(bridgeSocket_, reinterpret_cast<char*>(buf), sizeof(buf), 0);
+    auto n = ::recvfrom(bridgeSocket_, reinterpret_cast<char*>(buf), sizeof(buf), 0,
+                        nullptr, nullptr);
     if (n <= 0) {
       if (n < 0 && BRIDGE_WOULD_BLOCK) break;
       break;

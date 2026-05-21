@@ -2,6 +2,12 @@
 
 #include <cstdint>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <netinet/in.h>
+#endif
+
 struct IceAgent;
 struct _ENetHost;
 
@@ -41,5 +47,7 @@ private:
   int enetSocket_ = -1;
   int bridgeSocket_ = -1;
   uint16_t bridgePort_ = 0;
+  sockaddr_in enetAddr_{};
+  sockaddr_in bridgeAddr_{};
   IceAgent* agent_ = nullptr;
 };

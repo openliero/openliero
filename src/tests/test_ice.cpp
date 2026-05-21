@@ -8,6 +8,8 @@
 #include <winsock2.h>
 #else
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #endif
 
 #include "net/iceAgent.hpp"
@@ -267,8 +269,13 @@ TEST_CASE("IceBridge proxies data bidirectionally", "[ice][bridge]") {
 
   // Send from ENet side of A → should arrive on ENet side of B
   const uint8_t msg[] = "Bridge test data";
-  // Write to ENet socket A (as if ENet is sending)
-  ::send(fdA, reinterpret_cast<const char*>(msg), sizeof(msg), 0);
+  // Write to ENet socket A (as if ENet is sending via sendto to bridge address)
+  sockaddr_in bridgeAddrA{};
+  bridgeAddrA.sin_family = AF_INET;
+  bridgeAddrA.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  bridgeAddrA.sin_port = htons(bridgeA.bridgePort());
+  ::sendto(fdA, reinterpret_cast<const char*>(msg), sizeof(msg), 0,
+           reinterpret_cast<const sockaddr*>(&bridgeAddrA), sizeof(bridgeAddrA));
 
   // Poll bridge A to forward to IceAgent A → network → IceAgent B → bridge B → ENet socket B
   bridgeA.poll();
