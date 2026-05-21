@@ -47,5 +47,6 @@ private:
 	std::string statusLine2_;
 	bool cancel_ = false;
 	bool startedPunch_ = false;
+	bool punchRequested_ = false;
 	uint64_t lastKeepaliveMs_ = 0;
 };

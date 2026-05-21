@@ -68,7 +68,15 @@ void OnlineConnectState::enter()
 	signaling_.onStartPunch = [this]() {
 		fprintf(stderr, "[online] onStartPunch — %zu peer candidates\n",
 		        signaling_.peerCandidates().size());
-		startPunching();
+		punchRequested_ = true;
+		if (!signaling_.peerCandidates().empty())
+			startPunching();
+	};
+
+	signaling_.onPeerAddr = [this](const PeerCandidate&) {
+		// If punch was requested but we had no candidates yet, start now
+		if (punchRequested_ && !startedPunch_)
+			startPunching();
 	};
 
 	signaling_.onUseRelay = [this](uint16_t relayPort) {
