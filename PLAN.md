@@ -19,7 +19,7 @@ Replace the custom NAT traversal layer with **libjuice** (a lightweight RFC 8445
 - Proper connectivity checks with candidate pair prioritization
 - TURN relay as a first-class candidate (no separate fallback path)
 - Battle-tested code handling all NAT types
-- ~100 lines of glue code replacing ~1200 lines of custom C++ and Go
+- ~150 lines of glue code (IceAgent + IceBridge) replacing ~1200 lines of custom C++ and Go
 
 ## What We Keep
 
@@ -40,11 +40,40 @@ Replace the custom NAT traversal layer with **libjuice** (a lightweight RFC 8445
 │  3. Exchange ICE ufrag/pwd + candidates via signal   │
 │  4. libjuice performs ICE (checks all candidate      │
 │     pairs, including TURN relay)                     │
-│  5. On success → have a connected UDP socket pair    │
-│  6. Create ENet host on that socket                  │
+│  5. On success → create IceBridge (loopback proxy)   │
+│  6. Create ENet host connected to bridge             │
 │  7. Transition to NetConnectState (same as today)    │
 └──────────────────────────────────────────────────────┘
+
+     ENet ←UDP→ [127.0.0.1:A] ←→ [127.0.0.1:B] ←bridge→ juice_send/cb_recv ←→ Internet
 ```
+
+### Why a Loopback Bridge?
+
+libjuice does **not expose** its socket fd (the socket is private to `conn_impl`).
+After ICE completes, the only way to send/receive application data is through
+`juice_send()` and the `cb_recv` callback. For TURN relay connections, the TURN
+allocation lives inside libjuice — destroying the agent would kill the allocation.
+
+The loopback bridge creates two connected UDP sockets on localhost:
+- Socket A: given to ENet as its transport socket
+- Socket B: our bridge code reads from B → `juice_send()`, and `cb_recv` → writes to A
+
+This adds <0.1ms of latency (loopback) and works uniformly for both direct and
+relay connections. libjuice stays alive handling STUN/TURN keepalives.
+
+### Threading Model
+
+libjuice callbacks (`cb_state_changed`, `cb_candidate`, `cb_gathering_done`,
+`cb_recv`) all fire from an **internal background thread** (no user-facing poll API).
+
+Solution: A thread-safe event queue in `IceAgent`:
+- Callbacks push events (state changes, candidates, received data) onto the queue
+- Main game thread calls `IceAgent::poll()` each frame to drain the queue
+- `cb_recv` is special: it writes directly to the bridge socket (UDP writes are atomic)
+
+libjuice's public API (`juice_send`, `juice_add_remote_candidate`, etc.) is thread-safe
+internally (uses recursive mutex), so calling them from the main thread is fine.
 
 ## Dependencies
 
@@ -61,11 +90,13 @@ libjuice is ~3000 lines of pure C with zero external dependencies. It supports:
 
 ## Implementation Phases
 
-### Phase 1: Add libjuice and Create IceAgent Wrapper
+### Phase 1: Add libjuice and Create IceAgent + IceBridge
 
 **Files to create:**
 - `src/game/net/iceAgent.hpp` — C++ wrapper around libjuice
 - `src/game/net/iceAgent.cpp` — Implementation
+- `src/game/net/iceBridge.hpp` — Loopback UDP bridge between libjuice and ENet
+- `src/game/net/iceBridge.cpp` — Implementation
 
 **IceAgent API:**
 
@@ -78,7 +109,6 @@ struct IceAgent {
     uint16_t turnPort = 3478;
     std::string turnUser;
     std::string turnPassword;
-    uint16_t localPort = 0;   // 0 = ephemeral, or bind to game port
   };
 
   void start(const Config& config);
@@ -101,24 +131,57 @@ struct IceAgent {
   enum State { New, Gathering, Connecting, Connected, Failed, Disconnected };
   State state() const;
 
-  // Once connected: the selected local address/port and remote address/port
-  struct SelectedPair {
-    std::string localAddr;
-    uint16_t localPort;
-    std::string remoteAddr;
-    uint16_t remotePort;
-  };
-  SelectedPair selectedPair() const;
+  // Poll for state changes (drains internal event queue, call from main thread)
+  void poll();
 
-  // Get the socket fd (for handing to ENet after ICE completes)
-  int socket() const;
+  // Send application data through the ICE connection
+  void send(const uint8_t* data, size_t len);
 
-  // Callbacks
+  // Callbacks (fired from poll() on main thread, NOT from libjuice's thread)
   std::function<void(State)> onStateChange;
   std::function<void(const std::string& candidate)> onLocalCandidate;
   std::function<void()> onGatheringDone;
+
+private:
+  juice_agent_t* agent_ = nullptr;
+  // Thread-safe event queue: libjuice callbacks push, poll() drains
+  std::mutex mutex_;
+  std::vector<Event> pendingEvents_;
 };
 ```
+
+**IceBridge API:**
+
+```cpp
+// Creates a localhost UDP socket pair and bridges between ENet and IceAgent.
+// ENet sends/receives on one socket; bridge proxies to/from juice_send/cb_recv.
+struct IceBridge {
+  // Create the bridge. Returns the ENet-side socket fd.
+  // ENet should use this as its host->socket.
+  ENetSocket create(IceAgent& agent);
+
+  // Poll the bridge: reads outgoing ENet data from bridge socket → juice_send().
+  // Call once per frame from the main loop (before or after enet_host_service).
+  void poll();
+
+  // Destroy both sockets.
+  void destroy();
+
+private:
+  ENetSocket enetSocket_ = ENET_SOCKET_NULL;   // ENet's end (127.0.0.1:portA)
+  ENetSocket bridgeSocket_ = ENET_SOCKET_NULL; // Our end (127.0.0.1:portB)
+  IceAgent* agent_ = nullptr;
+};
+```
+
+**How the bridge works:**
+1. `create()` binds two UDP sockets to `127.0.0.1` with ephemeral ports, `connect()`s
+   each to the other's address (so send/recv work without specifying addresses)
+2. `enetSocket_` is given to ENet (replace `host->socket` after `enet_host_create`)
+3. IceAgent's `cb_recv` callback writes received data to `enetSocket_` via
+   `sendto(bridgeSocket_, data, len, 0, enetAddr)` — UDP writes are atomic, safe from any thread
+4. `poll()` reads from `bridgeSocket_` (non-blocking) and calls `agent->send()` for each datagram
+5. ENet sees a normal UDP socket and works unmodified
 
 **Build system:**
 - Add `"libjuice"` to `vcpkg.json`
@@ -141,6 +204,19 @@ Server → Client:
   PeerCandidate   [0x88] + [6: room code] + [2: candidate_len BE] + [N: candidate SDP string]
   PeerGatherDone  [0x89] + [6: room code]
 ```
+
+**TURN credentials in RoomCreated/PeerJoined:**
+
+The server generates time-limited TURN credentials and includes them in existing responses:
+
+```
+RoomCreated [0x81] + [6: room code] + [1: turn_user_len] + [N: turn_user] + [1: turn_pass_len] + [N: turn_pass]
+PeerJoined  [0x82] + [6: room code] + [1: turn_user_len] + [N: turn_user] + [1: turn_pass_len] + [N: turn_pass]
+```
+
+If no TURN server is configured, `turn_user_len` and `turn_pass_len` are both 0.
+The TURN server hostname/port are compile-time constants in the client (same as the
+signaling server address today). Only the per-session credentials are dynamic.
 
 **Removed messages:** `ReportAddr (0x03)`, `PunchOK (0x04)`, `PunchFail (0x05)`, `StartPunch (0x84)`, `UseRelay (0x85)`
 
@@ -183,6 +259,7 @@ enter():
 onRoomCreated / onJoinAcked:
   → Send local ICE credentials to signaling
   → Send any buffered local candidates
+  → Send gatherDone if gathering already finished
 
 onPeerCredentials:
   → agent.setRemoteCredentials(ufrag, pwd)
@@ -199,9 +276,15 @@ onLocalCandidate:
 onGatheringDone:
   → signaling.sendIceGatherDone()
 
+update() (each frame):
+  → agent.poll()  // drains event queue, fires callbacks on main thread
+
 onStateChange(Connected):
-  → Get selected pair from agent
-  → Create ENet host using the agent's socket (or connect existing)
+  → Create IceBridge, get ENet-side socket fd
+  → Create ENet host with address=NULL (unbound socket)
+  → Close ENet's auto-created socket, replace host->socket with bridge socket
+  → enet_host_connect() to a dummy address (127.0.0.1:bridgePort)
+  → Bridge handles all real I/O transparently
   → Transition to NetConnectState (same as today's connectDirect)
 
 onStateChange(Failed):
@@ -225,13 +308,17 @@ onStateChange(Failed):
 - Remove: `onInterceptedPacket` callback (STUN no longer goes through ENet)
 - Keep: `host()`, `connect()`, `connectExisting()`, all game packet types
 
-Alternatively, add a new method:
+Add a new method for online mode:
 ```cpp
-// Create ENet host using an existing socket fd (from libjuice)
-bool hostOnSocket(int socketFd);
+// Create ENet host using the bridge socket (from IceBridge).
+// The bridge socket is already connected to the bridge's other end on localhost.
+// ENet sees it as a normal UDP socket and works unmodified.
+bool createHostOnBridgeSocket(ENetSocket bridgeSocket);
 ```
 
-This lets us create the ENet host on the socket that libjuice already established the ICE connection through, preserving the NAT mapping.
+This creates the ENet host with `address=NULL`, then swaps `host->socket` with
+the provided bridge socket (closing the auto-created one). ENet is unaware that
+its "network" is actually a localhost proxy to libjuice.
 
 ### Phase 6: Remove Old STUN Code
 
@@ -299,15 +386,20 @@ The server becomes a pure message relay (~150 lines).
 2. **LAN mode unaffected:** Direct IP connection (`HOST LAN`/`JOIN LAN`) doesn't use ICE at all — unchanged
 3. **Test with symmetric NAT:** Use `iptables` to simulate symmetric NAT and verify TURN fallback works
 4. **Backwards-incompatible:** The new signaling protocol is not compatible with the old one. Both client and server must be updated together. This is fine for an alpha.
+5. **Development order:** Implement client (Phases 1-4) and server (Phase 8) in parallel since both sides are needed for integration testing. Use a local Go server for development. Phase 2-3 (signaling protocol) should be implemented on both sides simultaneously.
+6. **Trickle ICE vs full gather:** If gathering completes before the peer joins the room, all candidates are sent at once (effectively non-trickle). This is valid ICE behavior and simpler — no need to delay gathering for the peer.
 
 ## Risk Assessment
 
 | Risk | Mitigation |
 |---|---|
-| libjuice socket incompatible with ENet | ENet supports taking over existing sockets. libjuice can yield its fd after ICE completes. Fallback: create new ENet socket to the known peer address. |
+| libjuice doesn't expose socket fd | Loopback bridge pattern: ENet talks to localhost, bridge proxies to/from `juice_send()`/`cb_recv()`. Adds <0.1ms latency. |
+| libjuice callbacks fire from internal thread | Thread-safe event queue for state/candidate events. `cb_recv` writes directly to bridge socket (atomic UDP writes). Main thread polls queue each frame. |
+| ENet doesn't natively support custom transport | Replace `host->socket` after creation with bridge socket. ENet uses `sendto()`/`recvfrom()` on it unmodified. |
 | TURN adds latency | Expected ~20-50ms extra RTT vs direct. Acceptable for lockstep with 3-frame delay. Better than no connection at all. |
 | coturn operational complexity | Docker one-liner. Can also use free public TURN servers (e.g., Metered.ca free tier) for testing. |
 | libjuice doesn't support IPv6 TURN | libjuice supports IPv6 for host/srflx candidates. TURN over IPv4 is sufficient as fallback. |
+| Bridge adds complexity vs direct socket | ~40 lines of code total. Uniform path for all connection types (no special-casing direct vs relay). |
 
 ## Files Changed Summary
 
@@ -315,19 +407,21 @@ The server becomes a pure message relay (~150 lines).
 |---|---|
 | `vcpkg.json` | Add `libjuice` dependency |
 | `CMakeLists.txt` | Add libjuice find/link |
-| `src/game/net/iceAgent.hpp` | **Create** — libjuice wrapper |
+| `src/game/net/iceAgent.hpp` | **Create** — libjuice wrapper with thread-safe event queue |
 | `src/game/net/iceAgent.cpp` | **Create** — implementation |
+| `src/game/net/iceBridge.hpp` | **Create** — loopback UDP bridge between libjuice and ENet |
+| `src/game/net/iceBridge.cpp` | **Create** — implementation |
 | `src/game/net/signaling.hpp` | Modify — new ICE message types |
 | `src/game/net/signaling.cpp` | Modify — new ICE message types |
-| `src/game/net/transport.hpp` | Modify — remove punch/relay, add `hostOnSocket()` |
+| `src/game/net/transport.hpp` | Modify — remove punch/relay, add `createHostOnBridgeSocket()` |
 | `src/game/net/transport.cpp` | Modify — remove punch/relay code |
 | `src/game/net/stun.hpp` | **Delete** |
 | `src/game/net/stun.cpp` | **Delete** |
-| `src/game/onlineConnectState.hpp` | Modify — use IceAgent |
+| `src/game/onlineConnectState.hpp` | Modify — use IceAgent + IceBridge |
 | `src/game/onlineConnectState.cpp` | Modify — new ICE-based flow |
 | `src/tests/test_stun.cpp` | **Delete** |
 | `server/relay.go` | **Delete** |
-| `server/server.go` | Simplify — remove relay, add ICE forwarding |
+| `server/server.go` | Simplify — remove relay, add ICE forwarding + TURN cred generation |
 | `server/protocol.go` | Update message types |
 | `server/server_test.go` | Update tests |
 
