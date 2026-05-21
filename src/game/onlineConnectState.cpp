@@ -54,6 +54,15 @@ void OnlineConnectState::enter()
 	signaling_.onPeerJoined = [this]() {
 		fprintf(stderr, "[online] onPeerJoined\n");
 		statusLine2_ = "PEER JOINED! CONNECTING...";
+		peerJoinedMs_ = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now().time_since_epoch()).count();
+
+		// If we have no STUN addresses, skip punch and request relay immediately
+		if (stunResult_.ipv4.empty() && stunResult_.ipv6.empty()) {
+			fprintf(stderr, "[online] no STUN addresses — skipping punch, requesting relay\n");
+			reportedPunchFail_ = true;
+			signaling_.reportPunchFail();
+		}
 	};
 
 	signaling_.onJoinAcked = [this]() {
@@ -63,6 +72,13 @@ void OnlineConnectState::enter()
 			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
 		if (!stunResult_.ipv6.empty())
 			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+
+		// If we have no addresses, skip punch — request relay
+		if (stunResult_.ipv4.empty() && stunResult_.ipv6.empty()) {
+			fprintf(stderr, "[online] no STUN addresses — skipping punch, requesting relay\n");
+			reportedPunchFail_ = true;
+			signaling_.reportPunchFail();
+		}
 	};
 
 	signaling_.onStartPunch = [this]() {
@@ -176,6 +192,18 @@ bool OnlineConnectState::update()
 		if (now - lastKeepaliveMs_ > 5000) {
 			signaling_.sendKeepalive();
 			lastKeepaliveMs_ = now;
+		}
+	}
+
+	// If peer joined but punch never started, request relay after timeout
+	if (peerJoinedMs_ != 0 && !punchRequested_ && !reportedPunchFail_)
+	{
+		auto now = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now().time_since_epoch()).count();
+		if (now - peerJoinedMs_ > 10000) {
+			fprintf(stderr, "[online] punch never started after 10s — requesting relay\n");
+			reportedPunchFail_ = true;
+			signaling_.reportPunchFail();
 		}
 	}
 

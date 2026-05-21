@@ -48,5 +48,7 @@ private:
 	bool cancel_ = false;
 	bool startedPunch_ = false;
 	bool punchRequested_ = false;
+	bool reportedPunchFail_ = false;
 	uint64_t lastKeepaliveMs_ = 0;
+	uint64_t peerJoinedMs_ = 0;
 };
