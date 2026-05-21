@@ -10,34 +10,36 @@ struct _ENetPeer;
 
 // Handles UDP communication between two peers using ENet.
 // Provides reliable ordered delivery of input packets.
+//
+// NEW: Integrates hole-punch and STUN via ENet's intercept callback.
+// The same socket is used for STUN queries, hole-punch probes, and game traffic,
+// ensuring NAT mappings are preserved throughout the connection lifecycle.
 struct NetTransport {
   // Packet types
   enum PacketType : uint8_t {
-    PacketInput = 1,      // Frame input: [type(1) | frame(4) | input(1)]
-    PacketHandshake = 2,  // Initial sync: [type(1) | seed(4) | settingsHash(4)]
-    PacketChecksum = 3,   // Desync check: [type(1) | frame(4) | checksum(4)]
-    PacketPlayerInfo = 4, // Player info: [type(1) | weapons(5*4) | color(4) | rgb(3*4)]
-    PacketMatchSettings = 5, // Host-authoritative: [type(1) | settings blob]
-    PacketMapData = 6,    // Compressed map: [type(1) | width(2) | height(2) | compressedData...]
-    PacketPause = 7,      // Pause request: [type(1)]
-    PacketResume = 8,     // Resume request: [type(1)]
-    PacketRematchReady = 9,  // Ready toggle: [type(1) | ready(1)]
-    PacketRematchLevel = 10, // Level selection: [type(1) | randomLevel(1) | levelFile(N)]
-    PacketEndMatch = 11,     // End match request: [type(1)]
-    PacketTcInfo = 12,       // TC info: [type(1) | hash(4) | name(N)]
-    PacketTcResponse = 13,   // TC response: [type(1) | needData(1)]
-    PacketTcData = 14,       // TC archive: [type(1) | data(N)]
+    PacketInput = 1,
+    PacketHandshake = 2,
+    PacketChecksum = 3,
+    PacketPlayerInfo = 4,
+    PacketMatchSettings = 5,
+    PacketMapData = 6,
+    PacketPause = 7,
+    PacketResume = 8,
+    PacketRematchReady = 9,
+    PacketRematchLevel = 10,
+    PacketEndMatch = 11,
+    PacketTcInfo = 12,
+    PacketTcResponse = 13,
+    PacketTcData = 14,
   };
 
-  // Player info exchanged between peers (weapons + cosmetics)
   struct PlayerInfo {
     uint32_t weapons[5];
     int32_t color;
     int32_t rgb[3];
-    char name[24];  // Fixed-size, null-terminated
+    char name[24];
   };
 
-  // Match settings sent from host to client
   struct MatchSettingsData {
     int32_t lives;
     int32_t loadingTime;
@@ -48,7 +50,6 @@ struct NetTransport {
     int32_t flagsToWin;
     uint8_t loadChange;
     uint32_t weapTable[40];
-    // Additional synced settings
     uint8_t regenerateLevel;
     uint8_t shadow;
     uint8_t namesOnBonuses;
@@ -68,73 +69,69 @@ struct NetTransport {
   NetTransport();
   ~NetTransport();
 
-  // Disconnect and release resources (returns to initial state).
   void disconnect();
 
-  // Host a game on the given port. Returns true if listening started.
+  // Host a game on the given port.
   bool host(uint16_t port);
 
-  // Connect to a host. Returns true if connection attempt started.
+  // Connect to a host directly.
   bool connect(const std::string& address, uint16_t port);
 
-  // Connect via relay: sends auth token first, then connects.
-  // For host: listens on localPort, sends token to relay so relay knows us.
-  // For client: connects to relay after authenticating.
+  // Connect via relay. Sends auth token (with retry), then ENet connects.
+  // For host: creates ENet host on localPort, authenticates with relay.
+  // For client: creates ENet host on ephemeral port, authenticates with relay.
   bool hostViaRelay(uint16_t localPort, const std::string& relayAddr,
                     uint16_t relayPort, const std::vector<uint8_t>& token);
   bool connectViaRelay(const std::string& relayAddr, uint16_t relayPort,
                        const std::vector<uint8_t>& token);
 
-  // Poll for events and deliver received inputs. Call once per frame.
-  // Returns true if still connected.
+  // --- Hole-punch support (single-socket) ---
+  // Start hole-punching to candidates through the ENet host's socket.
+  // The host must already be created (via host() call).
+  // localNonce identifies us; peerNonce is expected peer (0 = accept any non-self).
+  struct PunchCandidate {
+    uint8_t type;      // 4=IPv4, 6=IPv6
+    std::string ip;
+    uint16_t port;
+  };
+  bool startPunch(const std::vector<PunchCandidate>& candidates,
+                  uint32_t localNonce, uint32_t peerNonce);
+  void stopPunch();
+
+  struct PunchResult {
+    std::string peerIP;
+    uint16_t peerPort;
+  };
+  bool punchSucceeded() const { return punchState_ == PunchSucceeded; }
+  bool punchFailed() const { return punchState_ == PunchFailed; }
+  const PunchResult& punchResult() const { return punchResult_; }
+
+  // --- General ---
+  // Poll for events. Call once per frame.
   bool poll();
 
-  // Send local input for a given frame
   void sendInput(uint32_t frame, uint8_t input);
-
-  // Send a checksum for desync detection
   void sendChecksum(uint32_t frame, uint32_t checksum);
-
-  // Send handshake (seed + settings hash)
   void sendHandshake(uint32_t seed, uint32_t settingsHash);
-
-  // Send local player's info (weapons + color)
   void sendPlayerInfo(const PlayerInfo& info);
-
-  // Send match settings (host only)
   void sendMatchSettings(const MatchSettingsData& data);
-
-  // Send compressed map data (host only)
   void sendMapData(const void* data, size_t len);
-
-  // Send pause/resume notifications
   void sendPause();
   void sendResume();
-
-  // Send rematch ready state
   void sendRematchReady(bool ready);
-
-  // Send rematch level selection (host only)
   void sendRematchLevel(bool randomLevel, const std::string& levelFile);
-
-  // Send end-match request (either player can end the match early)
   void sendEndMatch();
-
-  // Send TC info (name + hash) — host sends after connect
   void sendTcInfo(uint32_t hash, const std::string& name);
-
-  // Send TC response (client tells host whether it needs the TC data)
   void sendTcResponse(bool needData);
-
-  // Send TC archive data (host sends if client needs it)
   void sendTcData(const void* data, size_t len);
 
   State state() const { return state_; }
-
-  // Returns the port the host is listening on (useful when binding to port 0).
   uint16_t listeningPort() const;
 
-  // Callbacks set by the controller
+  // Access the ENet host (for STUN-via-host integration)
+  _ENetHost* enetHost() const { return enetHost_; }
+
+  // Callbacks
   std::function<void(uint32_t frame, uint8_t input)> onRemoteInput;
   std::function<void(uint32_t seed, uint32_t settingsHash)> onHandshake;
   std::function<void(uint32_t frame, uint32_t checksum)> onChecksum;
@@ -151,11 +148,49 @@ struct NetTransport {
   std::function<void(const void* data, size_t len)> onTcData;
   std::function<void()> onConnected;
   std::function<void()> onDisconnected;
+  std::function<void(const PunchResult&)> onPunchSuccess;
+  std::function<void()> onPunchTimeout;
+  // Called for each non-ENet packet intercepted (STUN, etc.)
+  // Return true if consumed.
+  std::function<bool(const uint8_t* data, size_t len)> onInterceptedPacket;
 
  private:
   void sendPacket(const void* data, size_t len);
+  bool createHost(uint16_t port);
+  void setupIntercept();
+
+  // Hole-punch internals
+  enum PunchState { PunchIdle, Punching, PunchSucceeded, PunchFailed };
+  void sendProbes();
+  void punchPoll();
+
+  // Relay internals
+  void sendRelayToken();
+
+  static int interceptCallback(_ENetHost* host, void* event);
 
   _ENetHost* enetHost_;
   _ENetPeer* peer_;
   State state_;
+
+  // Hole-punch state
+  PunchState punchState_;
+  std::vector<PunchCandidate> punchCandidates_;
+  uint32_t punchLocalNonce_;
+  uint32_t punchPeerNonce_;
+  uint64_t punchStartMs_;
+  uint64_t punchLastProbeMs_;
+  int punchTimeoutMs_;
+  PunchResult punchResult_;
+
+  // Relay state
+  std::vector<uint8_t> relayToken_;
+  std::string relayHost_;
+  uint16_t relayPort_ = 0;
+  bool relayAuthenticated_;
+  uint64_t relayLastTokenMs_;
+  int relayTokenAttempts_;
+
+  static constexpr uint8_t PROBE_MAGIC[4] = {0x4F, 0x4C, 0x48, 0x50}; // "OLHP"
+  static constexpr uint8_t RELAY_ACK = 0x01;
 };

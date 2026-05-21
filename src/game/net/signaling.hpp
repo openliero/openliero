@@ -15,45 +15,33 @@ struct PeerCandidate {
 };
 
 // Client for the openliero signaling server.
-// Uses ENet raw UDP sockets (same as STUN) — no WebSocket dependency.
+// Uses ENet raw UDP sockets — no WebSocket dependency.
 class SignalingClient {
 public:
   enum State {
     Idle,
-    Creating,       // Waiting for room code
-    Hosting,        // Room created, waiting for peer
-    Joining,        // Sent join, waiting for server ack
-    WaitingForPeer, // Join acked, waiting for host addresses
-    Punching,       // Received StartPunch signal
-    Relaying,       // Received UseRelay
+    Creating,
+    Hosting,
+    Joining,
+    WaitingForPeer,
+    Punching,
+    Relaying,
     Failed,
-    Done,           // Punch succeeded
+    Done,
   };
 
   SignalingClient();
   ~SignalingClient();
 
-  // Connect to signaling server and create a room (host flow).
   bool createRoom(const std::string& serverAddr, uint16_t serverPort);
-
-  // Connect to signaling server and join a room (client flow).
   bool joinRoom(const std::string& serverAddr, uint16_t serverPort,
                 const std::string& roomCode);
 
-  // Report our STUN-discovered addresses to the server.
   void reportAddress(uint8_t addrType, const std::string& ip, uint16_t port);
-
-  // Report hole-punch result.
   void reportPunchOK();
   void reportPunchFail();
-
-  // Send keepalive (call periodically while waiting).
   void sendKeepalive();
-
-  // Poll for incoming messages. Call once per frame.
   void poll();
-
-  // Disconnect and cleanup.
   void disconnect();
 
   State state() const { return state_; }
@@ -65,7 +53,7 @@ public:
   // Callbacks
   std::function<void(const std::string& code)> onRoomCreated;
   std::function<void()> onPeerJoined;
-  std::function<void()> onJoinAcked;  // Client: server confirmed we're in the room
+  std::function<void()> onJoinAcked;
   std::function<void(const PeerCandidate&)> onPeerAddr;
   std::function<void()> onStartPunch;
   std::function<void(uint16_t relayPort)> onUseRelay;
@@ -87,12 +75,10 @@ private:
   std::vector<uint8_t> relayToken_;
   int pollErrCount_ = 0;
 
-  // Retry state for unacknowledged messages
   uint64_t lastSendMs_ = 0;
   int retryCount_ = 0;
   static constexpr int kRetryIntervalMs = 2000;
   static constexpr int kMaxRetries = 5;
 
-  // Cached resolved server address
   ENetAddress resolvedAddr_ = {};
 };

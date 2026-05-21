@@ -1,19 +1,58 @@
 #include "transport.hpp"
 
 #include <cstring>
+#include <cstdio>
+#include <chrono>
 #include <vector>
+#include <unordered_map>
+#include <mutex>
 
 #define ENET_IMPLEMENTATION
 #include <enet.h>
 
-// Channel 0: reliable ordered (inputs, handshake)
-// Channel 1: unreliable (checksums — losing one is fine)
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#endif
+
 static constexpr int NUM_CHANNELS = 2;
 static constexpr int CHANNEL_RELIABLE = 0;
 static constexpr int CHANNEL_UNRELIABLE = 1;
 
+constexpr uint8_t NetTransport::PROBE_MAGIC[4];
+
+static uint64_t nowMs() {
+  return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+    std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+// Static registry mapping ENetHost* -> NetTransport* for intercept callback.
+// ENetHost has no user-data pointer, so we use a global map.
+static std::mutex sRegistryMutex;
+static std::unordered_map<_ENetHost*, NetTransport*> sRegistry;
+
+static void registerTransport(_ENetHost* host, NetTransport* t) {
+  std::lock_guard<std::mutex> lock(sRegistryMutex);
+  sRegistry[host] = t;
+}
+
+static void unregisterTransport(_ENetHost* host) {
+  std::lock_guard<std::mutex> lock(sRegistryMutex);
+  sRegistry.erase(host);
+}
+
+static NetTransport* getTransportFromHost(_ENetHost* host) {
+  std::lock_guard<std::mutex> lock(sRegistryMutex);
+  auto it = sRegistry.find(host);
+  return it != sRegistry.end() ? it->second : nullptr;
+}
+
 NetTransport::NetTransport()
-    : enetHost_(nullptr), peer_(nullptr), state_(Disconnected) {
+    : enetHost_(nullptr), peer_(nullptr), state_(Disconnected),
+      punchState_(PunchIdle), punchLocalNonce_(0), punchPeerNonce_(0),
+      punchStartMs_(0), punchLastProbeMs_(0), punchTimeoutMs_(5000),
+      relayAuthenticated_(false), relayLastTokenMs_(0), relayTokenAttempts_(0) {
   enet_initialize();
 }
 
@@ -23,30 +62,102 @@ NetTransport::~NetTransport() {
 }
 
 void NetTransport::disconnect() {
+  stopPunch();
   if (peer_) {
     enet_peer_disconnect_now(peer_, 0);
     peer_ = nullptr;
   }
   if (enetHost_) {
+    unregisterTransport(enetHost_);
     enet_host_destroy(enetHost_);
     enetHost_ = nullptr;
   }
   state_ = Disconnected;
+  relayAuthenticated_ = false;
+  relayToken_.clear();
 }
 
 uint16_t NetTransport::listeningPort() const {
   return enetHost_ ? enetHost_->address.port : 0;
 }
 
-bool NetTransport::host(uint16_t port) {
-  if (enetHost_) return false;
-
+bool NetTransport::createHost(uint16_t port) {
   ENetAddress address = {};
   address.port = port;
 
-  // Bind to all interfaces (IPv4 + IPv6 dual-stack)
   enetHost_ = enet_host_create(&address, 1, NUM_CHANNELS, 0, 0);
-  if (!enetHost_) {
+  if (!enetHost_) return false;
+
+  setupIntercept();
+  return true;
+}
+
+void NetTransport::setupIntercept() {
+  if (!enetHost_) return;
+  registerTransport(enetHost_, this);
+  enet_host_set_intercept(enetHost_, &NetTransport::interceptCallback);
+}
+
+int NetTransport::interceptCallback(_ENetHost* host, void* /*event*/) {
+  NetTransport* self = getTransportFromHost(host);
+  if (!self) return 0;
+
+  uint8_t* data = host->receivedData;
+  size_t len = host->receivedDataLength;
+
+  if (len < 4) return 0;
+
+  // Check for hole-punch probe (magic: OLHP)
+  if (len >= 8 && std::memcmp(data, PROBE_MAGIC, 4) == 0) {
+    if (self->punchState_ == Punching) {
+      uint32_t recvNonce = ((uint32_t)data[4] << 24) | ((uint32_t)data[5] << 16) |
+                           ((uint32_t)data[6] << 8) | (uint32_t)data[7];
+
+      if (recvNonce == self->punchLocalNonce_) {
+        // Our own reflected probe — ignore
+        return 1;
+      }
+      if (self->punchPeerNonce_ != 0 && recvNonce != self->punchPeerNonce_) {
+        // Unknown nonce
+        return 1;
+      }
+
+      // Valid probe from peer!
+      char fromIP[INET6_ADDRSTRLEN] = {};
+      enet_address_get_host_ip(&host->receivedAddress, fromIP, sizeof(fromIP));
+
+      fprintf(stderr, "[transport] punch SUCCESS from %s:%u (nonce=%08x)\n",
+              fromIP, host->receivedAddress.port, recvNonce);
+
+      self->punchResult_.peerIP = fromIP;
+      self->punchResult_.peerPort = host->receivedAddress.port;
+      self->punchState_ = PunchSucceeded;
+      if (self->onPunchSuccess) self->onPunchSuccess(self->punchResult_);
+    }
+    return 1; // consumed (don't pass to ENet)
+  }
+
+  // Check for relay ACK (single byte 0x01)
+  if (len == 1 && data[0] == RELAY_ACK) {
+    if (!self->relayAuthenticated_) {
+      fprintf(stderr, "[transport] relay ACK received — authenticated\n");
+      self->relayAuthenticated_ = true;
+    }
+    return 1;
+  }
+
+  // Let user-provided handler try (e.g., STUN responses)
+  if (self->onInterceptedPacket && self->onInterceptedPacket(data, len)) {
+    return 1;
+  }
+
+  return 0; // Not consumed — let ENet process it
+}
+
+bool NetTransport::host(uint16_t port) {
+  if (enetHost_) return false;
+
+  if (!createHost(port)) {
     state_ = Failed;
     return false;
   }
@@ -58,9 +169,8 @@ bool NetTransport::host(uint16_t port) {
 bool NetTransport::connect(const std::string& address, uint16_t port) {
   if (enetHost_) return false;
 
-  // Create client host (no incoming connections)
-  enetHost_ = enet_host_create(nullptr, 1, NUM_CHANNELS, 0, 0);
-  if (!enetHost_) {
+  // Create host on ephemeral port
+  if (!createHost(0)) {
     state_ = Failed;
     return false;
   }
@@ -90,31 +200,22 @@ bool NetTransport::hostViaRelay(uint16_t localPort, const std::string& relayAddr
                                 uint16_t relayPort, const std::vector<uint8_t>& token) {
   if (enetHost_) return false;
 
-  // Create host listening on localPort
-  ENetAddress listenAddr = {};
-  listenAddr.port = localPort;
-  enetHost_ = enet_host_create(&listenAddr, 1, NUM_CHANNELS, 0, 0);
-  if (!enetHost_) {
+  if (!createHost(localPort)) {
     state_ = Failed;
     return false;
   }
 
-  // Send auth token to relay so it registers us as a peer
-  ENetAddress relay = {};
-  relay.port = relayPort;
-  if (enet_address_set_host(&relay, relayAddr.c_str()) != 0) {
-    enet_host_destroy(enetHost_);
-    enetHost_ = nullptr;
-    state_ = Failed;
-    return false;
-  }
+  // Store relay info for token retry
+  relayToken_ = token;
+  relayHost_ = relayAddr;
+  relayPort_ = relayPort;
 
-  ENetBuffer buf;
-  buf.data = const_cast<uint8_t*>(token.data());
-  buf.dataLength = token.size();
-  enet_socket_send(enetHost_->socket, &relay, &buf, 1);
-  fprintf(stderr, "[transport] sent relay token (%zu bytes) to %s:%u\n",
-          token.size(), relayAddr.c_str(), relayPort);
+  relayAuthenticated_ = false;
+  relayTokenAttempts_ = 0;
+  relayLastTokenMs_ = 0;
+
+  // Send initial token
+  sendRelayToken();
 
   state_ = Listening;
   return true;
@@ -124,33 +225,37 @@ bool NetTransport::connectViaRelay(const std::string& relayAddr, uint16_t relayP
                                    const std::vector<uint8_t>& token) {
   if (enetHost_) return false;
 
-  // Create client host (no incoming connections)
-  enetHost_ = enet_host_create(nullptr, 1, NUM_CHANNELS, 0, 0);
-  if (!enetHost_) {
+  if (!createHost(0)) {
     state_ = Failed;
     return false;
   }
 
-  ENetAddress relay = {};
-  relay.port = relayPort;
-  if (enet_address_set_host(&relay, relayAddr.c_str()) != 0) {
+  // Store relay info
+  relayToken_ = token;
+  relayHost_ = relayAddr;
+  relayPort_ = relayPort;
+
+  relayAuthenticated_ = false;
+  relayTokenAttempts_ = 0;
+  relayLastTokenMs_ = 0;
+
+  // Send initial token
+  sendRelayToken();
+
+  // Connect to relay via ENet (after token)
+  ENetAddress addr = {};
+  addr.port = relayPort;
+  if (enet_address_set_host(&addr, relayAddr.c_str()) != 0) {
+    unregisterTransport(enetHost_);
     enet_host_destroy(enetHost_);
     enetHost_ = nullptr;
     state_ = Failed;
     return false;
   }
 
-  // Send auth token first — relay needs this before any ENet traffic
-  ENetBuffer buf;
-  buf.data = const_cast<uint8_t*>(token.data());
-  buf.dataLength = token.size();
-  enet_socket_send(enetHost_->socket, &relay, &buf, 1);
-  fprintf(stderr, "[transport] sent relay token (%zu bytes) to %s:%u\n",
-          token.size(), relayAddr.c_str(), relayPort);
-
-  // Now connect via ENet — handshake packets go through the relay
-  peer_ = enet_host_connect(enetHost_, &relay, NUM_CHANNELS, 0);
+  peer_ = enet_host_connect(enetHost_, &addr, NUM_CHANNELS, 0);
   if (!peer_) {
+    unregisterTransport(enetHost_);
     enet_host_destroy(enetHost_);
     enetHost_ = nullptr;
     state_ = Failed;
@@ -161,11 +266,111 @@ bool NetTransport::connectViaRelay(const std::string& relayAddr, uint16_t relayP
   return true;
 }
 
+void NetTransport::sendRelayToken() {
+  if (!enetHost_ || relayToken_.empty()) return;
+
+  ENetAddress addr = {};
+  addr.port = relayPort_;
+  if (enet_address_set_host(&addr, relayHost_.c_str()) != 0) return;
+
+  relayTokenAttempts_++;
+  relayLastTokenMs_ = nowMs();
+
+  ENetBuffer buf;
+  buf.data = relayToken_.data();
+  buf.dataLength = relayToken_.size();
+  int sent = enet_socket_send(enetHost_->socket, &addr, &buf, 1);
+  fprintf(stderr, "[transport] relay token sent (attempt %d, %d bytes, result=%d)\n",
+          relayTokenAttempts_, (int)relayToken_.size(), sent);
+}
+
+// --- Hole-punch ---
+
+bool NetTransport::startPunch(const std::vector<PunchCandidate>& candidates,
+                              uint32_t localNonce, uint32_t peerNonce) {
+  if (!enetHost_) return false;
+  if (candidates.empty()) return false;
+
+  fprintf(stderr, "[transport] startPunch: %zu candidates, nonce=%08x peer=%08x\n",
+          candidates.size(), localNonce, peerNonce);
+
+  punchCandidates_ = candidates;
+  punchLocalNonce_ = localNonce;
+  punchPeerNonce_ = peerNonce;
+  punchState_ = Punching;
+  punchStartMs_ = nowMs();
+  punchLastProbeMs_ = 0;
+  punchTimeoutMs_ = 5000;
+
+  sendProbes();
+  return true;
+}
+
+void NetTransport::stopPunch() {
+  if (punchState_ == Punching)
+    punchState_ = PunchFailed;
+  punchCandidates_.clear();
+}
+
+void NetTransport::sendProbes() {
+  if (!enetHost_) return;
+
+  uint8_t probe[8];
+  std::memcpy(probe, PROBE_MAGIC, 4);
+  probe[4] = (uint8_t)(punchLocalNonce_ >> 24);
+  probe[5] = (uint8_t)(punchLocalNonce_ >> 16);
+  probe[6] = (uint8_t)(punchLocalNonce_ >> 8);
+  probe[7] = (uint8_t)(punchLocalNonce_);
+
+  ENetBuffer buf;
+  buf.data = probe;
+  buf.dataLength = sizeof(probe);
+
+  for (auto& cand : punchCandidates_) {
+    ENetAddress addr = {};
+    addr.port = cand.port;
+    if (enet_address_set_host(&addr, cand.ip.c_str()) != 0) continue;
+    enet_socket_send(enetHost_->socket, &addr, &buf, 1);
+  }
+
+  punchLastProbeMs_ = nowMs();
+}
+
+void NetTransport::punchPoll() {
+  if (punchState_ != Punching) return;
+
+  uint64_t now = nowMs();
+
+  if (now - punchStartMs_ > (uint64_t)punchTimeoutMs_) {
+    fprintf(stderr, "[transport] punch TIMEOUT after %d ms\n", punchTimeoutMs_);
+    punchState_ = PunchFailed;
+    if (onPunchTimeout) onPunchTimeout();
+    return;
+  }
+
+  // Send probes every 200ms
+  if (now - punchLastProbeMs_ > 200) {
+    sendProbes();
+  }
+}
+
+// --- Poll ---
+
 bool NetTransport::poll() {
   if (!enetHost_) return false;
 
+  // Retry relay token if not yet authenticated
+  if (!relayToken_.empty() && !relayAuthenticated_) {
+    uint64_t now = nowMs();
+    if (now - relayLastTokenMs_ > 1000 && relayTokenAttempts_ < 10) {
+      sendRelayToken();
+    }
+  }
+
+  // Poll hole-punch
+  punchPoll();
+
   ENetEvent event;
-  // Process all pending events (timeout = 0 for non-blocking)
   while (enet_host_service(enetHost_, &event, 0) > 0) {
     switch (event.type) {
       case ENET_EVENT_TYPE_CONNECT:
@@ -178,7 +383,6 @@ bool NetTransport::poll() {
         uint8_t* data = event.packet->data;
         size_t len = event.packet->dataLength;
 
-        // Defense-in-depth: reject packets larger than 10MB
         static constexpr size_t MaxPacketSize = 10 * 1024 * 1024;
         if (len > MaxPacketSize) {
           enet_packet_destroy(event.packet);
@@ -194,7 +398,6 @@ bool NetTransport::poll() {
                 onRemoteInput(frame, data[5]);
               }
               break;
-
             case PacketHandshake:
               if (len == 9 && onHandshake) {
                 uint32_t seed, hash;
@@ -203,7 +406,6 @@ bool NetTransport::poll() {
                 onHandshake(seed, hash);
               }
               break;
-
             case PacketChecksum:
               if (len == 9 && onChecksum) {
                 uint32_t frame, checksum;
@@ -212,7 +414,6 @@ bool NetTransport::poll() {
                 onChecksum(frame, checksum);
               }
               break;
-
             case PacketPlayerInfo:
               if (len == 1 + sizeof(PlayerInfo) && onPlayerInfo) {
                 PlayerInfo info;
@@ -220,7 +421,6 @@ bool NetTransport::poll() {
                 onPlayerInfo(info);
               }
               break;
-
             case PacketMatchSettings:
               if (len == 1 + sizeof(MatchSettingsData) && onMatchSettings) {
                 MatchSettingsData msd;
@@ -228,42 +428,34 @@ bool NetTransport::poll() {
                 onMatchSettings(msd);
               }
               break;
-
             case PacketMapData:
               if (len > 5 && onMapData) {
                 onMapData(data + 1, len - 1);
               }
               break;
-
             case PacketPause:
               if (onPause) onPause();
               break;
-
             case PacketResume:
               if (onResume) onResume();
               break;
-
             case PacketRematchReady:
               if (len == 2 && onRematchReady) {
                 onRematchReady(data[1] != 0);
               }
               break;
-
             case PacketRematchLevel:
               if (len >= 2 && onRematchLevel) {
                 bool random = data[1] != 0;
                 std::string file;
-                if (len > 2) {
+                if (len > 2)
                   file.assign(reinterpret_cast<const char*>(data + 2), len - 2);
-                }
                 onRematchLevel(random, std::move(file));
               }
               break;
-
             case PacketEndMatch:
               if (onEndMatch) onEndMatch();
               break;
-
             case PacketTcInfo:
               if (len >= 5 && onTcInfo) {
                 uint32_t hash;
@@ -274,13 +466,11 @@ bool NetTransport::poll() {
                 onTcInfo(hash, std::move(name));
               }
               break;
-
             case PacketTcResponse:
               if (len == 2 && onTcResponse) {
                 onTcResponse(data[1] != 0);
               }
               break;
-
             case PacketTcData:
               if (len > 1 && onTcData) {
                 onTcData(data + 1, len - 1);
@@ -307,6 +497,8 @@ bool NetTransport::poll() {
 
   return state_ == Connected || state_ == Listening || state_ == Connecting;
 }
+
+// --- Send helpers ---
 
 void NetTransport::sendInput(uint32_t frame, uint8_t input) {
   uint8_t buf[6];
@@ -359,9 +551,8 @@ void NetTransport::sendMapData(const void* data, size_t len) {
   ENetPacket* packet =
       enet_packet_create(buf.data(), buf.size(), ENET_PACKET_FLAG_RELIABLE);
   if (!packet) return;
-  if (enet_peer_send(peer_, CHANNEL_RELIABLE, packet) < 0) {
+  if (enet_peer_send(peer_, CHANNEL_RELIABLE, packet) < 0)
     enet_packet_destroy(packet);
-  }
 }
 
 void NetTransport::sendPause() {
@@ -385,9 +576,8 @@ void NetTransport::sendRematchLevel(bool randomLevel, const std::string& levelFi
   std::vector<uint8_t> buf(2 + levelFile.size());
   buf[0] = PacketRematchLevel;
   buf[1] = randomLevel ? 1 : 0;
-  if (!levelFile.empty()) {
+  if (!levelFile.empty())
     std::memcpy(buf.data() + 2, levelFile.data(), levelFile.size());
-  }
   sendPacket(buf.data(), buf.size());
 }
 
@@ -420,9 +610,8 @@ void NetTransport::sendTcData(const void* data, size_t len) {
   ENetPacket* packet =
       enet_packet_create(buf.data(), buf.size(), ENET_PACKET_FLAG_RELIABLE);
   if (!packet) return;
-  if (enet_peer_send(peer_, CHANNEL_RELIABLE, packet) < 0) {
+  if (enet_peer_send(peer_, CHANNEL_RELIABLE, packet) < 0)
     enet_packet_destroy(packet);
-  }
 }
 
 void NetTransport::sendPacket(const void* data, size_t len) {
@@ -430,8 +619,6 @@ void NetTransport::sendPacket(const void* data, size_t len) {
   ENetPacket* packet =
       enet_packet_create(data, len, ENET_PACKET_FLAG_RELIABLE);
   if (!packet) return;
-  if (enet_peer_send(peer_, CHANNEL_RELIABLE, packet) < 0) {
-    // Send failed — ENet does NOT destroy the packet on failure
+  if (enet_peer_send(peer_, CHANNEL_RELIABLE, packet) < 0)
     enet_packet_destroy(packet);
-  }
 }

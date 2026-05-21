@@ -6,11 +6,13 @@
 #include <mutex>
 #include <cstdint>
 
+#include <enet.h>
+
 struct StunResult {
-  std::string ipv4;        // External IPv4, or empty if unavailable
-  uint16_t ipv4Port = 0;   // External port for IPv4 mapping (0 if unavailable)
-  std::string ipv6;        // External IPv6, or empty if unavailable
-  uint16_t ipv6Port = 0;   // External port for IPv6 mapping (0 if unavailable)
+  std::string ipv4;
+  uint16_t ipv4Port = 0;
+  std::string ipv6;
+  uint16_t ipv6Port = 0;
 };
 
 struct StunMappedAddress {
@@ -18,7 +20,7 @@ struct StunMappedAddress {
   uint16_t port = 0;
 };
 
-// STUN protocol constants (RFC 5389) — exposed for testing
+// STUN protocol constants (RFC 5389)
 namespace stun {
   constexpr uint16_t BINDING_REQUEST = 0x0001;
   constexpr uint16_t BINDING_RESPONSE = 0x0101;
@@ -35,34 +37,30 @@ namespace stun {
   static_assert(sizeof(Header) == 20);
 
   // Parse a STUN Binding Response, extracting the mapped address.
-  // req is the original request header (needed for XOR unmasking).
   StunMappedAddress parseResponse(const uint8_t* data, size_t len, const Header& req);
+
+  // Build a STUN Binding Request. Fills in txnId with random bytes.
+  Header buildRequest();
+
+  // Check if a packet is a STUN Binding Response matching our transaction ID.
+  bool isResponse(const uint8_t* data, size_t len, const Header& req);
 }
 
-// Minimal STUN client (RFC 5389) for discovering external IP addresses.
-// Queries a public STUN server over both IPv4 and IPv6 to discover
-// the external address for each protocol.
+// Async STUN query using a background thread and its own socket.
+// Use this for initial discovery when no ENet host exists yet.
 class StunQuery {
 public:
   void start();
-
-  // Start STUN queries bound to a specific local port.
-  // This ensures the NAT mapping corresponds to the game's listening port.
   void start(uint16_t localPort);
 
-  // Returns the results collected so far.
   StunResult result() const;
-
-  // True if the query has completed (success or failure).
   bool done() const { return done_.load(); }
 
   ~StunQuery();
 
 private:
-  // Query a specific STUN server address (IPv4 or IPv6 literal)
   static StunMappedAddress queryServer(const char* serverAddr, uint16_t port,
                                         uint16_t localPort = 0);
-
   void run();
 
   std::thread thread_;
@@ -71,4 +69,41 @@ private:
   mutable std::mutex mutex_;
   StunResult result_;
   uint16_t localPort_{0};
+};
+
+// Synchronous STUN query through an existing ENet host socket.
+// Sends STUN request and relies on the caller to feed received packets
+// via feedResponse(). This is the single-socket approach.
+class StunViaHost {
+public:
+  // Start a STUN query through the given ENet host socket.
+  // The query sends a binding request to the STUN server.
+  void start(ENetHost* host);
+
+  // Feed a received packet (from the intercept callback).
+  // Returns true if this packet was a STUN response and was consumed.
+  bool feedResponse(const uint8_t* data, size_t len);
+
+  // Returns result. Check done() first.
+  StunResult result() const { return result_; }
+  bool done() const { return done_; }
+
+  // Call periodically to retry if no response yet.
+  void update();
+
+private:
+  ENetHost* host_ = nullptr;
+  stun::Header ipv4Req_{};
+  stun::Header ipv6Req_{};
+  bool gotIPv4_ = false;
+  bool gotIPv6_ = false;
+  bool done_ = false;
+  int attempts_ = 0;
+  uint64_t lastSendMs_ = 0;
+  StunResult result_;
+
+  static constexpr int kMaxAttempts = 3;
+  static constexpr int kTimeoutMs = 2000;
+
+  void sendRequests();
 };

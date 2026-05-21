@@ -12,6 +12,11 @@
 #include <cstdio>
 #include <random>
 
+static uint64_t nowMs() {
+	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCode)
 : role_(role)
 , roomCode_(std::move(roomCode))
@@ -29,62 +34,78 @@ void OnlineConnectState::enter()
 		: "JOINING ROOM " + roomCode_ + "...";
 	statusLine2_ = "DISCOVERING EXTERNAL ADDRESS...";
 
-	// Start STUN query from the game port
-	stunQuery_ = std::make_unique<StunQuery>();
-	stunQuery_->start(localPort_);
-	fprintf(stderr, "[online] STUN query started from port %u\n", localPort_);
+	// Step 1: Create ENet host on game port FIRST (single-socket architecture)
+	if (!transport_.host(localPort_)) {
+		fprintf(stderr, "[online] ERROR: failed to create ENet host on port %u\n", localPort_);
+		statusLine2_ = "FAILED TO BIND GAME PORT";
+		cancel_ = true;
+		return;
+	}
+	fprintf(stderr, "[online] ENet host created on port %u\n", transport_.listeningPort());
 
-	// Wire up signaling callbacks
+	// Wire the intercept callback for STUN responses
+	transport_.onInterceptedPacket = [this](const uint8_t* data, size_t len) -> bool {
+		return stunViaHost_.feedResponse(data, len);
+	};
+
+	// Wire punch callbacks
+	transport_.onPunchSuccess = [this](const NetTransport::PunchResult& r) {
+		onPunchSuccess(r);
+	};
+	transport_.onPunchTimeout = [this]() {
+		onPunchFailed();
+	};
+
+	// Step 2: Start STUN through the ENet socket
+	stunViaHost_.start(transport_.enetHost());
+
+	// Wire signaling callbacks
 	signaling_.onRoomCreated = [this](const std::string& code) {
 		fprintf(stderr, "[online] onRoomCreated: code=%s\n", code.c_str());
 		roomCode_ = code;
 		statusLine1_ = "ROOM CODE: " + code;
 		statusLine2_ = "SHARE THIS CODE WITH YOUR PEER";
 
-		// Now that we have a room code, report our STUN addresses
-		fprintf(stderr, "[online] reporting STUN results: ipv4='%s':%u ipv6='%s':%u\n",
-		        stunResult_.ipv4.c_str(), stunResult_.ipv4Port,
-		        stunResult_.ipv6.c_str(), stunResult_.ipv6Port);
-		if (!stunResult_.ipv4.empty())
-			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
-		if (!stunResult_.ipv6.empty())
-			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+		auto res = stunViaHost_.result();
+		if (!res.ipv4.empty())
+			signaling_.reportAddress(4, res.ipv4, res.ipv4Port);
+		if (!res.ipv6.empty())
+			signaling_.reportAddress(6, res.ipv6, res.ipv6Port);
 	};
 
 	signaling_.onPeerJoined = [this]() {
 		fprintf(stderr, "[online] onPeerJoined\n");
 		statusLine2_ = "PEER JOINED! CONNECTING...";
-		peerJoinedMs_ = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()).count();
+		peerJoinedMs_ = nowMs();
 
-		// If we have no STUN addresses, skip punch and request relay immediately
-		if (stunResult_.ipv4.empty() && stunResult_.ipv6.empty()) {
-			fprintf(stderr, "[online] no STUN addresses — skipping punch, requesting relay\n");
+		auto res = stunViaHost_.result();
+		if (res.ipv4.empty() && res.ipv6.empty()) {
+			fprintf(stderr, "[online] no STUN addresses — requesting relay\n");
 			reportedPunchFail_ = true;
 			signaling_.reportPunchFail();
 		}
 	};
 
 	signaling_.onJoinAcked = [this]() {
-		fprintf(stderr, "[online] join acknowledged, reporting addresses\n");
+		fprintf(stderr, "[online] join acknowledged\n");
 		statusLine2_ = "JOINED! WAITING FOR HOST ADDRESSES...";
-		peerJoinedMs_ = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()).count();
-		if (!stunResult_.ipv4.empty())
-			signaling_.reportAddress(4, stunResult_.ipv4, stunResult_.ipv4Port);
-		if (!stunResult_.ipv6.empty())
-			signaling_.reportAddress(6, stunResult_.ipv6, stunResult_.ipv6Port);
+		peerJoinedMs_ = nowMs();
 
-		// If we have no addresses, skip punch — request relay
-		if (stunResult_.ipv4.empty() && stunResult_.ipv6.empty()) {
-			fprintf(stderr, "[online] no STUN addresses — skipping punch, requesting relay\n");
+		auto res = stunViaHost_.result();
+		if (!res.ipv4.empty())
+			signaling_.reportAddress(4, res.ipv4, res.ipv4Port);
+		if (!res.ipv6.empty())
+			signaling_.reportAddress(6, res.ipv6, res.ipv6Port);
+
+		if (res.ipv4.empty() && res.ipv6.empty()) {
+			fprintf(stderr, "[online] no STUN addresses — requesting relay\n");
 			reportedPunchFail_ = true;
 			signaling_.reportPunchFail();
 		}
 	};
 
 	signaling_.onStartPunch = [this]() {
-		fprintf(stderr, "[online] onStartPunch — %zu peer candidates\n",
+		fprintf(stderr, "[online] onStartPunch — %zu candidates\n",
 		        signaling_.peerCandidates().size());
 		punchRequested_ = true;
 		if (!signaling_.peerCandidates().empty())
@@ -92,7 +113,6 @@ void OnlineConnectState::enter()
 	};
 
 	signaling_.onPeerAddr = [this](const PeerCandidate&) {
-		// If punch was requested but we had no candidates yet, start now
 		if (punchRequested_ && !startedPunch_)
 			startPunching();
 	};
@@ -100,9 +120,8 @@ void OnlineConnectState::enter()
 	signaling_.onUseRelay = [this](uint16_t relayPort) {
 		fprintf(stderr, "[online] onUseRelay: port=%u\n", relayPort);
 		statusLine2_ = "USING RELAY (HIGHER LATENCY)";
-		// Release hole-punch socket before transitioning
-		if (holePunch_) { holePunch_->stop(); holePunch_.reset(); }
-		connectDirect(signalingServer_, relayPort);
+		transport_.stopPunch();
+		connectRelay();
 	};
 
 	signaling_.onError = [this](const std::string& msg) {
@@ -130,7 +149,7 @@ bool OnlineConnectState::update()
 		if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE) || gfx->testSDLKeyOnce(SDL_SCANCODE_RETURN))
 		{
 			signaling_.disconnect();
-			if (holePunch_) holePunch_->stop();
+			transport_.disconnect();
 			return false;
 		}
 		return true;
@@ -139,28 +158,30 @@ bool OnlineConnectState::update()
 	if (gfx->testSDLKeyOnce(SDL_SCANCODE_ESCAPE))
 	{
 		signaling_.disconnect();
-		if (holePunch_) holePunch_->stop();
+		transport_.disconnect();
 		gfx->clearKeys();
 		return false;
 	}
 
-	// Phase 1: Wait for STUN
-	if (!stunDone_ && stunQuery_ && stunQuery_->done())
+	// Update STUN-via-host (retries)
+	stunViaHost_.update();
+
+	// Poll transport (processes intercept for STUN + punch probes)
+	transport_.poll();
+
+	// Check if STUN completed — start signaling
+	if (!stunDone_ && stunViaHost_.done())
 	{
 		stunDone_ = true;
-		stunResult_ = stunQuery_->result();
+		auto res = stunViaHost_.result();
 		fprintf(stderr, "[online] STUN done: ipv4='%s':%u ipv6='%s':%u\n",
-		        stunResult_.ipv4.c_str(), stunResult_.ipv4Port,
-		        stunResult_.ipv6.c_str(), stunResult_.ipv6Port);
+		        res.ipv4.c_str(), res.ipv4Port, res.ipv6.c_str(), res.ipv6Port);
 
 		// Start signaling
-		fprintf(stderr, "[online] connecting to signaling server %s:%u\n",
-		        signalingServer_.c_str(), signalingPort_);
 		if (role_ == NetSession::Host)
 		{
 			if (!signaling_.createRoom(signalingServer_, signalingPort_))
 			{
-				fprintf(stderr, "[online] ERROR: createRoom failed\n");
 				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
 				cancel_ = true;
 				return true;
@@ -170,48 +191,40 @@ bool OnlineConnectState::update()
 		{
 			if (!signaling_.joinRoom(signalingServer_, signalingPort_, roomCode_))
 			{
-				fprintf(stderr, "[online] ERROR: joinRoom failed\n");
 				statusLine2_ = "FAILED TO REACH SIGNALING SERVER";
 				cancel_ = true;
 				return true;
 			}
 		}
 
-		statusLine2_ = (role_ == NetSession::Host)
-			? "WAITING FOR PEER..."
-			: "JOINING ROOM...";
+		statusLine2_ = (role_ == NetSession::Host) ? "WAITING FOR PEER..." : "JOINING ROOM...";
 	}
 
 	// Poll signaling
 	signaling_.poll();
 
-	// Send keepalive every 5 seconds to prevent room expiry
+	// Keepalive
 	if (signaling_.state() != SignalingClient::Idle &&
 	    signaling_.state() != SignalingClient::Failed)
 	{
-		auto now = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()).count();
+		uint64_t now = nowMs();
 		if (now - lastKeepaliveMs_ > 5000) {
 			signaling_.sendKeepalive();
 			lastKeepaliveMs_ = now;
 		}
 	}
 
-	// If peer joined but punch never completed, request relay after timeout
+	// Timeout: if peer joined but no punch started, request relay
 	if (peerJoinedMs_ != 0 && !startedPunch_ && !reportedPunchFail_)
 	{
-		auto now = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()).count();
-		if (now - peerJoinedMs_ > 10000) {
+		if (nowMs() - peerJoinedMs_ > 10000) {
 			fprintf(stderr, "[online] punch never started after 10s — requesting relay\n");
 			reportedPunchFail_ = true;
 			signaling_.reportPunchFail();
 		}
 	}
 
-	// Poll hole-punch if active
-	if (holePunch_)
-		holePunch_->poll();
+	// Check if punch succeeded (handled via callback, transitions happen there)
 
 	return true;
 }
@@ -222,86 +235,88 @@ void OnlineConnectState::startPunching()
 	startedPunch_ = true;
 
 	auto& candidates = signaling_.peerCandidates();
-	fprintf(stderr, "[online] startPunching with %zu candidates from port %u\n",
-	        candidates.size(), localPort_);
+	fprintf(stderr, "[online] startPunching with %zu candidates\n", candidates.size());
 
 	if (candidates.empty()) {
-		fprintf(stderr, "[online] no candidates to punch — requesting relay\n");
 		onPunchFailed();
 		return;
 	}
 
 	statusLine2_ = "HOLE-PUNCHING...";
 
-	holePunch_ = std::make_unique<HolePunch>();
-	holePunch_->onSuccess = [this](const HolePunch::Result& r) {
-		onPunchSuccess(r);
-	};
-	holePunch_->onTimeout = [this]() {
-		onPunchFailed();
-	};
+	// Convert PeerCandidate to PunchCandidate
+	std::vector<NetTransport::PunchCandidate> punchCandidates;
+	for (auto& c : candidates)
+		punchCandidates.push_back({c.type, c.ip, c.port});
 
-	// Generate a random nonce to identify our probes (prevents accepting
-	// our own reflected packets as success). peerNonce=0 means accept any
-	// non-self nonce (full nonce exchange via signaling is a future improvement).
 	std::random_device rd;
 	uint32_t localNonce = ((uint32_t)rd() & 0xFFFF0000) | ((uint32_t)rd() & 0xFFFF);
-	if (localNonce == 0) localNonce = 1; // ensure non-zero
+	if (localNonce == 0) localNonce = 1;
 
-	holePunch_->start(localPort_, candidates, localNonce, 0);
+	transport_.startPunch(punchCandidates, localNonce, 0);
 }
 
-void OnlineConnectState::onPunchSuccess(const HolePunch::Result& result)
+void OnlineConnectState::onPunchSuccess(const NetTransport::PunchResult& result)
 {
-	fprintf(stderr, "[online] onPunchSuccess: peer=%s:%u\n", result.peerIP.c_str(), result.peerPort);
+	fprintf(stderr, "[online] punch SUCCESS: peer=%s:%u\n", result.peerIP.c_str(), result.peerPort);
 	signaling_.reportPunchOK();
 	signaling_.disconnect();
 
-	// Release the hole-punch socket before ENet binds to the same port
-	holePunch_->stop();
-	holePunch_.reset();
-
 	statusLine2_ = "CONNECTED! STARTING GAME...";
 
-	// Transition to the normal direct-connect flow with the punched address
+	// Transition to game using the same ENet host (socket preserved!)
+	// For host: we're already listening. Peer will connect to us.
+	// For client: connect to the punched address.
 	connectDirect(result.peerIP, result.peerPort);
 }
 
 void OnlineConnectState::onPunchFailed()
 {
-	fprintf(stderr, "[online] onPunchFailed — requesting relay\n");
-	signaling_.reportPunchFail();
+	fprintf(stderr, "[online] punch FAILED — requesting relay\n");
+	if (!reportedPunchFail_) {
+		reportedPunchFail_ = true;
+		signaling_.reportPunchFail();
+	}
 	statusLine2_ = "HOLE-PUNCH FAILED, WAITING FOR RELAY...";
-	// Server will send UseRelay if both peers report failure
 }
 
 void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
 {
-	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s relay=%d\n",
-	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client",
-	        signaling_.state() == SignalingClient::Relaying ? 1 : 0);
+	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s\n",
+	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client");
 
-	bool useRelay = (signaling_.state() == SignalingClient::Relaying);
-
-	if (useRelay)
-	{
-		// In relay mode: host listens on localPort and registers with relay,
-		// client connects to relay. Both send auth token first.
-		auto token = signaling_.relayToken();
-		gfx->stateStack.scheduleReplaceTop(
-			std::make_unique<NetConnectState>(role_, addr, port, localPort_, std::move(token)));
-	}
-	else if (role_ == NetSession::Host)
-	{
-		// Host still listens — peer connects to us via punched address
+	// The transport already has an ENet host on the game port.
+	// For the host: just transition to NetConnectState which will use the existing host.
+	// For the client: connect via the existing host.
+	if (role_ == NetSession::Host) {
+		// Host is already listening on localPort. Transition to NetConnectState
+		// which creates a new session that listens on the same port.
+		// We disconnect our transport first — NetConnectState will create its own.
+		transport_.disconnect();
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Host, "", localPort_));
-	}
-	else
-	{
+	} else {
+		// Client: peer is at addr:port. Same port we hole-punched through.
+		transport_.disconnect();
 		gfx->stateStack.scheduleReplaceTop(
 			std::make_unique<NetConnectState>(NetSession::Client, addr, port));
 	}
+}
+
+void OnlineConnectState::connectRelay()
+{
+	fprintf(stderr, "[online] connectRelay: port=%u\n", signaling_.relayPort());
+
+	auto token = signaling_.relayToken();
+	uint16_t relayPort = signaling_.relayPort();
+
+	// Disconnect our punch transport — NetConnectState will create its own
+	// with relay mode through the same local port.
+	transport_.disconnect();
+
+	gfx->stateStack.scheduleReplaceTop(
+		std::make_unique<NetConnectState>(role_, signalingServer_, relayPort,
+		                                  localPort_, std::move(token)));
 }
 
 void OnlineConnectState::draw()
@@ -321,7 +336,6 @@ void OnlineConnectState::draw()
 	int w2 = font.getDims(statusLine2_);
 	font.drawText(gfx->playRenderer.bmp, statusLine2_, cx - w2 / 2, cy + 14, 7);
 
-	// Show room code prominently for host
 	if (role_ == NetSession::Host && !roomCode_.empty()
 	    && signaling_.state() == SignalingClient::Hosting)
 	{
