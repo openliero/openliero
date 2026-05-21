@@ -218,20 +218,23 @@ void SignalingClient::poll() {
     }
   }
 
-  enet_uint32 waitCondition = ENET_SOCKET_WAIT_RECEIVE;
-  if (enet_socket_wait(sock_, &waitCondition, 0) != 0) return;
-  if (!(waitCondition & ENET_SOCKET_WAIT_RECEIVE)) return;
-
-  uint8_t recvData[512];
+  // Drain all available packets from the socket
+  uint8_t recvData[2048];
   ENetBuffer recvBuf;
   recvBuf.data = recvData;
   recvBuf.dataLength = sizeof(recvData);
 
-  ENetAddress fromAddr = {};
-  int recvLen = enet_socket_receive(sock_, &fromAddr, &recvBuf, 1);
-  if (recvLen <= 0) return;
+  for (;;) {
+    enet_uint32 waitCondition = ENET_SOCKET_WAIT_RECEIVE;
+    if (enet_socket_wait(sock_, &waitCondition, 0) != 0) break;
+    if (!(waitCondition & ENET_SOCKET_WAIT_RECEIVE)) break;
 
-  handleMessage(recvData, (size_t)recvLen);
+    ENetAddress fromAddr = {};
+    int recvLen = enet_socket_receive(sock_, &fromAddr, &recvBuf, 1);
+    if (recvLen <= 0) break;
+
+    handleMessage(recvData, (size_t)recvLen);
+  }
 }
 
 void SignalingClient::handleMessage(const uint8_t* data, size_t len) {

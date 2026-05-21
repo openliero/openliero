@@ -121,7 +121,11 @@ void OnlineConnectState::startSignaling()
 	};
 
 	signaling_.onPeerGatherDone = [this]() {
-		iceAgent_.setRemoteGatheringDone();
+		// Not calling iceAgent_.setRemoteGatheringDone() — it's optional in ICE.
+		// Omitting it avoids a race where UDP reordering delivers gather-done
+		// before late candidates (which libjuice would then reject).
+		// libjuice still works correctly without it; it just uses its internal
+		// timeout to conclude that no more candidates are coming.
 	};
 
 	signaling_.onError = [this](const std::string& msg) {
