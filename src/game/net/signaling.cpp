@@ -265,8 +265,14 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
       break;
     }
     case proto::PeerJoined: {
-      fprintf(stderr, "[signaling] peer joined our room\n");
-      if (onPeerJoined) onPeerJoined();
+      if (state_ == Joining) {
+        // Server acknowledges our join — we're now in the room
+        fprintf(stderr, "[signaling] join acknowledged by server\n");
+        state_ = WaitingForPeer;
+      } else {
+        fprintf(stderr, "[signaling] peer joined our room\n");
+        if (onPeerJoined) onPeerJoined();
+      }
       break;
     }
     case proto::PeerAddr: {

@@ -187,7 +187,10 @@ func (s *Server) handleJoinRoom(code string, from *net.UDPAddr) {
 		s.sendError(from, ErrRoomNotFound, "no such room")
 		return
 	}
-	if room.Client != nil {
+	// Allow rejoin: if a client is already registered but hole-punch hasn't
+	// succeeded, allow a new client to replace it. This handles the case where
+	// the client reconnects from a new source port (new socket).
+	if room.Client != nil && room.Client.PunchOK {
 		s.mu.Unlock()
 		s.sendError(from, ErrRoomFull, "room full")
 		return
@@ -202,6 +205,12 @@ func (s *Server) handleJoinRoom(code string, from *net.UDPAddr) {
 	s.mu.Unlock()
 
 	log.Printf("Room %s: client joined from %s", code, from)
+
+	// Acknowledge to the joining client
+	ack := make([]byte, 1+RoomCodeLen)
+	ack[0] = MsgPeerJoined
+	copy(ack[1:], code)
+	s.conn.WriteToUDP(ack, from)
 
 	// Notify host that peer joined
 	msg := make([]byte, 1+RoomCodeLen)

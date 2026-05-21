@@ -13,7 +13,7 @@ package main
 //
 // Server → Client:
 //   RoomCreated [0x81] + [6 bytes: room code]
-//   PeerJoined  [0x82] + [6 bytes: room code]
+//   PeerJoined  [0x82] + [6 bytes: room code]  (sent to both host and joining client)
 //   PeerAddr    [0x83] + [6 bytes: room code] + [1 byte: addr_type] + [2 bytes: port BE] + [N bytes: IP]
 //   StartPunch  [0x84] + [6 bytes: room code]
 //   UseRelay    [0x85] + [6 bytes: room code] + [2 bytes: relay port BE] + [8 bytes: relay auth token]

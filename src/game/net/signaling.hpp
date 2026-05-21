@@ -20,13 +20,14 @@ class SignalingClient {
 public:
   enum State {
     Idle,
-    Creating,     // Waiting for room code
-    Hosting,      // Room created, waiting for peer
-    Joining,      // Sent join, waiting for addresses
-    Punching,     // Received StartPunch signal
-    Relaying,     // Received UseRelay
+    Creating,       // Waiting for room code
+    Hosting,        // Room created, waiting for peer
+    Joining,        // Sent join, waiting for server ack
+    WaitingForPeer, // Join acked, waiting for host addresses
+    Punching,       // Received StartPunch signal
+    Relaying,       // Received UseRelay
     Failed,
-    Done,         // Punch succeeded
+    Done,           // Punch succeeded
   };
 
   SignalingClient();
