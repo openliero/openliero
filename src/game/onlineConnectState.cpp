@@ -227,8 +227,8 @@ void OnlineConnectState::transitionToGame()
 	signaling_.disconnect();
 
 	// Create the loopback bridge
-	int bridgeFd = iceBridge_->create(*iceAgent_);
-	if (bridgeFd < 0) {
+	auto bridgeFd = iceBridge_->create(*iceAgent_);
+	if (bridgeFd == BRIDGE_INVALID) {
 		fprintf(stderr, "[online] ERROR: failed to create ICE bridge\n");
 		statusLine2_ = "BRIDGE CREATION FAILED";
 		cancel_ = true;

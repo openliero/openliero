@@ -1,5 +1,4 @@
 #include "transport.hpp"
-#include "iceBridge.hpp"
 #include "iceAgent.hpp"
 
 #include <cstring>
@@ -185,7 +184,7 @@ bool NetTransport::connectExisting(const std::string& address, uint16_t port) {
   return true;
 }
 
-bool NetTransport::createHostOnBridgeSocket(int bridgeSocket) {
+bool NetTransport::createHostOnBridgeSocket(BridgeSocket bridgeSocket) {
   if (enetHost_) return false;
 
   // Create ENet host with no address (won't bind a new socket)

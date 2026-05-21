@@ -9,6 +9,7 @@
 #include <ws2tcpip.h>
 #define BRIDGE_CLOSE closesocket
 #define BRIDGE_WOULD_BLOCK (WSAGetLastError() == WSAEWOULDBLOCK)
+#define BRIDGE_INVALID_SOCKET(s) ((s) == INVALID_SOCKET)
 using socklen_t = int;
 #else
 #include <arpa/inet.h>
@@ -18,6 +19,7 @@ using socklen_t = int;
 #include <unistd.h>
 #define BRIDGE_CLOSE close
 #define BRIDGE_WOULD_BLOCK (errno == EAGAIN || errno == EWOULDBLOCK)
+#define BRIDGE_INVALID_SOCKET(s) ((s) < 0)
 #endif
 
 static constexpr int BRIDGE_BUFSIZE = 256 * 1024;
@@ -42,15 +44,15 @@ static bool setBufferSizes(int fd) {
 
 IceBridge::~IceBridge() { destroy(); }
 
-int IceBridge::create(IceAgent& agent) {
+BridgeSocket IceBridge::create(IceAgent& agent) {
   agent_ = &agent;
 
   // Create two UDP sockets on localhost — must be AF_INET6 to match ENet's dual-stack sockets
   enetSocket_ = socket(AF_INET6, SOCK_DGRAM, 0);
   bridgeSocket_ = socket(AF_INET6, SOCK_DGRAM, 0);
-  if (enetSocket_ < 0 || bridgeSocket_ < 0) {
+  if (BRIDGE_INVALID_SOCKET(enetSocket_) || BRIDGE_INVALID_SOCKET(bridgeSocket_)) {
     destroy();
-    return -1;
+    return BRIDGE_INVALID;
   }
 
   // Disable IPV6_V6ONLY so the sockets accept IPv4-mapped addresses (matching ENet)
@@ -103,7 +105,7 @@ int IceBridge::create(IceAgent& agent) {
 }
 
 void IceBridge::poll() {
-  if (bridgeSocket_ < 0 || !agent_) return;
+  if (bridgeSocket_ == BRIDGE_INVALID || !agent_) return;
 
   uint8_t buf[2048];
   for (;;) {
@@ -124,10 +126,10 @@ void IceBridge::destroy() {
   }
   // Don't close enetSocket_ — ownership transferred to ENet via enet_host_create.
   // ENet closes it when enet_host_destroy is called.
-  enetSocket_ = -1;
-  if (bridgeSocket_ >= 0) {
+  enetSocket_ = BRIDGE_INVALID;
+  if (bridgeSocket_ != BRIDGE_INVALID) {
     BRIDGE_CLOSE(bridgeSocket_);
-    bridgeSocket_ = -1;
+    bridgeSocket_ = BRIDGE_INVALID;
   }
   bridgePort_ = 0;
 }

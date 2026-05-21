@@ -1,5 +1,7 @@
 #pragma once
 
+#include "iceBridge.hpp"
+
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -8,7 +10,6 @@
 
 struct _ENetHost;
 struct _ENetPeer;
-struct IceBridge;
 struct IceAgent;
 
 // Handles UDP communication between two peers using ENet.
@@ -88,7 +89,7 @@ struct NetTransport {
 
   // Create ENet host using a pre-existing socket (from IceBridge).
   // The socket should be non-blocking with adequate buffer sizes.
-  bool createHostOnBridgeSocket(int bridgeSocket);
+  bool createHostOnBridgeSocket(BridgeSocket bridgeSocket);
 
   // Attach ICE bridge and agent — transport takes ownership and polls them.
   // Must be called after createHostOnBridgeSocket.
