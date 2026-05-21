@@ -20,6 +20,9 @@ namespace proto {
   constexpr uint8_t PunchOK     = 0x04;
   constexpr uint8_t PunchFail   = 0x05;
   constexpr uint8_t Keepalive   = 0x06;
+  constexpr uint8_t IceCredentials = 0x07;
+  constexpr uint8_t IceCandidate   = 0x08;
+  constexpr uint8_t IceGatherDone  = 0x09;
 
   constexpr uint8_t RoomCreated = 0x81;
   constexpr uint8_t PeerJoined  = 0x82;
@@ -27,6 +30,9 @@ namespace proto {
   constexpr uint8_t StartPunch  = 0x84;
   constexpr uint8_t UseRelay    = 0x85;
   constexpr uint8_t RoomExpired = 0x86;
+  constexpr uint8_t PeerCredentials = 0x87;
+  constexpr uint8_t PeerCandidate   = 0x88;
+  constexpr uint8_t PeerGatherDone  = 0x89;
   constexpr uint8_t Error       = 0x8F;
 
   constexpr int RoomCodeLen = 6;
@@ -151,6 +157,43 @@ void SignalingClient::reportPunchFail() {
   send(msg, sizeof(msg));
 }
 
+void SignalingClient::sendIceCredentials(const std::string& ufrag, const std::string& pwd) {
+  // Format: [0x07] + [6: room code] + [1: ufrag_len] + [N: ufrag] + [1: pwd_len] + [N: pwd]
+  std::vector<uint8_t> msg(1 + proto::RoomCodeLen + 1 + ufrag.size() + 1 + pwd.size());
+  size_t off = 0;
+  msg[off++] = proto::IceCredentials;
+  std::memcpy(msg.data() + off, roomCode_.data(), proto::RoomCodeLen);
+  off += proto::RoomCodeLen;
+  msg[off++] = (uint8_t)ufrag.size();
+  std::memcpy(msg.data() + off, ufrag.data(), ufrag.size());
+  off += ufrag.size();
+  msg[off++] = (uint8_t)pwd.size();
+  std::memcpy(msg.data() + off, pwd.data(), pwd.size());
+  send(msg.data(), msg.size());
+}
+
+void SignalingClient::sendIceCandidate(const std::string& sdpCandidate) {
+  // Format: [0x08] + [6: room code] + [2: candidate_len BE] + [N: candidate]
+  std::vector<uint8_t> msg(1 + proto::RoomCodeLen + 2 + sdpCandidate.size());
+  size_t off = 0;
+  msg[off++] = proto::IceCandidate;
+  std::memcpy(msg.data() + off, roomCode_.data(), proto::RoomCodeLen);
+  off += proto::RoomCodeLen;
+  uint16_t candLen = (uint16_t)sdpCandidate.size();
+  msg[off++] = (uint8_t)(candLen >> 8);
+  msg[off++] = (uint8_t)(candLen & 0xFF);
+  std::memcpy(msg.data() + off, sdpCandidate.data(), sdpCandidate.size());
+  send(msg.data(), msg.size());
+}
+
+void SignalingClient::sendIceGatherDone() {
+  // Format: [0x09] + [6: room code]
+  uint8_t msg[1 + proto::RoomCodeLen];
+  msg[0] = proto::IceGatherDone;
+  std::memcpy(msg + 1, roomCode_.data(), proto::RoomCodeLen);
+  send(msg, sizeof(msg));
+}
+
 void SignalingClient::sendKeepalive() {
   uint8_t msg[1 + proto::RoomCodeLen];
   msg[0] = proto::Keepalive;
@@ -199,11 +242,37 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
     case proto::RoomCreated: {
       if (len < 1 + proto::RoomCodeLen) break;
       roomCode_ = std::string((const char*)data + 1, proto::RoomCodeLen);
+      // Parse optional TURN credentials: [1: turn_user_len] + [N: turn_user] + [1: turn_pass_len] + [N: turn_pass]
+      size_t off = 1 + proto::RoomCodeLen;
+      if (off + 1 <= len) {
+        uint8_t userLen = data[off++];
+        if (off + userLen + 1 <= len) {
+          turnUser_ = std::string((const char*)data + off, userLen);
+          off += userLen;
+          uint8_t passLen = data[off++];
+          if (off + passLen <= len) {
+            turnPassword_ = std::string((const char*)data + off, passLen);
+          }
+        }
+      }
       state_ = Hosting;
       if (onRoomCreated) onRoomCreated(roomCode_);
       break;
     }
     case proto::PeerJoined: {
+      // Parse optional TURN credentials
+      size_t off = 1 + proto::RoomCodeLen;
+      if (off + 1 <= len) {
+        uint8_t userLen = data[off++];
+        if (off + userLen + 1 <= len) {
+          turnUser_ = std::string((const char*)data + off, userLen);
+          off += userLen;
+          uint8_t passLen = data[off++];
+          if (off + passLen <= len) {
+            turnPassword_ = std::string((const char*)data + off, passLen);
+          }
+        }
+      }
       if (state_ == Joining) {
         state_ = WaitingForPeer;
         if (onJoinAcked) onJoinAcked();
@@ -259,6 +328,36 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
       fprintf(stderr, "[signaling] ERROR from server: %s\n", msg.c_str());
       state_ = Failed;
       if (onError) onError(msg);
+      break;
+    }
+    case proto::PeerCredentials: {
+      // Format: [0x87] + [6: room code] + [1: ufrag_len] + [N: ufrag] + [1: pwd_len] + [N: pwd]
+      size_t off = 1 + proto::RoomCodeLen;
+      if (off + 1 > len) break;
+      uint8_t ufragLen = data[off++];
+      if (off + ufragLen + 1 > len) break;
+      std::string ufrag((const char*)data + off, ufragLen);
+      off += ufragLen;
+      uint8_t pwdLen = data[off++];
+      if (off + pwdLen > len) break;
+      std::string pwd((const char*)data + off, pwdLen);
+      state_ = IceExchanging;
+      if (onPeerCredentials) onPeerCredentials(ufrag, pwd);
+      break;
+    }
+    case proto::PeerCandidate: {
+      // Format: [0x88] + [6: room code] + [2: candidate_len BE] + [N: candidate]
+      size_t off = 1 + proto::RoomCodeLen;
+      if (off + 2 > len) break;
+      uint16_t candLen = (uint16_t)(data[off] << 8 | data[off + 1]);
+      off += 2;
+      if (off + candLen > len) break;
+      std::string candidate((const char*)data + off, candLen);
+      if (onPeerCandidate) onPeerCandidate(candidate);
+      break;
+    }
+    case proto::PeerGatherDone: {
+      if (onPeerGatherDone) onPeerGatherDone();
       break;
     }
     default:
