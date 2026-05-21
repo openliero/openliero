@@ -1,7 +1,7 @@
 #include "signaling.hpp"
+#include "netutil.hpp"
 
 #include <enet.h>
-#include <chrono>
 #include <cstring>
 #include <cstdio>
 
@@ -10,6 +10,8 @@
 #else
 #include <arpa/inet.h>
 #endif
+
+using netutil::nowMs;
 
 namespace proto {
   constexpr uint8_t CreateRoom  = 0x01;
@@ -32,11 +34,6 @@ namespace proto {
   constexpr uint8_t AddrIPv6 = 6;
 }
 
-static uint64_t nowMs() {
-  return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-    std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-
 SignalingClient::SignalingClient()
     : sock_(ENET_SOCKET_NULL), state_(Idle), serverPort_(0), relayPort_(0) {}
 
@@ -48,7 +45,10 @@ bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort
   enet_initialize();
 
   ENetSocket sock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
-  if (sock == ENET_SOCKET_NULL) return false;
+  if (sock == ENET_SOCKET_NULL) {
+    fprintf(stderr, "[signaling] ERROR: failed to create socket\n");
+    return false;
+  }
 
   enet_socket_set_option(sock, ENET_SOCKOPT_IPV6_V6ONLY, 0);
 
@@ -60,6 +60,7 @@ bool SignalingClient::connect(const std::string& serverAddr, uint16_t serverPort
   ENetAddress resolved = {};
   resolved.port = serverPort;
   if (enet_address_set_host(&resolved, serverAddr.c_str()) != 0) {
+    fprintf(stderr, "[signaling] ERROR: failed to resolve '%s'\n", serverAddr.c_str());
     enet_socket_destroy(sock);
     return false;
   }
@@ -246,6 +247,7 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
       break;
     }
     case proto::RoomExpired: {
+      fprintf(stderr, "[signaling] room expired\n");
       state_ = Failed;
       if (onRoomExpired) onRoomExpired();
       break;
@@ -254,6 +256,7 @@ void SignalingClient::handleMessage(const uint8_t* data, size_t len) {
       std::string msg;
       if (len > 2)
         msg = std::string((const char*)data + 2, len - 2);
+      fprintf(stderr, "[signaling] ERROR from server: %s\n", msg.c_str());
       state_ = Failed;
       if (onError) onError(msg);
       break;

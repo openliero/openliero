@@ -1,11 +1,10 @@
 #include "transport.hpp"
+#include "netutil.hpp"
 
 #include <cstring>
 #include <cstdio>
-#include <chrono>
 #include <vector>
-#include <unordered_map>
-#include <mutex>
+#include <atomic>
 
 #define ENET_IMPLEMENTATION
 #include <enet.h>
@@ -16,36 +15,27 @@
 #include <arpa/inet.h>
 #endif
 
+using netutil::nowMs;
+
 static constexpr int NUM_CHANNELS = 2;
 static constexpr int CHANNEL_RELIABLE = 0;
 static constexpr int CHANNEL_UNRELIABLE = 1;
 
 constexpr uint8_t NetTransport::PROBE_MAGIC[4];
 
-static uint64_t nowMs() {
-  return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-    std::chrono::steady_clock::now().time_since_epoch()).count();
+// Single active transport pointer. Only one ENet host exists per process.
+static std::atomic<NetTransport*> sActiveTransport{nullptr};
+
+static void registerTransport(_ENetHost*, NetTransport* t) {
+  sActiveTransport.store(t, std::memory_order_release);
 }
 
-// Static registry mapping ENetHost* -> NetTransport* for intercept callback.
-// ENetHost has no user-data pointer, so we use a global map.
-static std::mutex sRegistryMutex;
-static std::unordered_map<_ENetHost*, NetTransport*> sRegistry;
-
-static void registerTransport(_ENetHost* host, NetTransport* t) {
-  std::lock_guard<std::mutex> lock(sRegistryMutex);
-  sRegistry[host] = t;
+static void unregisterTransport(_ENetHost*) {
+  sActiveTransport.store(nullptr, std::memory_order_release);
 }
 
-static void unregisterTransport(_ENetHost* host) {
-  std::lock_guard<std::mutex> lock(sRegistryMutex);
-  sRegistry.erase(host);
-}
-
-static NetTransport* getTransportFromHost(_ENetHost* host) {
-  std::lock_guard<std::mutex> lock(sRegistryMutex);
-  auto it = sRegistry.find(host);
-  return it != sRegistry.end() ? it->second : nullptr;
+static NetTransport* getTransportFromHost(_ENetHost*) {
+  return sActiveTransport.load(std::memory_order_acquire);
 }
 
 NetTransport::NetTransport()
@@ -54,6 +44,57 @@ NetTransport::NetTransport()
       punchStartMs_(0), punchLastProbeMs_(0), punchTimeoutMs_(5000),
       relayAuthenticated_(false), relayLastTokenMs_(0), relayTokenAttempts_(0) {
   enet_initialize();
+}
+
+NetTransport::NetTransport(NetTransport&& other) noexcept
+    : enetHost_(other.enetHost_), peer_(other.peer_), state_(other.state_),
+      punchState_(other.punchState_), punchCandidates_(std::move(other.punchCandidates_)),
+      punchLocalNonce_(other.punchLocalNonce_), punchPeerNonce_(other.punchPeerNonce_),
+      punchStartMs_(other.punchStartMs_), punchLastProbeMs_(other.punchLastProbeMs_),
+      punchTimeoutMs_(other.punchTimeoutMs_), punchResult_(std::move(other.punchResult_)),
+      relayToken_(std::move(other.relayToken_)), relayHost_(std::move(other.relayHost_)),
+      relayPort_(other.relayPort_), relayAuthenticated_(other.relayAuthenticated_),
+      relayLastTokenMs_(other.relayLastTokenMs_), relayTokenAttempts_(other.relayTokenAttempts_) {
+  // Update registry to point to new instance
+  if (enetHost_) {
+    registerTransport(enetHost_, this);
+  }
+  // Nullify source
+  other.enetHost_ = nullptr;
+  other.peer_ = nullptr;
+  other.state_ = Disconnected;
+  other.punchState_ = PunchIdle;
+}
+
+NetTransport& NetTransport::operator=(NetTransport&& other) noexcept {
+  if (this != &other) {
+    disconnect();
+    enetHost_ = other.enetHost_;
+    peer_ = other.peer_;
+    state_ = other.state_;
+    punchState_ = other.punchState_;
+    punchCandidates_ = std::move(other.punchCandidates_);
+    punchLocalNonce_ = other.punchLocalNonce_;
+    punchPeerNonce_ = other.punchPeerNonce_;
+    punchStartMs_ = other.punchStartMs_;
+    punchLastProbeMs_ = other.punchLastProbeMs_;
+    punchTimeoutMs_ = other.punchTimeoutMs_;
+    punchResult_ = std::move(other.punchResult_);
+    relayToken_ = std::move(other.relayToken_);
+    relayHost_ = std::move(other.relayHost_);
+    relayPort_ = other.relayPort_;
+    relayAuthenticated_ = other.relayAuthenticated_;
+    relayLastTokenMs_ = other.relayLastTokenMs_;
+    relayTokenAttempts_ = other.relayTokenAttempts_;
+    if (enetHost_) {
+      registerTransport(enetHost_, this);
+    }
+    other.enetHost_ = nullptr;
+    other.peer_ = nullptr;
+    other.state_ = Disconnected;
+    other.punchState_ = PunchIdle;
+  }
+  return *this;
 }
 
 NetTransport::~NetTransport() {
@@ -196,6 +237,27 @@ bool NetTransport::connect(const std::string& address, uint16_t port) {
   return true;
 }
 
+bool NetTransport::connectExisting(const std::string& address, uint16_t port) {
+  if (!enetHost_) return false;
+  if (peer_) return false;
+
+  ENetAddress addr = {};
+  addr.port = port;
+  if (enet_address_set_host(&addr, address.c_str()) != 0) {
+    state_ = Failed;
+    return false;
+  }
+
+  peer_ = enet_host_connect(enetHost_, &addr, NUM_CHANNELS, 0);
+  if (!peer_) {
+    state_ = Failed;
+    return false;
+  }
+
+  state_ = Connecting;
+  return true;
+}
+
 bool NetTransport::hostViaRelay(uint16_t localPort, const std::string& relayAddr,
                                 uint16_t relayPort, const std::vector<uint8_t>& token) {
   if (enetHost_) return false;
@@ -205,9 +267,22 @@ bool NetTransport::hostViaRelay(uint16_t localPort, const std::string& relayAddr
     return false;
   }
 
+  // Resolve relay address once (avoid DNS on every retry)
+  ENetAddress resolved = {};
+  resolved.port = relayPort;
+  if (enet_address_set_host(&resolved, relayAddr.c_str()) != 0) {
+    unregisterTransport(enetHost_);
+    enet_host_destroy(enetHost_);
+    enetHost_ = nullptr;
+    state_ = Failed;
+    return false;
+  }
+  char resolvedIP[INET6_ADDRSTRLEN] = {};
+  enet_address_get_host_ip(&resolved, resolvedIP, sizeof(resolvedIP));
+
   // Store relay info for token retry
   relayToken_ = token;
-  relayHost_ = relayAddr;
+  relayHost_ = resolvedIP;
   relayPort_ = relayPort;
 
   relayAuthenticated_ = false;
@@ -230,9 +305,22 @@ bool NetTransport::connectViaRelay(const std::string& relayAddr, uint16_t relayP
     return false;
   }
 
+  // Resolve relay address once
+  ENetAddress resolved = {};
+  resolved.port = relayPort;
+  if (enet_address_set_host(&resolved, relayAddr.c_str()) != 0) {
+    unregisterTransport(enetHost_);
+    enet_host_destroy(enetHost_);
+    enetHost_ = nullptr;
+    state_ = Failed;
+    return false;
+  }
+  char resolvedIP[INET6_ADDRSTRLEN] = {};
+  enet_address_get_host_ip(&resolved, resolvedIP, sizeof(resolvedIP));
+
   // Store relay info
   relayToken_ = token;
-  relayHost_ = relayAddr;
+  relayHost_ = resolvedIP;
   relayPort_ = relayPort;
 
   relayAuthenticated_ = false;
@@ -243,17 +331,7 @@ bool NetTransport::connectViaRelay(const std::string& relayAddr, uint16_t relayP
   sendRelayToken();
 
   // Connect to relay via ENet (after token)
-  ENetAddress addr = {};
-  addr.port = relayPort;
-  if (enet_address_set_host(&addr, relayAddr.c_str()) != 0) {
-    unregisterTransport(enetHost_);
-    enet_host_destroy(enetHost_);
-    enetHost_ = nullptr;
-    state_ = Failed;
-    return false;
-  }
-
-  peer_ = enet_host_connect(enetHost_, &addr, NUM_CHANNELS, 0);
+  peer_ = enet_host_connect(enetHost_, &resolved, NUM_CHANNELS, 0);
   if (!peer_) {
     unregisterTransport(enetHost_);
     enet_host_destroy(enetHost_);

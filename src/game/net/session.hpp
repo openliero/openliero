@@ -43,6 +43,13 @@ struct NetSession {
   bool joinViaRelay(const std::string& relayAddr, uint16_t relayPort,
                     const std::vector<uint8_t>& token);
 
+  // Start with an existing transport (already connected or listening).
+  // Used after hole-punch succeeds to preserve the NAT-mapped socket.
+  // For host: transport is already listening, peer will connect.
+  // For client: initiates ENet connect to peerAddr:peerPort through existing host.
+  bool hostWithTransport(NetTransport&& transport);
+  bool connectWithTransport(NetTransport&& transport, const std::string& peerAddr, uint16_t peerPort);
+
   // Call once per frame from the game loop.
   // Polls network, manages state transitions.
   void update();

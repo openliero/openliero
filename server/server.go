@@ -322,6 +322,7 @@ func (s *Server) handlePunchResult(code string, from *net.UDPAddr, ok bool) {
 	s.mu.Lock()
 	room, exists = s.rooms[code]
 	if !exists || room.Relay != nil {
+		delete(s.relayPorts, port)
 		s.mu.Unlock()
 		relay.Stop()
 		return

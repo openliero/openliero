@@ -69,6 +69,12 @@ struct NetTransport {
   NetTransport();
   ~NetTransport();
 
+  // Movable but not copyable (owns socket)
+  NetTransport(NetTransport&& other) noexcept;
+  NetTransport& operator=(NetTransport&& other) noexcept;
+  NetTransport(const NetTransport&) = delete;
+  NetTransport& operator=(const NetTransport&) = delete;
+
   void disconnect();
 
   // Host a game on the given port.
@@ -76,6 +82,10 @@ struct NetTransport {
 
   // Connect to a host directly.
   bool connect(const std::string& address, uint16_t port);
+
+  // Connect to a peer using the existing host (after hole-punch).
+  // The host must already be created.
+  bool connectExisting(const std::string& address, uint16_t port);
 
   // Connect via relay. Sends auth token (with retry), then ENet connects.
   // For host: creates ENet host on localPort, authenticates with relay.
@@ -185,7 +195,7 @@ struct NetTransport {
 
   // Relay state
   std::vector<uint8_t> relayToken_;
-  std::string relayHost_;
+  std::string relayHost_;        // resolved IP (not hostname)
   uint16_t relayPort_ = 0;
   bool relayAuthenticated_;
   uint64_t relayLastTokenMs_;

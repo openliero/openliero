@@ -1,10 +1,10 @@
 #include "stun.hpp"
+#include "netutil.hpp"
 
 #include <enet.h>
 #include <cstring>
 #include <cstdint>
 #include <cstdio>
-#include <chrono>
 #include <random>
 
 #ifdef _WIN32
@@ -13,16 +13,13 @@
 #include <arpa/inet.h>
 #endif
 
+using netutil::nowMs;
+
 static constexpr const char* STUN_SERVER_IPV4 = "74.125.250.129";
 static constexpr const char* STUN_SERVER_IPV6 = "2001:4860:4864:5:8000::1";
 static constexpr uint16_t STUN_PORT = 19302;
 static constexpr int STUN_TIMEOUT_MS = 2000;
 static constexpr int STUN_RETRIES = 2;
-
-static uint64_t nowMs() {
-  return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-    std::chrono::steady_clock::now().time_since_epoch()).count();
-}
 
 // --- stun namespace helpers ---
 

@@ -80,7 +80,13 @@ func (r *Relay) Done() <-chan struct{} {
 
 func (r *Relay) run() {
 	defer func() {
-		r.conn.Close()
+		// Ensure conn is closed (handles timeout/error exit without Stop())
+		r.mu.Lock()
+		if !r.closed {
+			r.closed = true
+			r.conn.Close()
+		}
+		r.mu.Unlock()
 		close(r.done)
 		log.Printf("Room %s: relay on port %d stopped", r.Code, r.Port)
 	}()

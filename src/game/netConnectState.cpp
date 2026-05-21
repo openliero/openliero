@@ -30,6 +30,16 @@ NetConnectState::NetConnectState(NetSession::Role role, std::string relayAddr, u
 {
 }
 
+NetConnectState::NetConnectState(NetSession::Role role, NetTransport&& transport,
+                                 std::string peerAddr, uint16_t peerPort)
+: role_(role)
+, address_(std::move(peerAddr))
+, port_(peerPort)
+, hasTransport_(true)
+, existingTransport_(std::move(transport))
+{
+}
+
 void NetConnectState::enter()
 {
 	FsNode tcRoot = gfx->getConfigNode() / "TC" / gfx->settings->tc;
@@ -42,7 +52,15 @@ void NetConnectState::enter()
 	};
 
 	bool ok = false;
-	if (relay_)
+	if (hasTransport_)
+	{
+		// Use the existing transport (preserves NAT mapping from hole-punch)
+		if (role_ == NetSession::Host)
+			ok = session->hostWithTransport(std::move(existingTransport_));
+		else
+			ok = session->connectWithTransport(std::move(existingTransport_), address_, port_);
+	}
+	else if (relay_)
 	{
 		if (role_ == NetSession::Host)
 			ok = session->hostViaRelay(localPort_, address_, port_, relayToken_);

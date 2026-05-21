@@ -5,17 +5,14 @@
 #include "keys.hpp"
 #include "common.hpp"
 #include "netConnectState.hpp"
+#include "net/netutil.hpp"
 
 #include <memory>
 #include <string>
-#include <chrono>
 #include <cstdio>
 #include <random>
 
-static uint64_t nowMs() {
-	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::steady_clock::now().time_since_epoch()).count();
-}
+using netutil::nowMs;
 
 OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCode)
 : role_(role)
@@ -285,21 +282,18 @@ void OnlineConnectState::connectDirect(const std::string& addr, uint16_t port)
 	fprintf(stderr, "[online] connectDirect: addr=%s port=%u role=%s\n",
 	        addr.c_str(), port, role_ == NetSession::Host ? "Host" : "Client");
 
-	// The transport already has an ENet host on the game port.
-	// For the host: just transition to NetConnectState which will use the existing host.
-	// For the client: connect via the existing host.
+	// Clear punch/STUN callbacks before transferring transport
+	transport_.onInterceptedPacket = nullptr;
+	transport_.onPunchSuccess = nullptr;
+	transport_.onPunchTimeout = nullptr;
+
+	// Transfer the transport to NetConnectState — preserves the NAT-mapped socket!
 	if (role_ == NetSession::Host) {
-		// Host is already listening on localPort. Transition to NetConnectState
-		// which creates a new session that listens on the same port.
-		// We disconnect our transport first — NetConnectState will create its own.
-		transport_.disconnect();
 		gfx->stateStack.scheduleReplaceTop(
-			std::make_unique<NetConnectState>(NetSession::Host, "", localPort_));
+			std::make_unique<NetConnectState>(NetSession::Host, std::move(transport_)));
 	} else {
-		// Client: peer is at addr:port. Same port we hole-punched through.
-		transport_.disconnect();
 		gfx->stateStack.scheduleReplaceTop(
-			std::make_unique<NetConnectState>(NetSession::Client, addr, port));
+			std::make_unique<NetConnectState>(NetSession::Client, std::move(transport_), addr, port));
 	}
 }
 
@@ -310,13 +304,15 @@ void OnlineConnectState::connectRelay()
 	auto token = signaling_.relayToken();
 	uint16_t relayPort = signaling_.relayPort();
 
-	// Disconnect our punch transport — NetConnectState will create its own
-	// with relay mode through the same local port.
+	// For relay, we disconnect and let NetConnectState create a new transport
+	// bound to the same local port. The relay doesn't care about NAT mappings
+	// since it's a server with a public IP.
+	uint16_t boundPort = transport_.listeningPort();
 	transport_.disconnect();
 
 	gfx->stateStack.scheduleReplaceTop(
 		std::make_unique<NetConnectState>(role_, signalingServer_, relayPort,
-		                                  localPort_, std::move(token)));
+		                                  boundPort, std::move(token)));
 }
 
 void OnlineConnectState::draw()
