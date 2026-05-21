@@ -20,6 +20,7 @@ OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string roomCo
 
 void OnlineConnectState::enter()
 {
+	localPort_ = gfx->onlinePort;
 	fprintf(stderr, "[online] enter: role=%s localPort=%u roomCode='%s'\n",
 	        role_ == NetSession::Host ? "Host" : "Client", localPort_, roomCode_.c_str());
 

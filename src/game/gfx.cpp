@@ -1505,14 +1505,14 @@ bool Gfx::runOneFrame()
 			else if (menuSelection == MainMenu::MaHostGame)
 			{
 				stateStack.push(std::make_unique<NetConnectState>(
-					NetSession::Host, "", 19532), this);
+					NetSession::Host, "", gfx.onlinePort), this);
 				return true;
 			}
 			else if (menuSelection == MainMenu::MaJoinGame)
 			{
 				// Parse address — support "host:port" and "[ipv6]:port" formats
 				std::string addr = std::move(pendingNetAddress);
-				uint16_t port = 19532;
+				uint16_t port = gfx.onlinePort;
 
 				if (!addr.empty() && addr[0] == '[') {
 					// IPv6 bracket notation: [::1]:port
