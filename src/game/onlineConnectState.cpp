@@ -195,8 +195,8 @@ bool OnlineConnectState::update()
 		}
 	}
 
-	// If peer joined but punch never started, request relay after timeout
-	if (peerJoinedMs_ != 0 && !punchRequested_ && !reportedPunchFail_)
+	// If peer joined but punch never completed, request relay after timeout
+	if (peerJoinedMs_ != 0 && !startedPunch_ && !reportedPunchFail_)
 	{
 		auto now = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -222,6 +222,12 @@ void OnlineConnectState::startPunching()
 	auto& candidates = signaling_.peerCandidates();
 	fprintf(stderr, "[online] startPunching with %zu candidates from port %u\n",
 	        candidates.size(), localPort_);
+
+	if (candidates.empty()) {
+		fprintf(stderr, "[online] no candidates to punch — requesting relay\n");
+		onPunchFailed();
+		return;
+	}
 
 	statusLine2_ = "HOLE-PUNCHING...";
 
