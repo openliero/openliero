@@ -19,6 +19,8 @@ All phases complete. Branch: `stun-support`
 - **test_stun.cpp retained** — Tests RFC 5389 parsing utilities (still used)
 - **Tests combined** — IceAgent + IceBridge tests in single `test_ice.cpp` (not split across 3 files as originally planned)
 - **TURN deployment** — Requires coturn server with shared secret matching `TURN_SECRET` env var on signaling server
+- **setRemoteGatheringDone() not called** — Omitted intentionally. UDP can reorder packets so gather-done arrives before a late candidate; libjuice then rejects it. Without the call, libjuice uses an internal timeout instead — same result, no race condition.
+- **signaling.poll() drains all packets** — Changed from reading one packet per call to draining all available, reducing multi-packet latency
 
 ---
 
