@@ -247,6 +247,10 @@ void OnlineConnectState::transitionToGame()
 	}
 
 	// Transfer ICE ownership to the transport (keeps them alive after this state is destroyed)
+	// Clear callbacks first — they capture `this` which will be destroyed
+	iceAgent_->onStateChange = nullptr;
+	iceAgent_->onLocalCandidate = nullptr;
+	iceAgent_->onGatheringDone = nullptr;
 	transport.attachIce(std::move(iceBridge_), std::move(iceAgent_));
 
 	// Transition to NetConnectState with the bridge-backed transport.
