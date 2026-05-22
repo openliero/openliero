@@ -336,6 +336,13 @@ if(OPENLIERO_BUILD_TESTS)
   add_executable(test_settings src/tests/test_settings.cpp)
   target_link_libraries(test_settings PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_settings DISCOVERY_MODE PRE_TEST)
+
+  add_executable(test_tc_load src/tests/test_tc_load.cpp)
+  target_link_libraries(test_tc_load PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_tc_load
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
+  )
 endif()
 
 # desync fuzzer

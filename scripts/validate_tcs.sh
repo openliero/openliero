@@ -14,7 +14,7 @@
 #
 # Options:
 #   --tctool PATH     Path to tctool binary (default: build/linux-x64/Debug/tctool)
-#   --test-bin PATH   Path to test_determinism binary (default: build/linux-x64/Debug/test_determinism)
+#   --test-bin PATH   Path to test_tc_load binary (default: build/linux-x64/Debug/test_tc_load)
 #   --workdir DIR     Working directory for downloads (default: /tmp/tc_validation)
 #   --keep            Don't clean up workdir on success
 #   --no-load-test    Skip the load test (only validate conversion + TOML syntax)
@@ -27,7 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 TCTOOL="${REPO_ROOT}/build/linux-x64/Debug/tctool"
-TEST_BIN="${REPO_ROOT}/build/linux-x64/Debug/test_determinism"
+TEST_BIN="${REPO_ROOT}/build/linux-x64/Debug/test_tc_load"
 WORKDIR="/tmp/tc_validation"
 KEEP=false
 LOAD_TEST=true
@@ -180,24 +180,17 @@ with open(sys.argv[1], 'rb') as f:
 
     VALID_TOML=$((VALID_TOML + 1))
 
-    # Load test: try to load the TC via test_determinism (optional, tests game compat)
-    # Note: many TCs will fail here because test_determinism runs a full simulation
-    # that expects specific weapon/object counts matching the openliero TC.
-    # This tests game compatibility, not format correctness.
+    # Load test: try to load the TC and run a short simulation
     if [[ "$LOAD_TEST" == true && -x "$TEST_BIN" ]]; then
-        load_dir=$(mktemp -d)
-        mkdir -p "$load_dir/data/TC"
-        ln -s "$(realpath "$tc_dir")" "$load_dir/data/TC/openliero"
-        cp -r "$REPO_ROOT/data/Setups" "$load_dir/data/Setups"
-
-        load_output=$(cd "$load_dir" && timeout 60 "$TEST_BIN" 2>&1) || true
-        rm -rf "$load_dir"
+        tc_realpath="$(realpath "$tc_dir")"
+        load_output=$(TC_PATH="$tc_realpath" timeout 60 "$TEST_BIN" 2>&1) || true
 
         if echo "$load_output" | grep -q "All tests passed"; then
             LOADABLE=$((LOADABLE + 1))
-            echo "  OK (converted + valid TOML + loads)"
+            echo "  OK (converted + valid TOML + loads + simulates)"
         else
-            echo "  OK (converted + valid TOML, load-test: incompatible)"
+            echo "  PARTIAL: converted + valid TOML, but load/sim failed"
+            echo "$load_output" | grep -E "FAILED|error|Error" | head -3 | sed 's/^/        /'
             FAILED_LOAD+=("$tc_name")
         fi
     else
