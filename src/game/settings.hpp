@@ -348,6 +348,7 @@ void archive_text(Settings& settings, Archive& ar) {
   ar.b(S(spectatorWindow));
   ar.b(S(fullscreen));
   ar.str(S(tc));
+  ar.i32(S(bloodParticleMax));
 
 #undef S
 
@@ -398,33 +399,35 @@ void archive_text(Settings& settings, Archive& ar) {
     settings.wormSettings[1] = twoWorms[1];
   }
 
-  // Serialize network player as a separate object
+  // Serialize network player as a separate [netPlayer] object
   {
     auto& ws = settings.wormSettings[Settings::NetworkPlayerIdx];
-    ar.u32("netPlayer.controller", ws->controller);
-    if (ar.in)
-      ws->controller = limit<0, 3>(ws->controller);
-    ar.arr("netPlayer.color", ws->rgb, [&](int& c) {
-      ar.i32(0, c);
+    ar.obj("netPlayer", [&] {
+      ar.u32("controller", ws->controller);
       if (ar.in)
-        c &= 63;
+        ws->controller = limit<0, 3>(ws->controller);
+      ar.arr("color", ws->rgb, [&](int& c) {
+        ar.i32(0, c);
+        if (ar.in)
+          c &= 63;
+      });
+      ar.arr("weapons", ws->weapons, [&](uint32_t& w) { ar.u32(0, w); });
+      ar.i32("health", ws->health);
+
+      if (ws->randomName && ar.out) {
+        std::string empty;
+        ar.str("name", empty);
+      } else {
+        ar.str("name", ws->name);
+      }
+
+      ar.arr("controls", ws->controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
+      ar.u32("inputDevice", ws->inputDevice);
+      ar.str("gamepadName", ws->gamepadName);
+      ar.str("gamepadSerial", ws->gamepadSerial);
+      ar.arr("gamepadControls", ws->gamepadControls,
+             [&](uint32_t& c) { ar.u32(0, c); });
     });
-    ar.arr("netPlayer.weapons", ws->weapons, [&](uint32_t& w) { ar.u32(0, w); });
-    ar.i32("netPlayer.health", ws->health);
-
-    if (ws->randomName && ar.out) {
-      std::string empty;
-      ar.str("netPlayer.name", empty);
-    } else {
-      ar.str("netPlayer.name", ws->name);
-    }
-
-    ar.arr("netPlayer.controls", ws->controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
-    ar.u32("netPlayer.inputDevice", ws->inputDevice);
-    ar.str("netPlayer.gamepadName", ws->gamepadName);
-    ar.str("netPlayer.gamepadSerial", ws->gamepadSerial);
-    ar.arr("netPlayer.gamepadControls", ws->gamepadControls,
-           [&](uint32_t& c) { ar.u32(0, c); });
   }
 
 #undef S

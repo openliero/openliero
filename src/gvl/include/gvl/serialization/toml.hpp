@@ -157,9 +157,9 @@ struct writer
 		return *this;
 	}
 
-	writer& u32(int32_t v)
+	writer& u32(uint32_t v)
 	{
-		w << v;
+		w << (int32_t)v;
 		return *this;
 	}
 
@@ -384,10 +384,10 @@ inline void resize(vector<T>& v, std::size_t s)
 template<typename T, int N>
 inline void resize(T(&arr)[N], std::size_t s)
 {
-	if (N != s)
-	{
-		throw parse_error();
-	}
+	// For fixed-size arrays, silently ignore size mismatch.
+	// Elements beyond N are ignored; elements beyond s keep defaults.
+	(void)arr;
+	(void)s;
 }
 
 template<typename Reader>
@@ -476,7 +476,11 @@ struct reader
 		do
 		{
 			skipws();
-			if (c == '[')
+			if (c == 0)
+			{
+				break; // EOF
+			}
+			else if (c == '[')
 			{
 				bool isArrayObj = false;
 				next();
@@ -565,6 +569,12 @@ struct reader
 		{
 			next();
 		}
+		// Skip # comments to end of line
+		if (c == '#')
+		{
+			while (c != '\n' && c != '\r' && c != 0)
+				next();
+		}
 	}
 
 	value f(char const* name)
@@ -589,7 +599,10 @@ struct reader
 	reader& obj(char const* name, F func)
 	{
 		value parent(cur);
-		cur = f(name);
+		value v(f(name));
+		if (v.tt == t_null)
+			return *this; // Missing object, keep defaults
+		cur = v;
 		func();
 		cur = std::move(parent);
 		return *this;
@@ -608,10 +621,14 @@ struct reader
 		resize(arr, jv.v.size());
 
 		auto i = jv.v.begin();
+		std::size_t idx = 0;
 		for (auto& e : arr)
 		{
+			if (idx >= jv.v.size())
+				break; // More slots than data: keep remaining defaults
 			cur = *i++;
 			func(e);
+			++idx;
 		}
 
 		cur = std::move(parent);

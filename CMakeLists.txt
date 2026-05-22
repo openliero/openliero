@@ -327,6 +327,10 @@ if(OPENLIERO_BUILD_TESTS)
   add_executable(test_ice src/tests/test_ice.cpp)
   target_link_libraries(test_ice PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_ice)
+
+  add_executable(test_settings src/tests/test_settings.cpp)
+  target_link_libraries(test_settings PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_settings)
 endif()
 
 # desync fuzzer
