@@ -178,41 +178,13 @@ void archive_text(Settings& settings, Archive& ar) {
       v = limit<0, 3>(v);
   });
 
-#define S(n) #n, ws->n
-
   // Serialize the first 2 worms (left/right players) as the "worms" array
-  // for backwards compatibility with old config files
   std::shared_ptr<WormSettings> twoWorms[2] = {
       settings.wormSettings[0], settings.wormSettings[1]};
   ar.array_obj(
       "worms", twoWorms,
       [&](std::shared_ptr<WormSettings> const& ws) {
-        ar.u32(S(controller));
-        if (ar.in)
-          ws->controller = limit<0, 3>(ws->controller);
-        ar.arr("color", ws->rgb, [&](int& c) {
-          ar.i32(0, c);
-          if (ar.in)
-            c &= 63;
-        });
-        ar.arr("weapons", ws->weapons, [&](uint32_t& w) { ar.u32(0, w); });
-        ar.i32(S(health));
-
-        if (ws->randomName && ar.out) {
-          std::string empty;
-          ar.str("name", empty);
-        } else {
-          ar.str(S(name));
-          // TODO: Random generation?
-        }
-
-        ar.arr("controls", ws->controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
-
-        ar.u32(S(inputDevice));
-        ar.str(S(gamepadName));
-        ar.str(S(gamepadSerial));
-        ar.arr("gamepadControls", ws->gamepadControls,
-               [&](uint32_t& c) { ar.u32(0, c); });
+        archive_worm_toml(ar, *ws);
       });
   if (ar.in) {
     settings.wormSettings[0] = twoWorms[0];
@@ -223,32 +195,7 @@ void archive_text(Settings& settings, Archive& ar) {
   {
     auto& ws = settings.wormSettings[Settings::NetworkPlayerIdx];
     ar.obj("netPlayer", [&] {
-      ar.u32("controller", ws->controller);
-      if (ar.in)
-        ws->controller = limit<0, 3>(ws->controller);
-      ar.arr("color", ws->rgb, [&](int& c) {
-        ar.i32(0, c);
-        if (ar.in)
-          c &= 63;
-      });
-      ar.arr("weapons", ws->weapons, [&](uint32_t& w) { ar.u32(0, w); });
-      ar.i32("health", ws->health);
-
-      if (ws->randomName && ar.out) {
-        std::string empty;
-        ar.str("name", empty);
-      } else {
-        ar.str("name", ws->name);
-      }
-
-      ar.arr("controls", ws->controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
-      ar.u32("inputDevice", ws->inputDevice);
-      ar.str("gamepadName", ws->gamepadName);
-      ar.str("gamepadSerial", ws->gamepadSerial);
-      ar.arr("gamepadControls", ws->gamepadControls,
-             [&](uint32_t& c) { ar.u32(0, c); });
+      archive_worm_toml(ar, *ws);
     });
   }
-
-#undef S
 }

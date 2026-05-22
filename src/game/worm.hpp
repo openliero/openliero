@@ -117,6 +117,37 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
   gvl::gash::value_type hash;
 };
 
+// Shared TOML serialization for worm settings (used by both settings file and profiles)
+template <typename Archive>
+void archive_worm_toml(Archive& ar, WormSettings& ws) {
+  ar.u32("controller", ws.controller);
+  if (ar.in)
+    ws.controller = ws.controller % 3;
+  ar.arr("color", ws.rgb, [&](int& c) {
+    ar.i32(0, c);
+    if (ar.in)
+      c &= 63;
+  });
+  ar.arr("weapons", ws.weapons, [&](uint32_t& w) { ar.u32(0, w); });
+  ar.i32("health", ws.health);
+
+  if (ws.randomName && ar.out) {
+    std::string empty;
+    ar.str("name", empty);
+  } else {
+    ar.str("name", ws.name);
+    if (ar.in && !ws.name.empty())
+      ws.randomName = false;
+  }
+
+  ar.arr("controls", ws.controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
+  ar.u32("inputDevice", ws.inputDevice);
+  ar.str("gamepadName", ws.gamepadName);
+  ar.str("gamepadSerial", ws.gamepadSerial);
+  ar.arr("gamepadControls", ws.gamepadControls,
+         [&](uint32_t& c) { ar.u32(0, c); });
+}
+
 template <typename Archive>
 void archive(Archive ar, WormSettings& ws) {
   ar.ui32(ws.color).ui32(ws.health).ui16(ws.controller);

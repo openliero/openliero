@@ -303,3 +303,53 @@ TEST_CASE("Settings hash only includes gameplay fields") {
   auto hash6 = s4.updateHash();
   CHECK(hash1 != hash6);
 }
+
+TEST_CASE("WormSettings profile round-trip") {
+  // Set up a worm profile with non-default values
+  WormSettings original;
+  original.name = "TestWorm";
+  original.randomName = false;
+  original.controller = 1;
+  original.health = 200;
+  original.rgb[0] = 10;
+  original.rgb[1] = 20;
+  original.rgb[2] = 30;
+  original.weapons[0] = 3;
+  original.weapons[1] = 2;
+  original.controlsEx[0] = 42;
+  original.controlsEx[1] = 99;
+  original.inputDevice = 1;
+  original.gamepadName = "TestPad";
+  original.gamepadSerial = "SERIAL123";
+  original.gamepadControls[0] = 7;
+
+  auto tmpPath =
+      std::filesystem::temp_directory_path() / "openliero_test_profile.toml";
+
+  // Save
+  original.saveProfile(FsNode(tmpPath.string()));
+
+  // Load into a fresh WormSettings
+  WormSettings loaded;
+  loaded.color = 55;  // Should be preserved
+  loaded.loadProfile(FsNode(tmpPath.string()));
+
+  CHECK(loaded.name == "TestWorm");
+  CHECK(loaded.randomName == false);
+  CHECK(loaded.controller == 1);
+  CHECK(loaded.health == 200);
+  CHECK(loaded.rgb[0] == 10);
+  CHECK(loaded.rgb[1] == 20);
+  CHECK(loaded.rgb[2] == 30);
+  CHECK(loaded.weapons[0] == 3);
+  CHECK(loaded.weapons[1] == 2);
+  CHECK(loaded.controlsEx[0] == 42);
+  CHECK(loaded.controlsEx[1] == 99);
+  CHECK(loaded.inputDevice == 1);
+  CHECK(loaded.gamepadName == "TestPad");
+  CHECK(loaded.gamepadSerial == "SERIAL123");
+  CHECK(loaded.gamepadControls[0] == 7);
+  CHECK(loaded.color == 55);  // Color is preserved across profile load
+
+  std::filesystem::remove(tmpPath);
+}

@@ -57,19 +57,7 @@ void WormSettings::saveProfile(FsNode node)
 		profileNode = node;
 
 		gvl::toml::writer<gvl::octet_writer> ar(writer);
-
-#define S(n) #n, n
-		ar.str(S(name));
-		ar.u32(S(controller));
-		ar.i32(S(health));
-		ar.arr("controls", controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
-		ar.arr("weapons", weapons, [&](uint32_t& w) { ar.u32(0, w); });
-		ar.arr("color", rgb, [&](int& c) { ar.i32(0, c); });
-		ar.u32(S(inputDevice));
-		ar.str(S(gamepadName));
-		ar.str(S(gamepadSerial));
-		ar.arr("gamepadControls", gamepadControls, [&](uint32_t& c) { ar.u32(0, c); });
-#undef S
+		archive_worm_toml(ar, *this);
 	}
 	catch(std::runtime_error& e)
 	{
@@ -86,22 +74,7 @@ void WormSettings::loadProfile(FsNode node)
 		profileNode = node;
 
 		gvl::toml::reader<gvl::octet_reader> ar(reader);
-
-#define S(n) #n, n
-		ar.str(S(name));
-		ar.u32(S(controller));
-		ar.i32(S(health));
-		ar.arr("controls", controlsEx, [&](uint32_t& c) { ar.u32(0, c); });
-		ar.arr("weapons", weapons, [&](uint32_t& w) { ar.u32(0, w); });
-		ar.arr("color", rgb, [&](int& c) { ar.i32(0, c); });
-		ar.u32(S(inputDevice));
-		ar.str(S(gamepadName));
-		ar.str(S(gamepadSerial));
-		ar.arr("gamepadControls", gamepadControls, [&](uint32_t& c) { ar.u32(0, c); });
-#undef S
-
-		if (!name.empty())
-			randomName = false;
+		archive_worm_toml(ar, *this);
 	}
 	catch(std::runtime_error& e)
 	{
