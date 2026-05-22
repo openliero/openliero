@@ -304,35 +304,38 @@ if(OPENLIERO_BUILD_TESTS)
   target_link_libraries(test_determinism PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_determinism
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
   )
 
   add_executable(test_network_controller src/tests/test_network_controller.cpp)
   target_link_libraries(test_network_controller PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_network_controller
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
   )
 
   add_executable(test_transport src/tests/test_transport.cpp)
   target_link_libraries(test_transport PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_transport)
+  catch_discover_tests(test_transport DISCOVERY_MODE PRE_TEST)
 
   add_executable(test_session src/tests/test_session.cpp)
   target_link_libraries(test_session PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_session
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
   )
 
   add_executable(test_stun src/tests/test_stun.cpp)
   target_link_libraries(test_stun PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_stun)
+  catch_discover_tests(test_stun DISCOVERY_MODE PRE_TEST)
 
   add_executable(test_ice src/tests/test_ice.cpp)
   target_link_libraries(test_ice PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_ice)
+  catch_discover_tests(test_ice DISCOVERY_MODE PRE_TEST)
 
   add_executable(test_settings src/tests/test_settings.cpp)
   target_link_libraries(test_settings PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_settings)
+  catch_discover_tests(test_settings DISCOVERY_MODE PRE_TEST)
 endif()
 
 # desync fuzzer
