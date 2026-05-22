@@ -122,23 +122,6 @@ bool Settings::load(FsNode node, Rand& rand)
 	return true;
 }
 
-bool Settings::loadLegacy(FsNode node, Rand& rand)
-{
-	try
-	{
-		auto reader = node.toOctetReader();
-		gvl::default_serialization_context context;
-
-		archive_liero(in_archive_t(reader, context), *this, rand);
-	}
-	catch (std::runtime_error&)
-	{
-		return false;
-	}
-
-	return true;
-}
-
 gvl::gash::value_type& Settings::updateHash()
 {
 	gvl::default_serialization_context context;
