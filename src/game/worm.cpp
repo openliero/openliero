@@ -9,7 +9,7 @@
 
 #include <gvl/serialization/context.hpp>
 #include <gvl/serialization/archive.hpp>
-#include <gvl/serialization/toml.hpp>
+#include <gvl/serialization/toml_adapter.hpp>
 #include "replay.hpp"
 
 #include <gvl/crypt/gash.hpp>
