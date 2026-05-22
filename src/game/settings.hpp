@@ -3,43 +3,45 @@
 #include <cstdint>
 #include <cstring>
 #include <gvl/crypt/gash.hpp>
-#include <gvl/serialization/archive.hpp>  // For gvl::enable_when
+#include <gvl/serialization/archive.hpp>
 #include <stdexcept>
 #include <string>
 #include "version.hpp"
 #include "worm.hpp"
 
-// We isolate extensions for the benefit of the .dat loader.
-// It can then easily reset the extensions if they fail to load.
-struct Extensions {
-  static int const myVersion = 9;
+// Gameplay-affecting settings (included in hash computation and replays)
+struct GameplayExtensions {
+  GameplayExtensions();
+
   static bool const extensions = true;
 
-  Extensions();
-
-  // Extensions
   bool recordReplays;
   bool loadPowerlevelPalette;
-  int32_t bloodParticleMax;
 
   int aiFrames, aiMutations;
   bool aiTraces;
   int32_t aiParallels;
 
-  bool fullscreen;
-
   int32_t zoneTimeout;
   uint32_t selectBotWeapons;
 
   bool allowViewingSpawnPoint;
+  std::string tc;
+};
+
+// App/UI settings (not included in hash or replays)
+struct AppSettings {
+  AppSettings();
+
+  bool fullscreen;
   bool singleScreenReplay;
   bool spectatorWindow;
-  std::string tc;
+  int32_t bloodParticleMax;
 };
 
 struct Rand;
 
-struct Settings : gvl::shared, Extensions {
+struct Settings : gvl::shared, GameplayExtensions, AppSettings {
   enum GameModes {
     GMKillEmAll,
     GMGameOfTag,
@@ -95,7 +97,8 @@ inline T limit(T v) {
   return v;
 }
 
-// Settings archiving, not including player (worm) settings
+// Binary settings archive for hash computation and replays.
+// Only includes gameplay-affecting fields (not UI/app preferences).
 template <typename Archive>
 void archive(Archive ar, Settings& settings) {
   for (int i = 0; i < 40; ++i) {
@@ -118,37 +121,13 @@ void archive(Archive ar, Settings& settings) {
       .b(settings.screenSync)
       .str(settings.levelFile);
 
-  // Extensions
-  int fileExtensionVersion = Extensions::myVersion;
-
-  ar.ui8(fileExtensionVersion);
-
-  bool extDummy = true;
-  uint8_t extDummy8 = 0;
-  int32_t extDummy16 = 0;
-
-  ar.b(extDummy)
-      .b(settings.recordReplays)
+  // Gameplay extensions
+  ar.b(settings.recordReplays)
       .b(settings.loadPowerlevelPalette)
-      .ui8(extDummy8)
-      .ui16(extDummy16)   // old fullscreenW
-      .ui16(extDummy16);  // old fullscreenH
+      .ui16(settings.zoneTimeout)
+      .b(settings.allowViewingSpawnPoint)
+      .str(settings.tc);
 
-  if (fileExtensionVersion >= 2)
-    ar.b(extDummy);
-
-  gvl::enable_when(ar, fileExtensionVersion >= 4)
-      .ui16(settings.zoneTimeout, 30);
-
-  gvl::enable_when(ar, fileExtensionVersion >= 6)
-      .b(settings.allowViewingSpawnPoint, false);
-  gvl::enable_when(ar, fileExtensionVersion >= 7)
-      .b(settings.singleScreenReplay, false);
-  gvl::enable_when(ar, fileExtensionVersion >= 8)
-      .b(settings.spectatorWindow, false);
-  gvl::enable_when(ar, fileExtensionVersion >= 9).b(settings.fullscreen, false);
-  gvl::enable_when(ar, fileExtensionVersion >= 10)
-      .str(settings.tc, std::string("openliero"));
   ar.check();
 }
 

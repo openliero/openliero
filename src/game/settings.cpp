@@ -19,20 +19,24 @@ int const Settings::wormAnimTab[] =
 	14
 };
 
-Extensions::Extensions()
+GameplayExtensions::GameplayExtensions()
 : recordReplays(true)
 , loadPowerlevelPalette(true)
-, bloodParticleMax(700)
 , aiFrames(70*2), aiMutations(2)
 , aiTraces(false)
 , aiParallels(3)
-, fullscreen(false)
 , zoneTimeout(30)
 , selectBotWeapons(true)
 , allowViewingSpawnPoint(false)
+, tc(std::string("openliero"))
+{
+}
+
+AppSettings::AppSettings()
+: fullscreen(false)
 , singleScreenReplay(false)
 , spectatorWindow(false)
-, tc(std::string("openliero"))
+, bloodParticleMax(700)
 {
 }
 

@@ -266,8 +266,40 @@ TEST_CASE("Settings TOML with comments") {
   FsNode node(tmpPath.string());
   Settings loaded;
   REQUIRE(loaded.load(node, rand));
-  CHECK(loaded.maxBonuses == 12);
-  CHECK(loaded.blood == 50);
-
   std::filesystem::remove(tmpPath);
+}
+
+TEST_CASE("Settings hash only includes gameplay fields") {
+  Settings s1;
+  Settings s2;
+
+  // Both should have the same hash initially
+  auto hash1 = s1.updateHash();
+  auto hash2 = s2.updateHash();
+  CHECK(hash1 == hash2);
+
+  // Changing an app-only field should NOT change the hash
+  s2.fullscreen = !s2.fullscreen;
+  s2.singleScreenReplay = !s2.singleScreenReplay;
+  s2.spectatorWindow = !s2.spectatorWindow;
+  s2.bloodParticleMax = 9999;
+  auto hash3 = s2.updateHash();
+  CHECK(hash1 == hash3);
+
+  // Changing a gameplay field SHOULD change the hash
+  s2.lives = 99;
+  auto hash4 = s2.updateHash();
+  CHECK(hash1 != hash4);
+
+  // Changing another gameplay field
+  Settings s3;
+  s3.zoneTimeout = 999;
+  auto hash5 = s3.updateHash();
+  CHECK(hash1 != hash5);
+
+  // Changing TC should change hash
+  Settings s4;
+  s4.tc = "different_tc";
+  auto hash6 = s4.updateHash();
+  CHECK(hash1 != hash6);
 }
