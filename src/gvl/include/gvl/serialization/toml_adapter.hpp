@@ -82,9 +82,13 @@ struct writer {
     if (name) {
       cur_table()->insert_or_assign(name, std::move(t));
       stack.push_back(cur_table()->at(name).as_table());
-    } else {
+    } else if (cur_array()) {
       cur_array()->push_back(std::move(t));
       stack.push_back(cur_array()->back().as_table());
+    } else {
+      // No name and no array context: write fields directly into current table
+      func();
+      return *this;
     }
     func();
     stack.pop_back();
