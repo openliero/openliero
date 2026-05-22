@@ -348,4 +348,24 @@ struct reader {
 };
 
 }  // namespace toml
+
+// Simple writer that appends to a std::string (for TOML-to-string serialization)
+struct string_writer {
+  std::string& buf;
+  string_writer(std::string& buf) : buf(buf) {}
+  void put(uint8_t c) { buf.push_back(static_cast<char>(c)); }
+};
+
+// Simple reader that reads from a std::string
+struct string_reader {
+  std::string const& buf;
+  std::size_t pos = 0;
+  string_reader(std::string const& buf) : buf(buf) {}
+  uint8_t get() {
+    if (pos >= buf.size())
+      throw std::runtime_error("string_reader: unexpected end of input");
+    return static_cast<uint8_t>(buf[pos++]);
+  }
+};
+
 }  // namespace gvl

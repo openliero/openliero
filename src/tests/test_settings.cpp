@@ -353,3 +353,47 @@ TEST_CASE("WormSettings profile round-trip") {
 
   std::filesystem::remove(tmpPath);
 }
+
+TEST_CASE("Settings toToml/fromToml round-trip") {
+  Settings original;
+  original.maxBonuses = 8;
+  original.blood = 150;
+  original.lives = 30;
+  original.fullscreen = true;
+  original.tc = "custom_tc";
+  original.wormSettings[0]->name = "Player1";
+  original.wormSettings[0]->randomName = false;
+
+  std::string toml = original.toToml();
+  REQUIRE(!toml.empty());
+
+  Settings loaded;
+  loaded.fromToml(toml);
+
+  CHECK(loaded.maxBonuses == 8);
+  CHECK(loaded.blood == 150);
+  CHECK(loaded.lives == 30);
+  CHECK(loaded.fullscreen == true);
+  CHECK(loaded.tc == "custom_tc");
+  CHECK(loaded.wormSettings[0]->name == "Player1");
+}
+
+TEST_CASE("WormSettings toToml/fromToml round-trip") {
+  WormSettings original;
+  original.name = "TestWorm";
+  original.randomName = false;
+  original.health = 250;
+  original.controller = 2;
+  original.controlsEx[0] = 77;
+
+  std::string toml = original.toToml();
+  REQUIRE(!toml.empty());
+
+  WormSettings loaded;
+  loaded.fromToml(toml);
+
+  CHECK(loaded.name == "TestWorm");
+  CHECK(loaded.health == 250);
+  CHECK(loaded.controller == 2);
+  CHECK(loaded.controlsEx[0] == 77);
+}

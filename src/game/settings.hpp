@@ -6,7 +6,6 @@
 #include <gvl/serialization/archive.hpp>
 #include <stdexcept>
 #include <string>
-#include "version.hpp"
 #include "worm.hpp"
 
 // Gameplay-affecting settings (included in hash computation and replays)
@@ -59,6 +58,8 @@ struct Settings : gvl::shared, GameplayExtensions, AppSettings {
 
   bool load(FsNode node, Rand& rand);
   void save(FsNode node, Rand& rand);
+  std::string toToml() const;
+  void fromToml(std::string const& data);
   gvl::gash::value_type& updateHash();
 
   static void generateName(WormSettings& ws, Rand& rand);
@@ -97,38 +98,61 @@ inline T limit(T v) {
   return v;
 }
 
-// Binary settings archive for hash computation and replays.
-// Only includes gameplay-affecting fields (not UI/app preferences).
+// Settings archive for replays: embeds TOML as a string in the binary stream.
 template <typename Archive>
 void archive(Archive ar, Settings& settings) {
-  for (int i = 0; i < 40; ++i) {
-    ar.ui8(settings.weapTable[i]);
+  if (ar.out) {
+    std::string toml = settings.toToml();
+    ar.str(toml);
+  } else {
+    std::string toml;
+    ar.str(toml);
+    settings.fromToml(toml);
   }
-
-  ar.ui16(settings.maxBonuses)
-      .ui16(settings.blood)
-      .ui16(settings.timeToLose)
-      .ui16(settings.flagsToWin)
-      .ui16(settings.gameMode)
-      .b(settings.shadow)
-      .b(settings.loadChange)
-      .b(settings.namesOnBonuses)
-      .b(settings.regenerateLevel)
-      .ui16(settings.lives)
-      .ui16(settings.loadingTime)
-      .b(settings.randomLevel)
-      .b(settings.map)
-      .b(settings.screenSync)
-      .str(settings.levelFile);
-
-  // Gameplay extensions
-  ar.b(settings.recordReplays)
-      .b(settings.loadPowerlevelPalette)
-      .ui16(settings.zoneTimeout)
-      .b(settings.allowViewingSpawnPoint)
-      .str(settings.tc);
-
   ar.check();
+}
+
+// Serialize only gameplay-affecting fields (used for hash computation).
+// This ensures that changing UI-only settings doesn't affect the hash.
+template <typename Archive>
+void archive_gameplay_text(Settings& settings, Archive& ar) {
+#define S(n) #n, settings.n
+
+  ar.i32(S(maxBonuses));
+  ar.i32(S(loadingTime));
+  ar.i32(S(lives));
+  ar.i32(S(timeToLose));
+  ar.i32(S(flagsToWin));
+  ar.b(S(screenSync));
+  ar.b(S(map));
+  ar.b(S(randomLevel));
+  ar.i32(S(blood));
+  ar.u32(S(gameMode));
+  ar.b(S(namesOnBonuses));
+  ar.b(S(regenerateLevel));
+  ar.b(S(shadow));
+  ar.b(S(loadChange));
+  ar.str(S(levelFile));
+
+  ar.b(S(recordReplays));
+  ar.b(S(loadPowerlevelPalette));
+
+  ar.i32(S(aiMutations))
+      .i32(S(aiFrames))
+      .u32(S(selectBotWeapons))
+      .i32(S(zoneTimeout));
+
+  ar.b(S(aiTraces)).i32(S(aiParallels));
+  ar.b(S(allowViewingSpawnPoint));
+  ar.str(S(tc));
+
+#undef S
+
+  ar.arr("weapTable", settings.weapTable, [&](uint32_t& v) {
+    ar.u32(0, v);
+    if (ar.in)
+      v = limit<0, 3>(v);
+  });
 }
 
 template <typename Archive>

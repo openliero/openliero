@@ -7,7 +7,6 @@
 #include "filesystem.hpp" // For joinPath
 #include <cstdlib>
 
-#include <gvl/serialization/context.hpp>
 #include <gvl/serialization/archive.hpp>
 #include <gvl/serialization/toml_adapter.hpp>
 #include "replay.hpp"
@@ -38,15 +37,30 @@ struct Point
 
 gvl::gash::value_type& WormSettings::updateHash()
 {
-	GameSerializationContext context;
+	std::string tomlData = toToml();
+
 	gvl::hash_accumulator<gvl::gash> ha;
-
-
-	archive(gvl::out_archive<gvl::hash_accumulator<gvl::gash>, GameSerializationContext>(ha, context), *this);
-
+	for (char c : tomlData)
+		ha.put(static_cast<uint8_t>(c));
 	ha.flush();
 	hash = ha.final();
 	return hash;
+}
+
+std::string WormSettings::toToml() const
+{
+	std::string buf;
+	gvl::string_writer sw(buf);
+	gvl::toml::writer<gvl::string_writer> ar(sw);
+	archive_worm_toml(ar, const_cast<WormSettings&>(*this));
+	return buf;
+}
+
+void WormSettings::fromToml(std::string const& data)
+{
+	gvl::string_reader sr(data);
+	gvl::toml::reader<gvl::string_reader> ar(sr);
+	archive_worm_toml(ar, *this);
 }
 
 void WormSettings::saveProfile(FsNode node)

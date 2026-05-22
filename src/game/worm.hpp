@@ -3,14 +3,13 @@
 #include <cstring>
 #include <functional>
 #include <gvl/crypt/gash.hpp>
-#include <gvl/serialization/archive.hpp>  // For gvl::enable_when
+#include <gvl/serialization/archive.hpp>
 #include <memory>
 #include <numeric>
 #include <string>
 #include "filesystem.hpp"
 #include "math.hpp"
 #include "rand.hpp"
-#include "version.hpp"
 
 #define NUM_WEAPONS 5
 
@@ -100,6 +99,8 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
 
   void saveProfile(FsNode node);
   void loadProfile(FsNode node);
+  std::string toToml() const;
+  void fromToml(std::string const& data);
 
   int health;
   uint32_t controller;  // CPU / Human
@@ -148,32 +149,16 @@ void archive_worm_toml(Archive& ar, WormSettings& ws) {
          [&](uint32_t& c) { ar.u32(0, c); });
 }
 
+// WormSettings archive for replays: embeds TOML as a string in the binary stream.
 template <typename Archive>
 void archive(Archive ar, WormSettings& ws) {
-  ar.ui32(ws.color).ui32(ws.health).ui16(ws.controller);
-  for (int i = 0; i < WormSettings::MaxControl; ++i)
-    ar.ui16(ws.controls[i]);  // TODO: Initialize controlsEx from this earlier
-  for (int i = 0; i < NUM_WEAPONS; ++i)
-    ar.ui16(ws.weapons[i]);
-  for (int i = 0; i < 3; ++i)
-    ar.ui16(ws.rgb[i]);
-  ar.b(ws.randomName);
-  ar.str(ws.name);
-  if (ar.context.replayVersion <= 1) {
-    ws.WormSettingsExtensions::operator=(WormSettingsExtensions());
-    return;
-  }
-
-  int wsVersion = myGameVersion;
-  ar.ui8(wsVersion);
-
-  for (int c = 0; c < WormSettings::MaxControl; ++c) {
-    int dummy = 0;
-    gvl::enable_when(ar, wsVersion >= 2).ui8(dummy, 255).ui8(dummy, 255);
-  }
-
-  for (int c = 0; c < WormSettings::MaxControlEx; ++c) {
-    gvl::enable_when(ar, wsVersion >= 3).ui32(ws.controlsEx[c], ws.controls[c]);
+  if (ar.out) {
+    std::string toml = ws.toToml();
+    ar.str(toml);
+  } else {
+    std::string toml;
+    ar.str(toml);
+    ws.fromToml(toml);
   }
 }
 
