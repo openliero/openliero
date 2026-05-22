@@ -57,8 +57,8 @@ BridgeSocket IceBridge::create(IceAgent& agent) {
 
   // Disable IPV6_V6ONLY so the sockets accept IPv4-mapped addresses (matching ENet)
   int off = 0;
-  setsockopt(enetSocket_, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
-  setsockopt(bridgeSocket_, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+  setsockopt(enetSocket_, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&off), sizeof(off));
+  setsockopt(bridgeSocket_, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&off), sizeof(off));
 
   // Bind both to IPv6 localhost (::1) with ephemeral ports
   sockaddr_in6 addrA{};
