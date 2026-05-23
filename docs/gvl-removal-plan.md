@@ -360,3 +360,63 @@ Three layers, applied at every phase boundary:
 Update this section as work happens. Date format: `YYYY-MM-DD`.
 
 - _(empty)_
+
+---
+
+## What actually happened (2026-05-23)
+
+### Done in this session
+
+**Phase 1, 2, 3, 4** completed as planned:
+- ✅ `support/{bits,debug,platform,type_info,functional}.hpp`, `meta/`, `system/`
+  — only `noncopyable` had external uses (3 sites), replaced with `= delete`.
+  The rest is dead-code-ish inside the moved-but-not-yet-simplified gvl tree.
+- ✅ `math/cmwc.hpp`, `math/random.hpp` → `std::mt19937` in `src/game/rand.hpp`.
+  RNG state grew from 8 bytes to ~6 KB serialized text; the network sync map
+  packet wire format and replay archive now carry the bigger state. Replay
+  binary format is broken — old replays will fail to load.
+- ✅ `math/vec.hpp`, `math/rect.hpp` → `src/game/math/rect.hpp`. Trimmed
+  unused methods (joins, rotations, etc.).
+- ✅ `crypt/gash.hpp` → `xxhash` via vcpkg. `gvl::gash::value_type` (256-bit)
+  → `uint64_t`. Settings/Worm/Replay hash fields shrank accordingly.
+- ✅ `containers/pairing_heap.hpp` → `std::priority_queue` with lazy
+  invalidation in `ai/dijkstra.hpp`. `ai/astar.hpp` was dead code, deleted.
+
+**Phase 8 partially**: the separate `src/gvl/` library / `add_subdirectory` /
+`libgvl.a` is gone. Files were relocated to `src/game/gvl/`, the .cpp
+sources are compiled into the `game` target directly.
+
+### Not done, and a course correction
+
+**Phase 5 / Phase 6 / Phase 7 plan was unrealistic.** Closer reading of
+`replay.cpp`, `settings.cpp`, `worm.cpp`, `common.cpp`, `common_model.hpp`
+turned up ~52 `archive` call sites and a binary-archive layer that genuinely
+earns its keep — the `ar.i32(name, x)` unified API works for both reader and
+writer through templates. Replacing it with direct `tomlplusplus` table
+manipulation or raw `FILE*` reads doubles each call site (separate read and
+write paths). That is *more* custom code, not less.
+
+Likewise the `io2/` stream layer is ~1200 lines of legitimate streaming I/O
+(buffered, deflate-piped, multi-source). Replacing with FILE* / span helpers
+requires inlining the streaming semantics at every call site (`reader.get()`
+per byte, deflate piping, etc.) — large, mechanical, and risky.
+
+So the *library* is removed, the *namespace* and the bulk of its
+implementation remain inside our tree. Code count after this session:
+- Net change: roughly 1000 lines of custom code removed (xxhash, mt19937,
+  std::priority_queue, simpler vec/rect, dead astar.hpp).
+- ~5000 lines of moved-but-not-yet-rewritten gvl code remains in
+  `src/game/gvl/`, ready for incremental simplification.
+
+### Suggested future work
+
+1. **Replace `gvl::shared` → `std::shared_ptr`** (Phase 7). Tractable, large
+   refactor — ~15 classes inherit `gvl::shared`. Sanitizer pass needed.
+2. **Replace `octet_reader/writer` + `file_bucket_pipe` + `deflate_source`**
+   in `replay.cpp` with a hand-rolled buffered reader on top of `FILE*` +
+   `miniz` deflate streaming. ~150 lines added, ~1200 deleted.
+3. **Keep `serialization/archive.hpp` and `toml_adapter.hpp`** as-is, or
+   simplify only the templating (drop the unused `Context` parameter).
+4. **Inline `support/bits.hpp`** at its few call sites using `<bit>` — it's
+   only included transitively now and only used inside gvl internals; it
+   may well become unreachable after step 2.
