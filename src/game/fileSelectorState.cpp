@@ -9,6 +9,7 @@
 #include "settings.hpp"
 #include "controller/controller.hpp"
 #include "controller/replayController.hpp"
+#include "io/gvl_compat.hpp"
 #include "menu/mainMenu.hpp"
 
 #include <gvl/io2/fstream.hpp>
@@ -134,7 +135,8 @@ void LevelSelectorState::drawExtra()
 
 		try
 		{
-			if (level.load(common, *gfx->settings, sel->getFsNode().toOctetReader()))
+			io::GvlReaderAdapter r(sel->getFsNode().toOctetReader());
+			if (level.load(common, *gfx->settings, r))
 			{
 				int centerX = gfx->singleScreenRenderer.renderResX / 2;
 

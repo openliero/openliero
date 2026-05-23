@@ -4,6 +4,8 @@
 #include "gfx.hpp"
 #include "gfx/color.hpp"
 #include "filesystem.hpp"
+#include "io/gvl_compat.hpp"
+#include "io/stream.hpp"
 
 #include <cstring>
 
@@ -216,7 +218,7 @@ void Level::resize(int width_new, int height_new)
 	materials.resize(width * height);
 }
 
-bool Level::load(Common& common, Settings const& settings, gvl::octet_reader r)
+bool Level::load(Common& common, Settings const& settings, io::Reader& r)
 {
 	resize(504, 350);
 
@@ -266,7 +268,8 @@ void Level::generateFromSettings(Common& common, Settings const& settings, Rand&
 		bool loaded = false;
 		try
 		{
-			loaded = load(common, settings, FsNode(path).toOctetReader());
+			io::GvlReaderAdapter r(FsNode(path).toOctetReader());
+			loaded = load(common, settings, r);
 		}
 		catch (std::runtime_error&)
 		{

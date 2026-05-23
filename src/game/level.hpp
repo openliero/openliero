@@ -8,7 +8,8 @@
 #include "material.hpp"
 #include "common.hpp"
 #include "math/rect.hpp"
-#include "math/rect.hpp"
+
+namespace io { struct Reader; }
 
 struct Game;
 struct Settings;
@@ -24,7 +25,7 @@ struct Level
 		zeroMaterial = common.materials[0];
 	}
 
-	bool load(Common& common, Settings const& settings, gvl::octet_reader r);
+	bool load(Common& common, Settings const& settings, io::Reader& r);
 
 	void generateDirtPattern(Common& common, Rand& rand);
 	void generateRandom(Common& common, Settings const& settings, Rand& rand);
