@@ -31,8 +31,13 @@ private:
 	gvl::octet_reader r_;
 };
 
+// Constructs its own gvl::octet_writer in-place from a gvl::sink, avoiding
+// the pre-existing bug in gvl::octet_writer's move ctor (gvl::shared_ptr's
+// move ctor is gated behind GVL_CPP0X, off on GCC, so moves fall back to
+// copy and leave the source's sink_ non-null — its destructor then runs
+// flush() on a null buffer_).
 struct GvlWriterAdapter : Writer {
-	explicit GvlWriterAdapter(gvl::octet_writer w) : w_(std::move(w)) {}
+	explicit GvlWriterAdapter(gvl::sink s) : w_(s) {}
 
 	void put(uint8_t b) override { w_.put(b); }
 	void put(uint8_t const* src, std::size_t n) override { w_.put(src, n); }

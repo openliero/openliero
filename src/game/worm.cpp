@@ -5,6 +5,8 @@
 #include "constants.hpp"
 #include "console.hpp"
 #include "filesystem.hpp" // For joinPath
+#include "io/gvl_compat.hpp"
+#include "io/stream.hpp"
 #include <cstdlib>
 
 #include <gvl/serialization/archive.hpp>
@@ -46,16 +48,16 @@ uint64_t& WormSettings::updateHash()
 std::string WormSettings::toToml() const
 {
 	std::string buf;
-	gvl::string_writer sw(buf);
-	gvl::toml::writer<gvl::string_writer> ar(sw);
+	io::StringWriter sw(buf);
+	gvl::toml::writer<io::Writer> ar(sw);
 	archive_worm_toml(ar, const_cast<WormSettings&>(*this));
 	return buf;
 }
 
 void WormSettings::fromToml(std::string const& data)
 {
-	gvl::string_reader sr(data);
-	gvl::toml::reader<gvl::string_reader> ar(sr);
+	io::MemReader sr(data);
+	gvl::toml::reader<io::Reader> ar(sr);
 	archive_worm_toml(ar, *this);
 }
 
@@ -63,10 +65,10 @@ void WormSettings::saveProfile(FsNode node)
 {
 	try
 	{
-		auto writer = node.toOctetWriter();
+		io::GvlWriterAdapter writer(node.toSink());
 		profileNode = node;
 
-		gvl::toml::writer<gvl::octet_writer> ar(writer);
+		gvl::toml::writer<io::Writer> ar(writer);
 		archive_worm_toml(ar, *this);
 	}
 	catch(std::runtime_error& e)
@@ -80,10 +82,10 @@ void WormSettings::loadProfile(FsNode node)
 	int oldColor = color;
 	try
 	{
-		auto reader = node.toOctetReader();
+		io::GvlReaderAdapter reader(node.toOctetReader());
 		profileNode = node;
 
-		gvl::toml::reader<gvl::octet_reader> ar(reader);
+		gvl::toml::reader<io::Reader> ar(reader);
 		archive_worm_toml(ar, *this);
 	}
 	catch(std::runtime_error& e)
