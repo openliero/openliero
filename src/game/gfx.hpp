@@ -1,7 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <gvl/math/rect.hpp>
+#include "math/rect.hpp"
 
 #include <cstdio>
 #include <cassert>

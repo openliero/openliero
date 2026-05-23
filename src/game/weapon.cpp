@@ -26,7 +26,7 @@ void Weapon::fire(Game& game, int angle, fixedvec vel, int speed, fixedvec pos, 
 	obj->firedBy = ww;
 	obj->hasHit = false;
 
-	LTRACE(rand, 0, wobj, game.rand.x);
+	LTRACE(rand, 0, wobj, game.rand.last);
 	LTRACE(fire, obj - game.wobjects.arr, cxpo, pos.x);
 	LTRACE(fire, obj - game.wobjects.arr, cypo, pos.y);
 

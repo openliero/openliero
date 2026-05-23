@@ -1,6 +1,6 @@
 #pragma once
 
-#include <gvl/math/vec.hpp>
+#include "math/rect.hpp"
 
 using fixedvec = gvl::ivec2;
 

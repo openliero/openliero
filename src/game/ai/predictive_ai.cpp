@@ -124,7 +124,7 @@ int obstacles(Game& game, gvl::ivec2 from, gvl::ivec2 to)
 	dvec2 dir(to.x, to.y);
 	dir -= org;
 
-	double l = length(dir);
+	double l = std::sqrt(dir.x * dir.x + dir.y * dir.y);
 	dir /= l;
 
 	int obst = 0;

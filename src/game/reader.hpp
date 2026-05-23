@@ -8,12 +8,15 @@
 #include <gvl/io2/stream.hpp>
 #include <gvl/serialization/coding.hpp>
 
-struct ReaderFile : gvl::noncopyable
+struct ReaderFile
 {
 	ReaderFile()
 	: data(0), pos(0), len(0)
 	{
 	}
+
+	ReaderFile(const ReaderFile&) = delete;
+	ReaderFile& operator=(const ReaderFile&) = delete;
 
 	ReaderFile(ReaderFile&& other)
 	: data(other.data), pos(other.pos), len(other.len)

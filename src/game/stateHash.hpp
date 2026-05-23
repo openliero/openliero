@@ -15,8 +15,7 @@
 inline uint32_t hashGameState(Game& game) {
   uint32_t h = 1;
 
-  h = h * 31 + game.rand.x;
-  h = h * 31 + game.rand.c;
+  h = h * 31 + game.rand.last;
   h = h * 31 + static_cast<uint32_t>(game.cycles);
 
   for (int i = 0; i < game.level.width * game.level.height; ++i) {
@@ -124,7 +123,7 @@ struct ComponentHashes {
 inline ComponentHashes hashGameComponents(Game& game) {
   ComponentHashes c{};
 
-  c.rng = game.rand.x * 31 + game.rand.c;
+  c.rng = game.rand.last;
 
   {
     uint32_t h = 1;

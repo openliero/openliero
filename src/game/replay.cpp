@@ -431,7 +431,7 @@ void ReplayWriter::endRecord()
 uint32_t fastGameChecksum(Game& game)
 {
 	// game.rand is like a golden thread
-	uint32_t checksum = game.rand.x;
+	uint32_t checksum = game.rand.last;
 	for(std::size_t i = 0; i < game.worms.size(); ++i)
 	{
 		Worm& worm = *game.worms[i];

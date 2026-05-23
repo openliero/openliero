@@ -4,7 +4,7 @@
 #include "worm.hpp"
 #include "rand.hpp"
 #include "viewport.hpp"
-#include <gvl/math/rect.hpp>
+#include "math/rect.hpp"
 #include <ctime>
 
 struct Renderer;

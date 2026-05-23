@@ -2,10 +2,9 @@
 
 #include "color.hpp"
 #include <cstring>
-#include <gvl/math/rect.hpp>
-#include <gvl/support/platform.hpp>
+#include "math/rect.hpp"
 
-struct Bitmap : gvl::noncopyable
+struct Bitmap
 {
 	int w, h;
 	unsigned int pitch;
@@ -16,6 +15,9 @@ struct Bitmap : gvl::noncopyable
 	: pixels(0)
 	{
 	}
+
+	Bitmap(const Bitmap&) = delete;
+	Bitmap& operator=(const Bitmap&) = delete;
 
 	void alloc(int w, int h)
 	{

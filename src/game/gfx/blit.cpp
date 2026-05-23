@@ -7,7 +7,7 @@
 #include "../settings.hpp"
 #include "bitmap.hpp"
 #include "macros.hpp"
-#include <gvl/math/rect.hpp>
+#include "math/rect.hpp"
 #include <cstring>
 #include <cassert>
 #include <cstdlib>

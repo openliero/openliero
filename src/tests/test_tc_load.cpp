@@ -90,7 +90,7 @@ TEST_CASE("TC supports game initialization", "[tc_load]") {
   game.resetWorms();
 
   // Run a short simulation — validates no crashes during gameplay
-  gvl::mwc inputRng(12345);
+  Rand inputRng(12345);
   constexpr int NUM_FRAMES = 200;
 
   for (int frame = 0; frame < NUM_FRAMES; ++frame) {

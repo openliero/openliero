@@ -2,7 +2,7 @@
 
 #include "color.hpp"
 #include "sprite.hpp"
-#include <gvl/math/rect.hpp>
+#include "math/rect.hpp"
 #include <vector>
 #include <algorithm>
 

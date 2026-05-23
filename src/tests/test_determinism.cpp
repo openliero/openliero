@@ -88,7 +88,7 @@ struct DualGameFixture {
   }
 
   // Apply identical random inputs to both games using a separate PRNG
-  void applyRandomInputs(gvl::mwc& inputRng) {
+  void applyRandomInputs(Rand& inputRng) {
     for (int idx = 0; idx < 2; ++idx) {
       uint32_t input = inputRng() & 0x7f;  // 7 control bits
       gameA->worms[idx]->controlStates.unpack(input);
@@ -100,7 +100,7 @@ struct DualGameFixture {
 TEST_CASE("Dual simulation produces identical state", "[determinism]") {
   DualGameFixture f;
 
-  gvl::mwc inputRng(12345);
+  Rand inputRng(12345);
 
   constexpr int NUM_FRAMES = 1000;
 
@@ -124,7 +124,7 @@ TEST_CASE("Simulation is reproducible across runs", "[determinism]") {
 
   for (int run = 0; run < 2; ++run) {
     DualGameFixture f;
-    gvl::mwc inputRng(99999);
+    Rand inputRng(99999);
 
     constexpr int NUM_FRAMES = 500;
 
@@ -202,8 +202,8 @@ TEST_CASE("Same inputs produce same state regardless of construction order",
   game1.resetWorms();
   game2.resetWorms();
 
-  gvl::mwc inputRng1(55555);
-  gvl::mwc inputRng2(55555);
+  Rand inputRng1(55555);
+  Rand inputRng2(55555);
 
   for (int frame = 0; frame < 300; ++frame) {
     for (int idx = 0; idx < 2; ++idx) {
@@ -287,7 +287,7 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
     gameA.resetWorms();
     gameB.resetWorms();
 
-    gvl::mwc inputRng(seed * 2654435761u + 1);
+    Rand inputRng(seed * 2654435761u + 1);
 
     constexpr int NUM_FRAMES = 5000;
     int deathCount = 0;
@@ -322,8 +322,8 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
 
       if (hashA != hashB) {
         // Identify which component diverged
-        uint32_t rngA = gameA.rand.x * 31 + gameA.rand.c;
-        uint32_t rngB = gameB.rand.x * 31 + gameB.rand.c;
+        uint32_t rngA = gameA.rand.last;
+        uint32_t rngB = gameB.rand.last;
         bool rngMatch = (rngA == rngB);
 
         bool wormsMatch = true;

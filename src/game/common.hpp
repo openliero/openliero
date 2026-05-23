@@ -71,9 +71,9 @@ struct AIParams {
   int k[NUM_AIPARAMS_VALUES][NUM_AIPARAMS_KEYS];  // 0x1AEEE, contiguous words
 };
 
-struct SfxSample : gvl::noncopyable {
-  // SfxSample(SfxSample const&) = delete;
-  // SfxSample& operator=(SfxSample const&) = delete;
+struct SfxSample {
+  SfxSample(SfxSample const&) = delete;
+  SfxSample& operator=(SfxSample const&) = delete;
 
   SfxSample() : sound(0) {}
 

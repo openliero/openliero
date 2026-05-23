@@ -5,7 +5,7 @@
 #include "../worm.hpp"
 #include "../math.hpp"
 #include "../rand.hpp"
-#include <gvl/math/vec.hpp>
+#include "math/rect.hpp"
 #include <numeric>
 #include <functional>
 #include <algorithm>

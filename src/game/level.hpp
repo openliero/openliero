@@ -7,8 +7,8 @@
 #include "gfx/palette.hpp"
 #include "material.hpp"
 #include "common.hpp"
-#include <gvl/math/vec.hpp>
-#include <gvl/math/rect.hpp>
+#include "math/rect.hpp"
+#include "math/rect.hpp"
 
 struct Game;
 struct Settings;

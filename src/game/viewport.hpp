@@ -3,7 +3,7 @@
 #include "game.hpp"
 #include "worm.hpp"
 #include "rand.hpp"
-#include <gvl/math/rect.hpp>
+#include "math/rect.hpp"
 #include <ctime>
 
 struct Renderer;

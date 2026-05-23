@@ -93,8 +93,9 @@ void NetworkController::loadLevelFromData(const std::vector<uint8_t>& data) {
     raw.assign(data.begin() + 5, data.end());
   }
 
-  // Deserialize: width(2) + height(2) + rand_x(4) + rand_c(4) + pixel_data(w*h) + palette(768)
-  if (raw.size() < 12)
+  // Deserialize: width(2) + height(2) + rand_state_len(4) + rand_state(N)
+  //            + rand_last(4) + pixel_data(w*h) + palette(768)
+  if (raw.size() < 8)
     return;
 
   uint16_t w, h;
@@ -105,26 +106,37 @@ void NetworkController::loadLevelFromData(const std::vector<uint8_t>& data) {
   if (w == 0 || h == 0 || w > 4096 || h > 4096)
     return;
 
-  uint32_t randX, randC;
-  std::memcpy(&randX, raw.data() + 4, 4);
-  std::memcpy(&randC, raw.data() + 8, 4);
+  uint32_t randStateLen;
+  std::memcpy(&randStateLen, raw.data() + 4, 4);
 
+  // mt19937 text serialisation is ~6.5 KB; reject anything wildly oversized.
+  if (randStateLen > 64 * 1024)
+    return;
+  if (raw.size() < 8 + randStateLen + 4)
+    return;
+
+  std::string randState(reinterpret_cast<const char*>(raw.data() + 8),
+                        randStateLen);
+  uint32_t randLast;
+  std::memcpy(&randLast, raw.data() + 8 + randStateLen, 4);
+
+  size_t pixelsOffset = 8 + randStateLen + 4;
   size_t pixelDataSize = static_cast<size_t>(w) * h;
-  if (raw.size() < 12 + pixelDataSize + 768)
+  if (raw.size() < pixelsOffset + pixelDataSize + 768)
     return;
 
   game.level.resize(w, h);
   Common& common = *game.common;
 
   // Load pixel data and rebuild materials
-  const uint8_t* pixels = raw.data() + 12;
+  const uint8_t* pixels = raw.data() + pixelsOffset;
   for (size_t i = 0; i < pixelDataSize; ++i) {
     game.level.data[i] = pixels[i];
     game.level.materials[i] = common.materials[pixels[i]];
   }
 
   // Load palette
-  const uint8_t* palData = raw.data() + 12 + pixelDataSize;
+  const uint8_t* palData = raw.data() + pixelsOffset + pixelDataSize;
   for (int i = 0; i < 256; ++i) {
     game.level.origpal.entries[i].r = palData[i * 3 + 0];
     game.level.origpal.entries[i].g = palData[i * 3 + 1];
@@ -132,8 +144,8 @@ void NetworkController::loadLevelFromData(const std::vector<uint8_t>& data) {
   }
 
   // Restore RNG state to match host's post-generation state
-  game.rand.x = randX;
-  game.rand.c = randC;
+  game.rand.deserialize(randState);
+  game.rand.last = randLast;
 
   levelPreloaded = true;
 }

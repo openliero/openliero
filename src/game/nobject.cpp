@@ -82,7 +82,7 @@ void NObject::process(Game& game)
 
 	pos += vel;
 
-	LTRACE(rand, 0, nopr, game.rand.x);
+	LTRACE(rand, 0, nopr, game.rand.last);
 	LTRACE(nobj, this - game.nobjects.arr, moxp, pos.x);
 	LTRACE(nobj, this - game.nobjects.arr, moyp, pos.y);
 
