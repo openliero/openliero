@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <gvl/support/debug.hpp>
+#include <cassert>
 #include "color.hpp"
 
 struct Settings;
@@ -31,9 +31,9 @@ struct Palette
 		entries[dest].g = (add + c[1] * scale) / 64;
 		entries[dest].b = (add + c[2] * scale) / 64;
 
-		sassert(entries[dest].r < 64);
-		sassert(entries[dest].g < 64);
-		sassert(entries[dest].b < 64);
+		assert(entries[dest].r < 64);
+		assert(entries[dest].g < 64);
+		assert(entries[dest].b < 64);
 	}
 
 	void setWormColoursSpan(int base, int const (&c)[3])

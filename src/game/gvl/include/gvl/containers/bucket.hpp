@@ -69,7 +69,7 @@ struct bucket_data_mem : bucket_data
 
 	static bucket_data_mem* create(bucket_size capacity, bucket_size size)
 	{
-		sassert(size <= capacity);
+		assert(size <= capacity);
 		void* mem = new char[compute_size(capacity)];
 		return new (mem) bucket_data_mem(size);
 	}
@@ -77,7 +77,7 @@ struct bucket_data_mem : bucket_data
 	static bucket_data_mem* create_from(uint8_t const* b, uint8_t const* e, std::size_t cap_init)
 	{
 		std::size_t s = e - b;
-		sassert(cap_init >= s);
+		assert(cap_init >= s);
 		bucket_data_mem* ret = create(cap_init, s);
 		std::memcpy(ret->data, b, s);
 		return ret;
@@ -180,26 +180,26 @@ struct bucket : list_node<>
 
 	size_type begin() const
 	{
-		passert(size_known(), "Size is unknown");
+		assert((size_known()) && "Size is unknown");
 		return begin_;
 	}
 
 	size_type end() const
 	{
-		passert(size_known(), "Size is unknown");
+		assert((size_known()) && "Size is unknown");
 		return end_;
 	}
 
 	size_type size() const
 	{
-		passert(size_known(), "Size is unknown");
+		assert((size_known()) && "Size is unknown");
 		return static_cast<size_type>(end_ - begin_);
 	}
 
 	void split(std::size_t point)
 	{
-		passert(size_known(), "Size is unknown");
-		passert(0 <= point && point <= size(), "Split point is out of bounds");
+		assert((size_known()) && "Size is unknown");
+		assert((0 <= point && point <= size()) && "Split point is out of bounds");
 
 		if(point == 0 || point == size())
 			return; // No need to do anything
@@ -215,16 +215,16 @@ struct bucket : list_node<>
 
 	void cut_front(size_type amount)
 	{
-		passert(size_known(), "Size is unknown");
+		assert((size_known()) && "Size is unknown");
 		begin_ += amount;
-		passert(begin_ <= end_, "Underflow");
+		assert((begin_ <= end_) && "Underflow");
 	}
 
 	void cut_back(size_type amount)
 	{
-		passert(size_known(), "Size is unknown");
+		assert((size_known()) && "Size is unknown");
 		end_ -= amount;
-		passert(begin_ <= end_, "Underflow");
+		assert((begin_ <= end_) && "Underflow");
 	}
 
 	shared_ptr<bucket_data_mem> release_data()
@@ -260,7 +260,7 @@ protected:
 uint8_t const* bucket::get_ptr()
 {
 	uint8_t const* ptr = data_->get_ptr(*this, begin_);
-	//passert(dynamic_cast<bucket_data_mem*>(data_.get()), "get_ptr must replace the bucket_data with bucket_data_mem");
+	//assert((dynamic_cast<bucket_data_mem*>(data_.get())) && "get_ptr must replace the bucket_data with bucket_data_mem");
 	return ptr;
 }
 

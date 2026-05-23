@@ -10,7 +10,7 @@ namespace gvl
 template<typename Writer>
 inline void write_uint16(Writer& writer, unsigned int v)
 {
-	sassert(v < 0x10000);
+	assert(v < 0x10000);
 	writer.put(uint8_t((v >> 8) & 0xff));
 	writer.put(uint8_t(v & 0xff));
 }
@@ -24,7 +24,7 @@ inline void write_sint16(Writer& writer, unsigned int v)
 template<typename Writer>
 inline void write_uint16_le(Writer& writer, unsigned int v)
 {
-	sassert(v < 0x10000);
+	assert(v < 0x10000);
 	writer.put(uint8_t(v & 0xff));
 	writer.put(uint8_t((v >> 8) & 0xff));
 }
@@ -32,7 +32,7 @@ inline void write_uint16_le(Writer& writer, unsigned int v)
 template<typename Writer>
 inline void write_uint24(Writer& writer, unsigned int v)
 {
-	sassert(v < 0x1000000);
+	assert(v < 0x1000000);
 	writer.put(uint8_t((v >> 16) & 0xff));
 	writer.put(uint8_t((v >> 8) & 0xff));
 	writer.put(uint8_t(v & 0xff));
@@ -41,7 +41,7 @@ inline void write_uint24(Writer& writer, unsigned int v)
 template<typename Writer>
 inline void write_uint24_le(Writer& writer, unsigned int v)
 {
-	sassert(v < 0x1000000);
+	assert(v < 0x1000000);
 	writer.put(uint8_t(v & 0xff));
 	writer.put(uint8_t((v >> 8) & 0xff));
 	writer.put(uint8_t((v >> 16) & 0xff));

@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "gvl/resman/shared.hpp"
-#include "gvl/support/debug.hpp"
+#include <cassert>
 #include "gvl/support/functional.hpp"
 
 namespace gvl
@@ -112,10 +112,10 @@ struct shared_ptr // : shared_ptr_common
 	{ return v; }
 
 	T* operator->() const
-	{ sassert(v); return static_cast<T*>(v); }
+	{ assert(v); return static_cast<T*>(v); }
 
 	T& operator*() const
-	{ sassert(v); return *static_cast<T*>(v); }
+	{ assert(v); return *static_cast<T*>(v); }
 
 	// Takes ownership, v_new assumed fresh (no add_ref!)
 	void reset(T* v_new)
@@ -150,7 +150,7 @@ struct shared_ptr // : shared_ptr_common
 
 	T& cow()
 	{
-		sassert(v);
+		assert(v);
 		if(v->ref_count() > 1)
 			reset(get()->clone());
 		return *get();
@@ -163,7 +163,7 @@ private:
 	// Takes ownership (no add_ref!)
 	void _reset(T* v_new)
 	{
-		sassert(v_new != v); // self-reset is invalid
+		assert(v_new != v); // self-reset is invalid
 		_release();
 		v = v_new;
 	}
@@ -193,7 +193,7 @@ private:
 	void _set_non_zero(T* v_new)
 	{
 		v = v_new;
-		sassert(v);
+		assert(v);
 		v->add_ref();
 	}
 
@@ -284,7 +284,7 @@ public:
 	{ return v;	}
 
 	T* operator->() const
-	{ sassert(v); return v; }
+	{ assert(v); return v; }
 
 	T& operator*() const
 	{ assert(v); return *v;	}
@@ -323,7 +323,7 @@ private:
 
 	void _reset(T* v_new)
 	{
-		sassert(v_new != v); // self-reset is invalid
+		assert(v_new != v); // self-reset is invalid
 		_release();
 		v = v_new;
 	}
@@ -352,7 +352,7 @@ private:
 	void _set_non_zero(T* v_new)
 	{
 		v = v_new;
-		sassert(v);
+		assert(v);
 		v->add_ref();
 	}
 

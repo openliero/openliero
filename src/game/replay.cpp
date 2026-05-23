@@ -3,7 +3,6 @@
 #include "game.hpp"
 #include "worm.hpp"
 #include "viewport.hpp"
-#include <gvl/support/type_info.hpp>
 #include <gvl/serialization/archive.hpp>
 #include <gvl/io2/deflate_filter.hpp>
 
@@ -573,7 +572,7 @@ void ReplayWriter::recordFrame()
 		{
 			uint8_t state = worm->controlStates.pack() ^ worm->prevControlStates.pack();
 
-			sassert(state < 0x80);
+			assert(state < 0x80);
 
 			writer.put(state);
 		}

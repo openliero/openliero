@@ -55,7 +55,7 @@ void octet_reader::set_bucket_(shared_ptr<bucket_data_mem> bucket)
 
 source_result::status octet_reader::next_piece_(uint32_t amount)
 {
-	passert(cur_ == end_, "Still data in the first bucket");
+	assert((cur_ == end_) && "Still data in the first bucket");
 
 	if (!head_)
 		return source_result::eos;
@@ -124,7 +124,7 @@ sink_result octet_writer::flush_buffer(bucket_size new_buffer_size)
 		end_ = buffer_->data + buffer_->size_;
 	}
 
-	sassert(left() >= new_buffer_size);
+	assert(left() >= new_buffer_size);
 
 	return res;
 }
@@ -132,7 +132,7 @@ sink_result octet_writer::flush_buffer(bucket_size new_buffer_size)
 sink_result octet_writer::overflow_put_(uint8_t b)
 {
 	auto ret = flush_buffer(default_initial_bucket_size);
-	sassert(cur_ != end_);
+	assert(cur_ != end_);
 	*cur_++ = b;
 	return ret;
 }

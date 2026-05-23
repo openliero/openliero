@@ -269,7 +269,7 @@ struct out_archive
 
 	out_archive& ui8(uint32_t v)
 	{
-		sassert(v < 0x100);
+		assert(v < 0x100);
 		writer.put(v);
 		return *this;
 	}

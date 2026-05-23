@@ -6,7 +6,7 @@
 #include <list>
 
 #include "gvl/support/functional.hpp"
-#include "gvl/support/debug.hpp"
+#include <cassert>
 #include "gvl/support/platform.hpp"
 
 // BIG TODO: Exception safety
@@ -69,9 +69,7 @@ inline void unlink(gvl_list_node* self);
 // This is (of course) the case right after the unlink.
 inline void relink(gvl_list_node* self)
 {
-	passert(
-		self->prev->next == self->next && self->next->prev == self->prev,
-		"Adjacent nodes must be consecutive");
+	assert((self->prev->next == self->next && self->next->prev == self->prev) && "Adjacent nodes must be consecutive");
 	self->prev->next = self;
 	self->next->prev = self;
 }
@@ -442,13 +440,13 @@ struct list : list_common, protected Deleter, protected Ownership
 
 	T* first() const
 	{
-		sassert(!empty());
+		assert(!empty());
 		return downcast(sentinel_.next);
 	}
 
 	T* last() const
 	{
-		sassert(!empty());
+		assert(!empty());
 		return downcast(sentinel_.prev);
 	}
 
@@ -664,7 +662,7 @@ struct list : list_common, protected Deleter, protected Ownership
 		if(i.ptr_ == &sentinel_)
 			return; // Nothing to do
 
-		sassert(sentinel_.prev != &sentinel_);
+		assert(sentinel_.prev != &sentinel_);
 
 		gvl_list_node* new_last = i.ptr_->prev;
 		i.ptr_->prev = b.sentinel_.prev;

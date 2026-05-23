@@ -6,8 +6,8 @@
 #include <climits>
 #include <cstdint>
 
-#include "gvl/support/debug.hpp"
-#include "gvl/meta/as_unsigned.hpp"
+#include <cassert>
+#include <type_traits>
 
 namespace gvl
 {
@@ -49,7 +49,7 @@ int uint_to_ascii_base(Writer& writer, T x, int min_digits = 1, bool uppercase =
 template<uint32_t Base, typename Writer, typename T>
 void int_to_ascii_base(Writer& writer, T x, int min_digits = 1, bool uppercase = false)
 {
-	typedef typename as_unsigned<T>::type unsigned_t;
+	typedef std::make_unsigned_t<T> unsigned_t;
 
 	if(x < 0)
 	{

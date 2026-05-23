@@ -24,9 +24,9 @@ void list_common::integrity_check()
 	gvl_list_node* n = sentinel();
 	for(;;)
 	{
-		passert(seen.find(n) == seen.end(), "No cycles");
-		sassert(n->next->prev == n);
-		sassert(n->prev->next == n);
+		assert((seen.find(n) == seen.end()) && "No cycles");
+		assert(n->next->prev == n);
+		assert(n->prev->next == n);
 
 		seen.insert(n);
 

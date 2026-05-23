@@ -4,7 +4,7 @@
 
 #include "gvl/resman/shared_ptr.hpp"
 #include "gvl/containers/bucket.hpp"
-#include "gvl/support/debug.hpp"
+#include <cassert>
 #include "gvl/io2/convert.hpp"
 
 namespace gvl
@@ -116,7 +116,7 @@ struct stream_piece : shared
 			return source_result::ok;
 
 		// No bucket data, must read
-		sassert(!next);
+		assert(!next);
 
 		auto r(source->read_next(amount));
 

@@ -59,7 +59,7 @@ struct deflate_source : bucket_pipe, octet_reader
 
 	virtual source_result read_next(size_t amount = 0)
 	{
-		sassert(pull);
+		assert(pull);
 
 		auto s = drive();
 		if (s == source_result::ok)
@@ -99,7 +99,7 @@ struct deflate_source : bucket_pipe, octet_reader
 
 	virtual sink_result write(unique_ptr<bucket_data_mem>&& data)
 	{
-		sassert(!pull);
+		assert(!pull);
 
 		while (true)
 		{
@@ -110,24 +110,24 @@ struct deflate_source : bucket_pipe, octet_reader
 				auto r = try_write_cur();
 				if (!r) return r;
 
-				sassert(str.avail_out != 0);
+				assert(str.avail_out != 0);
 			}
 			else if (str.avail_in != 0)
 			{
-				sassert(str.avail_out != 0);
+				assert(str.avail_out != 0);
 
 				auto s = drive();
 				if (s != source_result::ok)
 					return sink_result::would_block; // TODO: Should return error if the stream does
 
-				sassert(str.avail_out == 0 || str.avail_in == 0);
+				assert(str.avail_out == 0 || str.avail_in == 0);
 				continue;
 			}
 			else
 			{
 				set_bucket_(shared_ptr<bucket_data_mem>(data.release()));
 				str.avail_in = (unsigned int)buf_left();
-				sassert(str.avail_in > 0);
+				assert(str.avail_in > 0);
 				str.next_in = (unsigned char*)cur_;
 
 				auto s = drive();
@@ -156,7 +156,7 @@ struct deflate_source : bucket_pipe, octet_reader
 					if (s == source_result::ok)
 					{
 						str.avail_in = (unsigned int)buf_left();
-						sassert(str.avail_in > 0);
+						assert(str.avail_in > 0);
 						str.next_in = (unsigned char*)cur_;
 					}
 					else if (s != source_result::eos)

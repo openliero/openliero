@@ -112,7 +112,6 @@ set(SOURCES
   src/game/gvl/src/containers/list.cpp
   src/game/gvl/src/io2/stream.cpp
   src/game/gvl/src/support/bits.cpp
-  src/game/gvl/src/support/debug.cpp
   src/game/gvl/src/support/platform.cpp
 )
 

@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 
-#include "gvl/support/type_info.hpp"
+#include <typeindex>
 
 namespace gvl
 {
@@ -84,9 +84,9 @@ struct serialization_context
 	DerivedT& derived()
 	{ return *static_cast<DerivedT*>(this); }
 
-	type& get_type(gvl::type_info ti)
+	type& get_type(std::type_index ti)
 	{
-		typename std::map<gvl::type_info, type*>::iterator i = types.find(ti);
+		typename std::map<std::type_index, type*>::iterator i = types.find(ti);
 		if(i == types.end())
 		{
 			i = types.insert(std::make_pair(ti, new type)).first;
@@ -100,7 +100,7 @@ struct serialization_context
 	{
 		if(v == 0)
 			return std::make_pair(false, 0);
-		type& t = get_type(gvl::type_id<T>());
+		type& t = get_type(std::type_index(typeid(T)));
 
 		uint32_t id;
 		void* ptr = v;
@@ -130,7 +130,7 @@ struct serialization_context
 			v = 0;
 			return false;
 		}
-		type& t = get_type(gvl::type_id<T>());
+		type& t = get_type(std::type_index(typeid(T)));
 
 		void* ptr;
 		if(t.try_get(id, ptr))
@@ -152,13 +152,13 @@ struct serialization_context
 	template<typename T>
 	void unregister(T* v)
 	{
-		type& t = get_type(gvl::type_id<T>());
+		type& t = get_type(std::type_index(typeid(T)));
 		t.remove(v);
 	}
 
 	~serialization_context()
 	{
-		for(typename std::map<gvl::type_info, type*>::iterator i = types.begin(); i != types.end(); ++i)
+		for(typename std::map<std::type_index, type*>::iterator i = types.begin(); i != types.end(); ++i)
 		{
 			delete i->second;
 		}
@@ -169,7 +169,7 @@ private:
 	serialization_context(serialization_context const&);
 	serialization_context& operator=(serialization_context const&);
 
-	std::map<gvl::type_info, type*> types;
+	std::map<std::type_index, type*> types;
 };
 
 struct default_serialization_context : serialization_context<default_serialization_context>
