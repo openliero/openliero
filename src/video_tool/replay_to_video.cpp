@@ -3,6 +3,7 @@
 #include <string>
 #include "game/replay.hpp"
 #include "game/filesystem.hpp"
+#include "game/io/stream.hpp"
 #include "game/reader.hpp"
 #include "game/mixer/player.hpp"
 #include "game/game.hpp"
@@ -11,7 +12,6 @@
 #include "game/gfx/renderer.hpp"
 #include "game/text.hpp"
 
-#include <gvl/io2/fstream.hpp>
 #include <memory>
 
 extern "C"
@@ -26,9 +26,8 @@ void replayToVideo(
 	std::string const& fullPath,
 	std::string const& replayVideoName)
 {
-	auto replay(
-		gvl::to_source(new gvl::file_bucket_pipe(fullPath.c_str(), "rb")));
-	ReplayReader replayReader(replay);
+	ReplayReader replayReader(
+		std::make_unique<io::FileReader>(fullPath.c_str(), "rb"));
 	Renderer renderer;
 
 	if (spectator)

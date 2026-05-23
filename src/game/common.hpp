@@ -13,7 +13,6 @@
 #include "weapon.hpp"
 
 #if ENABLE_TRACING
-#include <gvl/io2/fstream.hpp>
 #include <gvl/serialization/archive.hpp>
 #endif
 

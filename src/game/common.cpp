@@ -1,14 +1,11 @@
 #include "common.hpp"
 
-#include <gvl/io2/convert.hpp>
-#include <gvl/io2/fstream.hpp>
 #include <map>
 #include <string>
 #include "common_model.hpp"
 #include "filesystem.hpp"
 #include "gfx/blit.hpp"
 #include "io/coding.hpp"
-#include "io/gvl_compat.hpp"
 #include "io/stream.hpp"
 #include "rand.hpp"
 #include "worm.hpp"
@@ -310,7 +307,7 @@ inline uint32_t quad(char a, char b, char c, char d) {
 
 void Common::load(FsNode node) {
   {
-    io::GvlReaderAdapter textReader((node / "tc.cfg").toOctetReader());
+    auto textReader_ptr = (node / "tc.cfg").toReader(); io::Reader& textReader = *textReader_ptr;
     gvl::toml::reader<io::Reader> tomlReader(textReader);
     archive_text(*this, tomlReader);
   }
@@ -318,7 +315,7 @@ void Common::load(FsNode node) {
   for (auto& s : sounds) {
     auto dir = node / "sounds";
 
-    io::GvlReaderAdapter r((dir / (s.name + ".wav")).toOctetReader());
+    auto r_ptr = (dir / (s.name + ".wav")).toReader(); io::Reader& r = *r_ptr;
 
     if (io::read_uint32_le(r) == quad('R', 'I', 'F', 'F')) {
       std::size_t roundedSize = io::read_uint32_le(r) + 8;
@@ -354,23 +351,23 @@ void Common::load(FsNode node) {
     textSprites.allocate(4, 4, 26);
 
     {
-      io::GvlReaderAdapter r((dir / "small.tga").toOctetReader());
+      auto r_ptr = (dir / "small.tga").toReader(); io::Reader& r = *r_ptr;
 
       readSpriteTga(r, smallSprites, &exepal);
     }
 
     {
-      io::GvlReaderAdapter r((dir / "large.tga").toOctetReader());
+      auto r_ptr = (dir / "large.tga").toReader(); io::Reader& r = *r_ptr;
       readSpriteTga(r, largeSprites, 0);
     }
 
     {
-      io::GvlReaderAdapter r((dir / "text.tga").toOctetReader());
+      auto r_ptr = (dir / "text.tga").toReader(); io::Reader& r = *r_ptr;
       readSpriteTga(r, textSprites, 0);
     }
 
     {
-      io::GvlReaderAdapter r((dir / "font.tga").toOctetReader());
+      auto r_ptr = (dir / "font.tga").toReader(); io::Reader& r = *r_ptr;
 
       std::vector<uint8_t> data(font.chars.size() * 7 * 8, 10);
 
@@ -403,7 +400,7 @@ void Common::load(FsNode node) {
   for (auto& w : weapons) {
     auto dir = node / "weapons";
 
-    io::GvlReaderAdapter wReader((dir / (w.idStr + ".cfg")).toOctetReader());
+    auto wReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& wReader = *wReader_ptr;
     gvl::toml::reader<io::Reader> tomlReader(wReader);
     archive_text(*this, w, tomlReader);
   }
@@ -411,7 +408,7 @@ void Common::load(FsNode node) {
   for (auto& w : nobjectTypes) {
     auto dir = node / "nobjects";
 
-    io::GvlReaderAdapter nReader((dir / (w.idStr + ".cfg")).toOctetReader());
+    auto nReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& nReader = *nReader_ptr;
     gvl::toml::reader<io::Reader> tomlReader(nReader);
     archive_text(*this, w, tomlReader);
   }
@@ -419,7 +416,7 @@ void Common::load(FsNode node) {
   for (auto& w : sobjectTypes) {
     auto dir = node / "sobjects";
 
-    io::GvlReaderAdapter sReader((dir / (w.idStr + ".cfg")).toOctetReader());
+    auto sReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& sReader = *sReader_ptr;
     gvl::toml::reader<io::Reader> tomlReader(sReader);
     archive_text(*this, w, tomlReader);
   }

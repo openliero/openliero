@@ -3,10 +3,8 @@
 #include "keys.hpp"
 #include "gfx.hpp"
 #include "filesystem.hpp"
-#include "io/gvl_compat.hpp"
 #include "io/stream.hpp"
 
-#include <gvl/io2/fstream.hpp>
 #include <gvl/serialization/toml_adapter.hpp>
 
 #include <xxhash.h>
@@ -108,7 +106,7 @@ bool Settings::load(FsNode node, Rand& rand)
 {
 	try
 	{
-		io::GvlReaderAdapter reader(node.toOctetReader());
+		auto reader_ptr = node.toReader(); io::Reader& reader = *reader_ptr;
 		gvl::toml::reader<io::Reader> ar(reader);
 		archive_text(*this, ar);
 	}
@@ -150,7 +148,7 @@ void Settings::fromToml(std::string const& data)
 
 void Settings::save(FsNode node, Rand& rand)
 {
-	io::GvlWriterAdapter writer(node.toSink());
+	auto writer_ptr = node.toWriter(); io::Writer& writer = *writer_ptr;
 
 	gvl::toml::writer<io::Writer> ar(writer);
 

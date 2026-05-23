@@ -74,7 +74,14 @@ struct Writer {
 // ---- File-backed ----
 
 struct FileReader : Reader {
+	// Borrows the FILE* — caller retains ownership and is responsible
+	// for closing it. Useful for stdin or pre-opened file descriptors.
 	explicit FileReader(std::FILE* f) : f_(f), owned_(false) {}
+
+	// Tag for the take-ownership flavour of the FILE* constructor.
+	struct OwnFile {};
+	FileReader(std::FILE* f, OwnFile) : f_(f), owned_(true) {}
+
 	FileReader(char const* path, char const* mode) {
 		f_ = std::fopen(path, mode);
 		if (!f_)
@@ -106,6 +113,10 @@ private:
 
 struct FileWriter : Writer {
 	explicit FileWriter(std::FILE* f) : f_(f), owned_(false) {}
+
+	struct OwnFile {};
+	FileWriter(std::FILE* f, OwnFile) : f_(f), owned_(true) {}
+
 	FileWriter(char const* path, char const* mode) {
 		f_ = std::fopen(path, mode);
 		if (!f_)

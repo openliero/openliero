@@ -25,7 +25,6 @@
 #include "filesystem.hpp"
 #include "metadata.hpp"
 
-#include <gvl/io2/fstream.hpp>
 
 #include "controller/replayController.hpp"
 #include "controller/localController.hpp"

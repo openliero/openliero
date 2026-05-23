@@ -1,7 +1,5 @@
 #include "common_exereader.hpp"
 
-#include <gvl/io2/convert.hpp>
-#include <gvl/io2/fstream.hpp>
 #include <cctype>
 #include "game/cp437.hpp"
 #include "game/reader.hpp"

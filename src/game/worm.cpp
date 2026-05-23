@@ -5,7 +5,6 @@
 #include "constants.hpp"
 #include "console.hpp"
 #include "filesystem.hpp" // For joinPath
-#include "io/gvl_compat.hpp"
 #include "io/stream.hpp"
 #include <cstdlib>
 
@@ -14,7 +13,6 @@
 #include "replay.hpp"
 
 #include <xxhash.h>
-#include <gvl/io2/fstream.hpp>
 
 #include <SDL3/SDL.h>
 
@@ -65,7 +63,7 @@ void WormSettings::saveProfile(FsNode node)
 {
 	try
 	{
-		io::GvlWriterAdapter writer(node.toSink());
+		auto writer_ptr = node.toWriter(); io::Writer& writer = *writer_ptr;
 		profileNode = node;
 
 		gvl::toml::writer<io::Writer> ar(writer);
@@ -82,7 +80,7 @@ void WormSettings::loadProfile(FsNode node)
 	int oldColor = color;
 	try
 	{
-		io::GvlReaderAdapter reader(node.toOctetReader());
+		auto reader_ptr = node.toReader(); io::Reader& reader = *reader_ptr;
 		profileNode = node;
 
 		gvl::toml::reader<io::Reader> ar(reader);

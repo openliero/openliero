@@ -2,7 +2,6 @@
 
 #include <gvl/serialization/toml_adapter.hpp>
 #include "common.hpp"
-#include <gvl/io2/stream.hpp>
 
 template<typename T>
 struct ObjectResolver

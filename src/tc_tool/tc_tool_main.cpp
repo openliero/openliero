@@ -1,7 +1,6 @@
 #include "common_writer.hpp"
 #include "common_exereader.hpp"
 #include "game/filesystem.hpp"
-#include "game/io/gvl_compat.hpp"
 #include "game/reader.hpp"
 
 int main(int argc, char *argv[])
@@ -51,7 +50,7 @@ int main(int argc, char *argv[])
 	{
 		if (toUpperCase(name.name).find(".EXE") != std::string::npos)
 		{
-			io::GvlReaderAdapter exeReader((path / name.name).toOctetReader());
+			auto exeReader_ptr = (path / name.name).toReader(); io::Reader& exeReader = *exeReader_ptr;
 			ReaderFile exe(exeReader);
 
 			if (exe.len() >= 135000 && exe.len() <= 137000)
@@ -60,9 +59,9 @@ int main(int argc, char *argv[])
 
 				// TODO: Some TCs change the name of the .SND or .CHR for some reason.
 				// We could read that name from the exe to make them work.
-				io::GvlReaderAdapter gfxReader((path / "LIERO.CHR").toOctetReader());
+				auto gfxReader_ptr = (path / "LIERO.CHR").toReader(); io::Reader& gfxReader = *gfxReader_ptr;
 				ReaderFile gfx(gfxReader);
-				io::GvlReaderAdapter sndReader((path / "LIERO.SND").toOctetReader());
+				auto sndReader_ptr = (path / "LIERO.SND").toReader(); io::Reader& sndReader = *sndReader_ptr;
 				ReaderFile snd(sndReader);
 
 				loadFromExe(common, exe, gfx, snd);

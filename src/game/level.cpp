@@ -4,7 +4,6 @@
 #include "gfx.hpp"
 #include "gfx/color.hpp"
 #include "filesystem.hpp"
-#include "io/gvl_compat.hpp"
 #include "io/stream.hpp"
 
 #include <cstring>
@@ -268,7 +267,7 @@ void Level::generateFromSettings(Common& common, Settings const& settings, Rand&
 		bool loaded = false;
 		try
 		{
-			io::GvlReaderAdapter r(FsNode(path).toOctetReader());
+			auto r_ptr = FsNode(path).toReader(); io::Reader& r = *r_ptr;
 			loaded = load(common, settings, r);
 		}
 		catch (std::runtime_error&)
