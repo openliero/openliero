@@ -7,7 +7,7 @@
 struct Common;
 struct Renderer;
 
-struct StatsRecorder : gvl::shared
+struct StatsRecorder
 {
 	virtual void damagePotential(Worm* byWorm, WormWeapon* weapon, int hp);
 	virtual void damageDealt(Worm* byWorm, WormWeapon* weapon, Worm* toWorm, int hp, bool hasHit);

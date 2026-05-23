@@ -83,7 +83,7 @@ struct WormSettingsExtensions {
   std::string gamepadSerial; // Hardware serial for disambiguating identical controllers
 };
 
-struct WormSettings : gvl::shared, WormSettingsExtensions {
+struct WormSettings : WormSettingsExtensions {
   WormSettings() : health(100), controller(0), randomName(true), color(0) {
     rgb[0] = 26;
     rgb[1] = 26;
@@ -165,7 +165,7 @@ void archive(Archive ar, WormSettings& ws) {
 struct Viewport;
 struct Renderer;
 
-struct WormAI : gvl::shared {
+struct WormAI {
   virtual void process(Game& game, Worm& worm) = 0;
 
   virtual void drawDebug(
@@ -182,7 +182,7 @@ struct DumbLieroAI : WormAI {
   Rand rand;
 };
 
-struct Worm : gvl::shared {
+struct Worm {
   enum { RFDown, RFLeft, RFUp, RFRight };
 
   enum Control {

@@ -394,7 +394,7 @@ void DirectoryListing::sort()
 
 struct FsNodeZipFile;
 
-struct FsNodeZipArchive : gvl::shared
+struct FsNodeZipArchive
 {
 	FsNodeZipArchive(std::string const& path);
 

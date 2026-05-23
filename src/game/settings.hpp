@@ -40,7 +40,7 @@ struct AppSettings {
 
 struct Rand;
 
-struct Settings : gvl::shared, GameplayExtensions, AppSettings {
+struct Settings : GameplayExtensions, AppSettings {
   enum GameModes {
     GMKillEmAll,
     GMGameOfTag,

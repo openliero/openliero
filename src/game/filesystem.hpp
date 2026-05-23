@@ -73,8 +73,9 @@ struct DirectoryListing
 	void sort();
 };
 
-struct FsNodeImp : gvl::shared
+struct FsNodeImp
 {
+	virtual ~FsNodeImp() = default;
 	virtual std::string const& fullPath() = 0;
 	virtual DirectoryListing iter() = 0;
 	virtual std::shared_ptr<FsNodeImp> go(std::string const& name) = 0;
