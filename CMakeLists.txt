@@ -65,13 +65,11 @@ find_package(LibJuice CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
 find_package(xxHash CONFIG REQUIRED)
 
-# local dependencies
-add_subdirectory(src/gvl)
-
 # TODO get rid of this kludgy hack
 include_directories(
   src
   src/game
+  src/game/gvl/include
 )
 
 # embed version metadata in the code
@@ -111,6 +109,11 @@ set(SOURCES
   src/game/mixer/mixer.cpp
   src/game/mixer/player.cpp
   src/game/metadata.cpp
+  src/game/gvl/src/containers/list.cpp
+  src/game/gvl/src/io2/stream.cpp
+  src/game/gvl/src/support/bits.cpp
+  src/game/gvl/src/support/debug.cpp
+  src/game/gvl/src/support/platform.cpp
 )
 
 set(GAME_SOURCES ${SOURCES}
@@ -161,7 +164,6 @@ endif()
 target_link_libraries(game
   PUBLIC
   miniz::miniz
-  gvl
   SDL3::SDL3
   SDL3_image::SDL3_image
   enet::enet_static
@@ -233,7 +235,6 @@ if(OPENLIERO_BUILD_TCTOOL)
   target_link_libraries(tc
     PUBLIC
     miniz::miniz
-    gvl
     SDL3::SDL3
     xxHash::xxhash
   )
@@ -263,7 +264,6 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
   target_link_libraries(vt
     PUBLIC
     miniz::miniz
-    gvl
     SDL3::SDL3
     PkgConfig::FFMPEG
   )
