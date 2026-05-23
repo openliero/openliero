@@ -393,8 +393,8 @@ std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common
 
 	read(reader, context, *game);
 #ifdef DEBUG_REPLAYS
-	gvl::gash::value_type actualH = hash(*game);
-	gvl::gash::value_type expectedH;
+	uint64_t actualH = hash(*game);
+	uint64_t expectedH;
 	read(reader, context, expectedH);
 
 	if(actualH != expectedH)
@@ -418,7 +418,7 @@ void ReplayWriter::beginRecord(Game& game)
 #endif
 
 #ifdef DEBUG_REPLAYS
-	gvl::gash::value_type h = hash(game);
+	uint64_t h = hash(game);
 	write(writer, context, h);
 #endif
 }
@@ -515,7 +515,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 #ifdef DEBUG_REPLAYS
 	uint32_t expected = gvl::read_uint32(reader);
 	uint32_t expected2 = gvl::read_uint32(reader);
-	gvl::gash::value_type actual = hash(game);
+	uint64_t actual = hash(game);
 	if(expected != (uint32_t)actual.value[0])
 	{
 		std::cout << "Expected: " << expected << ", was: " << (uint32_t)actual.value[0] << std::endl;
@@ -590,7 +590,7 @@ void ReplayWriter::recordFrame()
 	}
 
 #ifdef DEBUG_REPLAYS
-	gvl::gash::value_type actual = hash(game);
+	uint64_t actual = hash(game);
 	gvl::write_uint32(writer, (uint32_t)actual.value[0]);
 	gvl::write_uint32(writer, game.cycles);
 #endif

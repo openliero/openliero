@@ -2,7 +2,7 @@
 
 #include <cstring>
 #include <functional>
-#include <gvl/crypt/gash.hpp>
+#include <xxhash.h>
 #include <gvl/serialization/archive.hpp>
 #include <memory>
 #include <numeric>
@@ -95,7 +95,7 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
     std::memset(controls, 0, sizeof(controls));
   }
 
-  gvl::gash::value_type& updateHash();
+  uint64_t& updateHash();
 
   void saveProfile(FsNode node);
   void loadProfile(FsNode node);
@@ -115,7 +115,7 @@ struct WormSettings : gvl::shared, WormSettingsExtensions {
   // std::string profilePath;
   FsNode profileNode;
 
-  gvl::gash::value_type hash;
+  uint64_t hash;
 };
 
 // Shared TOML serialization for worm settings (used by both settings file and profiles)

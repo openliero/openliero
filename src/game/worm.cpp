@@ -11,7 +11,7 @@
 #include <gvl/serialization/toml_adapter.hpp>
 #include "replay.hpp"
 
-#include <gvl/crypt/gash.hpp>
+#include <xxhash.h>
 #include <gvl/io2/fstream.hpp>
 
 #include <SDL3/SDL.h>
@@ -35,15 +35,11 @@ struct Point
 	int x, y;
 };
 
-gvl::gash::value_type& WormSettings::updateHash()
+uint64_t& WormSettings::updateHash()
 {
 	std::string tomlData = toToml();
 
-	gvl::hash_accumulator<gvl::gash> ha;
-	for (char c : tomlData)
-		ha.put(static_cast<uint8_t>(c));
-	ha.flush();
-	hash = ha.final();
+	hash = XXH3_64bits(tomlData.data(), tomlData.size());
 	return hash;
 }
 

@@ -2,7 +2,7 @@
 
 #include <gvl/io2/stream.hpp>
 #include <gvl/serialization/context.hpp>
-#include <gvl/crypt/gash.hpp>
+#include <xxhash.h>
 #include "mixer/player.hpp"
 #include <cstring>
 #include <map>
@@ -28,7 +28,7 @@ struct GameSerializationContext : gvl::serialization_context<GameSerializationCo
 		{
 		}
 
-		gvl::gash::value_type lastSettingsHash;
+		uint64_t lastSettingsHash;
 		bool settingsExpired;
 	};
 
@@ -65,7 +65,7 @@ struct ReplayWriter : Replay
 	//gvl::filter_ptr str;
 	//gvl::octet_stream_writer writer;
 	gvl::octet_writer writer;
-	gvl::gash::value_type lastSettingsHash;
+	uint64_t lastSettingsHash;
 	bool settingsExpired;
 
 	void beginRecord(Game& game);

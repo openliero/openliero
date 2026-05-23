@@ -7,7 +7,7 @@
 #include <gvl/io2/fstream.hpp>
 #include <gvl/serialization/toml_adapter.hpp>
 
-#include <gvl/crypt/gash.hpp>
+#include <xxhash.h>
 
 int const Settings::wormAnimTab[] =
 {
@@ -118,7 +118,7 @@ bool Settings::load(FsNode node, Rand& rand)
 	return true;
 }
 
-gvl::gash::value_type& Settings::updateHash()
+uint64_t& Settings::updateHash()
 {
 	std::string buf;
 	gvl::string_writer sw(buf);
@@ -126,11 +126,7 @@ gvl::gash::value_type& Settings::updateHash()
 	archive_gameplay_text(*this, ar);
 	ar.flush();
 
-	gvl::hash_accumulator<gvl::gash> ha;
-	for (char c : buf)
-		ha.put(static_cast<uint8_t>(c));
-	ha.flush();
-	hash = ha.final();
+	hash = XXH3_64bits(buf.data(), buf.size());
 	return hash;
 }
 

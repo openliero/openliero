@@ -63,6 +63,7 @@ find_package(miniz CONFIG REQUIRED)
 find_package(enet CONFIG REQUIRED PATHS "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/lib/cmake/enet")
 find_package(LibJuice CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
+find_package(xxHash CONFIG REQUIRED)
 
 # local dependencies
 add_subdirectory(src/gvl)
@@ -166,6 +167,7 @@ target_link_libraries(game
   enet::enet_static
   LibJuice::LibJuice
   tomlplusplus::tomlplusplus
+  xxHash::xxhash
 )
 
 if(APPLE)
@@ -233,6 +235,7 @@ if(OPENLIERO_BUILD_TCTOOL)
     miniz::miniz
     gvl
     SDL3::SDL3
+    xxHash::xxhash
   )
 
   add_executable(tctool ${TC_TOOL_SOURCES})

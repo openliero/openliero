@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <cstring>
-#include <gvl/crypt/gash.hpp>
+#include <xxhash.h>
 #include <gvl/serialization/archive.hpp>
 #include <stdexcept>
 #include <string>
@@ -60,7 +60,7 @@ struct Settings : gvl::shared, GameplayExtensions, AppSettings {
   void save(FsNode node, Rand& rand);
   std::string toToml() const;
   void fromToml(std::string const& data);
-  gvl::gash::value_type& updateHash();
+  uint64_t& updateHash();
 
   static void generateName(WormSettings& ws, Rand& rand);
 
@@ -85,7 +85,7 @@ struct Settings : gvl::shared, GameplayExtensions, AppSettings {
   static int const NetworkPlayerIdx = 2;
   std::shared_ptr<WormSettings> wormSettings[NumWormSettings];
 
-  gvl::gash::value_type hash;
+  uint64_t hash;
 };
 
 template <int L, int H, typename T>
