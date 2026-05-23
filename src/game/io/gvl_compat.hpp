@@ -23,6 +23,10 @@ struct GvlReaderAdapter : Reader {
 		return r_.try_get(dst, n);
 	}
 
+	std::size_t try_skip(std::size_t n) override {
+		return r_.try_skip(n);
+	}
+
 private:
 	gvl::octet_reader r_;
 };

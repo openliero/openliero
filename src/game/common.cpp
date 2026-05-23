@@ -7,6 +7,9 @@
 #include "common_model.hpp"
 #include "filesystem.hpp"
 #include "gfx/blit.hpp"
+#include "io/coding.hpp"
+#include "io/gvl_compat.hpp"
+#include "io/stream.hpp"
 #include "rand.hpp"
 #include "worm.hpp"
 
@@ -235,19 +238,12 @@ void Common::drawTextSmall(Bitmap& scr, char const* str, int x, int y) {
   }
 }
 
-struct OctetTextReader : gvl::octet_reader {
-  OctetTextReader(gvl::octet_reader r)
-      : gvl::octet_reader(std::move(r)), r(*this) {}
-
-  gvl::toml::reader<gvl::octet_reader> r;
-};
-
 #define CHECK(c) \
   if (!(c))      \
   goto fail
 
 int readSpriteTga(
-    gvl::octet_reader& r,
+    io::Reader& r,
     int destImageWidth,
     int destImageHeight,
     int destCount,
@@ -258,17 +254,17 @@ int readSpriteTga(
   CHECK(r.get() == 1);
 
   // Palette spec
-  CHECK(gvl::read_uint16_le(r) == 0);
-  CHECK(gvl::read_uint16_le(r) == 256);
+  CHECK(io::read_uint16_le(r) == 0);
+  CHECK(io::read_uint16_le(r) == 256);
   CHECK(r.get() == 24);
 
   int imageWidth, imageHeight;
 
-  CHECK(gvl::read_uint16_le(r) == 0);
-  CHECK(gvl::read_uint16_le(r) == 0);
+  CHECK(io::read_uint16_le(r) == 0);
+  CHECK(io::read_uint16_le(r) == 0);
 
-  imageWidth = gvl::read_uint16_le(r);
-  imageHeight = gvl::read_uint16_le(r);
+  imageWidth = io::read_uint16_le(r);
+  imageHeight = io::read_uint16_le(r);
   CHECK(r.get() == 8);
   CHECK(r.get() == 0);
 
@@ -300,7 +296,7 @@ fail:
   return 0;
 }
 
-int readSpriteTga(gvl::octet_reader& r, SpriteSet& ss, Palette* pal) {
+int readSpriteTga(io::Reader& r, SpriteSet& ss, Palette* pal) {
   return readSpriteTga(
       r, ss.width, ss.count * ss.height, ss.count, &ss.data[0], pal);
 }
@@ -313,27 +309,30 @@ inline uint32_t quad(char a, char b, char c, char d) {
 }
 
 void Common::load(FsNode node) {
-  OctetTextReader textReader((node / "tc.cfg").toOctetReader());
-  archive_text(*this, textReader.r);
+  {
+    io::GvlReaderAdapter textReader((node / "tc.cfg").toOctetReader());
+    gvl::toml::reader<io::Reader> tomlReader(textReader);
+    archive_text(*this, tomlReader);
+  }
 
   for (auto& s : sounds) {
     auto dir = node / "sounds";
 
-    gvl::octet_reader r((dir / (s.name + ".wav")).toOctetReader());
+    io::GvlReaderAdapter r((dir / (s.name + ".wav")).toOctetReader());
 
-    if (gvl::read_uint32_le(r) == quad('R', 'I', 'F', 'F')) {
-      std::size_t roundedSize = gvl::read_uint32_le(r) + 8;
+    if (io::read_uint32_le(r) == quad('R', 'I', 'F', 'F')) {
+      std::size_t roundedSize = io::read_uint32_le(r) + 8;
 
       (void)roundedSize;  // Ignore
 
-      if (gvl::read_uint32_le(r) == quad('W', 'A', 'V', 'E') &&
-          gvl::read_uint32_le(r) == quad('f', 'm', 't', ' ') &&
-          gvl::read_uint32_le(r) == 16 && gvl::read_uint16_le(r) == 1 &&
-          gvl::read_uint16_le(r) == 1 && gvl::read_uint32_le(r) == 22050 &&
-          gvl::read_uint32_le(r) == 22050 * 1 * 1 &&
-          gvl::read_uint16_le(r) == 1 * 1 && gvl::read_uint16_le(r) == 8 &&
-          gvl::read_uint32_le(r) == quad('d', 'a', 't', 'a')) {
-        std::size_t dataSize = gvl::read_uint32_le(r);
+      if (io::read_uint32_le(r) == quad('W', 'A', 'V', 'E') &&
+          io::read_uint32_le(r) == quad('f', 'm', 't', ' ') &&
+          io::read_uint32_le(r) == 16 && io::read_uint16_le(r) == 1 &&
+          io::read_uint16_le(r) == 1 && io::read_uint32_le(r) == 22050 &&
+          io::read_uint32_le(r) == 22050 * 1 * 1 &&
+          io::read_uint16_le(r) == 1 * 1 && io::read_uint16_le(r) == 8 &&
+          io::read_uint32_le(r) == quad('d', 'a', 't', 'a')) {
+        std::size_t dataSize = io::read_uint32_le(r);
 
         s.originalData.resize(dataSize);
 
@@ -355,23 +354,23 @@ void Common::load(FsNode node) {
     textSprites.allocate(4, 4, 26);
 
     {
-      gvl::octet_reader r((dir / "small.tga").toOctetReader());
+      io::GvlReaderAdapter r((dir / "small.tga").toOctetReader());
 
       readSpriteTga(r, smallSprites, &exepal);
     }
 
     {
-      gvl::octet_reader r((dir / "large.tga").toOctetReader());
+      io::GvlReaderAdapter r((dir / "large.tga").toOctetReader());
       readSpriteTga(r, largeSprites, 0);
     }
 
     {
-      gvl::octet_reader r((dir / "text.tga").toOctetReader());
+      io::GvlReaderAdapter r((dir / "text.tga").toOctetReader());
       readSpriteTga(r, textSprites, 0);
     }
 
     {
-      gvl::octet_reader r((dir / "font.tga").toOctetReader());
+      io::GvlReaderAdapter r((dir / "font.tga").toOctetReader());
 
       std::vector<uint8_t> data(font.chars.size() * 7 * 8, 10);
 
@@ -404,22 +403,25 @@ void Common::load(FsNode node) {
   for (auto& w : weapons) {
     auto dir = node / "weapons";
 
-    OctetTextReader wReader((dir / (w.idStr + ".cfg")).toOctetReader());
-    archive_text(*this, w, wReader.r);
+    io::GvlReaderAdapter wReader((dir / (w.idStr + ".cfg")).toOctetReader());
+    gvl::toml::reader<io::Reader> tomlReader(wReader);
+    archive_text(*this, w, tomlReader);
   }
 
   for (auto& w : nobjectTypes) {
     auto dir = node / "nobjects";
 
-    OctetTextReader nReader((dir / (w.idStr + ".cfg")).toOctetReader());
-    archive_text(*this, w, nReader.r);
+    io::GvlReaderAdapter nReader((dir / (w.idStr + ".cfg")).toOctetReader());
+    gvl::toml::reader<io::Reader> tomlReader(nReader);
+    archive_text(*this, w, tomlReader);
   }
 
   for (auto& w : sobjectTypes) {
     auto dir = node / "sobjects";
 
-    OctetTextReader sReader((dir / (w.idStr + ".cfg")).toOctetReader());
-    archive_text(*this, w, sReader.r);
+    io::GvlReaderAdapter sReader((dir / (w.idStr + ".cfg")).toOctetReader());
+    gvl::toml::reader<io::Reader> tomlReader(sReader);
+    archive_text(*this, w, tomlReader);
   }
 
   precompute();

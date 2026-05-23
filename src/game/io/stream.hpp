@@ -47,6 +47,20 @@ struct Reader {
 		if (got != n)
 			throw EndOfStream{};
 	}
+
+	// Discard up to `n` bytes; return number actually discarded.
+	virtual std::size_t try_skip(std::size_t n) {
+		uint8_t buf[1024];
+		std::size_t total = 0;
+		while (total < n) {
+			std::size_t take = std::min(sizeof(buf), n - total);
+			std::size_t got = try_get(buf, take);
+			total += got;
+			if (got < take)
+				break;
+		}
+		return total;
+	}
 };
 
 struct Writer {
