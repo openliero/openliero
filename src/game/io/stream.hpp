@@ -1,0 +1,174 @@
+#pragma once
+
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+// Minimal stream layer replacing gvl::octet_reader / octet_writer /
+// bucket_pipe / file_bucket_pipe / source / sink.
+//
+// Polymorphic Reader / Writer base classes; concrete implementations for
+// files, memory buffers, and (in deflate.hpp) zlib-via-miniz streams.
+
+namespace io {
+
+struct EndOfStream : std::runtime_error {
+	EndOfStream() : std::runtime_error("end of stream") {}
+	explicit EndOfStream(char const* what) : std::runtime_error(what) {}
+};
+
+struct StreamError : std::runtime_error {
+	using std::runtime_error::runtime_error;
+};
+
+// Mirrors gvl::archive_check_error so the replay version-check site can
+// throw something we own.
+struct ArchiveCheckError : std::runtime_error {
+	using std::runtime_error::runtime_error;
+};
+
+struct Reader {
+	virtual ~Reader() = default;
+
+	// Read one byte; throw EndOfStream on EOF.
+	virtual uint8_t get() = 0;
+
+	// Read up to `n` bytes; return number actually read.
+	virtual std::size_t try_get(uint8_t* dst, std::size_t n) = 0;
+
+	// Read exactly `n` bytes or throw EndOfStream.
+	void get(uint8_t* dst, std::size_t n) {
+		std::size_t got = try_get(dst, n);
+		if (got != n)
+			throw EndOfStream{};
+	}
+};
+
+struct Writer {
+	virtual ~Writer() = default;
+
+	virtual void put(uint8_t b) = 0;
+	virtual void put(uint8_t const* src, std::size_t n) = 0;
+	virtual void flush() {}
+};
+
+// ---- File-backed ----
+
+struct FileReader : Reader {
+	explicit FileReader(std::FILE* f) : f_(f), owned_(false) {}
+	FileReader(char const* path, char const* mode) {
+		f_ = std::fopen(path, mode);
+		if (!f_)
+			throw StreamError(std::string("Couldn't open ") + path);
+		owned_ = true;
+	}
+	~FileReader() override {
+		if (owned_ && f_)
+			std::fclose(f_);
+	}
+	FileReader(FileReader const&) = delete;
+	FileReader& operator=(FileReader const&) = delete;
+
+	uint8_t get() override {
+		int c = std::fgetc(f_);
+		if (c == EOF)
+			throw EndOfStream{};
+		return static_cast<uint8_t>(c);
+	}
+
+	std::size_t try_get(uint8_t* dst, std::size_t n) override {
+		return std::fread(dst, 1, n, f_);
+	}
+
+private:
+	std::FILE* f_;
+	bool owned_;
+};
+
+struct FileWriter : Writer {
+	explicit FileWriter(std::FILE* f) : f_(f), owned_(false) {}
+	FileWriter(char const* path, char const* mode) {
+		f_ = std::fopen(path, mode);
+		if (!f_)
+			throw StreamError(std::string("Couldn't open ") + path);
+		owned_ = true;
+	}
+	~FileWriter() override {
+		if (owned_ && f_) {
+			std::fflush(f_);
+			std::fclose(f_);
+		}
+	}
+	FileWriter(FileWriter const&) = delete;
+	FileWriter& operator=(FileWriter const&) = delete;
+
+	void put(uint8_t b) override {
+		if (std::fputc(b, f_) == EOF)
+			throw StreamError("write failed");
+	}
+	void put(uint8_t const* src, std::size_t n) override {
+		if (std::fwrite(src, 1, n, f_) != n)
+			throw StreamError("write failed");
+	}
+	void flush() override { std::fflush(f_); }
+
+private:
+	std::FILE* f_;
+	bool owned_;
+};
+
+// ---- Memory-backed ----
+
+struct MemReader : Reader {
+	MemReader(uint8_t const* data, std::size_t size) : data_(data), size_(size) {}
+	explicit MemReader(std::string const& s)
+		: data_(reinterpret_cast<uint8_t const*>(s.data())), size_(s.size()) {}
+	explicit MemReader(std::vector<uint8_t> const& v)
+		: data_(v.data()), size_(v.size()) {}
+
+	uint8_t get() override {
+		if (pos_ >= size_)
+			throw EndOfStream{};
+		return data_[pos_++];
+	}
+
+	std::size_t try_get(uint8_t* dst, std::size_t n) override {
+		std::size_t avail = size_ - pos_;
+		std::size_t take = std::min(n, avail);
+		std::memcpy(dst, data_ + pos_, take);
+		pos_ += take;
+		return take;
+	}
+
+private:
+	uint8_t const* data_;
+	std::size_t size_;
+	std::size_t pos_ = 0;
+};
+
+struct VectorWriter : Writer {
+	std::vector<uint8_t>& buf;
+	explicit VectorWriter(std::vector<uint8_t>& b) : buf(b) {}
+
+	void put(uint8_t b) override { buf.push_back(b); }
+	void put(uint8_t const* src, std::size_t n) override {
+		buf.insert(buf.end(), src, src + n);
+	}
+};
+
+struct StringWriter : Writer {
+	std::string& buf;
+	explicit StringWriter(std::string& b) : buf(b) {}
+
+	void put(uint8_t b) override { buf.push_back(static_cast<char>(b)); }
+	void put(uint8_t const* src, std::size_t n) override {
+		buf.append(reinterpret_cast<char const*>(src), n);
+	}
+};
+
+}  // namespace io

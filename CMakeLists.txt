@@ -340,6 +340,10 @@ if(OPENLIERO_BUILD_TESTS)
   target_link_libraries(test_cp437 PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_cp437 DISCOVERY_MODE PRE_TEST)
 
+  add_executable(test_io src/tests/test_io.cpp)
+  target_link_libraries(test_io PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_io DISCOVERY_MODE PRE_TEST)
+
   add_executable(test_settings src/tests/test_settings.cpp)
   target_link_libraries(test_settings PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_settings
