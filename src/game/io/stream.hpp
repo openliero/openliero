@@ -139,11 +139,27 @@ private:
 // ---- Memory-backed ----
 
 struct MemReader : Reader {
+	MemReader() = default;
 	MemReader(uint8_t const* data, std::size_t size) : data_(data), size_(size) {}
 	explicit MemReader(std::string const& s)
 		: data_(reinterpret_cast<uint8_t const*>(s.data())), size_(s.size()) {}
 	explicit MemReader(std::vector<uint8_t> const& v)
 		: data_(v.data()), size_(v.size()) {}
+
+	// Point at a different buffer (e.g. once it has been filled by an
+	// owning container).
+	void reset(uint8_t const* data, std::size_t size) {
+		data_ = data;
+		size_ = size;
+		pos_ = 0;
+	}
+
+	std::size_t tellg() const { return pos_; }
+	void seekg(std::size_t pos) {
+		if (pos > size_)
+			throw EndOfStream("seekg past end");
+		pos_ = pos;
+	}
 
 	uint8_t get() override {
 		if (pos_ >= size_)
@@ -160,8 +176,8 @@ struct MemReader : Reader {
 	}
 
 private:
-	uint8_t const* data_;
-	std::size_t size_;
+	uint8_t const* data_ = nullptr;
+	std::size_t size_ = 0;
 	std::size_t pos_ = 0;
 };
 

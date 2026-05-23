@@ -1,8 +1,9 @@
 #pragma once
 
-#include <gvl/io2/stream.hpp>
 #include <gvl/serialization/context.hpp>
 #include <xxhash.h>
+#include "io/deflate.hpp"
+#include "io/stream.hpp"
 #include "mixer/player.hpp"
 #include <cstring>
 #include <map>
@@ -56,15 +57,13 @@ struct Replay
 
 struct ReplayWriter : Replay
 {
-	ReplayWriter(gvl::sink str_init);
+	ReplayWriter(std::unique_ptr<io::Writer> sink);
 	~ReplayWriter();
 
 	void unfocus();
 	void focus();
 
-	//gvl::filter_ptr str;
-	//gvl::octet_stream_writer writer;
-	gvl::octet_writer writer;
+	io::DeflateWriter writer;
 	uint64_t lastSettingsHash;
 	bool settingsExpired;
 
@@ -78,7 +77,7 @@ struct Renderer;
 
 struct ReplayReader : Replay
 {
-	ReplayReader(gvl::source str_init);
+	ReplayReader(std::unique_ptr<io::Reader> source);
 
 	void unfocus()
 	{
@@ -93,5 +92,8 @@ struct ReplayReader : Replay
 	std::unique_ptr<Game> beginPlayback(std::shared_ptr<Common> common, std::shared_ptr<SoundPlayer> soundPlayer);
 	bool playbackFrame(Renderer& renderer);
 
-	gvl::octet_reader reader;
+	// The full inflated replay is held in memory so we can rewind to
+	// the recorded initial position when the user presses R.
+	std::vector<uint8_t> data;
+	io::MemReader reader;
 };

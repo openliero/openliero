@@ -3,8 +3,8 @@
 #include "game.hpp"
 #include "worm.hpp"
 #include "viewport.hpp"
+#include "io/coding.hpp"
 #include <gvl/serialization/archive.hpp>
-#include <gvl/io2/deflate_filter.hpp>
 
 //#define DEBUG_REPLAYS 1
 
@@ -216,14 +216,11 @@ void archive(Archive ar, Palette& pal)
 	}
 }
 
-typedef gvl::octet_reader reader_t;
-
-typedef gvl::in_archive<reader_t, GameSerializationContext> in_archive_t;
-
-void archive(in_archive_t ar, Level& level)
+template<typename Reader>
+void archive(gvl::in_archive<Reader, GameSerializationContext> ar, Level& level)
 {
-	unsigned int w = gvl::read_uint16(ar.reader);
-	unsigned int h = gvl::read_uint16(ar.reader);
+	unsigned int w = io::read_uint16(ar.reader);
+	unsigned int h = io::read_uint16(ar.reader);
 	level.resize(w, h);
 
 	archive(ar, level.origpal);
@@ -263,7 +260,8 @@ void archive(gvl::out_archive<Writer, GameSerializationContext> ar, Level& level
 	}
 }
 
-void archive_worms(in_archive_t ar, Game& game)
+template<typename Reader>
+void archive_worms(gvl::in_archive<Reader, GameSerializationContext> ar, Game& game)
 {
 	uint8_t cont;
 	while(ar.ui8(cont), cont)
@@ -338,14 +336,10 @@ void write(Writer& writer, GameSerializationContext& context, T& x)
 	archive(gvl::out_archive<Writer, GameSerializationContext>(writer, context), x);
 }
 
-ReplayWriter::ReplayWriter(gvl::sink str_init)
-: settingsExpired(true)
+ReplayWriter::ReplayWriter(std::unique_ptr<io::Writer> sink)
+: writer(std::move(sink))
+, settingsExpired(true)
 {
-	gvl::deflate_source* ds(new gvl::deflate_source(gvl::source(), true, false));
-
-	ds->sink = str_init;
-
-	writer.attach(gvl::sink(ds));
 }
 
 ReplayWriter::~ReplayWriter()
@@ -353,9 +347,17 @@ ReplayWriter::~ReplayWriter()
 	endRecord();
 }
 
-ReplayReader::ReplayReader(gvl::source str_init)
+ReplayReader::ReplayReader(std::unique_ptr<io::Reader> source)
 {
-	reader.attach(gvl::to_source(new gvl::deflate_source(str_init, false)));
+	io::InflateReader inflater(std::move(source));
+	uint8_t buf[4096];
+	for (;;) {
+		std::size_t got = inflater.try_get(buf, sizeof(buf));
+		if (got == 0)
+			break;
+		data.insert(data.end(), buf, buf + got);
+	}
+	reader.reset(data.data(), data.size());
 }
 
 //#define DEBUG_REPLAYS
@@ -364,12 +366,12 @@ uint32_t const replayMagic = ('L' << 24) | ('R' << 16) | ('P' << 8) | 'F';
 
 std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common, std::shared_ptr<SoundPlayer> soundPlayer)
 {
-	uint32_t readMagic = gvl::read_uint32(reader);
+	uint32_t readMagic = io::read_uint32(reader);
 	if(readMagic != replayMagic)
-		throw gvl::archive_check_error("File does not appear to be a replay");
+		throw io::ArchiveCheckError("File does not appear to be a replay");
 	context.replayVersion = reader.get();
 	if(context.replayVersion > myReplayVersion)
-		throw gvl::archive_check_error("Replay version is too recent");
+		throw io::ArchiveCheckError("Replay version is too recent");
 
 	std::shared_ptr<Settings> settings(new Settings);
 
@@ -404,7 +406,7 @@ std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common
 
 void ReplayWriter::beginRecord(Game& game)
 {
-	gvl::write_uint32(writer, replayMagic);
+	io::write_uint32(writer, replayMagic);
 	writer.put(context.replayVersion);
 
 	write(writer, context, game);
@@ -462,7 +464,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 		}
 		else if(first == 0x82)
 		{
-			uint32_t wormId = gvl::read_uint32(reader);
+			uint32_t wormId = io::read_uint32(reader);
 			Worm* w = game.wormByIdx(wormId);
 			if (w)
 			{
@@ -493,7 +495,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 			break; // Read frame
 		}
 		else
-			throw gvl::archive_check_error("Unexpected header byte");
+			throw io::ArchiveCheckError("Unexpected header byte");
 	}
 
 	if(settingsChanged)
@@ -503,27 +505,27 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 
 	if((game.cycles % (70 * 15)) == 0)
 	{
-		uint32_t expected = gvl::read_uint32(reader);
+		uint32_t expected = io::read_uint32(reader);
 		uint32_t actual = fastGameChecksum(game);
 #if !ENABLE_TRACING
 		if(actual != expected)
-			throw gvl::archive_check_error("Replay has desynced");
+			throw io::ArchiveCheckError("Replay has desynced");
 #endif
 	}
 
 #ifdef DEBUG_REPLAYS
-	uint32_t expected = gvl::read_uint32(reader);
-	uint32_t expected2 = gvl::read_uint32(reader);
+	uint32_t expected = io::read_uint32(reader);
+	uint32_t expected2 = io::read_uint32(reader);
 	uint64_t actual = hash(game);
 	if(expected != (uint32_t)actual.value[0])
 	{
 		std::cout << "Expected: " << expected << ", was: " << (uint32_t)actual.value[0] << std::endl;
 		std::cout << "Frame: " << game.cycles << std::endl;
-		throw gvl::archive_check_error("Desynced state");
+		throw io::ArchiveCheckError("Desynced state");
 	}
 	if(expected2 != game.cycles)
 	{
-		throw gvl::archive_check_error("Descyned stream");
+		throw io::ArchiveCheckError("Descyned stream");
 	}
 #endif
 
@@ -559,7 +561,7 @@ void ReplayWriter::recordFrame()
 			if(data.settingsExpired)
 			{
 				writer.put(0x82);
-				gvl::write_uint32(writer, worm->index);
+				io::write_uint32(writer, worm->index);
 				write(writer, context, *worm->settings);
 				data.settingsExpired = false;
 			}
@@ -585,13 +587,13 @@ void ReplayWriter::recordFrame()
 	if((game.cycles % (70 * 15)) == 0)
 	{
 		uint32_t checksum = fastGameChecksum(game);
-		gvl::write_uint32(writer, checksum);
+		io::write_uint32(writer, checksum);
 	}
 
 #ifdef DEBUG_REPLAYS
 	uint64_t actual = hash(game);
-	gvl::write_uint32(writer, (uint32_t)actual.value[0]);
-	gvl::write_uint32(writer, game.cycles);
+	io::write_uint32(writer, (uint32_t)actual.value[0]);
+	io::write_uint32(writer, game.cycles);
 #endif
 }
 

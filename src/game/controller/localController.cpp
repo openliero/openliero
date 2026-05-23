@@ -7,6 +7,7 @@
 #include "../sfx.hpp"
 #include "../reader.hpp"
 #include "../filesystem.hpp"
+#include "../io/gvl_compat.hpp"
 
 #include "../ai/predictive_ai.hpp"
 #include "../worm.hpp"
@@ -300,7 +301,7 @@ void LocalController::changeState(GameState newState)
 
 				auto node = gfx.getConfigNode() / "Replays" / (buf + playerNames + ".lrp");
 
-				replay.reset(new ReplayWriter(node.toSink()));
+				replay.reset(new ReplayWriter(std::make_unique<io::GvlWriterAdapter>(node.toSink())));
 
 				replay->beginRecord(game);
 			}

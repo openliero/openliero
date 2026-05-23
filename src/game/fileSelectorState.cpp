@@ -194,7 +194,7 @@ bool ReplaySelectorState::onSelected(FileNode* node)
 
 	// Reset controller before opening the replay, since we may be recording it
 	gfx->controller.reset();
-	gfx->controller.reset(new ReplayController(gfx->common, node->getFsNode().toSource()));
+	gfx->controller.reset(new ReplayController(gfx->common, std::make_unique<io::GvlReaderAdapter>(node->getFsNode().toOctetReader())));
 
 	gfx->pendingMenuSelection = MainMenu::MaReplay;
 	return true;

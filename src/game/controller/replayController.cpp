@@ -6,11 +6,11 @@
 #include "../sfx.hpp"
 
 ReplayController::ReplayController(
-	std::shared_ptr<Common> common, gvl::source source)
+	std::shared_ptr<Common> common, std::unique_ptr<io::Reader> source)
 : state(StateInitial)
 , fadeValue(0)
 , goingToMenu(false)
-, replay(new ReplayReader(source))
+, replay(new ReplayReader(std::move(source)))
 , common(common)
 {
 }
@@ -68,7 +68,7 @@ bool ReplayController::process()
 		{
 			*game = *initialGame;
 			game->postClone(*initialGame, true);
-			replay->reader = initialReader;
+			replay->reader.seekg(initialReaderPos);
 		}
 
 		int realFrameSkip = inverseFrameSkip ? !(cycles % frameSkip) : frameSkip;
@@ -84,15 +84,21 @@ bool ReplayController::process()
 						replay.reset();
 					}
 				}
-				catch(gvl::stream_error& e)
+				catch(io::StreamError& e)
 				{
 					gfx.pendingErrorMessage = std::string("Stream error in replay: ") + e.what();
 					changeState(StateGameEnded);
 					replay.reset();
 				}
-				catch(gvl::archive_check_error& e)
+				catch(io::ArchiveCheckError& e)
 				{
 					gfx.pendingErrorMessage = std::string("Archive error in replay: ") + e.what();
+					changeState(StateGameEnded);
+					replay.reset();
+				}
+				catch(io::EndOfStream& e)
+				{
+					gfx.pendingErrorMessage = std::string("EOF in replay: ") + e.what();
 					changeState(StateGameEnded);
 					replay.reset();
 				}
@@ -185,7 +191,7 @@ void ReplayController::changeState(GameState newState)
 		initialGame.reset(new Game(*game));
 		initialGame->postClone(*game, true);
 #endif
-		initialReader = replay->reader;
+		initialReaderPos = replay->reader.tellg();
 	}
 	else if(newState == StateGameEnded)
 	{
