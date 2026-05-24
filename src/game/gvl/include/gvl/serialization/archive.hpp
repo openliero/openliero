@@ -3,12 +3,20 @@
 #include <stdexcept>
 #include <memory>
 #include <cstdint>
+#include <cassert>
 
-#include "gvl/resman/shared_ptr.hpp"
 #include "gvl/serialization/context.hpp"
 #include "gvl/serialization/coding.hpp"
-#include "gvl/support/bits.hpp"
 #include "gvl/serialization/except.hpp"
+
+namespace gvl {
+inline int32_t uint32_as_int32(uint32_t x) {
+	return static_cast<int32_t>(x);
+}
+inline uint32_t int32_as_uint32(int32_t x) {
+	return static_cast<uint32_t>(x);
+}
+}
 
 namespace gvl
 {
@@ -136,21 +144,6 @@ struct in_archive
 		return *this;
 	}
 
-	template<typename T, typename Creator>
-	in_archive& obj(gvl::shared_ptr<T>& v, Creator creator)
-	{
-		T* p;
-		obj(p, creator);
-		v.reset(p);
-		return *this;
-	}
-
-	template<typename T>
-	in_archive& obj(gvl::shared_ptr<T>& v)
-	{
-		return obj(v, gvl::new_creator<T>());
-	}
-
 	template<typename Ref, typename RefCreator>
 	in_archive& objref(Ref& v, RefCreator refCreator)
 	{
@@ -169,21 +162,6 @@ struct in_archive
 
 	template<typename T>
 	in_archive& fobj(T*& v)
-	{
-		return fobj(v, gvl::new_creator<T>());
-	}
-
-	template<typename T, typename Creator>
-	in_archive& fobj(gvl::shared_ptr<T>& v, Creator creator)
-	{
-		T* p;
-		fobj(p, creator);
-		v.reset(p);
-		return *this;
-	}
-
-	template<typename T>
-	in_archive& fobj(gvl::shared_ptr<T>& v)
 	{
 		return fobj(v, gvl::new_creator<T>());
 	}
@@ -331,19 +309,6 @@ struct out_archive
 	}
 
 	template<typename T, typename Creator>
-	out_archive& obj(gvl::shared_ptr<T>& v, Creator creator)
-	{
-		T* p = v.get();
-		return obj(p);
-	}
-
-	template<typename T>
-	out_archive& obj(gvl::shared_ptr<T>& v)
-	{
-		return obj(v, 0);
-	}
-
-	template<typename T, typename Creator>
 	out_archive& obj(std::shared_ptr<T>& v, Creator creator)
 	{
 		T* p = v.get();
@@ -373,19 +338,6 @@ struct out_archive
 
 	template<typename T>
 	out_archive& fobj(T*& v)
-	{
-		return fobj(v, 0);
-	}
-
-	template<typename T, typename Creator>
-	out_archive& fobj(gvl::shared_ptr<T>& v, Creator creator)
-	{
-		T* p = v.get();
-		return fobj(p);
-	}
-
-	template<typename T>
-	out_archive& fobj(gvl::shared_ptr<T>& v)
 	{
 		return fobj(v, 0);
 	}

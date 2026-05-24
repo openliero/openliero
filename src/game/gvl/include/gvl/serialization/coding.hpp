@@ -3,6 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <cstdint>
+#include <cassert>
 
 namespace gvl
 {

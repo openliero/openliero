@@ -109,10 +109,6 @@ set(SOURCES
   src/game/mixer/mixer.cpp
   src/game/mixer/player.cpp
   src/game/metadata.cpp
-  src/game/gvl/src/containers/list.cpp
-  src/game/gvl/src/io2/stream.cpp
-  src/game/gvl/src/support/bits.cpp
-  src/game/gvl/src/support/platform.cpp
 )
 
 set(GAME_SOURCES ${SOURCES}
