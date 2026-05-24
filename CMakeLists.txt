@@ -69,7 +69,6 @@ find_package(xxHash CONFIG REQUIRED)
 include_directories(
   src
   src/game
-  src/game/gvl/include
 )
 
 # embed version metadata in the code

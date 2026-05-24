@@ -5,11 +5,11 @@
 #include <cstdint>
 #include <cassert>
 
-#include "gvl/serialization/context.hpp"
-#include "gvl/serialization/coding.hpp"
-#include "gvl/serialization/except.hpp"
+#include "serialization/context.hpp"
+#include "serialization/coding.hpp"
+#include "serialization/except.hpp"
 
-namespace gvl {
+namespace ser {
 inline int32_t uint32_as_int32(uint32_t x) {
 	return static_cast<int32_t>(x);
 }
@@ -18,7 +18,7 @@ inline uint32_t int32_as_uint32(int32_t x) {
 }
 }
 
-namespace gvl
+namespace ser
 {
 
 template<typename Reader, typename Context = default_serialization_context>
@@ -36,42 +36,42 @@ struct in_archive
 	template<typename T>
 	in_archive& i32(T& v)
 	{
-		v = uint32_as_int32(gvl::read_uint32(reader));
+		v = uint32_as_int32(ser::read_uint32(reader));
 		return *this;
 	}
 
 	template<typename T>
 	in_archive& i32_le(T& v)
 	{
-		v = uint32_as_int32(gvl::read_uint32_le(reader));
+		v = uint32_as_int32(ser::read_uint32_le(reader));
 		return *this;
 	}
 
 	template<typename T>
 	in_archive& ui16(T& v)
 	{
-		v = gvl::read_uint16(reader);
+		v = ser::read_uint16(reader);
 		return *this;
 	}
 
 	template<typename T>
 	in_archive& ui16_le(T& v)
 	{
-		v = gvl::read_uint16_le(reader);
+		v = ser::read_uint16_le(reader);
 		return *this;
 	}
 
 	template<typename T>
 	in_archive& ui32(T& v)
 	{
-		v = gvl::read_uint32(reader);
+		v = ser::read_uint32(reader);
 		return *this;
 	}
 
 	template<typename T>
 	in_archive& ui32_le(T& v)
 	{
-		v = gvl::read_uint32_le(reader);
+		v = ser::read_uint32_le(reader);
 		return *this;
 	}
 
@@ -92,7 +92,7 @@ struct in_archive
 	template<typename T>
 	in_archive& str(T& v)
 	{
-		uint32_t len = gvl::read_uint32(reader);
+		uint32_t len = ser::read_uint32(reader);
 		v.clear();
 		for(uint32_t i = 0; i < len; ++i)
 		{
@@ -122,7 +122,7 @@ struct in_archive
 	template<typename T, typename Creator>
 	in_archive& obj(T*& v, Creator creator)
 	{
-		uint32_t id = gvl::read_uint32(reader);
+		uint32_t id = ser::read_uint32(reader);
 		if(context.read(v, id, creator))
 			archive(*this, *v);
 
@@ -132,7 +132,7 @@ struct in_archive
 	template<typename T>
 	in_archive& obj(T*& v)
 	{
-		return obj(v, gvl::new_creator<T>());
+		return obj(v, ser::new_creator<T>());
 	}
 
 	template<typename T, typename Ref, typename Creator, typename RefCreator>
@@ -163,7 +163,7 @@ struct in_archive
 	template<typename T>
 	in_archive& fobj(T*& v)
 	{
-		return fobj(v, gvl::new_creator<T>());
+		return fobj(v, ser::new_creator<T>());
 	}
 
 	template<typename T, typename Creator>
@@ -178,12 +178,12 @@ struct in_archive
 	template<typename T>
 	in_archive& fobj(std::shared_ptr<T>& v)
 	{
-		return fobj(v, gvl::new_creator<T>());
+		return fobj(v, ser::new_creator<T>());
 	}
 
 	in_archive& check()
 	{
-		uint32_t v = gvl::read_uint32(reader);
+		uint32_t v = ser::read_uint32(reader);
 		if(v != 0x12345678)
 			throw archive_check_error("Expected checkpoint here");
 		return *this;
@@ -210,38 +210,38 @@ struct out_archive
 
 	out_archive& i32(int32_t v)
 	{
-		gvl::write_uint32(writer, int32_as_uint32(v));
+		ser::write_uint32(writer, int32_as_uint32(v));
 		return *this;
 	}
 
 	out_archive& i32_le(int32_t v)
 	{
-		gvl::write_uint32_le(writer, int32_as_uint32(v));
+		ser::write_uint32_le(writer, int32_as_uint32(v));
 		return *this;
 	}
 
 	out_archive& ui16(uint32_t v)
 	{
 
-		gvl::write_uint16(writer, v);
+		ser::write_uint16(writer, v);
 		return *this;
 	}
 
 	out_archive& ui16_le(uint32_t v)
 	{
-		gvl::write_uint16_le(writer, v);
+		ser::write_uint16_le(writer, v);
 		return *this;
 	}
 
 	out_archive& ui32(uint32_t v)
 	{
-		gvl::write_uint32(writer, v);
+		ser::write_uint32(writer, v);
 		return *this;
 	}
 
 	out_archive& ui32_le(uint32_t v)
 	{
-		gvl::write_uint32_le(writer, v);
+		ser::write_uint32_le(writer, v);
 		return *this;
 	}
 
@@ -261,7 +261,7 @@ struct out_archive
 	template<typename T>
 	out_archive& str(T const& v)
 	{
-		gvl::write_uint32(writer, (uint32_t)v.size());
+		ser::write_uint32(writer, (uint32_t)v.size());
 		for(uint32_t i = 0; i < v.size(); ++i)
 		{
 			writer.put((uint8_t)v[i]);
@@ -288,7 +288,7 @@ struct out_archive
 	{
 		std::pair<bool, uint32_t> res = context.write(v);
 
-		gvl::write_uint32(writer, res.second);
+		ser::write_uint32(writer, res.second);
 		if(res.first)
 			archive(*this, *v);
 
@@ -357,7 +357,7 @@ struct out_archive
 
 	out_archive& check()
 	{
-		gvl::write_uint32(writer, 0x12345678);
+		ser::write_uint32(writer, 0x12345678);
 		return *this;
 	}
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <gvl/serialization/context.hpp>
+#include <serialization/context.hpp>
 #include <xxhash.h>
 #include "io/deflate.hpp"
 #include "io/stream.hpp"
@@ -14,7 +14,7 @@
 
 struct Game;
 
-struct GameSerializationContext : gvl::serialization_context<GameSerializationContext>
+struct GameSerializationContext : ser::serialization_context<GameSerializationContext>
 {
 	GameSerializationContext()
 	: game(0)

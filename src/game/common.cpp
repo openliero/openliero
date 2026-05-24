@@ -308,7 +308,7 @@ inline uint32_t quad(char a, char b, char c, char d) {
 void Common::load(FsNode node) {
   {
     auto textReader_ptr = (node / "tc.cfg").toReader(); io::Reader& textReader = *textReader_ptr;
-    gvl::toml::reader<io::Reader> tomlReader(textReader);
+    ser::toml::reader<io::Reader> tomlReader(textReader);
     archive_text(*this, tomlReader);
   }
 
@@ -401,7 +401,7 @@ void Common::load(FsNode node) {
     auto dir = node / "weapons";
 
     auto wReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& wReader = *wReader_ptr;
-    gvl::toml::reader<io::Reader> tomlReader(wReader);
+    ser::toml::reader<io::Reader> tomlReader(wReader);
     archive_text(*this, w, tomlReader);
   }
 
@@ -409,7 +409,7 @@ void Common::load(FsNode node) {
     auto dir = node / "nobjects";
 
     auto nReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& nReader = *nReader_ptr;
-    gvl::toml::reader<io::Reader> tomlReader(nReader);
+    ser::toml::reader<io::Reader> tomlReader(nReader);
     archive_text(*this, w, tomlReader);
   }
 
@@ -417,7 +417,7 @@ void Common::load(FsNode node) {
     auto dir = node / "sobjects";
 
     auto sReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& sReader = *sReader_ptr;
-    gvl::toml::reader<io::Reader> tomlReader(sReader);
+    ser::toml::reader<io::Reader> tomlReader(sReader);
     archive_text(*this, w, tomlReader);
   }
 

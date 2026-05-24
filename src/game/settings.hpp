@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <xxhash.h>
-#include <gvl/serialization/archive.hpp>
+#include <serialization/archive.hpp>
 #include <stdexcept>
 #include <string>
 #include "worm.hpp"

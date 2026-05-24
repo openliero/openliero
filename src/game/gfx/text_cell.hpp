@@ -6,7 +6,7 @@
 #include <vector>
 
 // Tiny text formatter used by the stats screen to collect a row of fields
-// with left / center / right placement. Replaces gvl::cell.
+// with left / center / right placement.
 
 struct TextCell {
 	enum Placement { Left, Center, Right };
@@ -25,7 +25,7 @@ struct TextCell {
 		return *this;
 	}
 
-	// Convenience for the `cell().ref() << ...` pattern (matches gvl::cell::ref).
+	// Convenience for the `cell().ref() << ...` pattern.
 	TextCell& ref() { return *this; }
 
 	std::vector<uint8_t> buffer;

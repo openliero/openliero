@@ -6,7 +6,7 @@
 
 #include <typeindex>
 
-namespace gvl
+namespace ser
 {
 
 template<typename T>

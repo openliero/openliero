@@ -6,9 +6,8 @@
 #include "io/stream.hpp"
 
 // Streaming deflate / inflate filters over an underlying io::Reader / Writer.
-// Replaces gvl::deflate_source. Bytes are buffered in chunks; the caller
-// pulls or pushes uncompressed data and the wrapper takes care of feeding /
-// draining the miniz state.
+// Bytes are buffered in chunks; the caller pulls or pushes uncompressed data
+// and the wrapper takes care of feeding / draining the miniz state.
 
 namespace io {
 

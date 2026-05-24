@@ -8,8 +8,8 @@
 #include "io/stream.hpp"
 #include <cstdlib>
 
-#include <gvl/serialization/archive.hpp>
-#include <gvl/serialization/toml_adapter.hpp>
+#include <serialization/archive.hpp>
+#include <serialization/toml_adapter.hpp>
 #include "replay.hpp"
 
 #include <xxhash.h>
@@ -47,7 +47,7 @@ std::string WormSettings::toToml() const
 {
 	std::string buf;
 	io::StringWriter sw(buf);
-	gvl::toml::writer<io::Writer> ar(sw);
+	ser::toml::writer<io::Writer> ar(sw);
 	archive_worm_toml(ar, const_cast<WormSettings&>(*this));
 	return buf;
 }
@@ -55,7 +55,7 @@ std::string WormSettings::toToml() const
 void WormSettings::fromToml(std::string const& data)
 {
 	io::MemReader sr(data);
-	gvl::toml::reader<io::Reader> ar(sr);
+	ser::toml::reader<io::Reader> ar(sr);
 	archive_worm_toml(ar, *this);
 }
 
@@ -66,7 +66,7 @@ void WormSettings::saveProfile(FsNode node)
 		auto writer_ptr = node.toWriter(); io::Writer& writer = *writer_ptr;
 		profileNode = node;
 
-		gvl::toml::writer<io::Writer> ar(writer);
+		ser::toml::writer<io::Writer> ar(writer);
 		archive_worm_toml(ar, *this);
 	}
 	catch(std::runtime_error& e)
@@ -83,7 +83,7 @@ void WormSettings::loadProfile(FsNode node)
 		auto reader_ptr = node.toReader(); io::Reader& reader = *reader_ptr;
 		profileNode = node;
 
-		gvl::toml::reader<io::Reader> ar(reader);
+		ser::toml::reader<io::Reader> ar(reader);
 		archive_worm_toml(ar, *this);
 	}
 	catch(std::runtime_error& e)

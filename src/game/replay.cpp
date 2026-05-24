@@ -4,7 +4,7 @@
 #include "worm.hpp"
 #include "viewport.hpp"
 #include "io/coding.hpp"
-#include <gvl/serialization/archive.hpp>
+#include <serialization/archive.hpp>
 
 //#define DEBUG_REPLAYS 1
 
@@ -217,7 +217,7 @@ void archive(Archive ar, Palette& pal)
 }
 
 template<typename Reader>
-void archive(gvl::in_archive<Reader, GameSerializationContext> ar, Level& level)
+void archive(ser::in_archive<Reader, GameSerializationContext> ar, Level& level)
 {
 	unsigned int w = io::read_uint16(ar.reader);
 	unsigned int h = io::read_uint16(ar.reader);
@@ -241,7 +241,7 @@ void archive(gvl::in_archive<Reader, GameSerializationContext> ar, Level& level)
 }
 
 template<typename Writer>
-void archive(gvl::out_archive<Writer, GameSerializationContext> ar, Level& level)
+void archive(ser::out_archive<Writer, GameSerializationContext> ar, Level& level)
 {
 	ar.ui16(level.width);
 	ar.ui16(level.height);
@@ -261,7 +261,7 @@ void archive(gvl::out_archive<Writer, GameSerializationContext> ar, Level& level
 }
 
 template<typename Reader>
-void archive_worms(gvl::in_archive<Reader, GameSerializationContext> ar, Game& game)
+void archive_worms(ser::in_archive<Reader, GameSerializationContext> ar, Game& game)
 {
 	uint8_t cont;
 	while(ar.ui8(cont), cont)
@@ -282,7 +282,7 @@ void archive_worms(gvl::in_archive<Reader, GameSerializationContext> ar, Game& g
 }
 
 template<typename Writer>
-void archive_worms(gvl::out_archive<Writer, GameSerializationContext> ar, Game& game)
+void archive_worms(ser::out_archive<Writer, GameSerializationContext> ar, Game& game)
 {
 	for (auto* worm : game.worms)
 	{
@@ -327,13 +327,13 @@ void archive(Archive ar, Game& game)
 template<typename Reader, typename T>
 void read(Reader& reader, GameSerializationContext& context, T& x)
 {
-	archive(gvl::in_archive<Reader, GameSerializationContext>(reader, context), x);
+	archive(ser::in_archive<Reader, GameSerializationContext>(reader, context), x);
 }
 
 template<typename Writer, typename T>
 void write(Writer& writer, GameSerializationContext& context, T& x)
 {
-	archive(gvl::out_archive<Writer, GameSerializationContext>(writer, context), x);
+	archive(ser::out_archive<Writer, GameSerializationContext>(writer, context), x);
 }
 
 ReplayWriter::ReplayWriter(std::unique_ptr<io::Writer> sink)

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gvl
+namespace ser
 {
 
 struct archive_check_error : std::runtime_error

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace gvl {
+namespace ser {
 namespace toml {
 
 struct parse_error : std::runtime_error {
@@ -372,4 +372,4 @@ struct string_reader {
   }
 };
 
-}  // namespace gvl
+}  // namespace ser

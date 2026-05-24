@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <cassert>
 
-namespace gvl
+namespace ser
 {
 
 template<typename Writer>

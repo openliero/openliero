@@ -9,11 +9,9 @@
 #include <string>
 #include <vector>
 
-// Minimal stream layer replacing gvl::octet_reader / octet_writer /
-// bucket_pipe / file_bucket_pipe / source / sink.
-//
-// Polymorphic Reader / Writer base classes; concrete implementations for
-// files, memory buffers, and (in deflate.hpp) zlib-via-miniz streams.
+// Minimal stream layer: polymorphic Reader / Writer base classes with
+// concrete implementations for files, memory buffers, and (in deflate.hpp)
+// zlib-via-miniz streams.
 
 namespace io {
 
@@ -26,8 +24,6 @@ struct StreamError : std::runtime_error {
 	using std::runtime_error::runtime_error;
 };
 
-// Mirrors gvl::archive_check_error so the replay version-check site can
-// throw something we own.
 struct ArchiveCheckError : std::runtime_error {
 	using std::runtime_error::runtime_error;
 };

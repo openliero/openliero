@@ -3,7 +3,7 @@
 #include "game/io/coding.hpp"
 #include "game/io/stream.hpp"
 
-#include <gvl/serialization/toml_adapter.hpp>
+#include <serialization/toml_adapter.hpp>
 
 void writeSpriteTga(
 	io::Writer& w,
@@ -58,7 +58,7 @@ void commonSave(Common& common, std::string const& path)
 
 	{
 		io::FileWriter textWriter(cfgPath.c_str(), "wb");
-		gvl::toml::writer<io::Writer> w(textWriter);
+		ser::toml::writer<io::Writer> w(textWriter);
 		archive_text(common, w);
 	}
 
@@ -143,7 +143,7 @@ void commonSave(Common& common, std::string const& path)
 		create_directories(dir);
 
 		io::FileWriter wWriter(joinPath(dir, w.idStr + ".cfg").c_str(), "wb");
-		gvl::toml::writer<io::Writer> tomlW(wWriter);
+		ser::toml::writer<io::Writer> tomlW(wWriter);
 		archive_text(common, w, tomlW);
 	}
 
@@ -153,7 +153,7 @@ void commonSave(Common& common, std::string const& path)
 		create_directories(dir);
 
 		io::FileWriter nWriter(joinPath(dir, w.idStr + ".cfg").c_str(), "wb");
-		gvl::toml::writer<io::Writer> tomlW(nWriter);
+		ser::toml::writer<io::Writer> tomlW(nWriter);
 		archive_text(common, w, tomlW);
 	}
 
@@ -163,7 +163,7 @@ void commonSave(Common& common, std::string const& path)
 		create_directories(dir);
 
 		io::FileWriter sWriter(joinPath(dir, w.idStr + ".cfg").c_str(), "wb");
-		gvl::toml::writer<io::Writer> tomlW(sWriter);
+		ser::toml::writer<io::Writer> tomlW(sWriter);
 		archive_text(common, w, tomlW);
 	}
 }

@@ -3,7 +3,7 @@
 #include <cstring>
 #include <functional>
 #include <xxhash.h>
-#include <gvl/serialization/archive.hpp>
+#include <serialization/archive.hpp>
 #include <memory>
 #include <numeric>
 #include <string>

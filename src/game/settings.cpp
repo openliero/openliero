@@ -5,7 +5,7 @@
 #include "filesystem.hpp"
 #include "io/stream.hpp"
 
-#include <gvl/serialization/toml_adapter.hpp>
+#include <serialization/toml_adapter.hpp>
 
 #include <xxhash.h>
 
@@ -107,7 +107,7 @@ bool Settings::load(FsNode node, Rand& rand)
 	try
 	{
 		auto reader_ptr = node.toReader(); io::Reader& reader = *reader_ptr;
-		gvl::toml::reader<io::Reader> ar(reader);
+		ser::toml::reader<io::Reader> ar(reader);
 		archive_text(*this, ar);
 	}
 	catch (std::runtime_error&)
@@ -122,7 +122,7 @@ uint64_t& Settings::updateHash()
 {
 	std::string buf;
 	io::StringWriter sw(buf);
-	gvl::toml::writer<io::Writer> ar(sw);
+	ser::toml::writer<io::Writer> ar(sw);
 	archive_gameplay_text(*this, ar);
 	ar.flush();
 
@@ -134,7 +134,7 @@ std::string Settings::toToml() const
 {
 	std::string buf;
 	io::StringWriter sw(buf);
-	gvl::toml::writer<io::Writer> ar(sw);
+	ser::toml::writer<io::Writer> ar(sw);
 	archive_text(const_cast<Settings&>(*this), ar);
 	return buf;
 }
@@ -142,7 +142,7 @@ std::string Settings::toToml() const
 void Settings::fromToml(std::string const& data)
 {
 	io::MemReader sr(data);
-	gvl::toml::reader<io::Reader> ar(sr);
+	ser::toml::reader<io::Reader> ar(sr);
 	archive_text(*this, ar);
 }
 
@@ -150,7 +150,7 @@ void Settings::save(FsNode node, Rand& rand)
 {
 	auto writer_ptr = node.toWriter(); io::Writer& writer = *writer_ptr;
 
-	gvl::toml::writer<io::Writer> ar(writer);
+	ser::toml::writer<io::Writer> ar(writer);
 
 	archive_text(*this, ar);
 }
