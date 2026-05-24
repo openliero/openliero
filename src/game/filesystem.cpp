@@ -534,11 +534,6 @@ struct FsNodeZipFile : FsNodeImp
 
 	DirectoryListing iter()
 	{
-		//std::unique_ptr<dir_zip_archive_itr_imp> imp(new dir_zip_archive_itr_imp(std::shared_ptr<FsNodeZipFile>(this, gvl::shared_ownership())));
-
-		//if (imp->cur == imp->end)
-		//	imp.reset();
-
 		std::vector<NodeName> subs;
 
 		for (auto& i : children)

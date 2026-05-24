@@ -22,8 +22,6 @@ struct StatsRecorder
 	virtual void finish(Game& game);
 
 	virtual void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
-
-	//virtual void write(Common& common, gvl::stream_ptr sink);
 };
 
 struct WeaponStats
@@ -146,7 +144,4 @@ struct NormalStatsRecorder : StatsRecorder
 
 	void finish(Game& game);
 	void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
-
-
-	//void write(Common& common, gvl::stream_ptr sink);
 };

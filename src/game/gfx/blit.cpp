@@ -306,9 +306,6 @@ void blitImageOnMap(Common& common, Level& level, PalIdx* mem, int x, int y, int
 	int pitch = width;
 	gvl::rect clipRect(0, 0, level.width, level.height);
 
-	LTRACE(blit, 0, xpos, x);
-	LTRACE(blit, 0, ypos, y);
-
 	CLIP_IMAGE(clipRect);
 
 	BLITL(&level.data[0], level.width, &level.materials[0],
@@ -429,9 +426,6 @@ void drawDirtEffect(Common& common, Rand& rand, Level& level, int dirtEffect, in
 	Texture& tex = common.textures[dirtEffect];
 	PalIdx* tFrame = common.largeSprites.spritePtr(tex.sFrame + rand(tex.rFrame));
 	PalIdx* mFrame = common.largeSprites.spritePtr(tex.mFrame);
-
-	LTRACE(draw, dirtEffect, xpos, x);
-	LTRACE(draw, dirtEffect, ypos, y);
 
 	int width = 16;
 	int height = 16;

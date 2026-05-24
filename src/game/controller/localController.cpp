@@ -269,7 +269,6 @@ void LocalController::changeState(GameState newState)
 		{
 			try
 			{
-#if !ENABLE_TRACING
 				std::time_t ticks = std::time(0);
 				std::tm* now = std::localtime(&ticks);
 
@@ -292,10 +291,6 @@ void LocalController::changeState(GameState newState)
 							playerNames.push_back(ch);
 					}
 				}
-#else
-				std::string prefix = "-  Trace";
-				std::string buf = ".lrp";
-#endif
 
 				auto node = gfx.getConfigNode() / "Replays" / (buf + playerNames + ".lrp");
 

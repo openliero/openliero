@@ -29,11 +29,7 @@ Game::Game(
 , quickSim(false)
 {
 
-#if ENABLE_TRACING
-	rand.seed(1);
-#else
 	rand.seed(uint32_t(std::time(0)));
-#endif
 
 	cycles = 0;
 }
@@ -284,23 +280,6 @@ void Game::createBonus()
 	} // 234F
 }
 
-#if ENABLE_TRACING
-
-void checkMap(Game& game) {
-	Common& common = *game.common;
-	uint32 h = 1;
-	for (std::size_t i = 0; i < 504*350; ++i) {
-		h = h * 33 ^ game.level.data[i];
-	}
-	LTRACE(maph, 0, pixl, h);
-	h = 1;
-	for (std::size_t i = 0; i < 504*350; ++i) {
-		h = h * 33 ^ game.level.materials[i].flags;
-	}
-	LTRACE(maph, 0, matr, h);
-}
-
-#endif
 
 void Game::processFrame()
 {
