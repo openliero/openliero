@@ -21,7 +21,7 @@ struct PreserveClipRect
 	}
 
 	Bitmap& bmp;
-	gvl::rect rect;
+	Rect rect;
 };
 
 void Viewport::process(Game& game)
@@ -197,7 +197,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 	break;
 	}
 
-	gvl::ivec2 renderPos(x, y);
+	IVec2 renderPos(x, y);
 
 	{
 		PreserveClipRect pcr(renderer.bmp);
@@ -453,7 +453,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 
 			if(t.startFrame > 0)
 			{
-				auto pos = ftoi(i->pos) - gvl::ivec2(3, 3);
+				auto pos = ftoi(i->pos) - IVec2(3, 3);
 
 				if(game.settings->shadow)
 				{
@@ -580,7 +580,7 @@ void Viewport::draw(Game& game, Renderer& renderer, GameState state, bool isRepl
 
 		if(worm.visible)
 		{
-			auto temp = ftoi(worm.pos) - gvl::ivec2(1, 2) + ftoi(cossinTable[ftoi(worm.aimingAngle)] * 16) + offs;
+			auto temp = ftoi(worm.pos) - IVec2(1, 2) + ftoi(cossinTable[ftoi(worm.aimingAngle)] * 16) + offs;
 			//int tempX = ftoi(worm.pos.x) - 1 + ftoi(cosTable[ftoi(worm.aimingAngle)] * 16) + offs.x;
 			//int tempY = ftoi(worm.pos.y) - 2 + ftoi(sinTable[ftoi(worm.aimingAngle)] * 16) + offs.y;
 

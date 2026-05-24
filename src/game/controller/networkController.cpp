@@ -58,11 +58,11 @@ NetworkController::NetworkController(
 
   // Viewports
   game.addViewport(
-      new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
+      new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
   game.addViewport(
-      new Viewport(gvl::rect(160, 0, 158 + 160, 158), 1, 504, 350));
+      new Viewport(Rect(160, 0, 158 + 160, 158), 1, 504, 350));
   game.addSpectatorViewport(
-      new SpectatorViewport(gvl::rect(0, 0, 504 + 68, 350), 504, 350));
+      new SpectatorViewport(Rect(0, 0, 504 + 68, 350), 504, 350));
 }
 
 NetworkController::~NetworkController() {}

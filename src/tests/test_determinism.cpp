@@ -63,10 +63,10 @@ struct DualGameFixture {
     }
 
     // Add viewports (needed for processFrame's viewport logic)
-    gameA->addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-    gameA->addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
-    gameB->addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-    gameB->addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
+    gameA->addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+    gameA->addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
+    gameB->addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+    gameB->addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
 
     // Generate levels with the same RNG state
     gameA->level.generateFromSettings(*common, *settings, gameA->rand);
@@ -184,10 +184,10 @@ TEST_CASE("Same inputs produce same state regardless of construction order",
     game2.addWorm(w2);
   }
 
-  game1.addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-  game1.addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
-  game2.addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-  game2.addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
+  game1.addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+  game1.addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
+  game2.addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+  game2.addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
 
   game1.level.generateFromSettings(*common, *settings, game1.rand);
   game2.level.generateFromSettings(*common, *settings, game2.rand);
@@ -269,10 +269,10 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
       gameB.addWorm(wB);
     }
 
-    gameA.addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-    gameA.addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
-    gameB.addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-    gameB.addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
+    gameA.addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+    gameA.addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
+    gameB.addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+    gameB.addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
 
     gameA.level.generateFromSettings(*common, *settings, gameA.rand);
     gameB.level.generateFromSettings(*common, *settings, gameB.rand);

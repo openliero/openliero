@@ -211,7 +211,7 @@ void Game::draw(Renderer& renderer, GameState state, bool useSpectatorViewports,
 
 bool checkBonusSpawnPosition(Game& game, int x, int y)
 {
-	gvl::rect rect(x - 2, y - 2, x + 3, y + 3);
+	Rect rect(x - 2, y - 2, x + 3, y + 3);
 
 	rect.intersect(game.level.rect());
 
@@ -535,7 +535,7 @@ void Game::updateSettings(Renderer& renderer)
 
 void Game::spawnZone()
 {
-	gvl::ivec2 pos;
+	IVec2 pos;
 
 	while (holdazone.zoneWidth >= 5)
 	{

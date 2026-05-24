@@ -218,7 +218,7 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 		{
 			int width = detectRange / 2;
 
-			gvl::rect rect(x - width, y - width, x + width + 1, y + width + 1);
+			Rect rect(x - width, y - width, x + width + 1, y + width + 1);
 
 			rect.intersect(game.level.rect());
 
@@ -234,7 +234,7 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 						game,
 						angle,
 						fixedvec(),
-						itof(gvl::ivec2(x, y)),
+						itof(IVec2(x, y)),
 						pix, ownerIdx, firedBy);
 				}
 			}
@@ -247,7 +247,7 @@ void SObjectType::create(Game& game, int x, int y, int ownerIdx, WormWeapon* fir
 		drawDirtEffect(common, game.rand, game.level, dirtEffect, x - 7, y - 7);
 
 		if(game.settings->shadow)
-			correctShadow(common, game.level, gvl::rect(x - 10, y - 10, x + 11, y + 11));
+			correctShadow(common, game.level, Rect(x - 10, y - 10, x + 11, y + 11));
 	}
 
 	auto br = game.bonuses.all();

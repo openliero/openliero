@@ -85,9 +85,9 @@ void Level::generateDirtPattern(Common& common, Rand& rand)
 
 bool isNoRock(Common& common, Level& level, int size, int x, int y)
 {
-	gvl::rect rect(x, y, x + size + 1, y + size + 1);
+	Rect rect(x, y, x + size + 1, y + size + 1);
 
-	rect.intersect(gvl::rect(0, 0, level.width, level.height));
+	rect.intersect(Rect(0, 0, level.width, level.height));
 
 	for(int y = rect.y1; y < rect.y2; ++y)
 	for(int x = rect.x1; x < rect.x2; ++x)
@@ -295,7 +295,7 @@ inline bool free(Material m)
 	return m.background() || m.anyDirt();
 }
 
-bool Level::selectSpawn(Rand& rand, int w, int h, gvl::ivec2& selected)
+bool Level::selectSpawn(Rand& rand, int w, int h, IVec2& selected)
 {
 	vector<int> vruns(width - w + 1);
 	vector<int> vdists(width - w + 1);

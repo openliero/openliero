@@ -9,7 +9,7 @@ struct Bitmap
 	int w, h;
 	unsigned int pitch;
 	unsigned char* pixels;
-	gvl::rect clip_rect;
+	Rect clip_rect;
 
 	Bitmap()
 	: pixels(0)

@@ -77,8 +77,8 @@ TEST_CASE("TC supports game initialization", "[tc_load]") {
     game.addWorm(w);
   }
 
-  game.addViewport(new Viewport(gvl::rect(0, 0, 158, 158), 0, 504, 350));
-  game.addViewport(new Viewport(gvl::rect(160, 0, 318, 158), 1, 504, 350));
+  game.addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+  game.addViewport(new Viewport(Rect(160, 0, 318, 158), 1, 504, 350));
 
   REQUIRE_NOTHROW(game.level.generateFromSettings(*common, *settings, game.rand));
 

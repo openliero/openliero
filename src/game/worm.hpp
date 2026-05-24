@@ -315,7 +315,7 @@ struct Worm {
 
   fixedvec pos, vel;
 
-  gvl::ivec2 logicRespawn;
+  IVec2 logicRespawn;
 
   int hotspotX, hotspotY;  // Hotspots for laser, laser sight, etc.
   fixed aimingAngle, aimingSpeed;

@@ -31,7 +31,7 @@ struct Level
 	void generateRandom(Common& common, Settings const& settings, Rand& rand);
 	void makeShadow(Common& common);
 	void generateFromSettings(Common& common, Settings const& settings, Rand& rand);
-	bool selectSpawn(Rand& rand, int w, int h, gvl::ivec2& selected);
+	bool selectSpawn(Rand& rand, int w, int h, IVec2& selected);
 	void drawMiniature(Bitmap& dest, int mapX, int mapY, int step);
 
 	unsigned char pixel(int x, int y)
@@ -116,9 +116,9 @@ struct Level
 		std::swap(zeroMaterial, other.zeroMaterial);
 	}
 
-	gvl::rect rect()
+	Rect rect()
 	{
-		return gvl::rect(0, 0, width, height);
+		return Rect(0, 0, width, height);
 	}
 
 	void resize(int width_new, int height_new);
