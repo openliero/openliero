@@ -124,6 +124,12 @@ bool Settings::load(FsNode node, Rand& rand)
 		return false;
 	}
 
+	// Validate that wormSettings were deserialized (guards against old-format
+	// files that parse as valid TOML but lack cereal's ptr_wrapper structure).
+	for (int i = 0; i < NumWormSettings; ++i)
+		if (!wormSettings[i])
+			return false;
+
 	return true;
 }
 
