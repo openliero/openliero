@@ -53,6 +53,7 @@ Settings::Settings()
 , randomLevel(true)
 , map(true)
 , screenSync(true)
+, bonusTimeout(0)
 {
 	std::memset(weapTable, 0, sizeof(weapTable));
 

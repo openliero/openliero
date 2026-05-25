@@ -381,6 +381,14 @@ if(OPENLIERO_BUILD_TESTS)
     tomlplusplus::tomlplusplus
     Catch2::Catch2WithMain)
   catch_discover_tests(test_cereal_types DISCOVERY_MODE PRE_TEST)
+
+  add_executable(test_versioning src/tests/test_versioning.cpp)
+  target_link_libraries(test_versioning PRIVATE
+    game
+    cereal::cereal
+    tomlplusplus::tomlplusplus
+    Catch2::Catch2WithMain)
+  catch_discover_tests(test_versioning DISCOVERY_MODE PRE_TEST)
 endif()
 
 # desync fuzzer

@@ -80,6 +80,7 @@ struct Settings : GameplayExtensions, AppSettings {
   std::string levelFile;
   bool map;
   bool screenSync;
+  int32_t bonusTimeout;  // max seconds a bonus stays on the map; 0 = no limit
 
   static int const NumWormSettings = 3;  // 0=left, 1=right, 2=network
   static int const NetworkPlayerIdx = 2;

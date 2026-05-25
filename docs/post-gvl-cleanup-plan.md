@@ -24,10 +24,11 @@ The branch state at the time of writing: build green on Linux,
 - Phase 2 — ✅ done
 - Phase 3 — ✅ done (commits `3033fed`, `243be75`); see Phase 3 notes for the deferred half
 - Phase 4 — ✅ done (commits `9b7c7a7`, `7e48263`, `848a094`, see Phase 4 notes for what was deferred)
-- Phase 5 — next up
-- Phases 6–8 — pending
+- Phase 5 — ✅ done (see Phase 5 notes)
+- Phase 6 — next up
+- Phases 7–8 — pending
 
-ctest 102/102. The next agent picks up at Phase 5.
+ctest 106/106. The next agent picks up at Phase 6.
 
 ---
 
@@ -477,7 +478,20 @@ After each type converts, the round-trip property tests from
 Phase 0 must pass. The byte-compare tests from Phase 0 break the
 moment the first type converts — that's the expected signal.
 
-### Phase 5 — turn on versioning, prove it works end-to-end
+### Phase 5 — turn on versioning, prove it works end-to-end — ✅ done
+
+`Settings` bumped from v1 → v2 with a new `bonusTimeout` field (default 0).
+Fixture approach chosen: **option (a)** — v1 binary (769 bytes) and v1 TOML
+fixtures captured at end of Phase 4 and embedded as inline arrays in
+`src/tests/test_versioning.cpp`. Four tests cover both paths:
+- v2 binary round-trip (new field preserved).
+- v1 binary fixture → v2 reader (new field = 0).
+- v2 TOML round-trip (new field in output, preserved on read).
+- v1 TOML fixture → v2 reader (new field = 0, missing key tolerated).
+
+ctest: 102 → 106.
+
+Original phase notes follow.
 
 Pick a type likely to grow — `Settings` is natural — and bump it
 to version 2 with a synthetic new field. Write tests:

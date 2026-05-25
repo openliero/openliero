@@ -110,8 +110,10 @@ void serialize(Archive& ar, Level& lvl) {
 // Includes GameplayExtensions, AppSettings, and the per-worm settings
 // (shared_ptr — cereal tracks identity natively in PortableBinaryArchive).
 // `hash` is a runtime cache, deliberately excluded.
+// v1: initial cereal migration (all original fields).
+// v2: added bonusTimeout (default 0 = no timeout).
 template <class Archive>
-void serialize(Archive& ar, Settings& s) {
+void serialize(Archive& ar, Settings& s, std::uint32_t const version) {
   // GameplayExtensions
   ar(cereal::make_nvp("recordReplays", s.recordReplays),
      cereal::make_nvp("loadPowerlevelPalette", s.loadPowerlevelPalette),
@@ -148,7 +150,10 @@ void serialize(Archive& ar, Settings& s) {
     ar(cereal::make_nvp("weap" + std::to_string(i), s.weapTable[i]));
   for (int i = 0; i < Settings::NumWormSettings; ++i)
     ar(cereal::make_nvp("worm" + std::to_string(i), s.wormSettings[i]));
+  if (version >= 2)
+    ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
 }
+CEREAL_CLASS_VERSION(Settings, 2);
 
 // ---- Viewport ----
 // Pure data; no context dependencies. The `rand` member isn't actually
