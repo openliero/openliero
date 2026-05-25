@@ -19,6 +19,12 @@
 #include "settings.hpp"
 #include "viewport.hpp"
 #include "worm.hpp"
+#include "gfx/palette.hpp"
+#include "gfx/color.hpp"
+#include "level.hpp"
+
+#include <cereal/types/vector.hpp>
+#include <cstdint>
 
 template <class Archive, typename T>
 void serialize(Archive& ar, BasicVec<T, 2>& v) {
@@ -69,6 +75,35 @@ void load(Archive& ar, Rand& r) {
   ar(cereal::make_nvp("state", state),
      cereal::make_nvp("last", r.last));
   r.deserialize(state);
+}
+
+// ---- Color ----
+template <class Archive>
+void serialize(Archive& ar, Color& c) {
+  ar(cereal::make_nvp("r", c.r),
+     cereal::make_nvp("g", c.g),
+     cereal::make_nvp("b", c.b));
+}
+
+// ---- Palette ----
+// Cereal's vector serialization wraps a SizeTag + element loop. Palette
+// has a fixed 256-entry C array, so we drive it manually.
+template <class Archive>
+void serialize(Archive& ar, Palette& p) {
+  for (int i = 0; i < 256; ++i)
+    ar(cereal::make_nvp("c" + std::to_string(i), p.entries[i]));
+}
+
+// ---- Level ----
+// `materials` is re-derived from `data` + Common at load time (matching
+// the existing replay behaviour), so we don't serialize it. `oldRandomLevel`
+// / `oldLevelFile` / `zeroMaterial` are also not part of the wire format.
+template <class Archive>
+void serialize(Archive& ar, Level& lvl) {
+  ar(cereal::make_nvp("width", lvl.width),
+     cereal::make_nvp("height", lvl.height),
+     cereal::make_nvp("data", lvl.data),
+     cereal::make_nvp("origpal", lvl.origpal));
 }
 
 // ---- Settings ----

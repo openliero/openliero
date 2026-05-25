@@ -247,6 +247,61 @@ TEST_CASE("cereal_types: Settings round-trip with shared worm settings",
   }
 }
 
+TEST_CASE("cereal_types: Color round-trip", "[cereal_types]") {
+  Color src{10, 20, 30, 0};
+  Color bin = roundtripBinary(src);
+  CHECK(bin.r == 10);
+  CHECK(bin.g == 20);
+  CHECK(bin.b == 30);
+}
+
+TEST_CASE("cereal_types: Palette round-trip", "[cereal_types]") {
+  Palette src;
+  for (int i = 0; i < 256; ++i) {
+    src.entries[i].r = static_cast<uint8_t>(i);
+    src.entries[i].g = static_cast<uint8_t>(255 - i);
+    src.entries[i].b = static_cast<uint8_t>(i ^ 0x55);
+  }
+  Palette bin = roundtripBinary(src);
+  for (int i = 0; i < 256; ++i) {
+    CHECK(static_cast<int>(bin.entries[i].r) == i);
+    CHECK(static_cast<int>(bin.entries[i].g) == 255 - i);
+    CHECK(static_cast<int>(bin.entries[i].b) == (i ^ 0x55));
+  }
+}
+
+TEST_CASE("cereal_types: Level round-trip preserves data and palette",
+          "[cereal_types]") {
+  Common common;
+  Level src(common);
+  src.width = 4;
+  src.height = 3;
+  src.data.assign(src.width * src.height, 0);
+  for (int i = 0; i < src.width * src.height; ++i)
+    src.data[i] = static_cast<unsigned char>(i * 7 + 1);
+  for (int i = 0; i < 256; ++i)
+    src.origpal.entries[i].r = static_cast<uint8_t>(i);
+
+  Level dst(common);
+  // Serialize directly without dst pre-construct equivalence to old API.
+  std::stringstream ss;
+  {
+    cereal::PortableBinaryOutputArchive ar(ss);
+    ar(cereal::make_nvp("lvl", src));
+  }
+  {
+    cereal::PortableBinaryInputArchive ar(ss);
+    ar(cereal::make_nvp("lvl", dst));
+  }
+  CHECK(dst.width == 4);
+  CHECK(dst.height == 3);
+  REQUIRE(dst.data.size() == src.data.size());
+  for (size_t i = 0; i < src.data.size(); ++i)
+    CHECK(dst.data[i] == src.data[i]);
+  CHECK(static_cast<int>(dst.origpal.entries[0].r) == 0);
+  CHECK(static_cast<int>(dst.origpal.entries[255].r) == 255);
+}
+
 TEST_CASE("cereal_types: Rand round-trip preserves stream", "[cereal_types]") {
   Rand src(0xC0FFEEu);
   for (int i = 0; i < 10; ++i)

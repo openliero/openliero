@@ -23,10 +23,11 @@ The branch state at the time of writing: build green on Linux,
 - Phase 1 — ✅ done (commit `600fd6a`)
 - Phase 2 — ✅ done
 - Phase 3 — ✅ done (commits `3033fed`, `243be75`); see Phase 3 notes for the deferred half
-- Phase 4 — next up (handoff point)
-- Phases 5–8 — pending
+- Phase 4 — ✅ done (commits `9b7c7a7`, `7e48263`, `848a094`, see Phase 4 notes for what was deferred)
+- Phase 5 — next up
+- Phases 6–8 — pending
 
-ctest still 86/86. The next agent picks up at Phase 4.
+ctest 102/102. The next agent picks up at Phase 5.
 
 ---
 
@@ -403,7 +404,52 @@ When this phase ends, no more `WormCreator`/`ViewportCreator`
 factory objects, no more `serialization_context` per-pointer
 register/unregister — just `shared_ptr` and ints.
 
-### Phase 4 — convert types to cereal `serialize()`
+### Phase 4 — convert types to cereal `serialize()` — ✅ done
+
+Landed as the *coexist* strategy: cereal `serialize()` functions live
+alongside the existing `ser::` `archive()` functions; the wire format
+and call sites in `replay.cpp` / `settings.cpp` don't change yet
+(Phase 6 swaps them). All glue lives in
+`src/game/serialization/cereal_types.hpp`, keeping the gameplay headers
+free of cereal. Each cluster is its own commit; per-type unit tests
+in `src/tests/test_cereal_types.cpp` round-trip through both
+`PortableBinaryArchive` and the new TOML archive.
+
+Per-type coverage so far:
+- Math leaves: `BasicVec<T, 2>`, `BasicRect<T>` (commit `9b7c7a7`).
+- Simple structs: `Worm::ControlState`, `Ninjarope`, `WormWeapon`
+  (commit `7e48263`). `Ninjarope::anchor` and `WormWeapon::type` are
+  intentionally excluded — they're pointer fields that will be
+  resolved as indices at the enclosing Worm/Game scope.
+- Mid-level: `Viewport`, `Worm`, `WormSettings`, `Settings`, `Rand`
+  (commit `848a094`). `Worm` excludes the same context-dependent
+  pointer fields plus its `settings` `shared_ptr` and `ai`. `Settings`
+  serializes `wormSettings[3]` natively via cereal's `shared_ptr`
+  support. Rand uses a save/load pair around `std::mt19937`'s stream
+  format.
+- Top-level leaves: `Color`, `Palette`, `Level` (commit `<this>`).
+  `Level::materials` is intentionally not serialized — it's
+  re-derived from `Level::data` + `Common` on load, matching the
+  existing replay behaviour.
+
+**Deferred to Phase 6:** `Game::serialize()`. The current
+`archive(Archive, Game&)` resolves three context-dependent fields
+that span worms:
+1. `worm.ninjarope.anchor` (raw `Worm*`) → index into `game.worms`.
+2. `worm.weapons[i].type` (`Weapon const*`) → offset into
+   `Common::weapons`.
+3. `worm.settings` (`shared_ptr<WormSettings>`) — shared across
+   `game.settings.wormSettings[]` and per-worm overrides.
+
+Wiring those through cereal needs a context object (cereal supports
+this via `UserDataAdapter` / `get_user_data`). That context lives
+naturally next to the call-site swap in `replay.cpp` and is the
+work of Phase 6 — there's no value in writing it now and immediately
+deleting the old `archive(Game&)` code.
+
+ctest: 86 → 102.
+
+Original phase notes follow.
 
 **Prerequisite audit** (do before writing any `serialize()`):
 - Default-constructibility of every type we'll serialize:
