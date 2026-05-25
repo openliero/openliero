@@ -87,3 +87,56 @@ TEST_CASE("cereal_types: BasicRect<int> toml round-trip", "[cereal_types]") {
   CHECK(dst.x2 == 100);
   CHECK(dst.y2 == 200);
 }
+
+TEST_CASE("cereal_types: ControlState round-trip", "[cereal_types]") {
+  Worm::ControlState src;
+  src.istate = 0x5a;
+  Worm::ControlState bin = roundtripBinary(src);
+  Worm::ControlState toml = roundtripToml(src);
+  CHECK(bin.istate == src.istate);
+  CHECK(toml.istate == src.istate);
+}
+
+TEST_CASE("cereal_types: Ninjarope round-trip excludes anchor",
+          "[cereal_types]") {
+  Ninjarope src;
+  src.out = true;
+  src.attached = true;
+  src.pos = fixedvec{1234, -5678};
+  src.vel = fixedvec{-1, 2};
+  src.length = 700;
+  src.curLen = 350;
+  // anchor is intentionally not serialized; verify dst.anchor stays default.
+  src.anchor = reinterpret_cast<Worm*>(0xdeadbeef);
+
+  Ninjarope bin = roundtripBinary(src);
+  CHECK(bin.out == true);
+  CHECK(bin.attached == true);
+  CHECK(bin.pos.x == 1234);
+  CHECK(bin.pos.y == -5678);
+  CHECK(bin.vel.x == -1);
+  CHECK(bin.vel.y == 2);
+  CHECK(bin.length == 700);
+  CHECK(bin.curLen == 350);
+  CHECK(bin.anchor == nullptr);
+}
+
+TEST_CASE("cereal_types: WormWeapon round-trip excludes type pointer",
+          "[cereal_types]") {
+  WormWeapon src;
+  src.ammo = 17;
+  src.delayLeft = 23;
+  src.loadingLeft = 41;
+
+  // WormWeapon's default ctor leaves `type` uninitialized; this test
+  // only checks the fields cereal serialize() touches.
+  WormWeapon bin = roundtripBinary(src);
+  CHECK(bin.ammo == 17);
+  CHECK(bin.delayLeft == 23);
+  CHECK(bin.loadingLeft == 41);
+
+  WormWeapon toml = roundtripToml(src);
+  CHECK(toml.ammo == 17);
+  CHECK(toml.delayLeft == 23);
+  CHECK(toml.loadingLeft == 41);
+}

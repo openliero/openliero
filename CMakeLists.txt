@@ -376,10 +376,10 @@ if(OPENLIERO_BUILD_TESTS)
 
   add_executable(test_cereal_types src/tests/test_cereal_types.cpp)
   target_link_libraries(test_cereal_types PRIVATE
+    game
     cereal::cereal
     tomlplusplus::tomlplusplus
     Catch2::Catch2WithMain)
-  target_include_directories(test_cereal_types PRIVATE src src/game)
   catch_discover_tests(test_cereal_types DISCOVERY_MODE PRE_TEST)
 endif()
 
