@@ -174,7 +174,7 @@ void Game::resetWorms()
 		w.visible = false;
 		w.killedTimer = Worm::KilledTimerInitial;
 
-		w.currentWeapon = 1;
+		w.currentWeapon = 0;
 	}
 }
 
