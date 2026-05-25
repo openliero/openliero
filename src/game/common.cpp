@@ -1,6 +1,7 @@
 #include "common.hpp"
 
 #include <map>
+#include <sstream>
 #include <string>
 #include "common_model.hpp"
 #include "filesystem.hpp"
@@ -308,8 +309,14 @@ inline uint32_t quad(char a, char b, char c, char d) {
 void Common::load(FsNode node) {
   {
     auto textReader_ptr = (node / "tc.cfg").toReader(); io::Reader& textReader = *textReader_ptr;
-    ser::toml::reader<io::Reader> tomlReader(textReader);
-    archive_text(*this, tomlReader);
+    // Read entire content into a string for istringstream
+    std::string content;
+    try {
+      for (;;)
+        content.push_back(static_cast<char>(textReader.get()));
+    } catch (std::runtime_error&) {}
+    std::istringstream is(content);
+    loadTcConfig(*this, is);
   }
 
   for (auto& s : sounds) {
@@ -401,24 +408,39 @@ void Common::load(FsNode node) {
     auto dir = node / "weapons";
 
     auto wReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& wReader = *wReader_ptr;
-    ser::toml::reader<io::Reader> tomlReader(wReader);
-    archive_text(*this, w, tomlReader);
+    std::string content;
+    try {
+      for (;;)
+        content.push_back(static_cast<char>(wReader.get()));
+    } catch (std::runtime_error&) {}
+    std::istringstream is(content);
+    loadWeaponConfig(*this, w, is);
   }
 
   for (auto& w : nobjectTypes) {
     auto dir = node / "nobjects";
 
     auto nReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& nReader = *nReader_ptr;
-    ser::toml::reader<io::Reader> tomlReader(nReader);
-    archive_text(*this, w, tomlReader);
+    std::string content;
+    try {
+      for (;;)
+        content.push_back(static_cast<char>(nReader.get()));
+    } catch (std::runtime_error&) {}
+    std::istringstream is(content);
+    loadNObjectConfig(*this, w, is);
   }
 
   for (auto& w : sobjectTypes) {
     auto dir = node / "sobjects";
 
     auto sReader_ptr = (dir / (w.idStr + ".cfg")).toReader(); io::Reader& sReader = *sReader_ptr;
-    ser::toml::reader<io::Reader> tomlReader(sReader);
-    archive_text(*this, w, tomlReader);
+    std::string content;
+    try {
+      for (;;)
+        content.push_back(static_cast<char>(sReader.get()));
+    } catch (std::runtime_error&) {}
+    std::istringstream is(content);
+    loadSObjectConfig(w, is);
   }
 
   precompute();

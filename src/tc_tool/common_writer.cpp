@@ -3,7 +3,8 @@
 #include "game/io/coding.hpp"
 #include "game/io/stream.hpp"
 
-#include <serialization/toml_adapter.hpp>
+#include <fstream>
+#include <sstream>
 
 void writeSpriteTga(
 	io::Writer& w,
@@ -57,9 +58,12 @@ void commonSave(Common& common, std::string const& path)
 	create_directories(cfgPath);
 
 	{
+		std::ostringstream ss;
+		saveTcConfig(common, ss);
 		io::FileWriter textWriter(cfgPath.c_str(), "wb");
-		ser::toml::writer<io::Writer> w(textWriter);
-		archive_text(common, w);
+		auto str = ss.str();
+		for (char c : str)
+			textWriter.put(c);
 	}
 
 	for (auto& s : common.sounds)
@@ -142,9 +146,12 @@ void commonSave(Common& common, std::string const& path)
 		std::string dir(joinPath(path, "weapons/"));
 		create_directories(dir);
 
+		std::ostringstream ss;
+		saveWeaponConfig(common, w, ss);
 		io::FileWriter wWriter(joinPath(dir, w.idStr + ".cfg").c_str(), "wb");
-		ser::toml::writer<io::Writer> tomlW(wWriter);
-		archive_text(common, w, tomlW);
+		auto str = ss.str();
+		for (char c : str)
+			wWriter.put(c);
 	}
 
 	for (auto& w : common.nobjectTypes)
@@ -152,9 +159,12 @@ void commonSave(Common& common, std::string const& path)
 		std::string dir(joinPath(path, "nobjects/"));
 		create_directories(dir);
 
+		std::ostringstream ss;
+		saveNObjectConfig(common, w, ss);
 		io::FileWriter nWriter(joinPath(dir, w.idStr + ".cfg").c_str(), "wb");
-		ser::toml::writer<io::Writer> tomlW(nWriter);
-		archive_text(common, w, tomlW);
+		auto str = ss.str();
+		for (char c : str)
+			nWriter.put(c);
 	}
 
 	for (auto& w : common.sobjectTypes)
@@ -162,8 +172,11 @@ void commonSave(Common& common, std::string const& path)
 		std::string dir(joinPath(path, "sobjects/"));
 		create_directories(dir);
 
+		std::ostringstream ss;
+		saveSObjectConfig(w, ss);
 		io::FileWriter sWriter(joinPath(dir, w.idStr + ".cfg").c_str(), "wb");
-		ser::toml::writer<io::Writer> tomlW(sWriter);
-		archive_text(common, w, tomlW);
+		auto str = ss.str();
+		for (char c : str)
+			sWriter.put(c);
 	}
 }
