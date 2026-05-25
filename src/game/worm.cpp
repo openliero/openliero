@@ -7,9 +7,10 @@
 #include "filesystem.hpp" // For joinPath
 #include "io/stream.hpp"
 #include <cstdlib>
+#include <sstream>
 
-#include <serialization/archive.hpp>
-#include <serialization/toml_adapter.hpp>
+#include <serialization/cereal_types.hpp>
+#include <serialization/toml_archive.hpp>
 #include "replay.hpp"
 
 #include <xxhash.h>
@@ -45,18 +46,19 @@ uint64_t& WormSettings::updateHash()
 
 std::string WormSettings::toToml() const
 {
-	std::string buf;
-	io::StringWriter sw(buf);
-	ser::toml::writer<io::Writer> ar(sw);
-	archive_worm_toml(ar, const_cast<WormSettings&>(*this));
-	return buf;
+	std::ostringstream ss;
+	{
+		ser::TomlOutputArchive ar(ss);
+		ar(cereal::make_nvp("ws", const_cast<WormSettings&>(*this)));
+	}
+	return ss.str();
 }
 
 void WormSettings::fromToml(std::string const& data)
 {
-	io::MemReader sr(data);
-	ser::toml::reader<io::Reader> ar(sr);
-	archive_worm_toml(ar, *this);
+	std::istringstream ss(data);
+	ser::TomlInputArchive ar(ss);
+	ar(cereal::make_nvp("ws", *this));
 }
 
 void WormSettings::saveProfile(FsNode node)
@@ -66,8 +68,8 @@ void WormSettings::saveProfile(FsNode node)
 		auto writer_ptr = node.toWriter(); io::Writer& writer = *writer_ptr;
 		profileNode = node;
 
-		ser::toml::writer<io::Writer> ar(writer);
-		archive_worm_toml(ar, *this);
+		std::string toml = toToml();
+		writer.put(reinterpret_cast<uint8_t const*>(toml.data()), toml.size());
 	}
 	catch(std::runtime_error& e)
 	{
@@ -83,8 +85,14 @@ void WormSettings::loadProfile(FsNode node)
 		auto reader_ptr = node.toReader(); io::Reader& reader = *reader_ptr;
 		profileNode = node;
 
-		ser::toml::reader<io::Reader> ar(reader);
-		archive_worm_toml(ar, *this);
+		std::string content;
+		uint8_t buf[4096];
+		for (;;) {
+			std::size_t got = reader.try_get(buf, sizeof(buf));
+			if (got == 0) break;
+			content.append(reinterpret_cast<char*>(buf), got);
+		}
+		fromToml(content);
 	}
 	catch(std::runtime_error& e)
 	{

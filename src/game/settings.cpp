@@ -5,9 +5,11 @@
 #include "filesystem.hpp"
 #include "io/stream.hpp"
 
-#include <serialization/toml_adapter.hpp>
+#include <serialization/cereal_types.hpp>
+#include <serialization/toml_archive.hpp>
 
 #include <xxhash.h>
+#include <sstream>
 
 int const Settings::wormAnimTab[] =
 {
@@ -108,8 +110,14 @@ bool Settings::load(FsNode node, Rand& rand)
 	try
 	{
 		auto reader_ptr = node.toReader(); io::Reader& reader = *reader_ptr;
-		ser::toml::reader<io::Reader> ar(reader);
-		archive_text(*this, ar);
+		std::string content;
+		uint8_t buf[4096];
+		for (;;) {
+			std::size_t got = reader.try_get(buf, sizeof(buf));
+			if (got == 0) break;
+			content.append(reinterpret_cast<char*>(buf), got);
+		}
+		fromToml(content);
 	}
 	catch (std::runtime_error&)
 	{
@@ -121,39 +129,38 @@ bool Settings::load(FsNode node, Rand& rand)
 
 uint64_t& Settings::updateHash()
 {
-	std::string buf;
-	io::StringWriter sw(buf);
-	ser::toml::writer<io::Writer> ar(sw);
-	archive_gameplay_text(*this, ar);
-	ar.flush();
-
+	std::ostringstream ss;
+	{
+		ser::TomlOutputArchive ar(ss);
+		serializeGameplay(ar, *this);
+	}
+	std::string buf = ss.str();
 	hash = XXH3_64bits(buf.data(), buf.size());
 	return hash;
 }
 
 std::string Settings::toToml() const
 {
-	std::string buf;
-	io::StringWriter sw(buf);
-	ser::toml::writer<io::Writer> ar(sw);
-	archive_text(const_cast<Settings&>(*this), ar);
-	return buf;
+	std::ostringstream ss;
+	{
+		ser::TomlOutputArchive ar(ss);
+		ar(cereal::make_nvp("s", const_cast<Settings&>(*this)));
+	}
+	return ss.str();
 }
 
 void Settings::fromToml(std::string const& data)
 {
-	io::MemReader sr(data);
-	ser::toml::reader<io::Reader> ar(sr);
-	archive_text(*this, ar);
+	std::istringstream ss(data);
+	ser::TomlInputArchive ar(ss);
+	ar(cereal::make_nvp("s", *this));
 }
 
 void Settings::save(FsNode node, Rand& rand)
 {
 	auto writer_ptr = node.toWriter(); io::Writer& writer = *writer_ptr;
-
-	ser::toml::writer<io::Writer> ar(writer);
-
-	archive_text(*this, ar);
+	std::string toml = toToml();
+	writer.put(reinterpret_cast<uint8_t const*>(toml.data()), toml.size());
 }
 
 void Settings::generateName(WormSettings& ws, Rand& rand)

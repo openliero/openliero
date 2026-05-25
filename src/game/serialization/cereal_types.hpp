@@ -155,6 +155,40 @@ void serialize(Archive& ar, Settings& s, std::uint32_t const version) {
 }
 CEREAL_CLASS_VERSION(Settings, 2);
 
+// Gameplay-only subset for hash computation. AppSettings fields are
+// deliberately excluded so UI-only changes don't affect the hash.
+template <class Archive>
+void serializeGameplay(Archive& ar, Settings& s) {
+  ar(cereal::make_nvp("recordReplays", s.recordReplays),
+     cereal::make_nvp("loadPowerlevelPalette", s.loadPowerlevelPalette),
+     cereal::make_nvp("aiFrames", s.aiFrames),
+     cereal::make_nvp("aiMutations", s.aiMutations),
+     cereal::make_nvp("aiTraces", s.aiTraces),
+     cereal::make_nvp("aiParallels", s.aiParallels),
+     cereal::make_nvp("zoneTimeout", s.zoneTimeout),
+     cereal::make_nvp("selectBotWeapons", s.selectBotWeapons),
+     cereal::make_nvp("allowViewingSpawnPoint", s.allowViewingSpawnPoint),
+     cereal::make_nvp("tc", s.tc));
+  ar(cereal::make_nvp("maxBonuses", s.maxBonuses),
+     cereal::make_nvp("blood", s.blood),
+     cereal::make_nvp("timeToLose", s.timeToLose),
+     cereal::make_nvp("flagsToWin", s.flagsToWin),
+     cereal::make_nvp("gameMode", s.gameMode),
+     cereal::make_nvp("shadow", s.shadow),
+     cereal::make_nvp("loadChange", s.loadChange),
+     cereal::make_nvp("namesOnBonuses", s.namesOnBonuses),
+     cereal::make_nvp("regenerateLevel", s.regenerateLevel),
+     cereal::make_nvp("lives", s.lives),
+     cereal::make_nvp("loadingTime", s.loadingTime),
+     cereal::make_nvp("randomLevel", s.randomLevel),
+     cereal::make_nvp("levelFile", s.levelFile),
+     cereal::make_nvp("map", s.map),
+     cereal::make_nvp("screenSync", s.screenSync));
+  for (int i = 0; i < 40; ++i)
+    ar(cereal::make_nvp("weap" + std::to_string(i), s.weapTable[i]));
+  ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
+}
+
 // ---- Viewport ----
 // Pure data; no context dependencies. The `rand` member isn't actually
 // consumed anywhere (the old archive just wrote two dummy u32s), so it
