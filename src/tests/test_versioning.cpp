@@ -360,7 +360,7 @@ TEST_CASE("versioning: Settings v2 TOML round-trip preserves bonusTimeout",
   Settings src = makeKnownV2();
   std::stringstream ss;
   {
-    ser::TomlOutputArchive ar(ss);
+    cereal::TomlOutputArchive ar(ss);
     ar(cereal::make_nvp("s", src));
   }
   // bonusTimeout = 42 must appear in the serialized text.
@@ -368,7 +368,7 @@ TEST_CASE("versioning: Settings v2 TOML round-trip preserves bonusTimeout",
 
   Settings dst;
   {
-    ser::TomlInputArchive ar(ss);
+    cereal::TomlInputArchive ar(ss);
     ar(cereal::make_nvp("s", dst));
   }
   CHECK(dst.maxBonuses == 7);
@@ -382,7 +382,7 @@ TEST_CASE("versioning: Settings v1 TOML fixture reads as v2 with default bonusTi
   std::stringstream ss(kSettingsV1Toml);
   Settings dst;
   {
-    ser::TomlInputArchive ar(ss);
+    cereal::TomlInputArchive ar(ss);
     ar(cereal::make_nvp("s", dst));
   }
   // Fields present in v1.

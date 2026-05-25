@@ -8,7 +8,7 @@
 //
 // Convention: non-member serialize() templated on Archive so the same
 // function works for cereal::PortableBinary{In,Out}putArchive and
-// ser::Toml{In,Out}putArchive.
+// cereal::Toml{In,Out}putArchive.
 
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>

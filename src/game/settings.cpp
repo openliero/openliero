@@ -131,7 +131,7 @@ uint64_t& Settings::updateHash()
 {
 	std::ostringstream ss;
 	{
-		ser::TomlOutputArchive ar(ss);
+		cereal::TomlOutputArchive ar(ss);
 		serializeGameplay(ar, *this);
 	}
 	std::string buf = ss.str();
@@ -143,7 +143,7 @@ std::string Settings::toToml() const
 {
 	std::ostringstream ss;
 	{
-		ser::TomlOutputArchive ar(ss);
+		cereal::TomlOutputArchive ar(ss);
 		ar(cereal::make_nvp("s", const_cast<Settings&>(*this)));
 	}
 	return ss.str();
@@ -152,7 +152,7 @@ std::string Settings::toToml() const
 void Settings::fromToml(std::string const& data)
 {
 	std::istringstream ss(data);
-	ser::TomlInputArchive ar(ss);
+	cereal::TomlInputArchive ar(ss);
 	ar(cereal::make_nvp("s", *this));
 }
 

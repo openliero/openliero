@@ -1,4 +1,4 @@
-// Phase 2 tests: ser::TomlOutputArchive / TomlInputArchive in isolation.
+// Phase 2 tests: cereal::TomlOutputArchive / TomlInputArchive in isolation.
 // Cover primitives, nested objects, arrays of primitives, arrays of objects,
 // missing-key tolerance, and version-tagged types.
 
@@ -100,12 +100,12 @@ TEST_CASE("TomlArchive: primitive round-trip", "[toml_archive]") {
   Primitives src{-42, 7u, true, "hello world", 3.5};
   std::stringstream ss;
   {
-    ser::TomlOutputArchive out(ss);
+    cereal::TomlOutputArchive out(ss);
     out(cereal::make_nvp("p", src));
   }
   Primitives dst;
   {
-    ser::TomlInputArchive in(ss);
+    cereal::TomlInputArchive in(ss);
     in(cereal::make_nvp("p", dst));
   }
   CHECK(dst == src);
@@ -117,12 +117,12 @@ TEST_CASE("TomlArchive: nested object round-trip", "[toml_archive]") {
   src.flag = 99;
   std::stringstream ss;
   {
-    ser::TomlOutputArchive out(ss);
+    cereal::TomlOutputArchive out(ss);
     out(cereal::make_nvp("outer", src));
   }
   Outer dst;
   {
-    ser::TomlInputArchive in(ss);
+    cereal::TomlInputArchive in(ss);
     in(cereal::make_nvp("outer", dst));
   }
   CHECK(dst == src);
@@ -134,12 +134,12 @@ TEST_CASE("TomlArchive: arrays of primitives", "[toml_archive]") {
   src.strs = {"a", "bb", "ccc"};
   std::stringstream ss;
   {
-    ser::TomlOutputArchive out(ss);
+    cereal::TomlOutputArchive out(ss);
     out(cereal::make_nvp("h", src));
   }
   ArrayHolder dst;
   {
-    ser::TomlInputArchive in(ss);
+    cereal::TomlInputArchive in(ss);
     in(cereal::make_nvp("h", dst));
   }
   CHECK(dst == src);
@@ -150,12 +150,12 @@ TEST_CASE("TomlArchive: arrays of objects", "[toml_archive]") {
   src.items = {{1, 2}, {3, 4}, {5, 6}};
   std::stringstream ss;
   {
-    ser::TomlOutputArchive out(ss);
+    cereal::TomlOutputArchive out(ss);
     out(cereal::make_nvp("h", src));
   }
   ObjectArrayHolder dst;
   {
-    ser::TomlInputArchive in(ss);
+    cereal::TomlInputArchive in(ss);
     in(cereal::make_nvp("h", dst));
   }
   CHECK(dst == src);
@@ -166,7 +166,7 @@ TEST_CASE("TomlArchive: missing key keeps default", "[toml_archive]") {
   std::string toml_text = "[p]\ni = 17\n";
   std::stringstream ss(toml_text);
   Primitives dst{0, 99u, true, "preserved", 1.25};
-  ser::TomlInputArchive in(ss);
+  cereal::TomlInputArchive in(ss);
   in(cereal::make_nvp("p", dst));
   CHECK(dst.i == 17);
   CHECK(dst.u == 99u);
@@ -180,7 +180,7 @@ TEST_CASE("TomlArchive: versioned type emits and reads version",
   Versioned src{10, 20};
   std::stringstream ss;
   {
-    ser::TomlOutputArchive out(ss);
+    cereal::TomlOutputArchive out(ss);
     out(cereal::make_nvp("v", src));
   }
   // The serialized text should contain the cereal_class_version field.
@@ -188,7 +188,7 @@ TEST_CASE("TomlArchive: versioned type emits and reads version",
 
   Versioned dst;
   {
-    ser::TomlInputArchive in(ss);
+    cereal::TomlInputArchive in(ss);
     in(cereal::make_nvp("v", dst));
   }
   CHECK(dst.a == 10);

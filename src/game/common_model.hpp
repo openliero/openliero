@@ -31,7 +31,7 @@ inline int objRefFromStr(std::string const& str, std::vector<T> const& vec) {
 // Save/load NObjectType config (individual .cfg file)
 inline void saveNObjectConfig(
     Common const& common, NObjectType const& n, std::ostream& os) {
-  ser::TomlOutputArchive ar(os);
+  cereal::TomlOutputArchive ar(os);
   ar(cereal::make_nvp("wormExplode", n.wormExplode));
   ar(cereal::make_nvp("explGround", n.explGround));
   ar(cereal::make_nvp("wormDestroy", n.wormDestroy));
@@ -72,7 +72,7 @@ inline void saveNObjectConfig(
 }
 
 inline void loadNObjectConfig(Common& common, NObjectType& n, std::istream& is) {
-  ser::TomlInputArchive ar(is);
+  cereal::TomlInputArchive ar(is);
   ar(cereal::make_nvp("wormExplode", n.wormExplode));
   ar(cereal::make_nvp("explGround", n.explGround));
   ar(cereal::make_nvp("wormDestroy", n.wormDestroy));
@@ -117,7 +117,7 @@ inline void loadNObjectConfig(Common& common, NObjectType& n, std::istream& is) 
 
 // Save/load SObjectType config
 inline void saveSObjectConfig(SObjectType const& s, std::ostream& os) {
-  ser::TomlOutputArchive ar(os);
+  cereal::TomlOutputArchive ar(os);
   ar(cereal::make_nvp("shadow", s.shadow));
   ar(cereal::make_nvp("startSound", s.startSound));
   ar(cereal::make_nvp("numSounds", s.numSounds));
@@ -133,7 +133,7 @@ inline void saveSObjectConfig(SObjectType const& s, std::ostream& os) {
 }
 
 inline void loadSObjectConfig(SObjectType& s, std::istream& is) {
-  ser::TomlInputArchive ar(is);
+  cereal::TomlInputArchive ar(is);
   ar(cereal::make_nvp("shadow", s.shadow));
   ar(cereal::make_nvp("startSound", s.startSound));
   ar(cereal::make_nvp("numSounds", s.numSounds));
@@ -151,7 +151,7 @@ inline void loadSObjectConfig(SObjectType& s, std::istream& is) {
 // Save/load Weapon config
 inline void saveWeaponConfig(
     Common const& common, Weapon const& w, std::ostream& os) {
-  ser::TomlOutputArchive ar(os);
+  cereal::TomlOutputArchive ar(os);
   ar(cereal::make_nvp("name", w.name));
   ar(cereal::make_nvp("affectByWorm", w.affectByWorm));
   ar(cereal::make_nvp("shadow", w.shadow));
@@ -217,7 +217,7 @@ inline void saveWeaponConfig(
 }
 
 inline void loadWeaponConfig(Common& common, Weapon& w, std::istream& is) {
-  ser::TomlInputArchive ar(is);
+  cereal::TomlInputArchive ar(is);
   ar(cereal::make_nvp("name", w.name));
   ar(cereal::make_nvp("affectByWorm", w.affectByWorm));
   ar(cereal::make_nvp("shadow", w.shadow));
@@ -478,7 +478,7 @@ inline void saveTcConfig(Common const& common, std::ostream& os) {
   LIERO_HDEFS(COPY_FIELD_H)
   #undef COPY_FIELD_H
 
-  ser::TomlOutputArchive ar(os);
+  cereal::TomlOutputArchive ar(os);
   ar(cereal::make_nvp("types", types));
   ar(cereal::make_nvp("constants", constants));
   ar(cereal::make_nvp("texts", texts));
@@ -491,7 +491,7 @@ inline void loadTcConfig(Common& common, std::istream& is) {
   tc_cfg::TextsS texts;
   tc_cfg::Hacks hacks;
 
-  ser::TomlInputArchive ar(is);
+  cereal::TomlInputArchive ar(is);
   ar(cereal::make_nvp("types", types));
   ar(cereal::make_nvp("constants", constants));
   ar(cereal::make_nvp("texts", texts));

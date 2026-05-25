@@ -27,7 +27,7 @@
 #include <utility>
 #include <vector>
 
-namespace ser {
+namespace cereal {
 
 // ============================================================
 // Output
@@ -304,32 +304,28 @@ class TomlInputArchive
   }
 };
 
-}  // namespace ser
-
 // ============================================================
 // cereal prologue/epilogue/save/load for the TOML archives
 // ============================================================
 
-namespace cereal {
-
 // ---- NameValuePair ----
 template <class T>
-inline void prologue(ser::TomlOutputArchive&, NameValuePair<T> const&) {}
+inline void prologue(TomlOutputArchive&, NameValuePair<T> const&) {}
 template <class T>
-inline void prologue(ser::TomlInputArchive&, NameValuePair<T> const&) {}
+inline void prologue(TomlInputArchive&, NameValuePair<T> const&) {}
 template <class T>
-inline void epilogue(ser::TomlOutputArchive&, NameValuePair<T> const&) {}
+inline void epilogue(TomlOutputArchive&, NameValuePair<T> const&) {}
 template <class T>
-inline void epilogue(ser::TomlInputArchive&, NameValuePair<T> const&) {}
+inline void epilogue(TomlInputArchive&, NameValuePair<T> const&) {}
 
 template <class T>
-inline void CEREAL_SAVE_FUNCTION_NAME(ser::TomlOutputArchive& ar,
+inline void CEREAL_SAVE_FUNCTION_NAME(TomlOutputArchive& ar,
                                       NameValuePair<T> const& t) {
   ar.setNextName(t.name);
   ar(t.value);
 }
 template <class T>
-inline void CEREAL_LOAD_FUNCTION_NAME(ser::TomlInputArchive& ar,
+inline void CEREAL_LOAD_FUNCTION_NAME(TomlInputArchive& ar,
                                       NameValuePair<T>& t) {
   ar.setNextName(t.name);
   ar(t.value);
@@ -337,25 +333,25 @@ inline void CEREAL_LOAD_FUNCTION_NAME(ser::TomlInputArchive& ar,
 
 // ---- SizeTag ----
 template <class T>
-inline void prologue(ser::TomlOutputArchive& ar, SizeTag<T> const&) {
+inline void prologue(TomlOutputArchive& ar, SizeTag<T> const&) {
   ar.makeArray();
 }
 template <class T>
-inline void prologue(ser::TomlInputArchive& ar, SizeTag<T> const&) {
+inline void prologue(TomlInputArchive& ar, SizeTag<T> const&) {
   ar.makeArray();
 }
 template <class T>
-inline void epilogue(ser::TomlOutputArchive&, SizeTag<T> const&) {}
+inline void epilogue(TomlOutputArchive&, SizeTag<T> const&) {}
 template <class T>
-inline void epilogue(ser::TomlInputArchive&, SizeTag<T> const&) {}
+inline void epilogue(TomlInputArchive&, SizeTag<T> const&) {}
 
 template <class T>
-inline void CEREAL_SAVE_FUNCTION_NAME(ser::TomlOutputArchive&,
+inline void CEREAL_SAVE_FUNCTION_NAME(TomlOutputArchive&,
                                       SizeTag<T> const&) {
   // size is implicit in the TOML array length
 }
 template <class T>
-inline void CEREAL_LOAD_FUNCTION_NAME(ser::TomlInputArchive& ar,
+inline void CEREAL_LOAD_FUNCTION_NAME(TomlInputArchive& ar,
                                       SizeTag<T>& st) {
   ar.loadSize(st.size);
 }
@@ -365,100 +361,100 @@ template <class T,
           traits::EnableIf<!std::is_arithmetic<T>::value,
                            !traits::has_minimal_base_class_serialization<
                                T, traits::has_minimal_output_serialization,
-                               ser::TomlOutputArchive>::value,
+                               TomlOutputArchive>::value,
                            !traits::has_minimal_output_serialization<
-                               T, ser::TomlOutputArchive>::value> =
+                               T, TomlOutputArchive>::value> =
               traits::sfinae>
-inline void prologue(ser::TomlOutputArchive& ar, T const&) {
+inline void prologue(TomlOutputArchive& ar, T const&) {
   ar.startNode();
 }
 template <class T,
           traits::EnableIf<!std::is_arithmetic<T>::value,
                            !traits::has_minimal_base_class_serialization<
                                T, traits::has_minimal_input_serialization,
-                               ser::TomlInputArchive>::value,
+                               TomlInputArchive>::value,
                            !traits::has_minimal_input_serialization<
-                               T, ser::TomlInputArchive>::value> =
+                               T, TomlInputArchive>::value> =
               traits::sfinae>
-inline void prologue(ser::TomlInputArchive& ar, T const&) {
+inline void prologue(TomlInputArchive& ar, T const&) {
   ar.startNode();
 }
 template <class T,
           traits::EnableIf<!std::is_arithmetic<T>::value,
                            !traits::has_minimal_base_class_serialization<
                                T, traits::has_minimal_output_serialization,
-                               ser::TomlOutputArchive>::value,
+                               TomlOutputArchive>::value,
                            !traits::has_minimal_output_serialization<
-                               T, ser::TomlOutputArchive>::value> =
+                               T, TomlOutputArchive>::value> =
               traits::sfinae>
-inline void epilogue(ser::TomlOutputArchive& ar, T const&) {
+inline void epilogue(TomlOutputArchive& ar, T const&) {
   ar.finishNode();
 }
 template <class T,
           traits::EnableIf<!std::is_arithmetic<T>::value,
                            !traits::has_minimal_base_class_serialization<
                                T, traits::has_minimal_input_serialization,
-                               ser::TomlInputArchive>::value,
+                               TomlInputArchive>::value,
                            !traits::has_minimal_input_serialization<
-                               T, ser::TomlInputArchive>::value> =
+                               T, TomlInputArchive>::value> =
               traits::sfinae>
-inline void epilogue(ser::TomlInputArchive& ar, T const&) {
+inline void epilogue(TomlInputArchive& ar, T const&) {
   ar.finishNode();
 }
 
 // ---- Arithmetic ----
 template <class T, traits::EnableIf<std::is_arithmetic<T>::value> =
                        traits::sfinae>
-inline void prologue(ser::TomlOutputArchive&, T const&) {}
+inline void prologue(TomlOutputArchive&, T const&) {}
 template <class T, traits::EnableIf<std::is_arithmetic<T>::value> =
                        traits::sfinae>
-inline void prologue(ser::TomlInputArchive&, T const&) {}
+inline void prologue(TomlInputArchive&, T const&) {}
 template <class T, traits::EnableIf<std::is_arithmetic<T>::value> =
                        traits::sfinae>
-inline void epilogue(ser::TomlOutputArchive&, T const&) {}
+inline void epilogue(TomlOutputArchive&, T const&) {}
 template <class T, traits::EnableIf<std::is_arithmetic<T>::value> =
                        traits::sfinae>
-inline void epilogue(ser::TomlInputArchive&, T const&) {}
+inline void epilogue(TomlInputArchive&, T const&) {}
 
 template <class T, traits::EnableIf<std::is_arithmetic<T>::value> =
                        traits::sfinae>
-inline void CEREAL_SAVE_FUNCTION_NAME(ser::TomlOutputArchive& ar, T const& t) {
+inline void CEREAL_SAVE_FUNCTION_NAME(TomlOutputArchive& ar, T const& t) {
   ar.saveValue(t);
 }
 template <class T, traits::EnableIf<std::is_arithmetic<T>::value> =
                        traits::sfinae>
-inline void CEREAL_LOAD_FUNCTION_NAME(ser::TomlInputArchive& ar, T& t) {
+inline void CEREAL_LOAD_FUNCTION_NAME(TomlInputArchive& ar, T& t) {
   ar.loadValue(t);
 }
 
 // ---- String ----
 template <class CharT, class Traits, class Alloc>
-inline void prologue(ser::TomlOutputArchive&,
+inline void prologue(TomlOutputArchive&,
                      std::basic_string<CharT, Traits, Alloc> const&) {}
 template <class CharT, class Traits, class Alloc>
-inline void prologue(ser::TomlInputArchive&,
+inline void prologue(TomlInputArchive&,
                      std::basic_string<CharT, Traits, Alloc> const&) {}
 template <class CharT, class Traits, class Alloc>
-inline void epilogue(ser::TomlOutputArchive&,
+inline void epilogue(TomlOutputArchive&,
                      std::basic_string<CharT, Traits, Alloc> const&) {}
 template <class CharT, class Traits, class Alloc>
-inline void epilogue(ser::TomlInputArchive&,
+inline void epilogue(TomlInputArchive&,
                      std::basic_string<CharT, Traits, Alloc> const&) {}
 
 template <class CharT, class Traits, class Alloc>
 inline void CEREAL_SAVE_FUNCTION_NAME(
-    ser::TomlOutputArchive& ar,
+    TomlOutputArchive& ar,
     std::basic_string<CharT, Traits, Alloc> const& s) {
   ar.saveValue(s);
 }
 template <class CharT, class Traits, class Alloc>
 inline void CEREAL_LOAD_FUNCTION_NAME(
-    ser::TomlInputArchive& ar, std::basic_string<CharT, Traits, Alloc>& s) {
+    TomlInputArchive& ar, std::basic_string<CharT, Traits, Alloc>& s) {
   ar.loadValue(s);
 }
 
 }  // namespace cereal
 
-CEREAL_REGISTER_ARCHIVE(ser::TomlOutputArchive)
-CEREAL_REGISTER_ARCHIVE(ser::TomlInputArchive)
-CEREAL_SETUP_ARCHIVE_TRAITS(ser::TomlInputArchive, ser::TomlOutputArchive)
+CEREAL_REGISTER_ARCHIVE(cereal::TomlOutputArchive)
+CEREAL_REGISTER_ARCHIVE(cereal::TomlInputArchive)
+CEREAL_SETUP_ARCHIVE_TRAITS(cereal::TomlInputArchive, cereal::TomlOutputArchive)

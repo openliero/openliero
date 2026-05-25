@@ -1,5 +1,5 @@
 // Phase 4 tests: per-type cereal serialize() round-trips through both
-// the binary (PortableBinaryArchive) and TOML (ser::TomlOutputArchive)
+// the binary (PortableBinaryArchive) and TOML (cereal::TomlOutputArchive)
 // archives. The old archive() functions stay in place; this verifies
 // the new cereal-based path before Phase 6 swaps the call sites.
 
@@ -33,12 +33,12 @@ template <typename T>
 T roundtripToml(T const& src) {
   std::stringstream ss;
   {
-    ser::TomlOutputArchive ar(ss);
+    cereal::TomlOutputArchive ar(ss);
     ar(cereal::make_nvp("v", src));
   }
   T dst{};
   {
-    ser::TomlInputArchive ar(ss);
+    cereal::TomlInputArchive ar(ss);
     ar(cereal::make_nvp("v", dst));
   }
   return dst;
