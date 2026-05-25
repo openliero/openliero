@@ -17,6 +17,15 @@ away.
 The branch state at the time of writing: build green on Linux,
 66/66 ctest cases pass, `grep -rn gvl src/ CMakeLists.txt` is empty.
 
+**Progress as of this revision** (branch `remove-gvl-and-new-serialization`):
+
+- Phase 0 — ✅ done (commit `13ea321`)
+- Phase 1 — ✅ done (commit `600fd6a`)
+- Phase 2 — next up (handoff point)
+- Phases 3–8 — pending
+
+ctest now at 80/80. The next agent picks up at Phase 2.
+
 ---
 
 ## Library evaluation
@@ -225,7 +234,28 @@ independently verifiable.
 
 ## Phases
 
-### Phase 0 — round-trip tests against the current code (mandatory prerequisite)
+### Phase 0 — round-trip tests against the current code (mandatory prerequisite) — ✅ done (commit `13ea321`)
+
+`src/tests/test_archive.cpp` (6 cases / 30 assertions) and
+`src/tests/test_toml_adapter.cpp` (7 cases / 21 assertions) cover the
+primitive read/write API, byte-compare fixtures for the binary layout,
+the `check()` sentinel, `pascal_str` truncate/pad, `obj()` pointer
+dedup, `obj()` null handling, missing-key and wrong-type tolerance on
+the TOML reader, nested `obj()`, `arr()` of primitives, `array_obj()`
+of objects, and `ref()` null omission. ctest goes from 66 to 79.
+
+Two intentional scope reductions to flag for the next agent:
+- **No standalone Worm round-trip test.** `archive(Worm&)` is wired
+  tightly to `GameSerializationContext` (resolves `lastKilledByIdx`
+  via `game->worms.at(idx)` and `weapons[i].type` via
+  `game->common->weapons[idx]`). Building a Game with a loaded Common
+  was deemed disproportionate for tests that get deleted in Phase 4.
+  `test_determinism` is the de-facto end-to-end Worm guard.
+- **Byte-compare fixtures are inline literals, not checked-in files.**
+  Easier review; no separate file management; the bytes are read
+  alongside the writes.
+
+Original phase notes follow.
 
 Before we rip anything out, lock down the existing behavior with
 direct tests. Today the only verification is end-to-end determinism.
@@ -248,7 +278,17 @@ This phase is non-negotiable. A silent regression in the archive
 layer corrupts replays in ways that won't surface until someone
 tries to play one.
 
-### Phase 1 — add cereal, prove it builds
+### Phase 1 — add cereal, prove it builds — ✅ done (commit `600fd6a`)
+
+`cereal` added to `vcpkg.json` (vcpkg pulled 1.3.2#1, BSD-3).
+`find_package(cereal CONFIG REQUIRED)` added to `CMakeLists.txt`.
+`src/tests/test_cereal_smoke.cpp` round-trips `int32_t` and
+`std::string` through `PortableBinaryArchive`. The smoke target links
+only `cereal::cereal` + Catch2 (cereal is header-only; no need to pull
+in the `game` lib). Verified on `linux-x64-debug`. Cross-platform
+(Windows, emscripten) verification deferred to CI on push.
+
+Original phase notes follow:
 
 - Add `cereal` to `vcpkg.json`.
 - Add `test_cereal_smoke.cpp` that round-trips an `int` and a
