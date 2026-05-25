@@ -22,10 +22,11 @@ The branch state at the time of writing: build green on Linux,
 - Phase 0 — ✅ done (commit `13ea321`)
 - Phase 1 — ✅ done (commit `600fd6a`)
 - Phase 2 — ✅ done
-- Phase 3 — next up (handoff point)
-- Phases 4–8 — pending
+- Phase 3 — ✅ done (commits `3033fed`, `243be75`); see Phase 3 notes for the deferred half
+- Phase 4 — next up (handoff point)
+- Phases 5–8 — pending
 
-ctest now at 86/86. The next agent picks up at Phase 3.
+ctest still 86/86. The next agent picks up at Phase 4.
 
 ---
 
@@ -345,7 +346,35 @@ Original phase notes follow.
 Land before any type conversions. The archive is the foundation
 everything else builds on.
 
-### Phase 3 — refactor the pointer model
+### Phase 3 — refactor the pointer model — ✅ done (commits `3033fed`, `243be75`)
+
+Split into two commits.
+
+**`3033fed` — index references go direct.** `WormIdxRefCreator` and
+`WeaponIdxRefCreator` both tunneled what's really an int through a
+pointer-dedup roundtrip. Replaced with `ar.i32(idx)` at all four
+sites (`worm.lastKilledByIdx`, `worm.weapons[i].type` via Common
+offset, `vp.wormIdx`, `game.lastKilledIdx`); both creator structs
+deleted. Wire format changes (~4 bytes per site, different number)
+but determinism round-trip still passes.
+
+**`243be75` — `Game::worms` becomes `vector<shared_ptr<Worm>>`.**
+This also fixes a pre-existing leak: `Game::clearWorms()` was
+calling `.clear()` on a `vector<Worm*>` without deleting. Touched
+~14 files (callers using `auto* w` / `Worm* w` → `auto const& w`;
+pointer-identity checks gained `.get()`; controllers and tests
+switched `new Worm()` → `make_shared<Worm>`). `wormByIdx` keeps
+returning a non-owning `Worm*` via `.get()`.
+
+**Deferred half:** `Ninjarope::anchor` stays as raw `Worm*`. The
+old archive's `obj()` dedup hands out raw pointers via a
+`serialization_context`; if `anchor` were `shared_ptr<Worm>`, two
+deserialized shared_ptrs to the same worm would get independent
+control blocks and double-free. Building shared_ptr-aware dedup in
+the throwaway archive isn't worth it — handled naturally in Phase 4
+when cereal's native `shared_ptr` serialization takes over.
+
+Original phase notes follow.
 
 For every `obj()` / `fobj()` call site in `replay.cpp`, decide:
 - "Already `shared_ptr`, no change."
