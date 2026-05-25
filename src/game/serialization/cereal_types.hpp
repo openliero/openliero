@@ -37,6 +37,18 @@ void serialize(Archive& ar, BasicRect<T>& r) {
      cereal::make_nvp("x2", r.x2), cereal::make_nvp("y2", r.y2));
 }
 
+// Serialize a C array as a cereal array (produces inline TOML arrays).
+template <class Archive, typename T, std::size_t N>
+void serializeArray(Archive& ar, const char* name, T (&arr)[N]) {
+  ar.setNextName(name);
+  ar.startNode();
+  cereal::size_type size = N;
+  ar(cereal::make_size_tag(size));
+  for (std::size_t i = 0; i < N; ++i)
+    ar(arr[i]);
+  ar.finishNode();
+}
+
 // ---- Worm::ControlState ----
 // Single bitfield; serialized through the underlying uint32_t.
 template <class Archive>
@@ -113,10 +125,11 @@ void serialize(Archive& ar, Level& lvl) {
 // v1: initial cereal migration (all original fields).
 // v2: added bonusTimeout (default 0 = no timeout).
 
-// Scalar fields only (no wormSettings). Used by toToml/fromToml (which
-// handles worm sub-tables separately for readability) and by updateHash.
+// Scalar fields only (no wormSettings or weapTable). The weapTable is
+// handled separately because the TOML path writes it as an array while
+// the binary path uses indexed fields.
 template <class Archive>
-void serializeSettingsFields(Archive& ar, Settings& s) {
+void serializeSettingsScalars(Archive& ar, Settings& s) {
   // GameplayExtensions
   ar(cereal::make_nvp("recordReplays", s.recordReplays),
      cereal::make_nvp("loadPowerlevelPalette", s.loadPowerlevelPalette),
@@ -149,9 +162,15 @@ void serializeSettingsFields(Archive& ar, Settings& s) {
      cereal::make_nvp("levelFile", s.levelFile),
      cereal::make_nvp("map", s.map),
      cereal::make_nvp("screenSync", s.screenSync));
+  ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
+}
+
+// Full Settings fields for binary archives (indexed weapon keys).
+template <class Archive>
+void serializeSettingsFields(Archive& ar, Settings& s) {
+  serializeSettingsScalars(ar, s);
   for (int i = 0; i < 40; ++i)
     ar(cereal::make_nvp("weap" + std::to_string(i), s.weapTable[i]));
-  ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
 }
 
 template <class Archive>
@@ -192,8 +211,7 @@ void serializeGameplay(Archive& ar, Settings& s) {
      cereal::make_nvp("levelFile", s.levelFile),
      cereal::make_nvp("map", s.map),
      cereal::make_nvp("screenSync", s.screenSync));
-  for (int i = 0; i < 40; ++i)
-    ar(cereal::make_nvp("weap" + std::to_string(i), s.weapTable[i]));
+  serializeArray(ar, "weapTable", s.weapTable);
   ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
 }
 
@@ -240,6 +258,24 @@ void serialize(Archive& ar, WormSettings& ws) {
   for (int i = 0; i < WormSettingsExtensions::MaxControlEx; ++i)
     ar(cereal::make_nvp("gpControl" + std::to_string(i),
                         ws.gamepadControls[i]));
+}
+
+// TOML-specific WormSettings serialization: uses arrays instead of indexed keys.
+template <class Archive>
+void serializeWormSettingsToml(Archive& ar, WormSettings& ws) {
+  ar(cereal::make_nvp("name", ws.name),
+     cereal::make_nvp("health", ws.health),
+     cereal::make_nvp("controller", ws.controller),
+     cereal::make_nvp("randomName", ws.randomName),
+     cereal::make_nvp("color", ws.color),
+     cereal::make_nvp("inputDevice", ws.inputDevice),
+     cereal::make_nvp("gamepadName", ws.gamepadName),
+     cereal::make_nvp("gamepadSerial", ws.gamepadSerial));
+  serializeArray(ar, "rgb", ws.rgb);
+  serializeArray(ar, "weapons", ws.weapons);
+  serializeArray(ar, "controls", ws.controls);
+  serializeArray(ar, "controlsEx", ws.controlsEx);
+  serializeArray(ar, "gamepadControls", ws.gamepadControls);
 }
 
 // ---- WormWeapon ----

@@ -346,5 +346,3 @@ TEST_CASE("WormSettings toToml/fromToml round-trip") {
   CHECK(loaded.controller == 2);
   CHECK(loaded.controlsEx[0] == 77);
 }
-
-

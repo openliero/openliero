@@ -335,6 +335,10 @@ TEST_CASE("versioning: Settings toToml/fromToml produces human-readable config",
   // No ptr_wrapper noise
   CHECK(toml.find("ptr_wrapper") == std::string::npos);
   CHECK(toml.find("[s]") == std::string::npos);
+  // Arrays used for weapons, controls, etc.
+  CHECK(toml.find("weapons = [") != std::string::npos);
+  CHECK(toml.find("controls = [") != std::string::npos);
+  CHECK(toml.find("weapTable = [") != std::string::npos);
 
   // Round-trip
   Settings dst;

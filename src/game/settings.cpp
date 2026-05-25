@@ -155,7 +155,8 @@ std::string Settings::toToml() const
 		ar.startNode();
 		int32_t version = ConfigVersion;
 		ar(cereal::make_nvp("version", version));
-		serializeSettingsFields(ar, const_cast<Settings&>(*this));
+		serializeSettingsScalars(ar, const_cast<Settings&>(*this));
+		serializeArray(ar, "weapTable", const_cast<Settings&>(*this).weapTable);
 		ar.finishNode();
 
 		// Serialize worm settings as sub-tables with descriptive names
@@ -164,7 +165,7 @@ std::string Settings::toToml() const
 			if (wormSettings[i]) {
 				ar.setNextName(wormNames[i]);
 				ar.startNode();
-				serialize(ar, *wormSettings[i]);
+				serializeWormSettingsToml(ar, *wormSettings[i]);
 				ar.finishNode();
 			}
 		}
@@ -181,7 +182,8 @@ void Settings::fromToml(std::string const& data)
 	ar.startNode();
 	int32_t version = 0;
 	ar(cereal::make_nvp("version", version));
-	serializeSettingsFields(ar, *this);
+	serializeSettingsScalars(ar, *this);
+	serializeArray(ar, "weapTable", weapTable);
 	ar.finishNode();
 
 	static const char* wormNames[] = {"player1", "player2", "network_player"};
@@ -190,7 +192,7 @@ void Settings::fromToml(std::string const& data)
 		ar.startNode();
 		if (!wormSettings[i])
 			wormSettings[i] = std::make_shared<WormSettings>();
-		serialize(ar, *wormSettings[i]);
+		serializeWormSettingsToml(ar, *wormSettings[i]);
 		ar.finishNode();
 	}
 }
