@@ -429,4 +429,10 @@ void load(Archive& ar, Game& game) {
 
   // Level
   ar(cereal::make_nvp("level", game.level));
+
+  // Rebuild materials from data + Common (materials are not serialized —
+  // they're derived from level.data and the material table in Common).
+  game.level.materials.resize(game.level.width * game.level.height);
+  for (std::size_t i = 0; i < game.level.data.size(); ++i)
+    game.level.materials[i] = game.common->materials[game.level.data[i]];
 }
