@@ -21,10 +21,11 @@ The branch state at the time of writing: build green on Linux,
 
 - Phase 0 — ✅ done (commit `13ea321`)
 - Phase 1 — ✅ done (commit `600fd6a`)
-- Phase 2 — next up (handoff point)
-- Phases 3–8 — pending
+- Phase 2 — ✅ done
+- Phase 3 — next up (handoff point)
+- Phases 4–8 — pending
 
-ctest now at 80/80. The next agent picks up at Phase 2.
+ctest now at 86/86. The next agent picks up at Phase 3.
 
 ---
 
@@ -296,7 +297,36 @@ Original phase notes follow:
 - Verify on all build presets (linux-x64 today; eventually Windows
   and emscripten).
 
-### Phase 2 — write the TOML archive
+### Phase 2 — write the TOML archive — ✅ done
+
+`src/game/serialization/toml_archive.hpp` adds `ser::TomlOutputArchive`
+and `ser::TomlInputArchive` (derived from `cereal::OutputArchive` /
+`cereal::InputArchive` + `cereal::traits::TextArchive`). The output
+archive builds a `toml::table` in memory using a lazy-materialization
+stack — frames are deferred until the first child arrives, so a
+`makeArray()` triggered by `SizeTag`'s prologue can flip the
+just-started node from table to array before it lands in the tree.
+Prologue/epilogue overloads cover NVP, SizeTag, generic objects,
+arithmetic, and string — mirroring the structure of cereal's bundled
+`json.hpp`.
+
+`src/tests/test_toml_archive.cpp` covers primitives, nested objects,
+arrays of primitives, arrays of objects, missing-key tolerance, and a
+versioned type (round-trip plus an assertion that
+`cereal_class_version` appears in the serialized output). ctest goes
+from 80 to 86.
+
+Out of scope for Phase 2 (deferred until needed):
+- Special `__version__` handling. Cereal writes the version inline as
+  a `cereal_class_version` NVP at first encounter of a versioned type;
+  in TOML this becomes a regular key in that table. Good enough until
+  Phase 5 reveals it isn't.
+- Explicit null handling. TOML omits the key; readers preserve the
+  default. The plan's `null()`-via-`ref()` mechanism doesn't have a
+  cereal-side analog yet — defer until Phase 3 makes the call sites
+  concrete.
+
+Original phase notes follow.
 
 - Create `src/game/serialization/toml_archive.hpp` with
   `TomlOutputArchive` and `TomlInputArchive` derived from
