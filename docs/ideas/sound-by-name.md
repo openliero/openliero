@@ -413,7 +413,7 @@ Each step has an explicit **Tests** subsection listing the tests to
 add or extend. A step is not "done" until its tests are committed
 and green.
 
-### Step 1 — Preserve disabled sound slots in tc_tool
+### Step 1 — Preserve disabled sound slots in tc_tool ✅ (landed)
 
 **What.** Change `loadSfx` in `src/tc_tool/common_exereader.cpp`
 (~line 817) so disabled / empty sample entries become a
@@ -435,6 +435,22 @@ naming work lands. Subsequent steps build on a stable index space.
 * Sanity-check `sfx_mixer_add` against a `nullptr` sound in a
   small new mixer test (or extend an existing one) to confirm a
   null sample is a silent no-op rather than a crash.
+
+**As landed.** `loadSfx` already pushed back every slot, but the
+shared `SfxSample(name, length)` constructor unconditionally called
+`sfx_new_sound(length * 2)`, so a disabled (length-0) slot ended up
+with a non-null `sound` pointing at a zero-sample buffer — playing
+it would have indexed an empty `samples` vector. Fix: the
+constructor now leaves `sound == nullptr` when `length == 0`, and
+`sfx_mixer_add` early-returns on a null sound so callers can play a
+disabled slot as a silent no-op. Stale `loadSfx` declaration in the
+header was corrected to match the cpp signature.
+
+The new regression test lives in
+`src/tests/test_sfx_loader.cpp` (synthesises a 3-entry `.snd` blob
+with a disabled middle slot, asserts vector length, names, and that
+the disabled slot is null). To make it linkable, the `tc` static
+library was split from `tctool`'s `main()` translation unit.
 
 ### Step 2 — Add `Common::soundIndex`
 

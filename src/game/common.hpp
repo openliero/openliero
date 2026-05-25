@@ -88,8 +88,12 @@ struct SfxSample {
   }
 
   SfxSample(std::string name, int length)
-      : name(std::move(name)), originalData(length) {
-    sound = sfx_new_sound(length * 2);
+      : name(std::move(name)), sound(nullptr), originalData(length) {
+    // A zero-length sample is a "disabled" slot. Leave `sound` null so
+    // the slot survives in `Common::sounds` without occupying audio
+    // memory, and so play paths can treat it as a silent no-op.
+    if (length > 0)
+      sound = sfx_new_sound(length * 2);
   }
 
   ~SfxSample() {

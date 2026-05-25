@@ -219,13 +219,12 @@ endif()
 target_link_libraries(openliero PRIVATE game)
 
 if(OPENLIERO_BUILD_TCTOOL)
-  set(TC_TOOL_SOURCES ${SOURCES}
+  set(TC_LIB_SOURCES ${SOURCES}
     src/tc_tool/common_exereader.cpp
     src/tc_tool/common_writer.cpp
-    src/tc_tool/tc_tool_main.cpp
   )
 
-  add_library(tc ${TC_TOOL_SOURCES})
+  add_library(tc ${TC_LIB_SOURCES})
 
   target_link_libraries(tc
     PUBLIC
@@ -234,7 +233,7 @@ if(OPENLIERO_BUILD_TCTOOL)
     xxHash::xxhash
   )
 
-  add_executable(tctool ${TC_TOOL_SOURCES})
+  add_executable(tctool src/tc_tool/tc_tool_main.cpp)
   target_link_libraries(tctool PRIVATE tc)
 endif()
 
@@ -379,6 +378,13 @@ if(OPENLIERO_BUILD_TESTS)
     tomlplusplus::tomlplusplus
     Catch2::Catch2WithMain)
   catch_discover_tests(test_versioning DISCOVERY_MODE PRE_TEST)
+
+  if(OPENLIERO_BUILD_TCTOOL)
+    add_executable(test_sfx_loader src/tests/test_sfx_loader.cpp)
+    target_link_libraries(test_sfx_loader PRIVATE tc Catch2::Catch2WithMain)
+    target_include_directories(test_sfx_loader PRIVATE src src/game)
+    catch_discover_tests(test_sfx_loader DISCOVERY_MODE PRE_TEST)
+  endif()
 endif()
 
 # desync fuzzer
