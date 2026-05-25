@@ -24,39 +24,6 @@ struct ViewportCreator
 	}
 };
 
-struct WormIdxRefCreator
-{
-	Worm* operator()(int idx, GameSerializationContext& context)
-	{
-		if (idx < 0) return 0;
-		return context.game->worms.at(idx);
-	}
-
-	int operator()(Worm* w, GameSerializationContext&)
-	{
-		if (!w) return -1;
-		return w->index;
-	}
-};
-
-struct WeaponIdxRefCreator
-{
-	template<typename Archive>
-	Weapon* operator()(Archive& ar, GameSerializationContext& context)
-	{
-		int idx;
-		ar.i32(idx);
-		return &context.game->common->weapons[idx];
-	}
-
-	template<typename Archive>
-	void operator()(Weapon const* w, Archive& ar, GameSerializationContext& context)
-	{
-		int idx = (int)(w - &context.game->common->weapons[0]);
-		ar.i32(idx);
-	}
-};
-
 template<typename Archive>
 void archive(Archive ar, Worm::ControlState& cs)
 {
@@ -107,7 +74,7 @@ void archive(Archive ar, Worm& worm)
 	.i32(worm.ninjarope.pos.y)
 	.i32(worm.currentWeapon)
 	.b(dummy)
-	.template obj<Worm>(worm.lastKilledByIdx, WormCreator(), WormIdxRefCreator())
+	.i32(worm.lastKilledByIdx)
 	.i32(worm.fireCone)
 	.i32(worm.leaveShellTimer);
 	ar.fobj(worm.settings)
@@ -124,10 +91,20 @@ void archive(Archive ar, Worm& worm)
 		ar
 		.i32(worm.weapons[i].ammo)
 		.b(dummy)
-		.i32(worm.weapons[i].delayLeft)
-		.objref(worm.weapons[i].type, WeaponIdxRefCreator())
+		.i32(worm.weapons[i].delayLeft);
 
-		.i32(worm.weapons[i].loadingLeft);
+		int32_t weapIdx = 0;
+		if constexpr (Archive::out)
+			weapIdx = worm.weapons[i].type
+				? (int32_t)(worm.weapons[i].type - &ar.context.game->common->weapons[0])
+				: -1;
+		ar.i32(weapIdx);
+		if constexpr (Archive::in)
+			worm.weapons[i].type = weapIdx >= 0
+				? &ar.context.game->common->weapons[weapIdx]
+				: nullptr;
+
+		ar.i32(worm.weapons[i].loadingLeft);
 	}
 
 	ar.ui8(worm.direction);
@@ -151,7 +128,7 @@ void archive(Archive ar, Viewport& vp)
 	.i32(vp.maxY)
 	.i32(vp.centerX)
 	.i32(vp.centerY)
-	.template obj<Worm>(vp.wormIdx, WormCreator(), WormIdxRefCreator())
+	.i32(vp.wormIdx)
 	.i32(vp.bannerY)
 	// dummy for old ingameX variable
 	.i32(dummy_int)
@@ -315,7 +292,7 @@ void archive(Archive ar, Game& game)
 	.fobj(game.settings)
 	.i32(game.cycles)
 	.b(game.gotChanged)
-	.template obj<Worm>(game.lastKilledIdx, WormCreator(), WormIdxRefCreator())
+	.i32(game.lastKilledIdx)
 	.i32(game.screenFlash);
 	archive(ar, game.rand);
 
