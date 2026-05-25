@@ -121,6 +121,141 @@ TEST_CASE("cereal_types: Ninjarope round-trip excludes anchor",
   CHECK(bin.anchor == nullptr);
 }
 
+TEST_CASE("cereal_types: Viewport round-trip", "[cereal_types]") {
+  Viewport src;
+  src.x = 100;
+  src.y = -50;
+  src.shake = 7;
+  src.maxX = 320;
+  src.maxY = 200;
+  src.centerX = 160;
+  src.centerY = 100;
+  src.wormIdx = 1;
+  src.bannerY = -8;
+  src.rect = Rect{10, 20, 30, 40};
+
+  Viewport bin = roundtripBinary(src);
+  CHECK(bin.x == 100);
+  CHECK(bin.y == -50);
+  CHECK(bin.shake == 7);
+  CHECK(bin.wormIdx == 1);
+  CHECK(bin.rect.x1 == 10);
+  CHECK(bin.rect.y2 == 40);
+}
+
+TEST_CASE("cereal_types: Worm round-trip excludes context fields",
+          "[cereal_types]") {
+  Worm src;
+  src.pos = fixedvec{1 << 16, 2 << 16};
+  src.vel = fixedvec{-3, 4};
+  src.logicRespawn = IVec2{50, 60};
+  src.health = 75;
+  src.lives = 3;
+  src.kills = 11;
+  src.aimingAngle = 90 << 16;
+  src.lastKilledByIdx = 2;
+  src.currentWeapon = 3;
+  src.direction = 1;
+  src.controlStates.istate = 0x42;
+  src.weapons[0].ammo = 99;
+  src.weapons[2].delayLeft = 17;
+  src.reacts[1] = 5;
+  src.ninjarope.out = true;
+  src.ninjarope.length = 500;
+
+  Worm bin = roundtripBinary(src);
+  CHECK(bin.pos.x == src.pos.x);
+  CHECK(bin.pos.y == src.pos.y);
+  CHECK(bin.logicRespawn.x == 50);
+  CHECK(bin.health == 75);
+  CHECK(bin.lives == 3);
+  CHECK(bin.aimingAngle == 90 << 16);
+  CHECK(bin.lastKilledByIdx == 2);
+  CHECK(bin.currentWeapon == 3);
+  CHECK(bin.direction == 1);
+  CHECK(bin.controlStates.istate == 0x42);
+  CHECK(bin.weapons[0].ammo == 99);
+  CHECK(bin.weapons[2].delayLeft == 17);
+  CHECK(bin.reacts[1] == 5);
+  CHECK(bin.ninjarope.out == true);
+  CHECK(bin.ninjarope.length == 500);
+
+  Worm toml = roundtripToml(src);
+  CHECK(toml.pos.x == src.pos.x);
+  CHECK(toml.health == 75);
+  CHECK(toml.weapons[0].ammo == 99);
+  CHECK(toml.ninjarope.length == 500);
+}
+
+TEST_CASE("cereal_types: WormSettings round-trip", "[cereal_types]") {
+  WormSettings src;
+  src.health = 150;
+  src.controller = 1;
+  src.name = "Hero";
+  src.randomName = false;
+  src.color = 3;
+  src.rgb[0] = 10;
+  src.rgb[1] = 20;
+  src.rgb[2] = 30;
+  src.weapons[0] = 5;
+  src.weapons[4] = 7;
+  src.controls[WormSettings::Up] = 100u;
+
+  WormSettings bin = roundtripBinary(src);
+  CHECK(bin.health == 150);
+  CHECK(bin.controller == 1);
+  CHECK(bin.name == "Hero");
+  CHECK(bin.randomName == false);
+  CHECK(bin.color == 3);
+  CHECK(bin.rgb[0] == 10);
+  CHECK(bin.rgb[2] == 30);
+  CHECK(bin.weapons[0] == 5);
+  CHECK(bin.weapons[4] == 7);
+  CHECK(bin.controls[WormSettings::Up] == 100u);
+
+  WormSettings toml = roundtripToml(src);
+  CHECK(toml.name == "Hero");
+  CHECK(toml.weapons[4] == 7);
+}
+
+TEST_CASE("cereal_types: Settings round-trip with shared worm settings",
+          "[cereal_types]") {
+  Settings src;
+  src.maxBonuses = 12;
+  src.lives = 5;
+  src.shadow = true;
+  src.tc = "openliero";
+  src.weapTable[0] = 2;
+  src.weapTable[39] = 1;
+  for (int i = 0; i < Settings::NumWormSettings; ++i) {
+    src.wormSettings[i] = std::make_shared<WormSettings>();
+    src.wormSettings[i]->health = 100 + i;
+    src.wormSettings[i]->name = "worm" + std::to_string(i);
+  }
+
+  Settings bin = roundtripBinary(src);
+  CHECK(bin.maxBonuses == 12);
+  CHECK(bin.lives == 5);
+  CHECK(bin.shadow == true);
+  CHECK(bin.tc == "openliero");
+  CHECK(bin.weapTable[0] == 2);
+  CHECK(bin.weapTable[39] == 1);
+  for (int i = 0; i < Settings::NumWormSettings; ++i) {
+    REQUIRE(bin.wormSettings[i] != nullptr);
+    CHECK(bin.wormSettings[i]->health == 100 + i);
+    CHECK(bin.wormSettings[i]->name == "worm" + std::to_string(i));
+  }
+}
+
+TEST_CASE("cereal_types: Rand round-trip preserves stream", "[cereal_types]") {
+  Rand src(0xC0FFEEu);
+  for (int i = 0; i < 10; ++i)
+    src();
+  Rand bin = roundtripBinary(src);
+  CHECK(bin == src);
+  CHECK(bin() == src());
+}
+
 TEST_CASE("cereal_types: WormWeapon round-trip excludes type pointer",
           "[cereal_types]") {
   WormWeapon src;
