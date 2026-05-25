@@ -149,7 +149,7 @@ void NormalStatsRecorder::tick(Game& game)
 	auto frameEnd = std::chrono::steady_clock::now();
 	processTimeTotal += std::chrono::duration_cast<std::chrono::milliseconds>(frameEnd - frameStart).count();
 
-	for (auto* w : game.worms)
+	for (auto const& w : game.worms)
 	{
 		auto& ws = worms[w->index];
 		if (w->visible)
@@ -178,7 +178,7 @@ void NormalStatsRecorder::finish(Game& game)
 {
 	for (int i = 0; i < 2; ++i)
 	{
-		auto* gw = game.worms[i];
+		auto const& gw = game.worms[i];
 		WormStats& w = worms[i];
 		if (w.spawnTime >= 0)
 		{

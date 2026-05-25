@@ -46,13 +46,13 @@ struct DualGameFixture {
 
     // Create identical worms for both games
     for (int idx = 0; idx < 2; ++idx) {
-      Worm* wA = new Worm();
+      auto wA = std::make_shared<Worm>();
       wA->settings = settings->wormSettings[idx];
       wA->health = wA->settings->health;
       wA->index = idx;
       wA->statsX = idx == 0 ? 0 : 218;
 
-      Worm* wB = new Worm();
+      auto wB = std::make_shared<Worm>();
       wB->settings = settings->wormSettings[idx];
       wB->health = wB->settings->health;
       wB->index = idx;
@@ -73,8 +73,8 @@ struct DualGameFixture {
     gameB->level.generateFromSettings(*common, *settings, gameB->rand);
 
     // Initialize weapons for all worms
-    for (auto* w : gameA->worms) w->initWeapons(*gameA);
-    for (auto* w : gameB->worms) w->initWeapons(*gameB);
+    for (auto const& w : gameA->worms) w->initWeapons(*gameA);
+    for (auto const& w : gameB->worms) w->initWeapons(*gameB);
 
     // Start games
     gameA->paused = false;
@@ -171,13 +171,13 @@ TEST_CASE("Same inputs produce same state regardless of construction order",
 
   // Same worm setup
   for (int idx = 0; idx < 2; ++idx) {
-    Worm* w1 = new Worm();
+    auto w1 = std::make_shared<Worm>();
     w1->settings = settings->wormSettings[idx];
     w1->health = w1->settings->health;
     w1->index = idx;
     game1.addWorm(w1);
 
-    Worm* w2 = new Worm();
+    auto w2 = std::make_shared<Worm>();
     w2->settings = settings->wormSettings[idx];
     w2->health = w2->settings->health;
     w2->index = idx;
@@ -192,8 +192,8 @@ TEST_CASE("Same inputs produce same state regardless of construction order",
   game1.level.generateFromSettings(*common, *settings, game1.rand);
   game2.level.generateFromSettings(*common, *settings, game2.rand);
 
-  for (auto* w : game1.worms) w->initWeapons(game1);
-  for (auto* w : game2.worms) w->initWeapons(game2);
+  for (auto const& w : game1.worms) w->initWeapons(game1);
+  for (auto const& w : game2.worms) w->initWeapons(game2);
 
   game1.paused = false;
   game2.paused = false;
@@ -254,14 +254,14 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
     gameB.rand.seed(seed);
 
     for (int idx = 0; idx < 2; ++idx) {
-      Worm* wA = new Worm();
+      auto wA = std::make_shared<Worm>();
       wA->settings = settings->wormSettings[idx];
       wA->health = 25;  // Low health for quick deaths
       wA->index = idx;
       wA->statsX = idx == 0 ? 0 : 218;
       gameA.addWorm(wA);
 
-      Worm* wB = new Worm();
+      auto wB = std::make_shared<Worm>();
       wB->settings = settings->wormSettings[idx];
       wB->health = 25;
       wB->index = idx;
@@ -277,8 +277,8 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
     gameA.level.generateFromSettings(*common, *settings, gameA.rand);
     gameB.level.generateFromSettings(*common, *settings, gameB.rand);
 
-    for (auto* w : gameA.worms) w->initWeapons(gameA);
-    for (auto* w : gameB.worms) w->initWeapons(gameB);
+    for (auto const& w : gameA.worms) w->initWeapons(gameA);
+    for (auto const& w : gameB.worms) w->initWeapons(gameB);
 
     gameA.paused = false;
     gameB.paused = false;
@@ -311,7 +311,7 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
 
       // Track deaths for info output — killedTimer is set to 150 on death,
       // then decremented each frame, so 149 means "just died this frame"
-      for (auto* w : gameA.worms) {
+      for (auto const& w : gameA.worms) {
         if (!w->visible && w->killedTimer == Worm::KilledTimerInitial - 1)
           ++deathCount;
       }
@@ -457,7 +457,7 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
         // Deep compare worm weapons
         bool weaponsMatch = true;
         for (size_t wi = 0; wi < gameA.worms.size(); ++wi) {
-          auto* wA = gameA.worms[wi]; auto* wB = gameB.worms[wi];
+          auto const& wA = gameA.worms[wi]; auto const& wB = gameB.worms[wi];
           for (int i = 0; i < NUM_WEAPONS; ++i) {
             if (wA->weapons[i].ammo != wB->weapons[i].ammo ||
                 wA->weapons[i].delayLeft != wB->weapons[i].delayLeft ||

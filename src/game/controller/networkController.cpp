@@ -45,7 +45,7 @@ NetworkController::NetworkController(
 
   // Create worms
   for (int idx = 0; idx < 2; ++idx) {
-    Worm* worm = new Worm();
+    auto worm = std::make_shared<Worm>();
     // Local player uses network player profile; remote uses their slot
     worm->settings = (idx == localIdx)
         ? settings->wormSettings[Settings::NetworkPlayerIdx]
@@ -166,7 +166,7 @@ void NetworkController::onKey(int key, bool keyState) {
   Worm::Control control;
   // Only check the local worm's key bindings to avoid conflicts with
   // the remote worm having the same default bindings.
-  Worm* worm = game.worms[localIdx];
+  Worm* worm = game.worms[localIdx].get();
   bool found = false;
 
   if (worm->settings->inputDevice == WormSettingsExtensions::InputKeyboard) {
@@ -245,9 +245,9 @@ void NetworkController::focus() {
 
     if (skipWeaponSelection) {
       // Test mode: skip weapon selection, go straight to game
-      for (auto* w : game.worms)
+      for (auto const& w : game.worms)
         w->initWeapons(game);
-      for (auto* w : game.worms)
+      for (auto const& w : game.worms)
         w->lives = game.settings->lives;
       game.startGame();
       game.resetWorms();
@@ -258,7 +258,7 @@ void NetworkController::focus() {
       // Force controller=0 (human) so isReady/randomWeapons logic is consistent
       // across both peers. Weapon preferences are already synced via PlayerInfo
       // exchange in NetSession, so both machines have identical data per worm.
-      for (auto* w : game.worms) {
+      for (auto const& w : game.worms) {
         w->settings->controller = 0;
       }
 
@@ -430,7 +430,7 @@ void NetworkController::advanceWeaponSelection() {
     localHeldFrames.fill(0);
     remoteHeldFrames.fill(0);
 
-    for (auto* w : game.worms) {
+    for (auto const& w : game.worms) {
       w->lives = game.settings->lives;
     }
     game.startGame();

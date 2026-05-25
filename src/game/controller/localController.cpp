@@ -31,14 +31,14 @@ LocalController::LocalController(std::shared_ptr<Common> common, std::shared_ptr
 , fadeValue(0)
 , goingToMenu(false)
 {
-	Worm* worm1 = new Worm();
+	auto worm1 = std::make_shared<Worm>();
 	worm1->settings = settings->wormSettings[0];
 	worm1->health = worm1->settings->health;
 	worm1->index = 0;
 	worm1->statsX = 0;
 	worm1->ai = createAi(worm1->settings->controller, *worm1, *settings);
 
-	Worm* worm2 = new Worm();
+	auto worm2 = std::make_shared<Worm>();
 	worm2->settings = settings->wormSettings[1];
 	worm2->health = worm2->settings->health;
 	worm2->index = 1;

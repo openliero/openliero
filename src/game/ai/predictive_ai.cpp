@@ -715,7 +715,7 @@ void FollowAI::process(Game& game, Worm& worm)
 {
 	Common& common = *game.common;
 
-	Worm* target = game.worms[worm.index ^ 1];
+	Worm* target = game.worms[worm.index ^ 1].get();
 
 	{
 		int targetx = ftoi(target->pos.x), targety = ftoi(target->pos.y);

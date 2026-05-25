@@ -246,7 +246,7 @@ void archive_worms(ser::in_archive<Reader, GameSerializationContext> ar, Game& g
 		Worm* worm;
 		ar.obj(worm, WormCreator());
 
-		game.addWorm(worm);
+		game.addWorm(std::shared_ptr<Worm>(worm));
 	}
 
 	while(ar.ui8(cont), cont)
@@ -261,10 +261,11 @@ void archive_worms(ser::in_archive<Reader, GameSerializationContext> ar, Game& g
 template<typename Writer>
 void archive_worms(ser::out_archive<Writer, GameSerializationContext> ar, Game& game)
 {
-	for (auto* worm : game.worms)
+	for (auto const& worm_sp : game.worms)
 	{
 		ar.writer.put(1);
 
+		Worm* worm = worm_sp.get();
 		GameSerializationContext::WormData& data = ar.context.wormData[worm];
 
 		ar.obj(worm, WormCreator());
@@ -438,7 +439,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 			uint8_t state = first;
 			bool hasState = true;
 
-			for (auto* worm : game.worms)
+			for (auto const& worm : game.worms)
 			{
 				if (!hasState)
 					state = reader.get();
@@ -504,9 +505,9 @@ void ReplayWriter::recordFrame()
 		writeStates = true;
 	else
 	{
-		for (auto* worm : game.worms)
+		for (auto const& worm : game.worms)
 		{
-			GameSerializationContext::WormData& data = context.wormData[worm];
+			GameSerializationContext::WormData& data = context.wormData[worm.get()];
 			if(worm->controlStates != worm->prevControlStates)
 			{
 				writeStates = true;
@@ -524,7 +525,7 @@ void ReplayWriter::recordFrame()
 
 	if(writeStates)
 	{
-		for (auto* worm : game.worms)
+		for (auto const& worm : game.worms)
 		{
 			uint8_t state = worm->controlStates.pack() ^ worm->prevControlStates.pack();
 

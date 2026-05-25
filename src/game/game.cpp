@@ -70,7 +70,7 @@ Worm* Game::findControlForKey(uint32_t key, Worm::Control& control)
 		if (playerIdx >= 0 && playerIdx < (int)worms.size())
 		{
 			control = static_cast<Worm::Control>(c);
-			return worms[playerIdx];
+			return worms[playerIdx].get();
 		}
 		return 0;
 	}
@@ -178,9 +178,9 @@ void Game::resetWorms()
 	}
 }
 
-void Game::addWorm(Worm* worm)
+void Game::addWorm(std::shared_ptr<Worm> worm)
 {
-	worms.push_back(worm);
+	worms.push_back(std::move(worm));
 }
 
 void Game::draw(Renderer& renderer, GameState state, bool useSpectatorViewports, bool isReplay)
@@ -430,7 +430,7 @@ void Game::processFrame()
 		int contenderIdx = -1;
 		int contenders = 0;
 
-		for (Worm* w : worms)
+		for (auto const& w : worms)
 		{
 			int x = ftoi(w->pos.x), y = ftoi(w->pos.y);
 
@@ -588,7 +588,7 @@ bool Game::isGameOver()
 	}
 	else if(settings->gameMode == Settings::GMHoldazone)
 	{
-		for (auto* w : worms)
+		for (auto const& w : worms)
 			if (w->timer >= settings->timeToLose)
 				return true;
 	}
@@ -641,9 +641,9 @@ void Game::doDamage(Worm& w, int amount, int byIdx)
 				int parts = (int)worms.size() - 1;
 				int left = amount;
 
-				for (Worm* other : worms)
+				for (auto const& other : worms)
 				{
-					if (other != &w)
+					if (other.get() != &w)
 					{
 						int k = left / parts;
 						doHealingDirect(*other, k);
@@ -669,9 +669,9 @@ void Game::doHealing(Worm& w, int amount)
 		int parts = (int)worms.size() - 1;
 		int left = amount;
 
-		for (Worm* other : worms)
+		for (auto const& other : worms)
 		{
-			if (other != &w)
+			if (other.get() != &w)
 			{
 				int k = left / parts;
 				doDamageDirect(*other, k, w.index);
@@ -741,7 +741,7 @@ void Game::postClone(Game& original, bool complete)
 
 	for (auto& w : worms)
 	{
-		w = new Worm(*w);
+		w = std::make_shared<Worm>(*w);
 	}
 
 }

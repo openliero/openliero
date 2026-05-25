@@ -69,7 +69,7 @@ TEST_CASE("TC supports game initialization", "[tc_load]") {
   game.rand.seed(42);
 
   for (int idx = 0; idx < 2; ++idx) {
-    Worm* w = new Worm();
+    auto w = std::make_shared<Worm>();
     w->settings = settings->wormSettings[idx];
     w->health = w->settings->health;
     w->index = idx;
@@ -82,7 +82,7 @@ TEST_CASE("TC supports game initialization", "[tc_load]") {
 
   REQUIRE_NOTHROW(game.level.generateFromSettings(*common, *settings, game.rand));
 
-  for (auto* w : game.worms)
+  for (auto const& w : game.worms)
     REQUIRE_NOTHROW(w->initWeapons(game));
 
   game.paused = false;

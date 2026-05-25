@@ -321,13 +321,13 @@ TEST_CASE("NetworkController determinism fuzz with deaths", "[network][death]") 
   LoopbackFixture f;
 
   // Override to low health for frequent deaths
-  for (auto* w : f.controllerA->game.worms)
+  for (auto const& w : f.controllerA->game.worms)
     w->health = 30;
-  for (auto* w : f.controllerB->game.worms)
+  for (auto const& w : f.controllerB->game.worms)
     w->health = 30;
-  for (auto* w : f.controllerA->game.worms)
+  for (auto const& w : f.controllerA->game.worms)
     w->lives = 30;
-  for (auto* w : f.controllerB->game.worms)
+  for (auto const& w : f.controllerB->game.worms)
     w->lives = 30;
 
   // Pre-fill input delay
@@ -363,7 +363,7 @@ TEST_CASE("NetworkController determinism fuzz with deaths", "[network][death]") 
     f.deliverAll();
 
     // Track deaths
-    for (auto* w : f.controllerA->game.worms) {
+    for (auto const& w : f.controllerA->game.worms) {
       if (!w->visible && w->killedTimer == 149)
         ++deathCount;
     }

@@ -152,8 +152,8 @@ void SpectatorViewport::draw(Game& game, Renderer& renderer, GameState state, bo
 		{
 			int state = 0;
 
-			for (auto* w : game.worms)
-				if (w != &worm && w->timer <= worm.timer)
+			for (auto const& w : game.worms)
+				if (w.get() != &worm && w->timer <= worm.timer)
 					state = 1;
 
 			int color = stateColours[game.holdazone.holderIdx != worm.index][state];
@@ -166,8 +166,8 @@ void SpectatorViewport::draw(Game& game, Renderer& renderer, GameState state, bo
 		{
 			int state = 0;
 
-			for (auto* w : game.worms)
-				if (w != &worm && w->timer >= worm.timer)
+			for (auto const& w : game.worms)
+				if (w.get() != &worm && w->timer >= worm.timer)
 					state = 1;
 
 			int color = stateColours[game.lastKilledIdx != worm.index][state];

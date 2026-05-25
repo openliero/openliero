@@ -558,7 +558,7 @@ void DumbLieroAI::process(Game& game, Worm& worm)
 	int minLen = 0;
 	for(std::size_t i = 0; i < game.worms.size(); ++i)
 	{
-		Worm* w = game.worms[i];
+		Worm* w = game.worms[i].get();
 		if(w != &worm)
 		{
 			int len = sqrVectorLength(ftoi(worm.pos.x) - ftoi(w->pos.x), ftoi(worm.pos.y) - ftoi(w->pos.y));

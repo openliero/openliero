@@ -22,7 +22,7 @@ inline uint32_t hashGameState(Game& game) {
     h = h * 33 ^ game.level.data[i];
   }
 
-  for (auto* w : game.worms) {
+  for (auto const& w : game.worms) {
     h = h * 31 + static_cast<uint32_t>(w->pos.x);
     h = h * 31 + static_cast<uint32_t>(w->pos.y);
     h = h * 31 + static_cast<uint32_t>(w->vel.x);
@@ -133,7 +133,7 @@ inline ComponentHashes hashGameComponents(Game& game) {
   }
 
   for (size_t wi = 0; wi < game.worms.size() && wi < NumPlayers; ++wi) {
-    auto* w = game.worms[wi];
+    auto const& w = game.worms[wi];
     uint32_t h = 1;
     h = h * 31 + static_cast<uint32_t>(w->pos.x);
     h = h * 31 + static_cast<uint32_t>(w->pos.y);
