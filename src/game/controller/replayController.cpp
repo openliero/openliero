@@ -51,6 +51,7 @@ void ReplayController::focus()
 			fadeValue = 0;
 			return;
 		}
+		replay->game = game.get();
 		// Changing state first when game is available
 		changeState(StateGame);
 	}
