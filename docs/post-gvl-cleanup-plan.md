@@ -25,10 +25,10 @@ The branch state at the time of writing: build green on Linux,
 - Phase 3 — ✅ done (commits `3033fed`, `243be75`); see Phase 3 notes for the deferred half
 - Phase 4 — ✅ done (commits `9b7c7a7`, `7e48263`, `848a094`, see Phase 4 notes for what was deferred)
 - Phase 5 — ✅ done (see Phase 5 notes)
-- Phase 6 — next up
+- Phase 6 — ✅ done (commits `bd89396`, `6a805cf`, `b1636a8`, `85e1f43`)
 - Phases 7–8 — pending
 
-ctest 106/106. The next agent picks up at Phase 6.
+ctest 93/93. The next agent picks up at Phase 7.
 
 ---
 
@@ -511,9 +511,16 @@ before Phase 5 starts.
 This is the deliverable that justifies the whole exercise. The
 tests document the pattern future contributors will copy.
 
-### Phase 6 — delete the old code
+### Phase 6 — delete the old code ✅
 
-Delete:
+Completed in sub-phases:
+- 6a+6b: Game::serialize() + replay.cpp rewrite (cereal PortableBinaryArchive)
+- 6c: Settings/WormSettings TOML swap (cereal TomlOutputArchive/TomlInputArchive)
+- 6d: common_model types ported (NObjectType, SObjectType, Weapon, Common tc.cfg)
+- 6e: Deleted archive.hpp, coding.hpp, context.hpp, except.hpp, toml_adapter.hpp,
+  test_archive.cpp, test_toml_adapter.cpp
+
+Deleted:
 - `src/game/serialization/archive.hpp` (~415 lines)
 - `src/game/serialization/coding.hpp` (~207 lines, after confirming
   `io/coding.hpp` covers all remaining uses)
