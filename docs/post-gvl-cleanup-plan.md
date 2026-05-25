@@ -26,9 +26,10 @@ The branch state at the time of writing: build green on Linux,
 - Phase 4 — ✅ done (commits `9b7c7a7`, `7e48263`, `848a094`, see Phase 4 notes for what was deferred)
 - Phase 5 — ✅ done (see Phase 5 notes)
 - Phase 6 — ✅ done (commits `bd89396`, `6a805cf`, `b1636a8`, `85e1f43`)
-- Phases 7–8 — pending
+- Phase 7 — ✅ done (commit `297592b`)
+- Phase 8 — pending
 
-ctest 93/93. The next agent picks up at Phase 7.
+ctest 93/93. The next agent picks up at Phase 8.
 
 ---
 
