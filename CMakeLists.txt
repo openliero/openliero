@@ -260,6 +260,7 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
     PUBLIC
     miniz::miniz
     SDL3::SDL3
+    xxHash::xxhash
     PkgConfig::FFMPEG
   )
 
