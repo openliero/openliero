@@ -112,8 +112,11 @@ void serialize(Archive& ar, Level& lvl) {
 // `hash` is a runtime cache, deliberately excluded.
 // v1: initial cereal migration (all original fields).
 // v2: added bonusTimeout (default 0 = no timeout).
+
+// Scalar fields only (no wormSettings). Used by toToml/fromToml (which
+// handles worm sub-tables separately for readability) and by updateHash.
 template <class Archive>
-void serialize(Archive& ar, Settings& s, std::uint32_t const version) {
+void serializeSettingsFields(Archive& ar, Settings& s) {
   // GameplayExtensions
   ar(cereal::make_nvp("recordReplays", s.recordReplays),
      cereal::make_nvp("loadPowerlevelPalette", s.loadPowerlevelPalette),
@@ -148,10 +151,15 @@ void serialize(Archive& ar, Settings& s, std::uint32_t const version) {
      cereal::make_nvp("screenSync", s.screenSync));
   for (int i = 0; i < 40; ++i)
     ar(cereal::make_nvp("weap" + std::to_string(i), s.weapTable[i]));
+  ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
+}
+
+template <class Archive>
+void serialize(Archive& ar, Settings& s, std::uint32_t const version) {
+  serializeSettingsFields(ar, s);
   for (int i = 0; i < Settings::NumWormSettings; ++i)
     ar(cereal::make_nvp("worm" + std::to_string(i), s.wormSettings[i]));
-  if (version >= 2)
-    ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
+  (void)version;  // all fields always written now (breaking change)
 }
 CEREAL_CLASS_VERSION(Settings, 2);
 

@@ -124,8 +124,8 @@ bool Settings::load(FsNode node, Rand& rand)
 		return false;
 	}
 
-	// Validate that wormSettings were deserialized (guards against old-format
-	// files that parse as valid TOML but lack cereal's ptr_wrapper structure).
+	// Validate that wormSettings were deserialized (guards against corrupt
+	// or incompatible config files that lack player sections).
 	for (int i = 0; i < NumWormSettings; ++i)
 		if (!wormSettings[i])
 			return false;
@@ -150,7 +150,24 @@ std::string Settings::toToml() const
 	std::ostringstream ss;
 	{
 		cereal::TomlOutputArchive ar(ss);
-		ar(cereal::make_nvp("s", const_cast<Settings&>(*this)));
+		// Serialize all scalar fields under [settings]
+		ar.setNextName("settings");
+		ar.startNode();
+		int32_t version = ConfigVersion;
+		ar(cereal::make_nvp("version", version));
+		serializeSettingsFields(ar, const_cast<Settings&>(*this));
+		ar.finishNode();
+
+		// Serialize worm settings as sub-tables with descriptive names
+		static const char* wormNames[] = {"player1", "player2", "network_player"};
+		for (int i = 0; i < NumWormSettings; ++i) {
+			if (wormSettings[i]) {
+				ar.setNextName(wormNames[i]);
+				ar.startNode();
+				serialize(ar, *wormSettings[i]);
+				ar.finishNode();
+			}
+		}
 	}
 	return ss.str();
 }
@@ -159,7 +176,23 @@ void Settings::fromToml(std::string const& data)
 {
 	std::istringstream ss(data);
 	cereal::TomlInputArchive ar(ss);
-	ar(cereal::make_nvp("s", *this));
+
+	ar.setNextName("settings");
+	ar.startNode();
+	int32_t version = 0;
+	ar(cereal::make_nvp("version", version));
+	serializeSettingsFields(ar, *this);
+	ar.finishNode();
+
+	static const char* wormNames[] = {"player1", "player2", "network_player"};
+	for (int i = 0; i < NumWormSettings; ++i) {
+		ar.setNextName(wormNames[i]);
+		ar.startNode();
+		if (!wormSettings[i])
+			wormSettings[i] = std::make_shared<WormSettings>();
+		serialize(ar, *wormSettings[i]);
+		ar.finishNode();
+	}
 }
 
 void Settings::save(FsNode node, Rand& rand)

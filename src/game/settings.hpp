@@ -83,6 +83,7 @@ struct Settings : GameplayExtensions, AppSettings {
 
   static int const NumWormSettings = 3;  // 0=left, 1=right, 2=network
   static int const NetworkPlayerIdx = 2;
+  static int const ConfigVersion = 2;  // bump when adding fields to the TOML config
   std::shared_ptr<WormSettings> wormSettings[NumWormSettings];
 
   uint64_t hash;
