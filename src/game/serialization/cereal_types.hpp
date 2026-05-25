@@ -260,3 +260,139 @@ void serialize(Archive& ar, Worm& w) {
   for (int i = 0; i < NUM_WEAPONS; ++i)
     ar(cereal::make_nvp("weapon" + std::to_string(i), w.weapons[i]));
 }
+
+// ---- Game ----
+// save/load pair: handles context-dependent fields that span worms.
+// The flat per-type serialize() above handles each worm's plain data;
+// this Game-level function adds:
+//   - ninjarope.anchor → worm index
+//   - weapons[i].type → index into Common::weapons
+//   - worm settings (shared_ptr, cereal tracks identity)
+//   - viewports
+
+#include "game.hpp"
+
+template <class Archive>
+void save(Archive& ar, Game const& game) {
+  // Settings (shared_ptr — cereal handles identity tracking in binary)
+  ar(cereal::make_nvp("settings", game.settings));
+
+  // Scalars
+  ar(cereal::make_nvp("cycles", game.cycles),
+     cereal::make_nvp("gotChanged", game.gotChanged),
+     cereal::make_nvp("lastKilledIdx", game.lastKilledIdx),
+     cereal::make_nvp("screenFlash", game.screenFlash));
+
+  // Rand
+  ar(cereal::make_nvp("rand", const_cast<Rand&>(game.rand)));
+
+  // Worms
+  cereal::size_type wormCount = game.worms.size();
+  ar(cereal::make_size_tag(wormCount));
+  for (auto const& worm_sp : game.worms) {
+    Worm const& w = *worm_sp;
+    // Flat worm data
+    ar(cereal::make_nvp("worm", const_cast<Worm&>(w)));
+
+    // Context: anchor worm index (-1 if null)
+    int32_t anchorIdx = -1;
+    if (w.ninjarope.anchor) {
+      for (std::size_t i = 0; i < game.worms.size(); ++i) {
+        if (game.worms[i].get() == w.ninjarope.anchor) {
+          anchorIdx = static_cast<int32_t>(i);
+          break;
+        }
+      }
+    }
+    ar(cereal::make_nvp("anchorIdx", anchorIdx));
+
+    // Context: weapon type indices (-1 if null)
+    for (int i = 0; i < NUM_WEAPONS; ++i) {
+      int32_t weapIdx = w.weapons[i].type
+          ? static_cast<int32_t>(w.weapons[i].type - &game.common->weapons[0])
+          : -1;
+      ar(cereal::make_nvp("weapIdx" + std::to_string(i), weapIdx));
+    }
+
+    // Per-worm settings (shared_ptr — cereal tracks sharing)
+    ar(cereal::make_nvp("wormSettings", w.settings));
+  }
+
+  // Viewports
+  cereal::size_type vpCount = game.viewports.size();
+  ar(cereal::make_size_tag(vpCount));
+  for (auto* vp : game.viewports) {
+    ar(cereal::make_nvp("viewport", *vp));
+  }
+
+  // Level
+  ar(cereal::make_nvp("level", const_cast<Level&>(game.level)));
+}
+
+template <class Archive>
+void load(Archive& ar, Game& game) {
+  // Settings
+  ar(cereal::make_nvp("settings", game.settings));
+
+  // Scalars
+  ar(cereal::make_nvp("cycles", game.cycles),
+     cereal::make_nvp("gotChanged", game.gotChanged),
+     cereal::make_nvp("lastKilledIdx", game.lastKilledIdx),
+     cereal::make_nvp("screenFlash", game.screenFlash));
+
+  // Rand
+  ar(cereal::make_nvp("rand", game.rand));
+
+  // Worms
+  cereal::size_type wormCount;
+  ar(cereal::make_size_tag(wormCount));
+
+  game.clearWorms();
+  std::vector<int32_t> anchorIndices(wormCount);
+  for (cereal::size_type i = 0; i < wormCount; ++i) {
+    auto worm_sp = std::make_shared<Worm>();
+    Worm& w = *worm_sp;
+
+    // Flat worm data
+    ar(cereal::make_nvp("worm", w));
+
+    // Context: anchor index (resolve after all worms loaded)
+    ar(cereal::make_nvp("anchorIdx", anchorIndices[i]));
+
+    // Context: weapon type indices
+    for (int j = 0; j < NUM_WEAPONS; ++j) {
+      int32_t weapIdx;
+      ar(cereal::make_nvp("weapIdx" + std::to_string(j), weapIdx));
+      w.weapons[j].type = weapIdx >= 0
+          ? &game.common->weapons[weapIdx]
+          : nullptr;
+    }
+
+    // Per-worm settings
+    ar(cereal::make_nvp("wormSettings", w.settings));
+
+    game.addWorm(worm_sp);
+  }
+
+  // Resolve anchor pointers now that all worms exist
+  for (std::size_t i = 0; i < game.worms.size(); ++i) {
+    int32_t idx = anchorIndices[i];
+    game.worms[i]->ninjarope.anchor =
+        (idx >= 0 && idx < static_cast<int32_t>(game.worms.size()))
+            ? game.worms[idx].get()
+            : nullptr;
+  }
+
+  // Viewports
+  cereal::size_type vpCount;
+  ar(cereal::make_size_tag(vpCount));
+  game.clearViewports();
+  for (cereal::size_type i = 0; i < vpCount; ++i) {
+    Viewport* vp = new Viewport();
+    ar(cereal::make_nvp("viewport", *vp));
+    game.addViewport(vp);
+  }
+
+  // Level
+  ar(cereal::make_nvp("level", game.level));
+}

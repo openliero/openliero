@@ -1,6 +1,5 @@
 #pragma once
 
-#include <serialization/context.hpp>
 #include <xxhash.h>
 #include "io/deflate.hpp"
 #include "io/stream.hpp"
@@ -14,45 +13,10 @@
 
 struct Game;
 
-struct GameSerializationContext : ser::serialization_context<GameSerializationContext>
-{
-	GameSerializationContext()
-	: game(0)
-	, replayVersion(myReplayVersion)
-	{
-	}
-
-	struct WormData
-	{
-		WormData()
-		: settingsExpired(true)
-		{
-		}
-
-		uint64_t lastSettingsHash;
-		bool settingsExpired;
-	};
-
-	int version()
-	{
-		return replayVersion;
-	}
-
-	typedef std::map<Worm*, WormData> WormDataMap;
-
-	Game* game;
-	WormDataMap wormData;
-	int replayVersion;
-};
-
 struct Replay
 {
-	Replay()
-	{
-	}
-
-	GameSerializationContext context;
-
+	Game* game = nullptr;
+	int replayVersion = myReplayVersion;
 };
 
 struct ReplayWriter : Replay
@@ -67,6 +31,14 @@ struct ReplayWriter : Replay
 	uint64_t lastSettingsHash;
 	bool settingsExpired;
 
+	struct WormData
+	{
+		WormData() : settingsExpired(true) {}
+		uint64_t lastSettingsHash;
+		bool settingsExpired;
+	};
+	std::map<Worm*, WormData> wormData;
+
 	void beginRecord(Game& game);
 	void recordFrame();
 private:
@@ -79,15 +51,8 @@ struct ReplayReader : Replay
 {
 	ReplayReader(std::unique_ptr<io::Reader> source);
 
-	void unfocus()
-	{
-		// Nothing
-	}
-
-	void focus()
-	{
-		// Nothing
-	}
+	void unfocus() {}
+	void focus() {}
 
 	std::unique_ptr<Game> beginPlayback(std::shared_ptr<Common> common, std::shared_ptr<SoundPlayer> soundPlayer);
 	bool playbackFrame(Renderer& renderer);

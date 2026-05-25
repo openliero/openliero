@@ -4,314 +4,42 @@
 #include "worm.hpp"
 #include "viewport.hpp"
 #include "io/coding.hpp"
-#include <serialization/archive.hpp>
+
+#include <serialization/cereal_types.hpp>
+#include <cereal/archives/portable_binary.hpp>
+
+#include <cassert>
+#include <sstream>
 
 //#define DEBUG_REPLAYS 1
 
-struct WormCreator
-{
-	Worm* operator()(GameSerializationContext& context)
+// Helper: serialize an object to a binary blob via cereal and write
+// [uint32 length][blob] into the replay stream.
+template <typename T>
+static void cerealWrite(io::Writer& writer, T& obj) {
+	std::ostringstream ss(std::ios::binary);
 	{
-		return new Worm();
+		cereal::PortableBinaryOutputArchive ar(ss);
+		ar(obj);
 	}
-};
-
-struct ViewportCreator
-{
-	Viewport* operator()(GameSerializationContext& context)
-	{
-		return new Viewport();
-	}
-};
-
-template<typename Archive>
-void archive(Archive ar, Worm::ControlState& cs)
-{
-	ar.ui8(cs.istate);
+	std::string buf = ss.str();
+	io::write_uint32(writer, static_cast<uint32_t>(buf.size()));
+	writer.put(reinterpret_cast<uint8_t const*>(buf.data()), buf.size());
 }
 
-template<typename Archive>
-void archive(Archive ar, Worm& worm)
-{
-	bool dummy = false;
-
-	ar
-	.i32(worm.pos.x)
-	.i32(worm.pos.y)
-	.i32(worm.vel.x)
-	.i32(worm.vel.y)
-	.i32(worm.logicRespawn.x)
-	.i32(worm.logicRespawn.y)
-	.i32(worm.hotspotX)
-	.i32(worm.hotspotY)
-	.i32(worm.aimingAngle)
-	.i32(worm.aimingSpeed)
-	.b(worm.ableToJump)
-	.b(worm.ableToDig)
-	.b(worm.keyChangePressed)
-	.b(worm.movable)
-	.b(worm.animate)
-	.b(worm.visible)
-	.b(worm.ready)
-	.b(worm.flag)
-	.b(worm.makeSightGreen)
-	.i32(worm.health)
-	.i32(worm.lives)
-	.i32(worm.kills)
-	.i32(worm.timer)
-	.i32(worm.killedTimer)
-	.i32(worm.currentFrame)
-	.i32(worm.flags)
-
-	.obj(worm.ninjarope.anchor, WormCreator())
-	.b(worm.ninjarope.attached)
-	.i32(worm.ninjarope.curLen)
-	.i32(worm.ninjarope.length)
-	.b(worm.ninjarope.out)
-	.i32(worm.ninjarope.vel.x)
-	.i32(worm.ninjarope.vel.y)
-	.i32(worm.ninjarope.pos.x)
-	.i32(worm.ninjarope.pos.y)
-	.i32(worm.currentWeapon)
-	.b(dummy)
-	.i32(worm.lastKilledByIdx)
-	.i32(worm.fireCone)
-	.i32(worm.leaveShellTimer);
-	ar.fobj(worm.settings)
-	.i32(worm.index)
-	.i32(worm.reacts[0])
-	.i32(worm.reacts[1])
-	.i32(worm.reacts[2])
-	.i32(worm.reacts[3]);
-
-	for(int i = 0; i < 5; ++i)
+// Helper: read [uint32 length][blob] from the replay stream and
+// deserialize into obj via cereal.
+template <typename T>
+static void cerealRead(io::MemReader& reader, T& obj) {
+	uint32_t len = io::read_uint32(reader);
+	std::string buf(len, '\0');
+	for (uint32_t i = 0; i < len; ++i)
+		buf[i] = static_cast<char>(reader.get());
+	std::istringstream ss(buf, std::ios::binary);
 	{
-		bool dummy = false;
-
-		ar
-		.i32(worm.weapons[i].ammo)
-		.b(dummy)
-		.i32(worm.weapons[i].delayLeft);
-
-		int32_t weapIdx = 0;
-		if constexpr (Archive::out)
-			weapIdx = worm.weapons[i].type
-				? (int32_t)(worm.weapons[i].type - &ar.context.game->common->weapons[0])
-				: -1;
-		ar.i32(weapIdx);
-		if constexpr (Archive::in)
-			worm.weapons[i].type = weapIdx >= 0
-				? &ar.context.game->common->weapons[weapIdx]
-				: nullptr;
-
-		ar.i32(worm.weapons[i].loadingLeft);
+		cereal::PortableBinaryInputArchive ar(ss);
+		ar(obj);
 	}
-
-	ar.ui8(worm.direction);
-
-	archive(ar, worm.controlStates);
-	archive(ar, worm.prevControlStates);
-
-	ar.check();
-}
-
-template<typename Archive>
-void archive(Archive ar, Viewport& vp)
-{
-	int32_t dummy_int = 0;
-
-	ar
-	.i32(vp.x)
-	.i32(vp.y)
-	.i32(vp.shake)
-	.i32(vp.maxX)
-	.i32(vp.maxY)
-	.i32(vp.centerX)
-	.i32(vp.centerY)
-	.i32(vp.wormIdx)
-	.i32(vp.bannerY)
-	// dummy for old ingameX variable
-	.i32(dummy_int)
-	.i32(vp.rect.x1)
-	.i32(vp.rect.y1)
-	.i32(vp.rect.x2)
-	.i32(vp.rect.y2)
-	;
-
-	uint32_t dummy = 0;
-
-	// Dummys for unused rand
-	ar.ui32(dummy);
-	ar.ui32(dummy);
-}
-
-struct mtf
-{
-	uint8_t order[256];
-
-	mtf()
-	{
-		for(int i = 0; i < 256; ++i)
-			order[i] = i;
-	}
-
-	uint8_t byte_to_rank(uint8_t v)
-	{
-		for(int i = 0; i < 256; ++i)
-		{
-			if(order[i] == v)
-				return i;
-		}
-
-		return 0; // Will never reach here
-	}
-
-	uint8_t rank_to_byte(uint8_t v)
-	{
-		return order[v];
-	}
-
-	void promote_rank(uint8_t rank)
-	{
-		uint8_t byte = order[rank];
-		for(uint32_t i = rank; i-- > 0; )
-		{
-			order[i+1] = order[i];
-		}
-		order[0] = byte;
-	}
-};
-
-template<typename Archive>
-void archive(Archive ar, Palette& pal)
-{
-	for(int i = 0; i < 256; ++i)
-	{
-		ar.ui8(pal.entries[i].r);
-		ar.ui8(pal.entries[i].g);
-		ar.ui8(pal.entries[i].b);
-	}
-}
-
-template<typename Reader>
-void archive(ser::in_archive<Reader, GameSerializationContext> ar, Level& level)
-{
-	unsigned int w = io::read_uint16(ar.reader);
-	unsigned int h = io::read_uint16(ar.reader);
-	level.resize(w, h);
-
-	archive(ar, level.origpal);
-
-	Common& common = *ar.context.game->common;
-
-	for(unsigned int y = 0; y < h; ++y)
-	for(unsigned int x = 0; x < w; ++x)
-	{
-		level.setPixel(x, y, ar.reader.get(), common);
-	}
-	for(unsigned int i = 0; i < 256; ++i)
-	{
-		level.origpal.entries[i].r = ar.reader.get();
-		level.origpal.entries[i].g = ar.reader.get();
-		level.origpal.entries[i].b = ar.reader.get();
-	}
-}
-
-template<typename Writer>
-void archive(ser::out_archive<Writer, GameSerializationContext> ar, Level& level)
-{
-	ar.ui16(level.width);
-	ar.ui16(level.height);
-	unsigned int w = level.width;
-	unsigned int h = level.height;
-
-	archive(ar, level.origpal);
-
-	ar.writer.put(&level.data[0], w * h);
-
-	for(unsigned int i = 0; i < 256; ++i)
-	{
-		ar.writer.put(level.origpal.entries[i].r);
-		ar.writer.put(level.origpal.entries[i].g);
-		ar.writer.put(level.origpal.entries[i].b);
-	}
-}
-
-template<typename Reader>
-void archive_worms(ser::in_archive<Reader, GameSerializationContext> ar, Game& game)
-{
-	uint8_t cont;
-	while(ar.ui8(cont), cont)
-	{
-		Worm* worm;
-		ar.obj(worm, WormCreator());
-
-		game.addWorm(std::shared_ptr<Worm>(worm));
-	}
-
-	while(ar.ui8(cont), cont)
-	{
-		Viewport* vp;
-		ar.fobj(vp, ViewportCreator());
-
-		game.addViewport(vp);
-	}
-}
-
-template<typename Writer>
-void archive_worms(ser::out_archive<Writer, GameSerializationContext> ar, Game& game)
-{
-	for (auto const& worm_sp : game.worms)
-	{
-		ar.writer.put(1);
-
-		Worm* worm = worm_sp.get();
-		GameSerializationContext::WormData& data = ar.context.wormData[worm];
-
-		ar.obj(worm, WormCreator());
-
-		data.settingsExpired = false; // We just serialized them, so they have to be up to date
-
-	}
-	ar.writer.put(0);
-
-	for(std::size_t i = 0; i < game.viewports.size(); ++i)
-	{
-		ar.writer.put(1);
-		Viewport* vp = game.viewports[i];
-		ar.fobj(vp);
-	}
-	ar.writer.put(0);
-}
-
-template<typename Archive>
-void archive(Archive ar, Game& game)
-{
-	ar.context.game = &game;
-
-	ar
-	.fobj(game.settings)
-	.i32(game.cycles)
-	.b(game.gotChanged)
-	.i32(game.lastKilledIdx)
-	.i32(game.screenFlash);
-	archive(ar, game.rand);
-
-	archive_worms(ar, game);
-
-	archive(ar, game.level);
-}
-
-template<typename Reader, typename T>
-void read(Reader& reader, GameSerializationContext& context, T& x)
-{
-	archive(ser::in_archive<Reader, GameSerializationContext>(reader, context), x);
-}
-
-template<typename Writer, typename T>
-void write(Writer& writer, GameSerializationContext& context, T& x)
-{
-	archive(ser::out_archive<Writer, GameSerializationContext>(writer, context), x);
 }
 
 ReplayWriter::ReplayWriter(std::unique_ptr<io::Writer> sink)
@@ -338,8 +66,6 @@ ReplayReader::ReplayReader(std::unique_ptr<io::Reader> source)
 	reader.reset(data.data(), data.size());
 }
 
-//#define DEBUG_REPLAYS
-
 uint32_t const replayMagic = ('L' << 24) | ('R' << 16) | ('P' << 8) | 'F';
 
 std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common, std::shared_ptr<SoundPlayer> soundPlayer)
@@ -347,38 +73,34 @@ std::unique_ptr<Game> ReplayReader::beginPlayback(std::shared_ptr<Common> common
 	uint32_t readMagic = io::read_uint32(reader);
 	if(readMagic != replayMagic)
 		throw io::ArchiveCheckError("File does not appear to be a replay");
-	context.replayVersion = reader.get();
-	if(context.replayVersion > myReplayVersion)
+	replayVersion = reader.get();
+	if(replayVersion > myReplayVersion)
 		throw io::ArchiveCheckError("Replay version is too recent");
 
 	std::shared_ptr<Settings> settings(new Settings);
-
 	std::unique_ptr<Game> game(new Game(common, settings, soundPlayer));
 
-	read(reader, context, *game);
-#ifdef DEBUG_REPLAYS
-	uint64_t actualH = hash(*game);
-	uint64_t expectedH;
-	read(reader, context, expectedH);
+	cerealRead(reader, *game);
 
-	if(actualH != expectedH)
-		printf("Differing hashes\n");
-#endif
 	return game;
 }
 
 void ReplayWriter::beginRecord(Game& game)
 {
 	io::write_uint32(writer, replayMagic);
-	writer.put(context.replayVersion);
+	writer.put(myReplayVersion);
 
-	write(writer, context, game);
-	settingsExpired = false; // We just serialized them, so they have to be up to date
+	cerealWrite(writer, game);
+	settingsExpired = false;
 
-#ifdef DEBUG_REPLAYS
-	uint64_t h = hash(game);
-	write(writer, context, h);
-#endif
+	// Track worm settings for change detection
+	for (auto const& worm_sp : game.worms) {
+		WormData& data = wormData[worm_sp.get()];
+		data.settingsExpired = false;
+		data.lastSettingsHash = worm_sp->settings->updateHash();
+	}
+	lastSettingsHash = game.settings->updateHash();
+	this->game = &game;
 }
 
 void ReplayWriter::endRecord()
@@ -388,7 +110,6 @@ void ReplayWriter::endRecord()
 
 uint32_t fastGameChecksum(Game& game)
 {
-	// game.rand is like a golden thread
 	uint32_t checksum = game.rand.last;
 	for(std::size_t i = 0; i < game.worms.size(); ++i)
 	{
@@ -404,7 +125,7 @@ uint32_t fastGameChecksum(Game& game)
 
 bool ReplayReader::playbackFrame(Renderer& renderer)
 {
-	Game& game = *context.game;
+	Game& game = *this->game;
 
 	bool settingsChanged = false;
 
@@ -416,7 +137,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 			break;
 		else if(first == 0x81)
 		{
-			read(reader, context, *game.settings);
+			cerealRead(reader, *game.settings);
 			settingsChanged = true;
 		}
 		else if(first == 0x82)
@@ -425,7 +146,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 			Worm* w = game.wormByIdx(wormId);
 			if (w)
 			{
-				read(reader, context, *w->settings);
+				cerealRead(reader, *w->settings);
 				settingsChanged = true;
 			}
 		}
@@ -468,34 +189,18 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 			throw io::ArchiveCheckError("Replay has desynced");
 	}
 
-#ifdef DEBUG_REPLAYS
-	uint32_t expected = io::read_uint32(reader);
-	uint32_t expected2 = io::read_uint32(reader);
-	uint64_t actual = hash(game);
-	if(expected != (uint32_t)actual.value[0])
-	{
-		std::cout << "Expected: " << expected << ", was: " << (uint32_t)actual.value[0] << std::endl;
-		std::cout << "Frame: " << game.cycles << std::endl;
-		throw io::ArchiveCheckError("Desynced state");
-	}
-	if(expected2 != game.cycles)
-	{
-		throw io::ArchiveCheckError("Descyned stream");
-	}
-#endif
-
 	return true;
 }
 
 
 void ReplayWriter::recordFrame()
 {
-	Game& game = *context.game;
+	Game& game = *this->game;
 
 	if(settingsExpired)
 	{
 		writer.put(0x81);
-		write(writer, context, *context.game->settings);
+		cerealWrite(writer, *game.settings);
 		settingsExpired = false;
 	}
 
@@ -507,7 +212,7 @@ void ReplayWriter::recordFrame()
 	{
 		for (auto const& worm : game.worms)
 		{
-			GameSerializationContext::WormData& data = context.wormData[worm.get()];
+			WormData& data = wormData[worm.get()];
 			if(worm->controlStates != worm->prevControlStates)
 			{
 				writeStates = true;
@@ -517,7 +222,7 @@ void ReplayWriter::recordFrame()
 			{
 				writer.put(0x82);
 				io::write_uint32(writer, worm->index);
-				write(writer, context, *worm->settings);
+				cerealWrite(writer, *worm->settings);
 				data.settingsExpired = false;
 			}
 		}
@@ -544,38 +249,23 @@ void ReplayWriter::recordFrame()
 		uint32_t checksum = fastGameChecksum(game);
 		io::write_uint32(writer, checksum);
 	}
-
-#ifdef DEBUG_REPLAYS
-	uint64_t actual = hash(game);
-	io::write_uint32(writer, (uint32_t)actual.value[0]);
-	io::write_uint32(writer, game.cycles);
-#endif
 }
 
 void ReplayWriter::unfocus()
 {
-	for(GameSerializationContext::WormDataMap::iterator i = context.wormData.begin();
-		i != context.wormData.end();
-		++i)
-	{
-		i->second.lastSettingsHash = i->first->settings->updateHash();
-	}
-
-	lastSettingsHash = context.game->settings->updateHash();
+	for (auto& [worm, data] : wormData)
+		data.lastSettingsHash = worm->settings->updateHash();
+	lastSettingsHash = game->settings->updateHash();
 }
 
 void ReplayWriter::focus()
 {
-	for(GameSerializationContext::WormDataMap::iterator i = context.wormData.begin();
-		i != context.wormData.end();
-		++i)
+	for (auto& [worm, data] : wormData)
 	{
-		if(i->second.lastSettingsHash != i->first->settings->updateHash())
-		{
-			i->second.settingsExpired = true;
-		}
+		if(data.lastSettingsHash != worm->settings->updateHash())
+			data.settingsExpired = true;
 	}
 
-	if(lastSettingsHash != context.game->settings->updateHash())
+	if(lastSettingsHash != game->settings->updateHash())
 		settingsExpired = true;
 }
