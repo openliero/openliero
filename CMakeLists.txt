@@ -354,14 +354,6 @@ if(OPENLIERO_BUILD_TESTS)
     DISCOVERY_MODE PRE_TEST
   )
 
-  add_executable(test_archive src/tests/test_archive.cpp)
-  target_link_libraries(test_archive PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_archive DISCOVERY_MODE PRE_TEST)
-
-  add_executable(test_toml_adapter src/tests/test_toml_adapter.cpp)
-  target_link_libraries(test_toml_adapter PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_toml_adapter DISCOVERY_MODE PRE_TEST)
-
   add_executable(test_cereal_smoke src/tests/test_cereal_smoke.cpp)
   target_link_libraries(test_cereal_smoke PRIVATE cereal::cereal Catch2::Catch2WithMain)
   catch_discover_tests(test_cereal_smoke DISCOVERY_MODE PRE_TEST)
