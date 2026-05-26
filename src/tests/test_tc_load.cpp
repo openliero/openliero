@@ -4,6 +4,8 @@
 #include <string>
 
 #include "common.hpp"
+#include "common_model.hpp"
+#include "constants.hpp"
 #include "filesystem.hpp"
 #include "game.hpp"
 #include "level.hpp"
@@ -47,6 +49,59 @@ TEST_CASE("TC loads without errors", "[tc_load]") {
   REQUIRE(selectIdx >= 0);
   REQUIRE(common->sounds[selectIdx].name == "select");
   REQUIRE(common->soundIndex("does_not_exist") == -1);
+
+  // [sounds] hooks resolve via the loaded sound table.
+  REQUIRE(common->soundHook[SoundMenuSelect] == common->soundIndex("select"));
+  REQUIRE(
+      common->soundHook[SoundMenuMoveUp] == common->soundIndex("moveup"));
+  REQUIRE(
+      common->soundHook[SoundMenuMoveDown] == common->soundIndex("movedown"));
+  REQUIRE(common->soundHook[SoundBump] == common->soundIndex("bump"));
+  REQUIRE(common->soundHook[SoundBegin] == common->soundIndex("begin"));
+  REQUIRE(common->soundHook[SoundReloaded] == common->soundIndex("reloaded"));
+  for (int i = 0; i < SOUND_DEF_T::MaxSound; ++i)
+    REQUIRE(common->soundHook[i] >= 0);
+}
+
+TEST_CASE("tc.cfg [sounds] round-trips through save/load", "[tc_load]") {
+  auto src = std::make_shared<Common>();
+  FsNode tcRoot(getTcPath());
+  src->load(std::move(tcRoot));
+
+  std::stringstream ss;
+  saveTcConfig(*src, ss);
+
+  Common dst;
+  // soundIndex resolution during load relies on `dst.sounds` being
+  // populated from [types].sounds, which loadTcConfig does first.
+  loadTcConfig(dst, ss);
+
+  for (int i = 0; i < SOUND_DEF_T::MaxSound; ++i)
+    REQUIRE(dst.soundHook[i] == src->soundHook[i]);
+}
+
+TEST_CASE("[sounds] unknown name resolves to -1", "[tc_load]") {
+  std::string cfg =
+      "[types]\n"
+      "sounds = [\"alpha\", \"beta\"]\n"
+      "weapons = []\n"
+      "nobjects = []\n"
+      "sobjects = []\n"
+      "\n"
+      "[constants]\n"
+      "materials = []\n"
+      "[hacks]\n"
+      "[texts]\n"
+      "[sounds]\n"
+      "MenuSelect = \"not_a_real_sound\"\n"
+      "MenuMoveUp = \"alpha\"\n";
+  std::stringstream ss(cfg);
+  Common c;
+  loadTcConfig(c, ss);
+  REQUIRE(c.soundHook[SoundMenuSelect] == -1);
+  REQUIRE(c.soundHook[SoundMenuMoveUp] == c.soundIndex("alpha"));
+  // Unset entries default to -1.
+  REQUIRE(c.soundHook[SoundBump] == -1);
 }
 
 TEST_CASE("TC supports game initialization", "[tc_load]") {

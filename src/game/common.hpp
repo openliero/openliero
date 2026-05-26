@@ -178,4 +178,10 @@ struct Common {
   int32_t C[CONST_DEF_T::MaxC];
   std::string S[STRING_DEF_T::MaxS];
   bool H[HACK_DEF_T::MaxH];
+  // Indices into `sounds` for engine-played sounds. -1 if not configured.
+  int soundHook[SOUND_DEF_T::MaxSound] = {
+      #define INIT_SOUNDHOOK(n) -1,
+      LIERO_SOUNDDEFS(INIT_SOUNDHOOK)
+      #undef INIT_SOUNDHOOK
+  };
 };

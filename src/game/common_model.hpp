@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "console.hpp"
 #include "serialization/toml_archive.hpp"
 
 // Cross-reference resolution helpers
@@ -412,6 +413,18 @@ struct Hacks {
   }
 };
 
+struct Sounds {
+  #define DECL_FIELD_SO(n) std::string n;
+  LIERO_SOUNDDEFS(DECL_FIELD_SO)
+  #undef DECL_FIELD_SO
+  template <typename Archive>
+  void serialize(Archive& ar) {
+    #define SER_FIELD_SO(n) ar(cereal::make_nvp(#n, n));
+    LIERO_SOUNDDEFS(SER_FIELD_SO)
+    #undef SER_FIELD_SO
+  }
+};
+
 }  // namespace tc_cfg
 
 // Save/load tc.cfg (top-level Common config)
@@ -478,11 +491,21 @@ inline void saveTcConfig(Common const& common, std::ostream& os) {
   LIERO_HDEFS(COPY_FIELD_H)
   #undef COPY_FIELD_H
 
+  tc_cfg::Sounds sounds;
+  #define COPY_FIELD_SO(n)                                            \
+    sounds.n = (common.soundHook[Sound##n] >= 0 &&                    \
+                common.soundHook[Sound##n] < (int)common.sounds.size()) \
+                   ? common.sounds[common.soundHook[Sound##n]].name   \
+                   : std::string();
+  LIERO_SOUNDDEFS(COPY_FIELD_SO)
+  #undef COPY_FIELD_SO
+
   cereal::TomlOutputArchive ar(os);
   ar(cereal::make_nvp("types", types));
   ar(cereal::make_nvp("constants", constants));
   ar(cereal::make_nvp("texts", texts));
   ar(cereal::make_nvp("hacks", hacks));
+  ar(cereal::make_nvp("sounds", sounds));
 }
 
 inline void loadTcConfig(Common& common, std::istream& is) {
@@ -490,12 +513,14 @@ inline void loadTcConfig(Common& common, std::istream& is) {
   tc_cfg::Constants constants;
   tc_cfg::TextsS texts;
   tc_cfg::Hacks hacks;
+  tc_cfg::Sounds sounds;
 
   cereal::TomlInputArchive ar(is);
   ar(cereal::make_nvp("types", types));
   ar(cereal::make_nvp("constants", constants));
   ar(cereal::make_nvp("texts", texts));
   ar(cereal::make_nvp("hacks", hacks));
+  ar(cereal::make_nvp("sounds", sounds));
 
   // Populate Common from deserialized structs
   common.sounds.clear();
@@ -568,4 +593,21 @@ inline void loadTcConfig(Common& common, std::istream& is) {
   #define COPY_FIELD_H2(n) common.H[H##n] = hacks.n;
   LIERO_HDEFS(COPY_FIELD_H2)
   #undef COPY_FIELD_H2
+
+  // Resolve [sounds] hook names against the now-loaded sound table.
+  // Missing entries stay at -1 (no sound). Names that don't match any
+  // loaded sound get a warning and resolve to -1 as well.
+  #define COPY_FIELD_SO2(n)                                          \
+    if (sounds.n.empty()) {                                          \
+      common.soundHook[Sound##n] = -1;                               \
+    } else {                                                         \
+      int idx = common.soundIndex(sounds.n);                         \
+      if (idx < 0)                                                   \
+        Console::writeWarning(                                       \
+            std::string("[sounds] " #n " references unknown sound \"") + \
+            sounds.n + "\"");                                        \
+      common.soundHook[Sound##n] = idx;                              \
+    }
+  LIERO_SOUNDDEFS(COPY_FIELD_SO2)
+  #undef COPY_FIELD_SO2
 }
