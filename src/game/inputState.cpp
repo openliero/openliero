@@ -83,7 +83,7 @@ bool InputStringState::update()
 	if (done_)
 	{
 		SDL_StopTextInput(gfx->sdlWindow);
-		sfx.play(*gfx->common, 27);
+		sfx.play(*gfx->common, gfx->common->soundHook[SoundMenuSelect]);
 		gfx->clearKeys();
 		callback_(accepted_, buffer_);
 		return false;

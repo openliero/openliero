@@ -43,7 +43,7 @@ bool FileSelectorState::update()
 	 || gfx->testControlOnce(WormSettingsExtensions::Fire)
 	 || gfx->testGamepadButtonOnce(SDL_GAMEPAD_BUTTON_SOUTH))
 	{
-		sfx.play(*gfx->common, 27);
+		sfx.play(*gfx->common, gfx->common->soundHook[SoundMenuSelect]);
 
 		auto* sel = selector_->enter();
 		if (sel)

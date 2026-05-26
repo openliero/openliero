@@ -38,7 +38,7 @@ static int filterDigits(int k)
 
 int IntegerBehavior::onEnter(Menu& menu, MenuItem& item)
 {
-	sfx.play(common, 27);
+	sfx.play(common, common.soundHook[SoundMenuSelect]);
 
 	if(!allowEntry)
 		return -1; // Not allowed

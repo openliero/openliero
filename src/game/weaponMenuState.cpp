@@ -63,7 +63,7 @@ bool WeaponMenuState::update()
 	|| gfx->testControlOnce(WormSettingsExtensions::Up)
 	|| gfx->testGamepadDirOnce(SDL_GAMEPAD_BUTTON_DPAD_UP))
 	{
-		sfx.play(common, 26);
+		sfx.play(common, common.soundHook[SoundMenuMoveDown]);
 		weaponMenu_->movement(-1);
 	}
 
@@ -71,7 +71,7 @@ bool WeaponMenuState::update()
 	|| gfx->testControlOnce(WormSettingsExtensions::Down)
 	|| gfx->testGamepadDirOnce(SDL_GAMEPAD_BUTTON_DPAD_DOWN))
 	{
-		sfx.play(common, 25);
+		sfx.play(common, common.soundHook[SoundMenuMoveUp]);
 		weaponMenu_->movement(1);
 	}
 
@@ -92,13 +92,13 @@ bool WeaponMenuState::update()
 	{
 		if (gfx->testSDLKeyOnce(SDL_SCANCODE_PAGEUP))
 		{
-			sfx.play(common, 26);
+			sfx.play(common, common.soundHook[SoundMenuMoveDown]);
 			weaponMenu_->movementPage(-1);
 		}
 
 		if (gfx->testSDLKeyOnce(SDL_SCANCODE_PAGEDOWN))
 		{
-			sfx.play(common, 25);
+			sfx.play(common, common.soundHook[SoundMenuMoveUp]);
 			weaponMenu_->movementPage(1);
 		}
 	}

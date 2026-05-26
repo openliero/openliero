@@ -282,14 +282,14 @@ bool NetworkController::process() {
       if (gfx.testSDLKeyOnce(SDL_SCANCODE_UP)
        || gfx.testControlOnce(WormSettingsExtensions::Up)
        || gfx.testGamepadDirOnce(SDL_GAMEPAD_BUTTON_DPAD_UP)) {
-        sfx.play(*game.common, 26);
+        sfx.play(*game.common, game.common->soundHook[SoundMenuMoveDown]);
         pauseMenu_.movement(-1);
       }
 
       if (gfx.testSDLKeyOnce(SDL_SCANCODE_DOWN)
        || gfx.testControlOnce(WormSettingsExtensions::Down)
        || gfx.testGamepadDirOnce(SDL_GAMEPAD_BUTTON_DPAD_DOWN)) {
-        sfx.play(*game.common, 25);
+        sfx.play(*game.common, game.common->soundHook[SoundMenuMoveUp]);
         pauseMenu_.movement(1);
       }
 

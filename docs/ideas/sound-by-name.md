@@ -135,8 +135,9 @@ verify in step 0 — see §6).
 ### 4.3 Engine-side named hooks
 
 The engine itself plays a fixed set of sounds (menu navigation,
-reload, begin-round, etc.). Today these are integer literals: 14
-(`bump`), 22 (`begin`), 24 (`reloaded`), 25 (`moveup`), 26
+reload, begin-round, worm spawn, ninjarope throw, etc.). Today
+these are integer literals: 5 (`throw`), 14 (`bump`), 21
+(`alive`), 22 (`begin`), 24 (`reloaded`), 25 (`moveup`), 26
 (`movedown`), 27 (`select`). All hardcoded uses are listed in §5.
 
 Introduce a new tc.cfg section, mirroring the existing
@@ -146,12 +147,14 @@ Introduce a new tc.cfg section, mirroring the existing
 ```cpp
 // Sound hooks the engine plays directly. Sourced from [sounds] in tc.cfg.
 #define LIERO_SOUNDDEFS(_) \
-    _(MenuMoveUp)   \
-    _(MenuMoveDown) \
-    _(MenuSelect)   \
-    _(Bump)         \
-    _(Begin)        \
-    _(Reloaded)
+    _(MenuMoveUp)     \
+    _(MenuMoveDown)   \
+    _(MenuSelect)     \
+    _(Bump)           \
+    _(Begin)          \
+    _(Reloaded)       \
+    _(Alive)          \
+    _(NinjaropeThrow)
 ```
 
 Generate `enum SOUND_DEF_T { SoundMenuMoveUp, ... MaxSound }` and
@@ -165,12 +168,14 @@ The TC config grows a `[sounds]` table:
 
 ```toml
 [sounds]
-MenuMoveUp   = "moveup"
-MenuMoveDown = "movedown"
-MenuSelect   = "select"
-Bump         = "bump"
-Begin        = "begin"
-Reloaded     = "reloaded"
+MenuMoveUp     = "moveup"
+MenuMoveDown   = "movedown"
+MenuSelect     = "select"
+Bump           = "bump"
+Begin          = "begin"
+Reloaded       = "reloaded"
+Alive          = "alive"
+NinjaropeThrow = "throw"
 ```
 
 Loaded by `loadTcConfig` (src/game/common_model.hpp:488) into
@@ -311,6 +316,9 @@ Replace each with `common.soundHook[Sound<Name>]`:
 | src/game/worm.cpp:195 | 14 | bump | Bump |
 | src/game/worm.cpp:209 | 14 | bump | Bump |
 | src/game/worm.cpp:357 | 24 | reloaded | Reloaded |
+| src/game/worm.cpp:913 | 21 | alive | Alive |
+| src/game/worm.cpp:962 | 24 | reloaded | Reloaded |
+| src/game/worm.cpp:1120 | 5 | throw | NinjaropeThrow |
 | src/game/game.cpp:562 | 22 | begin | Begin |
 | src/game/weapsel.cpp:249,308 | 25 | moveup | MenuMoveUp |
 | src/game/weapsel.cpp:272,296 | 26 | movedown | MenuMoveDown |
@@ -469,7 +477,7 @@ No call sites change.
 `-1` on miss. `test_tc_load.cpp` extended with the three assertions
 above against the shipped TC.
 
-### Step 3 — Add `[sounds]` hooks table
+### Step 3 — Add `[sounds]` hooks table ✅ (landed)
 
 **What.**
 * Add `LIERO_SOUNDDEFS` macro and `SOUND_DEF_T` enum to
@@ -495,7 +503,21 @@ unused.
   a warning (assert via a captured `Console` sink if available,
   otherwise just assert the `-1`).
 
-### Step 4 — Replace hardcoded integer literals in engine code
+**As landed.** `LIERO_SOUNDDEFS` + `SOUND_DEF_T` enum added to
+`constants.hpp`; `Common::soundHook[MaxSound]` default-initialised
+to `-1`; `loadTcConfig` / `saveTcConfig` round-trip a `[sounds]`
+TOML table via `Common::soundIndex`, with unknown names producing
+a `Console::writeWarning` and resolving to `-1`. The shipped
+`data/TC/openliero/tc.cfg` grew the `[sounds]` section. The hook
+set was extended past the spec's initial six to include `Alive`
+(worm respawn, sound 21) and `NinjaropeThrow` (jump-on-change
+deploy, sound 5) so that Step 4 could replace every remaining
+literal `play()` call site (originally folded in via amend).
+Tests in `test_tc_load.cpp` cover positive resolution per hook,
+the round-trip via the shipped TC, and the negative case
+(unknown name → `-1`).
+
+### Step 4 — Replace hardcoded integer literals in engine code ✅ (landed)
 
 **What.** Mechanical replacement of every literal listed in §5.1
 with `common.soundHook[Sound<Name>]`. Touch only call sites; no
@@ -510,6 +532,20 @@ header or schema change in this step.
   worm bump against terrain (`Bump`), reloaded notification
   (`Reloaded`).
 * CI: `test_determinism` must still pass.
+
+**As landed.** Every literal sound index in §5.1, plus the three
+`worm.cpp` literals (`913` = `21`/Alive, `962` = `24`/Reloaded,
+`1120` = `5`/NinjaropeThrow) the original table missed, was
+swapped for `common.soundHook[Sound<Name>]` (or
+`common->soundHook[...]` / `gfx->common->soundHook[...]` /
+`game.common->soundHook[...]` depending on what `Common` was in
+scope). The `gfx.cpp:186` ternary became
+`common.soundHook[dir > 0 ? SoundMenuMoveUp : SoundMenuMoveDown]`.
+Random-TC generator in `mainMenuState.cpp` was left alone — it
+operates on the in-memory `Common` and is never serialised.
+After this step
+`grep -rn 'soundPlayer->play(\s*[0-9]\+\|sfx\.play([^,]\+,\s*[0-9]\+' src/game`
+returns no matches and all 95 tests pass.
 
 ### Step 5 — Name-typed sound fields in weapon / sobject configs
 

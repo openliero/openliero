@@ -183,14 +183,14 @@ struct InputDeviceBehavior : ItemBehavior
 
 	bool onLeftRight(Menu& menu, MenuItem& item, int dir)
 	{
-		sfx.play(common, dir > 0 ? 25 : 26);
+		sfx.play(common, common.soundHook[dir > 0 ? SoundMenuMoveUp : SoundMenuMoveDown]);
 		cycle(menu, dir);
 		return false;
 	}
 
 	int onEnter(Menu& menu, MenuItem& item)
 	{
-		sfx.play(common, 27);
+		sfx.play(common, common.soundHook[SoundMenuSelect]);
 		cycle(menu, 1);
 		return -1;
 	}
@@ -236,7 +236,7 @@ struct ProfileSaveBehavior : ItemBehavior
 
 	int onEnter(Menu& menu, MenuItem& item)
 	{
-		sfx.play(common, 27);
+		sfx.play(common, common.soundHook[SoundMenuSelect]);
 
 		if(!saveAs)
 			ws.saveProfile(ws.profileNode);
@@ -1130,11 +1130,11 @@ void playChangeSound(Common& common, int change)
 {
 	if(change > 0)
 	{
-		sfx.play(common, 25);
+		sfx.play(common, common.soundHook[SoundMenuMoveUp]);
 	}
 	else
 	{
-		sfx.play(common, 26);
+		sfx.play(common, common.soundHook[SoundMenuMoveDown]);
 	}
 }
 

@@ -559,7 +559,7 @@ void Game::spawnZone()
 
 void Game::startGame()
 {
-	soundPlayer->play(22);
+	soundPlayer->play(common->soundHook[SoundBegin]);
 	bobjects.resize(settings->bloodParticleMax);
 
 	if (settings->gameMode == Settings::GMHoldazone)

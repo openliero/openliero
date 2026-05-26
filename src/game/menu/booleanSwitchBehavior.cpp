@@ -8,9 +8,9 @@
 bool BooleanSwitchBehavior::onLeftRight(Menu& menu, MenuItem& item, int dir)
 {
 	if(dir > 0)
-		sfx.play(common, 25);
+		sfx.play(common, common.soundHook[SoundMenuMoveUp]);
 	else
-		sfx.play(common, 26);
+		sfx.play(common, common.soundHook[SoundMenuMoveDown]);
 
 	set(!v);
 	onUpdate(menu, item);
@@ -19,7 +19,7 @@ bool BooleanSwitchBehavior::onLeftRight(Menu& menu, MenuItem& item, int dir)
 
 int BooleanSwitchBehavior::onEnter(Menu& menu, MenuItem& item)
 {
-	sfx.play(common, 27);
+	sfx.play(common, common.soundHook[SoundMenuSelect]);
 	set(!v);
 	onUpdate(menu, item);
 	return -1;
