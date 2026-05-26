@@ -61,6 +61,77 @@ TEST_CASE("TC loads without errors", "[tc_load]") {
   REQUIRE(common->soundHook[SoundReloaded] == common->soundIndex("reloaded"));
   for (int i = 0; i < SOUND_DEF_T::MaxSound; ++i)
     REQUIRE(common->soundHook[i] >= 0);
+
+  // Step 5: sound fields in weapon / sobject configs are now name-typed.
+  // Anchor a couple of known values so regressions in soundRefFromStr
+  // (e.g. unknown-name returning 0 instead of -1) get caught.
+  auto findWeapon = [&](std::string const& id) -> Weapon const& {
+    for (auto& w : common->weapons)
+      if (w.idStr == id)
+        return w;
+    FAIL("weapon not found: " + id);
+    return common->weapons.front();
+  };
+  auto findSObject = [&](std::string const& id) -> SObjectType const& {
+    for (auto& s : common->sobjectTypes)
+      if (s.idStr == id)
+        return s;
+    FAIL("sobject not found: " + id);
+    return common->sobjectTypes.front();
+  };
+  REQUIRE(findWeapon("bazooka").launchSound == common->soundIndex("bazooka"));
+  REQUIRE(findWeapon("bazooka").exploSound == -1);
+  REQUIRE(findSObject("large_explosion").startSound == common->soundIndex("exp2"));
+  REQUIRE(findSObject("flashing_pixel").startSound == -1);
+}
+
+TEST_CASE("weapon / sobject sound refs round-trip via save/load", "[tc_load]") {
+  auto src = std::make_shared<Common>();
+  FsNode tcRoot(getTcPath());
+  src->load(std::move(tcRoot));
+
+  for (auto const& w : src->weapons) {
+    std::stringstream ss;
+    saveWeaponConfig(*src, w, ss);
+    Weapon copy = w;
+    copy.launchSound = copy.loopSound = copy.exploSound = -999;
+    loadWeaponConfig(*src, copy, ss);
+    REQUIRE(copy.launchSound == w.launchSound);
+    REQUIRE(copy.loopSound == w.loopSound);
+    REQUIRE(copy.exploSound == w.exploSound);
+  }
+  for (auto const& s : src->sobjectTypes) {
+    std::stringstream ss;
+    saveSObjectConfig(*src, s, ss);
+    SObjectType copy = s;
+    copy.startSound = -999;
+    loadSObjectConfig(*src, copy, ss);
+    REQUIRE(copy.startSound == s.startSound);
+  }
+}
+
+TEST_CASE(
+    "weapon cfg with unknown sound name resolves to -1, not 0", "[tc_load]") {
+  auto common = std::make_shared<Common>();
+  FsNode tcRoot(getTcPath());
+  common->load(std::move(tcRoot));
+
+  // Round-trip a weapon, but rewrite exploSound to a bogus name. Must
+  // resolve to -1 (no sound), NOT 0 (would spuriously play the first sound).
+  Weapon const& src = common->weapons.front();
+  std::stringstream out;
+  saveWeaponConfig(*common, src, out);
+  std::string text = out.str();
+  // Inject an unknown name into exploSound.
+  auto pos = text.find("exploSound = ");
+  REQUIRE(pos != std::string::npos);
+  auto eol = text.find('\n', pos);
+  text.replace(pos, eol - pos, "exploSound = \"definitely_not_a_sound\"");
+
+  std::stringstream in(text);
+  Weapon dst = src;
+  loadWeaponConfig(*common, dst, in);
+  REQUIRE(dst.exploSound == -1);
 }
 
 TEST_CASE("tc.cfg [sounds] round-trips through save/load", "[tc_load]") {

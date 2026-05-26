@@ -440,7 +440,7 @@ void Common::load(FsNode node) {
         content.push_back(static_cast<char>(sReader.get()));
     } catch (std::runtime_error&) {}
     std::istringstream is(content);
-    loadSObjectConfig(w, is);
+    loadSObjectConfig(*this, w, is);
   }
 
   precompute();

@@ -29,6 +29,21 @@ inline int objRefFromStr(std::string const& str, std::vector<T> const& vec) {
   return 0;
 }
 
+// Sound-ref helpers: distinct from objRefFromStr because an unknown
+// non-empty name must resolve to -1 (no sound), not 0 (would spuriously
+// play the first sound).
+inline std::string soundRefToStr(int idx, Common const& common) {
+  if (idx < 0 || idx >= (int)common.sounds.size())
+    return "";
+  return common.sounds[idx].name;
+}
+
+inline int soundRefFromStr(std::string const& str, Common const& common) {
+  if (str.empty())
+    return -1;
+  return common.soundIndex(str);
+}
+
 // Save/load NObjectType config (individual .cfg file)
 inline void saveNObjectConfig(
     Common const& common, NObjectType const& n, std::ostream& os) {
@@ -117,10 +132,14 @@ inline void loadNObjectConfig(Common& common, NObjectType& n, std::istream& is) 
 }
 
 // Save/load SObjectType config
-inline void saveSObjectConfig(SObjectType const& s, std::ostream& os) {
+inline void saveSObjectConfig(
+    Common const& common, SObjectType const& s, std::ostream& os) {
   cereal::TomlOutputArchive ar(os);
   ar(cereal::make_nvp("shadow", s.shadow));
-  ar(cereal::make_nvp("startSound", s.startSound));
+  {
+    std::string ref = soundRefToStr(s.startSound, common);
+    ar(cereal::make_nvp("startSound", ref));
+  }
   ar(cereal::make_nvp("numSounds", s.numSounds));
   ar(cereal::make_nvp("animDelay", s.animDelay));
   ar(cereal::make_nvp("startFrame", s.startFrame));
@@ -133,10 +152,15 @@ inline void saveSObjectConfig(SObjectType const& s, std::ostream& os) {
   ar(cereal::make_nvp("dirtEffect", s.dirtEffect));
 }
 
-inline void loadSObjectConfig(SObjectType& s, std::istream& is) {
+inline void loadSObjectConfig(
+    Common const& common, SObjectType& s, std::istream& is) {
   cereal::TomlInputArchive ar(is);
   ar(cereal::make_nvp("shadow", s.shadow));
-  ar(cereal::make_nvp("startSound", s.startSound));
+  {
+    std::string ref;
+    ar(cereal::make_nvp("startSound", ref));
+    s.startSound = soundRefFromStr(ref, common);
+  }
   ar(cereal::make_nvp("numSounds", s.numSounds));
   ar(cereal::make_nvp("animDelay", s.animDelay));
   ar(cereal::make_nvp("startFrame", s.startFrame));
@@ -167,9 +191,18 @@ inline void saveWeaponConfig(
   ar(cereal::make_nvp("detectDistance", w.detectDistance));
   ar(cereal::make_nvp("blowAway", w.blowAway));
   ar(cereal::make_nvp("gravity", w.gravity));
-  ar(cereal::make_nvp("launchSound", w.launchSound));
-  ar(cereal::make_nvp("loopSound", w.loopSound));
-  ar(cereal::make_nvp("exploSound", w.exploSound));
+  {
+    std::string ref = soundRefToStr(w.launchSound, common);
+    ar(cereal::make_nvp("launchSound", ref));
+  }
+  {
+    std::string ref = soundRefToStr(w.loopSound, common);
+    ar(cereal::make_nvp("loopSound", ref));
+  }
+  {
+    std::string ref = soundRefToStr(w.exploSound, common);
+    ar(cereal::make_nvp("exploSound", ref));
+  }
   ar(cereal::make_nvp("speed", w.speed));
   ar(cereal::make_nvp("addSpeed", w.addSpeed));
   ar(cereal::make_nvp("distribution", w.distribution));
@@ -233,9 +266,21 @@ inline void loadWeaponConfig(Common& common, Weapon& w, std::istream& is) {
   ar(cereal::make_nvp("detectDistance", w.detectDistance));
   ar(cereal::make_nvp("blowAway", w.blowAway));
   ar(cereal::make_nvp("gravity", w.gravity));
-  ar(cereal::make_nvp("launchSound", w.launchSound));
-  ar(cereal::make_nvp("loopSound", w.loopSound));
-  ar(cereal::make_nvp("exploSound", w.exploSound));
+  {
+    std::string ref;
+    ar(cereal::make_nvp("launchSound", ref));
+    w.launchSound = soundRefFromStr(ref, common);
+  }
+  {
+    std::string ref;
+    ar(cereal::make_nvp("loopSound", ref));
+    w.loopSound = soundRefFromStr(ref, common);
+  }
+  {
+    std::string ref;
+    ar(cereal::make_nvp("exploSound", ref));
+    w.exploSound = soundRefFromStr(ref, common);
+  }
   ar(cereal::make_nvp("speed", w.speed));
   ar(cereal::make_nvp("addSpeed", w.addSpeed));
   ar(cereal::make_nvp("distribution", w.distribution));

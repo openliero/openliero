@@ -547,7 +547,7 @@ After this step
 `grep -rn 'soundPlayer->play(\s*[0-9]\+\|sfx\.play([^,]\+,\s*[0-9]\+' src/game`
 returns no matches and all 95 tests pass.
 
-### Step 5 — Name-typed sound fields in weapon / sobject configs
+### Step 5 — Name-typed sound fields in weapon / sobject configs ✅ (landed)
 
 **What.**
 * Add `soundRefToStr(idx, common)` / `soundRefFromStr(str, common)`
@@ -576,6 +576,28 @@ returns no matches and all 95 tests pass.
   than the wrong one).
 * `test_determinism` must still pass — the simulation must
   observe the same integer indices it did before this step.
+
+**As landed.** `soundRefToStr` / `soundRefFromStr` helpers added to
+`common_model.hpp`, returning `-1` on miss to preserve the no-sound
+contract (distinct from `objRefFromStr`'s `0`). `saveWeaponConfig` /
+`loadWeaponConfig` round-trip `launchSound` / `loopSound` /
+`exploSound` as names; `saveSObjectConfig` / `loadSObjectConfig`
+grew a `Common const&` parameter and round-trip `startSound` as a
+name (call sites in `common.cpp` and `tc_tool/common_writer.cpp`
+updated). `tools/migrate_sound_refs.py` rewrites integer-valued
+sound fields in `weapons/*.cfg` and `sobjects/*.cfg` to quoted names
+(or `""` for out-of-range / `-1`); ran it against
+`data/TC/openliero/`, regenerating 54 files in this commit. New
+tests in `test_tc_load.cpp`: anchor `bazooka.launchSound` /
+`large_explosion.startSound` to known names; round-trip every weapon
+and sobject through save/load; assert an unknown sound name resolves
+to `-1` (not `0`). All 97 tests pass.
+
+Note: this preserves int values bit-for-bit. Weapons with
+`loopSound = 0` migrate to `loopSound = "shotgun"` (index 0) — still
+falsy under the `if(w.loopSound)` check at `worm.cpp:393`, so
+behavior is unchanged. That truthiness-as-null pattern is a
+pre-existing smell, out of scope here.
 
 ### Step 6 — Unify Sfx and SoundPlayer
 
