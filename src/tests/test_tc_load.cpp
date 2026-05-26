@@ -40,6 +40,13 @@ TEST_CASE("TC loads without errors", "[tc_load]") {
   REQUIRE(copy2.find("\xC3\xA4") != std::string::npos);  // 'ä' UTF-8
   REQUIRE(copy2.find("\xC2\x84") == std::string::npos);  // bogus old form
   REQUIRE(common->guessName() == "Liero v1.33");
+
+  // Sound name lookup: known names resolve to a valid index that
+  // round-trips back to the same name, unknown names yield -1.
+  int selectIdx = common->soundIndex("select");
+  REQUIRE(selectIdx >= 0);
+  REQUIRE(common->sounds[selectIdx].name == "select");
+  REQUIRE(common->soundIndex("does_not_exist") == -1);
 }
 
 TEST_CASE("TC supports game initialization", "[tc_load]") {

@@ -522,6 +522,14 @@ std::string Common::guessName() const {
   return cp.substr(0, p);
 }
 
+int Common::soundIndex(std::string_view name) const {
+  for (std::size_t i = 0; i < sounds.size(); ++i) {
+    if (sounds[i].name == name)
+      return static_cast<int>(i);
+  }
+  return -1;
+}
+
 void SfxSample::createSound() {
   if (originalData.empty())
     return;

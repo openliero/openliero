@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include "constants.hpp"
 #include "gfx/font.hpp"
 #include "gfx/palette.hpp"
@@ -126,6 +127,10 @@ struct Common {
   void precompute();
 
   std::string guessName() const;
+
+  // Returns the index of the named sound in `sounds`, or -1 if absent.
+  // -1 is the existing "no sound" sentinel used at play sites.
+  int soundIndex(std::string_view name) const;
 
   PalIdx* wormSprite(int f, int dir, int w) {
     return wormSprites.spritePtr(f + dir * 7 * 3 + w * 2 * 7 * 3);

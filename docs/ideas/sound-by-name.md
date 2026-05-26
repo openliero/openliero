@@ -452,7 +452,7 @@ with a disabled middle slot, asserts vector length, names, and that
 the disabled slot is null). To make it linkable, the `tc` static
 library was split from `tctool`'s `main()` translation unit.
 
-### Step 2 — Add `Common::soundIndex`
+### Step 2 — Add `Common::soundIndex` ✅ (landed)
 
 **What.** Add `int Common::soundIndex(std::string_view name) const`
 in `common.hpp` / `common.cpp`. Linear scan, returns `-1` on miss.
@@ -463,6 +463,11 @@ No call sites change.
   `soundIndex("select") >= 0`, `soundIndex("does_not_exist") == -1`,
   and that the returned index round-trips via
   `common.sounds[idx].name == "select"`.
+
+**As landed.** `Common::soundIndex(std::string_view)` added in
+`src/game/common.{hpp,cpp}` as a linear scan over `sounds` returning
+`-1` on miss. `test_tc_load.cpp` extended with the three assertions
+above against the shipped TC.
 
 ### Step 3 — Add `[sounds]` hooks table
 
