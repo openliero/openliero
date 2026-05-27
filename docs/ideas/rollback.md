@@ -251,7 +251,7 @@ All `ExactObjectList<T, N>` are fixed-size pools → straight `memcpy`. Level ve
 
 **Build artifact:** new path behind a `useFastSnapshot` flag; both coexist temporarily.
 
-### Step 3 — Pool snapshots & input ring buffer
+### Step 3 — Pool snapshots & input ring buffer — ✅ done
 
 ```cpp
 class RollbackBuffer {
@@ -483,3 +483,10 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - Microbench (Debug build, ~500 frames warm-up): save ≈ 7.9 µs, load ≈ 7.7 µs — ~30× under the 500 µs plan target. Release should be substantially faster still; not worth measuring until Step 4 has a CPU budget to defend.
 - Test (`src/tests/test_snapshot_fast.cpp`) covers three properties: round-trip parity vs. a no-restore control, cereal-vs-fast cross-check at five snapshot points across a 2000-frame fuzz, and the microbench with a 2 ms generous bound.
 - New: `src/game/serialization/fast_snapshot.hpp`, `Game::saveSnapshotFast/loadSnapshotFast`, `src/tests/test_snapshot_fast.cpp`, CMake entry.
+
+### Step 3 — Pool snapshots & input ring buffer (2026-05-27)
+
+- Buffer lives at `src/game/rollback/buffer.hpp` as a header-only `rollback::RollbackBuffer` with `kCapacity = kMaxRollback + 1 = 8` slots. Pure data structure: no Game/processFrame dependency, no per-frame allocation. `prepare(game)` once forwards to `GameSnapshot::prepare` on every slot so the per-snapshot vectors (level data, bobjects) are sized up front.
+- API mirrors the plan sketch but uses `write(frame)`/`find(frame)` rather than direct slot access. `write` repurposes the ring slot at `frame % kCapacity`; if the slot already holds `frame`, inputs/state are kept (cheap input-only updates), otherwise inputs reset to defaults. The snapshot field is **deliberately not cleared on eviction** — callers overwrite it via `saveSnapshotFast` when they actually re-snapshot. Keeps the hot path allocation-free and avoids zeroing ~200 KB on every wrap.
+- `oldestFrame()` returns 0 while the buffer is filling and tracks `newest - kCapacity + 1` after the first eviction; controllers compare incoming confirmed frames against this to detect stall conditions.
+- New: `src/game/rollback/buffer.hpp`, `src/tests/test_rollback_buffer.cpp` (8 cases: empty state, sequential fill, wrap-around eviction, idempotent same-frame writes, ring-slot collision reset, Predicted→Confirmed transition, clear/reuse, oldestFrame during fill), CMake entry.
