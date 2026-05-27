@@ -640,19 +640,36 @@ inline void loadTcConfig(Common& common, std::istream& is) {
   #undef COPY_FIELD_H2
 
   // Resolve [sounds] hook names against the now-loaded sound table.
-  // Missing entries stay at -1 (no sound). Names that don't match any
-  // loaded sound get a warning and resolve to -1 as well.
-  #define COPY_FIELD_SO2(n)                                          \
-    if (sounds.n.empty()) {                                          \
-      common.soundHook[Sound##n] = -1;                               \
-    } else {                                                         \
-      int idx = common.soundIndex(sounds.n);                         \
-      if (idx < 0)                                                   \
-        Console::writeWarning(                                       \
-            std::string("[sounds] " #n " references unknown sound \"") + \
-            sounds.n + "\"");                                        \
-      common.soundHook[Sound##n] = idx;                              \
+  // Missing/empty entries fall back to the canonical Liero sound name
+  // for that hook (so TCs whose tc.cfg predates the [sounds] section
+  // still get menu/round/bump/reload sounds). Names that don't match
+  // any loaded sound get a warning and resolve to -1.
+  auto resolveHook = [&](SOUND_DEF_T hook, std::string const& configured,
+                         char const* defaultName,
+                         char const* hookLabel) {
+    if (!configured.empty()) {
+      int idx = common.soundIndex(configured);
+      if (idx < 0)
+        Console::writeWarning(
+            std::string("[sounds] ") + hookLabel +
+            " references unknown sound \"" + configured + "\"");
+      common.soundHook[hook] = idx;
+    } else {
+      common.soundHook[hook] = common.soundIndex(defaultName);
     }
+  };
+  #define COPY_FIELD_SO2(n) resolveHook(Sound##n, sounds.n, defaultSound##n, #n);
+  // Canonical Liero sound names per hook. Kept in sync with tctool's
+  // extracted sound table; serves as the fallback when [sounds] is
+  // missing from tc.cfg.
+  constexpr char const* defaultSoundMenuMoveUp = "moveup";
+  constexpr char const* defaultSoundMenuMoveDown = "movedown";
+  constexpr char const* defaultSoundMenuSelect = "select";
+  constexpr char const* defaultSoundBump = "bump";
+  constexpr char const* defaultSoundBegin = "begin";
+  constexpr char const* defaultSoundReloaded = "reloaded";
+  constexpr char const* defaultSoundAlive = "alive";
+  constexpr char const* defaultSoundNinjaropeThrow = "throw";
   LIERO_SOUNDDEFS(COPY_FIELD_SO2)
   #undef COPY_FIELD_SO2
 }
