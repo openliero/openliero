@@ -37,25 +37,121 @@ The codebase has roughly 80% of the infrastructure rollback needs:
 Worst-case `Level` is 504×350 = 176,400 cells. `Level` stores two parallel vectors:
 
 - `std::vector<unsigned char> data` — ~176 KB
-- `std::vector<Material> materials` — ~176 KB (assuming 1-byte Material; verify)
+- `std::vector<Material> materials` — ~176 KB (`Material` is a single `uint8_t flags` — confirmed in `src/game/material.hpp`)
 
-Plus the fixed-size object pools (nobjects, sobjects, bonuses, worms) — all known small.
+Plus the fixed-size object pools (nobjects, sobjects, wobjects, bonuses, worms) and the variable-size `bobjects` (blood particles, `FastObjectList<BObject>` with `settings->bloodParticleMax` slots).
 
 Total snapshot ≈ **~400 KB**. Two `memcpy`s of 176 KB take ~50 µs on commodity hardware. With `MaxRollback = 7` snapshots resident, working set is ~2.8 MB — fits in L2. **Snapshot cost is a non-issue.**
+
+## `Game` Field Inventory (Step 0 audit, completed)
+
+Auditing `src/game/game.hpp` against the simulation code, each field is classified as:
+- **sim** — read or written by `processFrame()` or its callees; must be in the snapshot
+- **render** — only read by drawing / viewport code; out of snapshot
+- **meta** — controller- or session-owned (e.g. paused, viewports, shared_ptrs to common/settings/sound); out of snapshot
+
+| Field | Class | Notes |
+|---|---|---|
+| `Level level` (data + materials + width/height/origpal/zeroMaterial/oldRandomLevel/oldLevelFile) | sim | `data`/`materials` change every frame via setPixel; static after load: width, height, origpal, zeroMaterial, oldRandomLevel, oldLevelFile. Snapshot only the dynamic parts. |
+| `Rand rand` | sim | Single `uint32_t last`. |
+| `int cycles` | sim | Frame counter. |
+| `int screenFlash` | sim | Written from `sobject.cpp` during sim, decremented in `processFrame`. Read by renderer but also re-written by sim, so it must round-trip. |
+| `bool gotChanged` | sim | Written from `worm.cpp:469` during sim. Currently consumed only by viewport draw — but it's set inside the sim and lives in `Game`, so include for safety. |
+| `int lastKilledIdx` | sim | Updated in damage path. |
+| `Holdazone holdazone` | sim | Game-mode state. |
+| `bool paused` | meta | Controller-level pause; not touched by `processFrame`. |
+| `bool quickSim` | meta | Render-skip flag for replay scrubbing. |
+| `std::vector<std::shared_ptr<Worm>> worms` | sim (per-worm contents) | Snapshot the Worm payloads, not the `shared_ptr`s themselves — pointers stay stable across the rollback window. Skip render-only worm fields: `gamepadName`, `name`, `statsX`. |
+| `BonusList bonuses` (`ExactObjectList<Bonus,99>`) | sim | POD pool. |
+| `WObjectList wobjects` (`ExactObjectList<WObject,600>`) | sim | **Missing from the original Step 2 struct — must be added.** |
+| `SObjectList sobjects` (`ExactObjectList<SObject,700>`) | sim | POD pool. |
+| `NObjectList nobjects` (`ExactObjectList<NObject,600>`) | sim | POD pool. |
+| `BObjectList bobjects` (`FastObjectList<BObject>`) | sim | **Blood particles ARE sim-affecting** — `bobject.cpp` calls `game.rand` and `level.setPixel`. Must snapshot. `FastObjectList` wraps `std::vector<BObject>` of size `settings->bloodParticleMax`; treat as POD-block + count. |
+| `std::vector<Viewport*> viewports` / `spectatorViewports` | render | Pointers owned by controllers. |
+| `std::shared_ptr<Common> common` | meta | TC data; immutable during a session. |
+| `std::shared_ptr<Settings> settings` | meta | Match config; immutable during a session. |
+| `std::shared_ptr<SoundPlayer> soundPlayer` | meta | See "Sound during resim" below. |
+| `std::shared_ptr<StatsRecorder> statsRecorder` | sim? | Stats writes from sim. Decision: **disable stats during resim** (treat like sound) since stats are observational, not load-bearing on game state. Verify in audit. |
+
+**Decision:** `GameSnapshot` covers exactly the fields tagged `sim`. The Step 2 struct definition below is updated accordingly.
+
+## Sound During Resim (Step 5 expanded)
+
+`SoundPlayer` has three methods (`src/game/mixer/player.hpp`): `play(sound, id, loops)`, `stop(id)`, `isPlaying(id)`.
+
+The sim path calls all three (`grep "soundPlayer->"` finds ~30 sites across worm, weapon, sobject, nobject, weapsel). Both `play` and `stop` must be suppressed during resim — suppressing only `play` (as Step 5 originally stated) would let a stop-during-resim leak through and silence a still-valid sound.
+
+`isPlaying` is *read* by sim code to gate `play` calls (e.g. `worm.cpp:1290` gates the launch-loop sound). Two options:
+
+- **Option A (chosen):** Let `isPlaying` return whatever the underlying mixer says. Since both `play` and `stop` are suppressed during resim, the gate just consults the pre-resim mixer state. Its only consequence is whether a (suppressed) `play` would fire — no further sim effect. This is safe.
+- Option B: Track `isPlaying` per-rollback-frame in the snapshot. Unnecessary given A is safe.
+
+**Wrap all three calls** with `if (game.resimulating) return;` (play/stop) and a passthrough for isPlaying. The `Game::resimulating` flag is the single source of truth.
+
+## Transport / Wire Format Changes
+
+The current input wire format is fixed-width (`transport.cpp:349`):
+```
+[PacketInput=1B][frame:u32 LE][input:u8]   // 6 bytes
+```
+Lockstep mode sends one packet per frame and the path is reliable-ordered.
+
+Rollback requires:
+
+1. **Input redundancy.** Each packet carries the last `K` inputs (K = `MaxRollback + 1`, ~8 bytes payload). On packet loss, the next packet still confirms the missing frames without a retransmit round-trip. New format:
+   ```
+   [PacketInput=1B][baseFrame:u32 LE][count:u8][input[count]:u8]   // 6+count bytes
+   ```
+2. **Frame-advantage byte (Step 8).** Append `localFrame:u32 LE` (or a delta — 1 signed byte vs baseFrame is sufficient) so the peer can compute frame skew.
+3. **Channel change.** Move inputs from ENet reliable-ordered to *unreliable-sequenced* — redundancy replaces retransmits and removes head-of-line blocking. Drop any packet older than the last accepted `baseFrame + count - 1`.
+4. **Version gate.** Bump protocol version so a rollback peer refuses to play against a lockstep peer (or vice versa).
+
+Confirmed inputs are inputs the local peer has *received* from the remote — these are the `Confirmed` state in the rollback buffer. Inputs the local peer has *predicted* but not yet received are `Predicted`. No additional flag travels on the wire; the receiver classifies on arrival.
+
+## Buffer Sizing & Player Count
+
+`NetworkController` has `localIdx ∈ {0,1}`, `remoteIdx = localIdx ^ 1` (`networkController.cpp:18-19`). Multiplayer is **strictly 2 worms, 1 per peer**. The `uint8_t localInput` / `uint8_t remoteInput` in the rollback buffer are correct as written.
+
+`MaxRollback = 7` is derived from: at 70 fps each frame is ~14.3 ms; 7 frames = ~100 ms covers one-way input jitter for sessions with up to ~80 ms RTT and ~20 ms additional jitter. Beyond that the player is going to feel rollbacks regardless of buffer size. Increase only with playtest data.
+
+## Disconnect / Stall Semantics
+
+When remote inputs are absent for more than `MaxRollback` frames, the rollback controller stalls (does not advance `simFrame`). Behavior matches existing `NetworkController` lockstep stall — the existing `update()` loop drives `transport_.update()` and the pause/disconnect signaling. **No new disconnect semantics needed**; rollback only changes *when* a frame is treated as confirmed, not the connection lifecycle.
+
+When stalled, the UI shows "waiting for opponent" (already implemented for lockstep — reuse).
+
+## Desync Detection Under Rollback (Step 10, expanded)
+
+Existing checksum infrastructure (`session.hpp:154-165`):
+- Local checksums computed every frame, kept in a 128-entry ring buffer (`checksumBuffer_`).
+- Sent unreliable-unsequenced via `sendChecksum(frame, checksum)`.
+- Compared per-frame in `onChecksum` against the local ring.
+
+Under rollback, the *current* checksum at frame `F` may reflect predicted state. Solution:
+
+- Compute and send the checksum **only when a frame is confirmed** (all remote inputs through `F` received and no rollback re-applied changes it). Cache the checksum *in the snapshot slot* at confirmation time.
+- This drops checksum frequency from ~70/s to "as fast as remote inputs arrive" — still ~70/s under normal play, fewer during stalls.
+- Existing `pendingRemoteChecksums_` buffer logic continues to work; only the producer side changes.
+
+## Snapshot Cost Measurement Plan
+
+Step 1 must include a microbenchmark (cereal save/restore time per call) before Step 4 commits to "save after every confirmed frame". If cereal exceeds ~2 ms per save the parity test in Step 4 becomes slow; in that case interleave Step 2's fast path earlier (build it before Step 4's parity test, then use it).
 
 ## Plan
 
 Each step is independently buildable and verifiable. Do not skip the verification step.
 
-### Step 0 — Audit & instrument (no code change)
+### Step 0 — Audit & instrument (no code change) — ✅ done in this document
 
-Confirm every non-deterministic side effect inside `processFrame()` and its callees. Produce a short audit document listing each external call from the sim path, tagged `(sim-effect | render-only | sound)`. Known categories to verify:
+Audit results are recorded above ("Game Field Inventory" and "Sound During Resim"). Key findings:
 
-- `game.soundPlayer->play/stop/isPlaying` — 30+ sites, expected `sound`
-- Particle spawning — expected `render-only`; **verify it does not feed back into sim**
-- Any logging, printf, or file I/O from sim path
+- Blood particles (`BObject`) **do** affect simulation: `bobject.cpp` calls `game.rand` and `level.setPixel`. Must snapshot.
+- `wobjects` were missing from the original Step 2 struct sketch. Added.
+- `SoundPlayer::stop` must be suppressed alongside `play`. `isPlaying` can pass through safely.
+- `StatsRecorder` writes happen during sim; treat like sound — suppress during resim.
+- No file I/O, logging, or printf in the sim path.
 
-**Exit criteria:** confidence that the only sim-affecting state lives inside the `Game` object graph.
+**Exit criteria met:** all sim-affecting state is enumerated and lives inside the `Game` object graph (plus the side channels — sound, stats — which are explicitly suppressed during resim).
 
 ### Step 1 — Cereal-based snapshot (correctness baseline)
 
@@ -71,18 +167,39 @@ Add `Game::saveSnapshot(std::vector<uint8_t>&)` and `Game::loadSnapshot(std::vec
 
 ```cpp
 struct GameSnapshot {
+    // RNG
     Rand rand;
-    std::array<Worm, MaxWorms> worms;
-    ExactObjectList<NObject> nobjects;
-    ExactObjectList<SObject> sobjects;
-    ExactObjectList<Bonus>   bonuses;
+
+    // Scalars from Game
+    int cycles;
+    int screenFlash;
+    int lastKilledIdx;
+    bool gotChanged;
+    Holdazone holdazone;
+
+    // Worms (2, fixed) — copy only sim fields; skip name/gamepadName/statsX
+    std::array<Worm, 2> worms;
+
+    // Object pools (all sim-affecting)
+    Game::BonusList   bonuses;
+    Game::WObjectList wobjects;
+    Game::SObjectList sobjects;
+    Game::NObjectList nobjects;
+
+    // Blood particles — dynamic capacity (settings->bloodParticleMax)
+    std::vector<BObject> bobjectsArr;
+    std::size_t          bobjectsCount;
+
+    // Level dynamic state (width/height/origpal/etc. are static after load)
     std::vector<uint8_t>  levelData;
     std::vector<Material> levelMaterials;
-    // + scalar fields: cycles, screen shake state, etc.
+
+    // Cached checksum (computed at confirmation, sent under Step 10)
+    uint32_t checksum;
 };
 ```
 
-All `ExactObjectList<T, N>` are fixed-size pools → straight `memcpy`. Level vectors: two `memcpy`s, ~350 KB total.
+All `ExactObjectList<T, N>` are fixed-size pools → straight `memcpy`. Level vectors and `bobjectsArr`: pre-size their buffers at startup (`bloodParticleMax`, `level.width * level.height`) so no allocations happen per save. Save = three `memcpy`s + scalar copies, ~350 KB total.
 
 **Target:** ≤500 µs save + ≤500 µs restore. (At 7 rollback frames × 70 fps × 1 ms = 0.5% CPU budget — negligible.)
 
@@ -120,18 +237,21 @@ New controller alongside `NetworkController`. Initially behaves *identically* to
 
 **Build artifact:** menu still uses `NetworkController`; rollback controller selectable via a hidden debug flag.
 
-### Step 5 — `Game::resimulating` flag + sound suppression
+### Step 5 — `Game::resimulating` flag + side-effect suppression
 
-Add `bool Game::resimulating = false`. Wrap `soundPlayer->play/stop`:
+Add `bool Game::resimulating = false`. Suppress during resim:
+
+- `SoundPlayer::play` — early return
+- `SoundPlayer::stop` — early return (do **not** silence valid sounds)
+- `SoundPlayer::isPlaying` — pass through (safe, see "Sound During Resim" above)
+- `StatsRecorder` writes — early return at the recorder boundary
 
 ```cpp
-void SoundPlayer::play(...) {
-    if (game.resimulating) return;
-    // ...
-}
+void SoundPlayer::play(...) { if (game.resimulating) return; /* ... */ }
+void SoundPlayer::stop(...) { if (game.resimulating) return; /* ... */ }
 ```
 
-**Test:** assert sound `play` count over an `N → snapshot → restore → N` round-trip equals a single `N`-frame run (no double sounds).
+**Test:** assert sound `play` count and stats event count over an `N → snapshot → restore → N` round-trip equals a single `N`-frame run.
 
 **Build artifact:** behavior-neutral in non-rollback play.
 
@@ -160,9 +280,21 @@ When real input arrives for frame F and differs from prediction:
 
 **Build artifact:** rollback works end-to-end at the algorithm level.
 
+### Step 7.5 — Transport: input redundancy + protocol bump
+
+Before frame-advantage (Step 8), change the input wire format per "Transport / Wire Format Changes" above:
+
+- Packet carries `[baseFrame][count][input[count]]` with `count = MaxRollback + 1`.
+- Move from reliable-ordered to unreliable-sequenced; drop stale packets at the receiver.
+- Bump protocol version; refuse cross-mode play.
+
+**Verify:** with 10% simulated packet loss, no input is ever missed at the receiver (every frame eventually gets a confirmed input within MaxRollback).
+
+**Build artifact:** rollback survives lossy links without retransmit stalls.
+
 ### Step 8 — Frame-advantage / time sync
 
-Each peer includes its current local frame number in input packets (1 extra byte). If local is ≥2 frames ahead of remote, stall 1 frame. Mirrors GGPO's time-sync.
+Each peer includes its current local frame number in input packets (as a signed 8-bit delta vs `baseFrame`, no new bytes if packed into the existing layout, or +1 byte otherwise). If local is ≥2 frames ahead of remote, stall 1 frame. Mirrors GGPO's time-sync.
 
 **Verify:** under simulated 30/60/100 ms RTT, neither peer is >2 frames ahead of the other for sustained windows.
 
@@ -205,8 +337,10 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 | Hidden non-determinism only surfaces under rollback | Medium | High | Step 0 audit; step 1 cereal oracle; step 7 fuzz harness |
 | Snapshot performance worse than estimated | Low | Medium | Step 2 measured before commitment; cereal fallback always available |
 | Sound deferral (step 9) becomes a rabbit hole | Medium | Low | Step 9 explicitly allows shipping the "suppress" version |
-| `Material` is larger than 1 byte → snapshot >400 KB | Low | Low | Verify in step 2; still well under budget even at 4× |
-| Particle system feeds back into sim | Low | High | Step 0 explicitly checks this |
+| ~~`Material` is larger than 1 byte~~ | — | — | Resolved: `Material` is `uint8_t flags`. |
+| ~~Particle system feeds back into sim~~ | — | — | Resolved: blood particles **do** feed back (rand + setPixel). Included in snapshot. |
+| Cereal save cost makes Step 4 parity test slow | Medium | Low | Step 1 measures; pull Step 2 forward if needed. |
+| StatsRecorder writes leak through resim | Medium | Low | Step 5 suppresses at recorder boundary. |
 
 ## Out of Scope (Defer)
 
