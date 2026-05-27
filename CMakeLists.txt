@@ -377,6 +377,13 @@ if(OPENLIERO_BUILD_TESTS)
     Catch2::Catch2WithMain)
   catch_discover_tests(test_cereal_types DISCOVERY_MODE PRE_TEST)
 
+  add_executable(test_snapshot_roundtrip src/tests/test_snapshot_roundtrip.cpp)
+  target_link_libraries(test_snapshot_roundtrip PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_snapshot_roundtrip
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
+  )
+
   add_executable(test_versioning src/tests/test_versioning.cpp)
   target_link_libraries(test_versioning PRIVATE
     game

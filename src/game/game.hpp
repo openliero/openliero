@@ -81,6 +81,12 @@ struct Game
 	void doHealing(Worm& w, int amount);
 	void postClone(Game& original, bool complete = false);
 
+	// Full mid-game state snapshot (rollback Step 1 baseline). Round-trips
+	// every sim-affecting field via cereal; see
+	// src/game/serialization/snapshot.hpp.
+	void saveSnapshot(std::vector<uint8_t>& out) const;
+	void loadSnapshot(std::vector<uint8_t> const& in);
+
 	void spawnZone();
 
 	Material pixelMat(int x, int y)

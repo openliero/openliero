@@ -12,6 +12,10 @@
 #include "weapsel.hpp"
 #include "constants.hpp"
 #include "ai/predictive_ai.hpp"
+#include "serialization/snapshot.hpp"
+
+#include <cereal/archives/portable_binary.hpp>
+#include <sstream>
 
 Game::Game(
 	std::shared_ptr<Common> common,
@@ -751,4 +755,23 @@ void Game::postClone(Game& original, bool complete)
 		w = std::make_shared<Worm>(*w);
 	}
 
+}
+
+void Game::saveSnapshot(std::vector<uint8_t>& out) const
+{
+	std::ostringstream ss(std::ios::binary);
+	{
+		cereal::PortableBinaryOutputArchive ar(ss);
+		saveGameSnapshot(ar, *this);
+	}
+	std::string const& buf = ss.str();
+	out.assign(buf.begin(), buf.end());
+}
+
+void Game::loadSnapshot(std::vector<uint8_t> const& in)
+{
+	std::string buf(in.begin(), in.end());
+	std::istringstream ss(std::move(buf), std::ios::binary);
+	cereal::PortableBinaryInputArchive ar(ss);
+	loadGameSnapshot(ar, *this);
 }

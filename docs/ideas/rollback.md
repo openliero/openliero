@@ -196,7 +196,7 @@ Audit results are recorded above ("Game Field Inventory" and "Sound During Resim
 
 **Exit criteria met:** all sim-affecting state is enumerated and lives inside the `Game` object graph (plus the side channels — sound, stats — which are explicitly suppressed during resim).
 
-### Step 1 — Cereal-based snapshot (correctness baseline)
+### Step 1 — Cereal-based snapshot (correctness baseline) — ✅ done
 
 Add `Game::saveSnapshot(std::vector<uint8_t>&)` and `Game::loadSnapshot(std::vector<uint8_t> const&)` using the existing `cerealWrite/cerealRead`.
 
@@ -458,3 +458,16 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 ## Learnings
 
 *(Append as each step lands. Format: `### Step N — [title] (YYYY-MM-DD)` then notes.)*
+
+### Step 1 — Cereal-based snapshot (2026-05-27)
+
+- The existing `cereal_types.hpp` Game save/load is replay-oriented and **omits** the object pools (bonuses/wobjects/sobjects/nobjects/bobjects) and `Holdazone`. A full mid-game snapshot needs all of them. Solution: a separate `serialization/snapshot.hpp` that composes the existing Game save/load with the extra state, leaving replay format untouched.
+- `NObject::firedBy` / `WObject::firedBy` (`WormWeapon*`) had to be encoded; chosen scheme is `(wormIdx:int8, slot:int8)` resolved to `&worms[i]->weapons[j]` after worms are reconstructed. Cheap and survives the worm-recreation that the existing Game load does.
+- `ExactObjectList<T,Limit>` round-trip preserves **slot identity** (per-slot used flag + raw rewrite of `freeList` bits + `count`). Required because slot index drives the order in which `getFreeObject` hands out new slots, which would otherwise diverge from the source sim. Cannot use `getFreeObject` during load because it picks the lowest free slot, not slot `i`.
+- `Level::materials` is intentionally not serialized — it's rederived from `level.data` + `Common::materials` in the existing Level load. Saves ~176 KB per snapshot for free.
+- Microbench (Release build, ~500 frames of warm-up, snapshot size **~196 KB**):
+  - save ≈ 211 µs
+  - load ≈ 122 µs
+  - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
+- Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
+- New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
