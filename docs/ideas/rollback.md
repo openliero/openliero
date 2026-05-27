@@ -75,6 +75,49 @@ Auditing `src/game/game.hpp` against the simulation code, each field is classifi
 
 **Decision:** `GameSnapshot` covers exactly the fields tagged `sim`. The Step 2 struct definition below is updated accordingly.
 
+### Worm copy semantics (clarification)
+
+`Worm` is **not** a POD type — `memcpy` is unsafe. It contains:
+
+- `std::shared_ptr<WormSettings> settings` — meta (input bindings, name, color); refcount-managed
+- `std::shared_ptr<WormAI> ai` — meta in network play (AI excluded from netplay per Phase 1)
+- `Ninjarope ninjarope` containing `Worm* anchor` — sim, but the pointer targets the *other* worm in `game.worms`, which has stable storage across the rollback window
+- `WormWeapon weapons[NUM_WEAPONS]` each with `Weapon const* type` — sim, pointer into immutable `Common` data
+- All other fields are POD scalars / fixed arrays
+
+**Rule:** snapshot Worm via field-wise copy (or plain `operator=`), never `memcpy`. The raw pointers (`anchor`, `type`) are safe to copy by value because their targets are stable. The shared_ptrs in the snapshot's stored Worm copies are kept alive correctly through normal refcount semantics — but the snapshot doesn't actually *need* them. To keep snapshots cheap and avoid touching atomics on save/restore, the snapshot stores a **WormSimState** struct containing only the sim fields (everything except `settings`, `ai`, `cleanControlStates`, `statsX`). On restore, fields are written into the live `Worm` in place; `settings`/`ai`/etc. are left untouched on the live object.
+
+**Sim fields of Worm** (explicit list, for Step 2): `pos`, `vel`, `logicRespawn`, `hotspotX/Y`, `aimingAngle`, `aimingSpeed`, `ableToJump`, `ableToDig`, `keyChangePressed`, `movable`, `animate`, `visible`, `ready`, `flag`, `makeSightGreen`, `health`, `lives`, `kills`, `timer`, `killedTimer`, `currentFrame`, `flags`, `ninjarope` (whole struct), `currentWeapon`, `lastKilledByIdx`, `fireCone`, `leaveShellTimer`, `reacts[4]`, `weapons[NUM_WEAPONS]`, `direction`, `controlStates`, `prevControlStates`, `steerableSumX/Y`, `steerableCount`, `index`.
+
+**Meta fields (skip):** `settings`, `ai`, `cleanControlStates` (LocalController-only), `statsX` (renderer-only).
+
+### Side-effect suppression during *prediction* (not only resim)
+
+The plan's Step 5 talks about `resimulating = true` during the resim window, but the same hazard exists for **predicted frames** on first execution: a sound or stats event emitted from a predicted frame that later gets rolled back has already escaped. Two options:
+
+- **Option A (chosen): treat predicted frames as "speculative" too.** Repurpose the flag as `Game::speculative` (true during prediction *and* during resim). Sound/stats suppressed whenever `speculative`. Consequence: on confirmation of a frame whose prediction was correct, the transient sound/stat for that frame is lost. Accept this for v1 — fighting-game rollback implementations do the same.
+- Option B: capture-and-replay (buffer side effects keyed by frame, flush on confirmation). Deferred to the "correct version" in Step 9.
+
+Rename the flag in Step 5 accordingly. `StatsRecorder` suppression follows the same flag.
+
+### `screenFlash` / `gotChanged` consumption timing
+
+Both fields are written by sim and read by the renderer. Render runs only between `advance()` calls, never mid-resim (Step 9), so the snapshot captures their post-sim value before the renderer consumes them. On rollback-restore the values revert to their post-sim state at frame `F-1` and the renderer simply sees a new sequence. Visible artifact: a flash that played during a mispredicted frame may "un-play" visually on the next render — acceptable, mirrors the audio suppression tradeoff.
+
+### Step 8 frame-advantage encoding (pin down)
+
+Per Step 7.5, each packet carries `baseFrame` and `count = MaxRollback + 1`. The local frame at send time lies in `[baseFrame, baseFrame + count - 1]` — that's `count` values, so the delta fits in `uint8_t` (no sign needed). Encode as:
+
+```
+[PacketInput=1B][baseFrame:u32 LE][count:u8][localDelta:u8][input[count]:u8]
+```
+
+`localDelta` is the sender's `simFrame - baseFrame` at the moment of send. Receiver reconstructs `remoteLocalFrame = baseFrame + localDelta` and compares to its own `simFrame` for the time-sync calculation. Adds exactly 1 byte over Step 7.5.
+
+### Weapon selection phase
+
+Rollback applies **only to `StateGame`** (`processFrame` path). The `StateWeaponSelection` phase in `NetworkController::advanceWeaponSelection` is menu-driven and tolerant of input delay; keep it on lockstep with the existing 3-frame delay. The rollback buffer is empty/inactive during weapon selection. Document this in the Step 4 controller.
+
 ## Sound During Resim (Step 5 expanded)
 
 `SoundPlayer` has three methods (`src/game/mixer/player.hpp`): `play(sound, id, loops)`, `stop(id)`, `isPlaying(id)`.
@@ -102,7 +145,7 @@ Rollback requires:
    ```
    [PacketInput=1B][baseFrame:u32 LE][count:u8][input[count]:u8]   // 6+count bytes
    ```
-2. **Frame-advantage byte (Step 8).** Append `localFrame:u32 LE` (or a delta — 1 signed byte vs baseFrame is sufficient) so the peer can compute frame skew.
+2. **Frame-advantage byte (Step 8).** Append `localDelta:u8` = `simFrame - baseFrame` at send time (range `[0, count-1]`, unsigned suffices). See "Step 8 frame-advantage encoding" below.
 3. **Channel change.** Move inputs from ENet reliable-ordered to *unreliable-sequenced* — redundancy replaces retransmits and removes head-of-line blocking. Drop any packet older than the last accepted `baseFrame + count - 1`.
 4. **Version gate.** Bump protocol version so a rollback peer refuses to play against a lockstep peer (or vice versa).
 
@@ -177,8 +220,9 @@ struct GameSnapshot {
     bool gotChanged;
     Holdazone holdazone;
 
-    // Worms (2, fixed) — copy only sim fields; skip name/gamepadName/statsX
-    std::array<Worm, 2> worms;
+    // Worms (2, fixed) — sim-only field set, NOT a full Worm (Worm holds
+    // shared_ptrs and so is not memcpy-safe). See "Worm copy semantics" above.
+    std::array<WormSimState, 2> worms;
 
     // Object pools (all sim-affecting)
     Game::BonusList   bonuses;
@@ -237,9 +281,9 @@ New controller alongside `NetworkController`. Initially behaves *identically* to
 
 **Build artifact:** menu still uses `NetworkController`; rollback controller selectable via a hidden debug flag.
 
-### Step 5 — `Game::resimulating` flag + side-effect suppression
+### Step 5 — `Game::speculative` flag + side-effect suppression
 
-Add `bool Game::resimulating = false`. Suppress during resim:
+Add `bool Game::speculative = false`. Set to `true` both during initial prediction (frames whose remote input is predicted) **and** during resim. See "Side-effect suppression during *prediction*" above for the rationale. Suppress when `speculative`:
 
 - `SoundPlayer::play` — early return
 - `SoundPlayer::stop` — early return (do **not** silence valid sounds)
@@ -247,8 +291,8 @@ Add `bool Game::resimulating = false`. Suppress during resim:
 - `StatsRecorder` writes — early return at the recorder boundary
 
 ```cpp
-void SoundPlayer::play(...) { if (game.resimulating) return; /* ... */ }
-void SoundPlayer::stop(...) { if (game.resimulating) return; /* ... */ }
+void SoundPlayer::play(...) { if (game.speculative) return; /* ... */ }
+void SoundPlayer::stop(...) { if (game.speculative) return; /* ... */ }
 ```
 
 **Test:** assert sound `play` count and stats event count over an `N → snapshot → restore → N` round-trip equals a single `N`-frame run.
@@ -294,7 +338,7 @@ Before frame-advantage (Step 8), change the input wire format per "Transport / W
 
 ### Step 8 — Frame-advantage / time sync
 
-Each peer includes its current local frame number in input packets (as a signed 8-bit delta vs `baseFrame`, no new bytes if packed into the existing layout, or +1 byte otherwise). If local is ≥2 frames ahead of remote, stall 1 frame. Mirrors GGPO's time-sync.
+Each peer includes its current local frame number in input packets as `localDelta:u8` = `simFrame - baseFrame` (+1 byte, see "Step 8 frame-advantage encoding" above). If local is ≥2 frames ahead of remote, stall 1 frame. Mirrors GGPO's time-sync.
 
 **Verify:** under simulated 30/60/100 ms RTT, neither peer is >2 frames ahead of the other for sustained windows.
 
