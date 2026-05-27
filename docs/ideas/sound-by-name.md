@@ -663,7 +663,7 @@ would shift simulation state. New tests in
 `src/tests/test_sound_player.cpp` cover the four assertions above;
 all 101 tests pass.
 
-### Step 7 — Final regression test for the issue #44 scenario
+### Step 7 — Final regression test for the issue #44 scenario ✅ (landed)
 
 **What.** Construct a TC fixture (in-tree, under
 `src/tests/fixtures/` or similar) where one entry in
@@ -680,6 +680,31 @@ the full load pipeline.
   is a silent no-op, not a crash.
 
 This step closes the issue.
+
+**As landed.** `Common::load` previously threw `std::runtime_error`
+when a sound's WAV file was absent on disk, taking the entire TC
+load down with it. It now calls `wavNode.exists()` first; on a miss
+it emits a `Console::writeWarning` and leaves the slot with
+`sound == nullptr`, mirroring the disabled-slot behavior tc_tool
+already had since Step 1. Indices in `Common::sounds` therefore
+stay aligned with `[types].sounds` regardless of which WAV files
+are actually present.
+
+The fixture is built at test time rather than checked in: the test
+recursively copies `data/TC/openliero` into a tempdir via
+`std::filesystem::copy`, deletes `sounds/shotgun.wav` (sound index
+0, with `exp2` and `large_explosion`'s `startSound` living further
+down the array), and loads the resulting TC. New test in
+`src/tests/test_tc_load.cpp`:
+* `common->sounds[soundIndex("shotgun")].sound == nullptr` and
+  the slot keeps its name.
+* `soundIndex("exp2")` and `sounds[exp2Idx].name == "exp2"` are
+  unchanged — the regression check for the shifting bug.
+* `large_explosion`'s `startSound` still points at the slot named
+  `exp2`, not at whatever shifted into its old index.
+* `NullSoundPlayer::play(shotgunIdx)` doesn't crash.
+
+All 102 tests pass.
 
 ## 7. Acceptance criteria
 

@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -173,6 +174,62 @@ TEST_CASE("[sounds] unknown name resolves to -1", "[tc_load]") {
   REQUIRE(c.soundHook[SoundMenuMoveUp] == c.soundIndex("alpha"));
   // Unset entries default to -1.
   REQUIRE(c.soundHook[SoundBump] == -1);
+}
+
+// Regression for issue #44: a TC whose [types].sounds lists a sound whose
+// WAV file is missing on disk must still load — the slot survives with
+// sound == nullptr, indices of later sounds are unchanged, and playing the
+// missing slot is a silent no-op (not a crash, not the wrong sound).
+TEST_CASE("TC with a missing sound WAV loads and keeps indices stable",
+          "[tc_load][issue44]") {
+  namespace fs = std::filesystem;
+  fs::path const tempTc =
+      fs::temp_directory_path() / "openliero_test_missing_sound_tc";
+  fs::remove_all(tempTc);
+  fs::copy(
+      getTcPath(), tempTc,
+      fs::copy_options::recursive | fs::copy_options::copy_symlinks);
+
+  // Pick a sound that is NOT the last entry so we can verify later
+  // indices don't shift. "shotgun" is sounds[0] in the shipped TC, and
+  // "exp2" lives further down the array, referenced by the
+  // "large_explosion" sobject.
+  fs::path const victim = tempTc / "sounds" / "shotgun.wav";
+  REQUIRE(fs::exists(victim));
+  fs::remove(victim);
+
+  auto common = std::make_shared<Common>();
+  REQUIRE_NOTHROW(common->load(FsNode(tempTc.string())));
+
+  int const shotgunIdx = common->soundIndex("shotgun");
+  REQUIRE(shotgunIdx >= 0);
+  REQUIRE(common->sounds[shotgunIdx].name == "shotgun");
+  REQUIRE(common->sounds[shotgunIdx].sound == nullptr);
+
+  // Later entries must still resolve to the same (named) slot — the
+  // shifting bug from issue #44 would have moved them up by one.
+  int const exp2Idx = common->soundIndex("exp2");
+  REQUIRE(exp2Idx > shotgunIdx);
+  REQUIRE(common->sounds[exp2Idx].name == "exp2");
+  REQUIRE(common->sounds[exp2Idx].sound != nullptr);
+
+  // The sobject that plays "exp2" must point at the slot that's still
+  // named "exp2", not at whatever happens to live at the shifted index.
+  SObjectType const* largeExp = nullptr;
+  for (auto const& s : common->sobjectTypes)
+    if (s.idStr == "large_explosion")
+      largeExp = &s;
+  REQUIRE(largeExp != nullptr);
+  REQUIRE(largeExp->startSound == exp2Idx);
+
+  // Playing the missing slot must be a silent no-op, not a crash. Run
+  // through the production play wrapper (NullSoundPlayer dispatches to
+  // playImpl, which does nothing — but the wrapper still touches
+  // Common::sounds[idx] on the SOUND_DEF_T overload path).
+  NullSoundPlayer p;
+  REQUIRE_NOTHROW(p.play(shotgunIdx));
+
+  fs::remove_all(tempTc);
 }
 
 TEST_CASE("TC supports game initialization", "[tc_load]") {
