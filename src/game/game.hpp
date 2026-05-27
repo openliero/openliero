@@ -87,6 +87,12 @@ struct Game
 	void saveSnapshot(std::vector<uint8_t>& out) const;
 	void loadSnapshot(std::vector<uint8_t> const& in);
 
+	// Fast in-memory snapshot path (rollback Step 2). Writes/reads directly
+	// into a pre-allocated GameSnapshot — no serialisation, no allocation in
+	// the steady state. See src/game/serialization/fast_snapshot.hpp.
+	void saveSnapshotFast(struct GameSnapshot& out) const;
+	void loadSnapshotFast(struct GameSnapshot const& in);
+
 	void spawnZone();
 
 	Material pixelMat(int x, int y)

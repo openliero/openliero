@@ -384,6 +384,13 @@ if(OPENLIERO_BUILD_TESTS)
     DISCOVERY_MODE PRE_TEST
   )
 
+  add_executable(test_snapshot_fast src/tests/test_snapshot_fast.cpp)
+  target_link_libraries(test_snapshot_fast PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_snapshot_fast
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
+  )
+
   add_executable(test_versioning src/tests/test_versioning.cpp)
   target_link_libraries(test_versioning PRIVATE
     game

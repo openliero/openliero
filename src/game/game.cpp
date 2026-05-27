@@ -13,6 +13,7 @@
 #include "constants.hpp"
 #include "ai/predictive_ai.hpp"
 #include "serialization/snapshot.hpp"
+#include "serialization/fast_snapshot.hpp"
 
 #include <cereal/archives/portable_binary.hpp>
 #include <sstream>
@@ -774,4 +775,73 @@ void Game::loadSnapshot(std::vector<uint8_t> const& in)
 	std::istringstream ss(std::move(buf), std::ios::binary);
 	cereal::PortableBinaryInputArchive ar(ss);
 	loadGameSnapshot(ar, *this);
+}
+
+void Game::saveSnapshotFast(GameSnapshot& snap) const
+{
+	snap.rand = rand;
+	snap.cycles = cycles;
+	snap.screenFlash = screenFlash;
+	snap.lastKilledIdx = lastKilledIdx;
+	snap.gotChanged = gotChanged;
+	snap.holdazone = holdazone;
+
+	for (std::size_t i = 0; i < worms.size() && i < snap.worms.size(); ++i)
+		saveWormSimState(snap.worms[i], *worms[i]);
+
+	// ExactObjectList<T,N> contents are trivially copyable POD blocks; the
+	// compiler-generated copy assignment is a straight memcpy of the fixed
+	// arr/freeList/count layout.
+	snap.bonuses = bonuses;
+	snap.wobjects = wobjects;
+	snap.sobjects = sobjects;
+	snap.nobjects = nobjects;
+
+	snap.bobjectsCount = bobjects.count;
+	if (snap.bobjectsArr.size() < bobjects.limit)
+		snap.bobjectsArr.resize(bobjects.limit);
+	if (bobjects.count > 0)
+		std::memcpy(snap.bobjectsArr.data(), bobjects.arr.data(),
+		            bobjects.count * sizeof(BObject));
+
+	std::size_t const cells = static_cast<std::size_t>(level.width) *
+	                          static_cast<std::size_t>(level.height);
+	if (snap.levelData.size() != cells) snap.levelData.resize(cells);
+	if (snap.levelMaterials.size() != cells) snap.levelMaterials.resize(cells);
+	if (cells > 0) {
+		std::memcpy(snap.levelData.data(), level.data.data(), cells);
+		std::memcpy(snap.levelMaterials.data(), level.materials.data(),
+		            cells * sizeof(Material));
+	}
+}
+
+void Game::loadSnapshotFast(GameSnapshot const& snap)
+{
+	rand = snap.rand;
+	cycles = snap.cycles;
+	screenFlash = snap.screenFlash;
+	lastKilledIdx = snap.lastKilledIdx;
+	gotChanged = snap.gotChanged;
+	holdazone = snap.holdazone;
+
+	for (std::size_t i = 0; i < worms.size() && i < snap.worms.size(); ++i)
+		restoreWormSimState(*worms[i], snap.worms[i]);
+
+	bonuses = snap.bonuses;
+	wobjects = snap.wobjects;
+	sobjects = snap.sobjects;
+	nobjects = snap.nobjects;
+
+	bobjects.count = snap.bobjectsCount;
+	if (snap.bobjectsCount > 0)
+		std::memcpy(bobjects.arr.data(), snap.bobjectsArr.data(),
+		            snap.bobjectsCount * sizeof(BObject));
+
+	std::size_t const cells = static_cast<std::size_t>(level.width) *
+	                          static_cast<std::size_t>(level.height);
+	if (cells > 0) {
+		std::memcpy(level.data.data(), snap.levelData.data(), cells);
+		std::memcpy(level.materials.data(), snap.levelMaterials.data(),
+		            cells * sizeof(Material));
+	}
 }

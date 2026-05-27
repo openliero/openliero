@@ -206,7 +206,7 @@ Add `Game::saveSnapshot(std::vector<uint8_t>&)` and `Game::loadSnapshot(std::vec
 
 **Build artifact:** test only, no behavior change.
 
-### Step 2 — Fast snapshot path (`memcpy` of POD regions)
+### Step 2 — Fast snapshot path (`memcpy` of POD regions) — ✅ done
 
 ```cpp
 struct GameSnapshot {
@@ -471,3 +471,15 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 2 — Fast snapshot path (2026-05-27)
+
+- Implemented as `Game::saveSnapshotFast(GameSnapshot&) / loadSnapshotFast` next to the cereal pair, sharing the `GameSnapshot` definition in `src/game/serialization/fast_snapshot.hpp`.
+- The plan's `useFastSnapshot` flag turned out to be unnecessary: the cereal and fast paths are independent methods, so a future caller (Step 3's RollbackBuffer) just picks one. Cereal stays as the oracle.
+- **Worm** is copied via a hand-written `WormSimState` (per-field). `memcpy(Worm)` would touch `shared_ptr<WormSettings>`/`shared_ptr<WormAI>` reference counts and is unsafe; the field-wise path leaves those live shared_ptrs untouched on restore. `Ninjarope::anchor` and `WormWeapon::type` are raw pointers but their targets (other worms, `Common::weapons`) are stable across the rollback window, so plain value copy is fine.
+- **ExactObjectList<T,N>** pools (`Bonus`, `WObject`, `SObject`, `NObject`): the compiler-generated copy assignment is a straight memcpy of the fixed `arr/freeList/count` layout. No special handling needed; `firedBy`/`type` pointers inside the elements stay valid on restore for the same reason as above.
+- **FastObjectList<BObject>**: the snapshot stores a `std::vector<BObject>` pre-sized to `bobjects.limit` (`prepare(game)` once) plus the live `count`. Save/load `memcpy` only the used prefix.
+- **Level**: only `data` + `materials` are dynamic; `width`/`height`/`origpal`/etc. are static after generation and live on `Game::level` untouched. Pre-sized in `prepare`.
+- Microbench (Debug build, ~500 frames warm-up): save ≈ 7.9 µs, load ≈ 7.7 µs — ~30× under the 500 µs plan target. Release should be substantially faster still; not worth measuring until Step 4 has a CPU budget to defend.
+- Test (`src/tests/test_snapshot_fast.cpp`) covers three properties: round-trip parity vs. a no-restore control, cereal-vs-fast cross-check at five snapshot points across a 2000-frame fuzz, and the microbench with a 2 ms generous bound.
+- New: `src/game/serialization/fast_snapshot.hpp`, `Game::saveSnapshotFast/loadSnapshotFast`, `src/tests/test_snapshot_fast.cpp`, CMake entry.
