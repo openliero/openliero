@@ -307,6 +307,73 @@ No rollback yet → the verification test from step 7 will fail under mispredict
 
 **Build artifact:** gameplay works under zero jitter; degrades visibly under jitter.
 
+### Test harness: `JitterTransport` (built in Step 4, reused throughout)
+
+All rollback behavior is testable on a single machine using the same in-process loopback pattern already established in `src/tests/test_network_controller.cpp` (see `LoopbackFixture`). Build a `JitterTransport` helper alongside that fixture — a configurable queue between two `RollbackController`s that models real-world packet behavior without touching ENet.
+
+```cpp
+struct JitterTransport {
+    struct Params {
+        std::mt19937 rng{0xC0FFEE};       // deterministic seed for reproducibility
+        int minDelayFrames = 0;           // floor on delivery delay
+        int maxDelayFrames = 0;           // ceiling on delivery delay (uniform random)
+        double lossProbability = 0.0;     // 0..1; dropped packets are silently discarded
+        double duplicateProbability = 0.0;// 0..1; duplicated packets are delivered twice
+        int reorderWindow = 0;            // if >0, allow out-of-order delivery within window
+    };
+
+    struct InFlight {
+        int deliverAtFrame;               // localFrame at which to deliver
+        std::vector<uint8_t> packet;      // raw bytes
+    };
+
+    Params params;
+    std::vector<InFlight> aToB, bToA;
+    int currentFrame = 0;
+
+    // Called by the controller's send callback.
+    void send(std::vector<InFlight>& queue, std::vector<uint8_t> packet);
+
+    // Called once per local tick. Drains anything whose deliverAtFrame <= currentFrame.
+    void tick(/*deliver callbacks for A and B*/);
+};
+```
+
+Use this for every rollback test below by varying `Params`. Seed the RNG so failures are reproducible (the seed is part of the test name / Catch2 section).
+
+**Why a custom transport instead of `tc qdisc netem`:** netem requires root, only works on Linux, and can't be wired into CI. The in-process harness runs the same code paths as ENet (Step 7.5 onward parses the same wire format from a `std::vector<uint8_t>` regardless of source) and gives bit-exact reproducibility.
+
+### Test matrix (rollback-specific)
+
+Add these to `src/tests/`. Each test runs entirely on one machine; no localhost ENet needed.
+
+| Test file | Step | What it verifies |
+|---|---|---|
+| `test_snapshot_roundtrip.cpp` | 1 | Cereal save → 200 frames → restore → 200 frames matches no-restore control via `fastGameChecksum` every frame. |
+| `test_snapshot_fast.cpp` | 2 | Fast (memcpy) snapshot byte-equivalent to cereal snapshot across 5000-frame fuzz run; also measures save/restore time (asserts ≤500 µs) and reports it. |
+| `test_rollback_buffer.cpp` | 3 | Ring buffer lookup, wrap, eviction, predicted/confirmed transitions; pure data-structure test. |
+| `test_rollback_lockstep_parity.cpp` | 4 | `RollbackController` with no jitter produces frame-by-frame identical state hashes to `NetworkController` over 1000 frames with scripted inputs. |
+| `test_speculative_suppression.cpp` | 5 | Two runs of `N → snapshot → restore → N` frames produce identical `SoundPlayer::play` and `StatsRecorder` event counts as a single `N`-frame run. Uses a counting mock for both. |
+| `test_prediction_no_rollback.cpp` | 6 | With zero jitter the predicted input equals the real input; no rollback ever triggers; gameplay identical to lockstep. |
+| `test_rollback_correctness.cpp` | 7 | **The headline test.** Two `RollbackController`s wired via `JitterTransport` with `minDelay=0, maxDelay=8`, 10% loss, run 5000 frames with PRNG-driven random inputs. Final state hashes match a zero-jitter control run. Repeat for `MaxRollback ∈ {1, 4, 8}` and 3 RNG seeds (= 9 sub-cases). |
+| `test_rollback_packet_loss.cpp` | 7.5 | With 10% loss + redundancy, every frame eventually receives confirmed input within `MaxRollback`; no stalls under steady-state. |
+| `test_rollback_reorder.cpp` | 7.5 | Packets reordered within `reorderWindow=3` are deduplicated correctly; no duplicate input application. |
+| `test_frame_advantage.cpp` | 8 | With asymmetric delay (A→B 2 frames, B→A 6 frames), after 1000 frames the faster peer has stalled enough that frame advantage stays within ±2. |
+| `test_rollback_desync.cpp` | 10 | (a) Two clean runs over 5000 frames produce zero desync alarms. (b) A test build with a 1-bit nondeterminism injection triggers desync detection within 200 frames. |
+| `test_rollback_long_haul.cpp` | 11 | 50 000-frame run with realistic params (`maxDelay=7`, 2% loss, frame-advantage on) shows no asserts, no leaks, bounded snapshot memory. |
+
+Catch2 sub-sections (`SECTION`) for parameter sweeps within each file; the seed/jitter params print on failure for repro.
+
+### Manual / interactive testing
+
+A debug menu toggle (Step 11) lets the user enable the same `JitterTransport` in an actual gameplay session against a local second instance (or against themselves via the existing 2-controller local mode running through the network path). Two knobs in the dev HUD:
+
+- `+/-` adjust simulated one-way delay (0–200 ms)
+- `[/]` adjust simulated loss (0–20%)
+- Display: `RB:n` (frames resimulated this tick), `D:±n` (frame advantage), `L:n%` (loss)
+
+This is how the developer feels rollback before promoting it to default in Step 11. Combined with the automated harness, no `tc qdisc netem` or two-machine setup is needed at any point.
+
 ### Step 7 — Rollback on misprediction
 
 When real input arrives for frame F and differs from prediction:
@@ -315,12 +382,7 @@ When real input arrives for frame F and differs from prediction:
 2. Re-apply confirmed inputs through to current local frame, snapshotting as we go
 3. `resimulating = true` throughout the resim window
 
-**Write the verification harness before the implementation** (this is effectively the spec):
-
-- Two `Game` instances + `RollbackController`s connected via in-process transport with configurable jitter buffer (0–8 frame random delay each direction)
-- Run 5000 frames with random inputs, two seeds
-- Final state hashes must match a zero-jitter control run
-- Test with `MaxRollback = 1, 4, 8`
+**Write the verification harness before the implementation** (this is the spec). See `JitterTransport` and `test_rollback_correctness.cpp` in the test matrix above — that test must compile (failing) before Step 7 implementation begins, and pass before Step 7 is complete.
 
 **Build artifact:** rollback works end-to-end at the algorithm level.
 
@@ -332,7 +394,7 @@ Before frame-advantage (Step 8), change the input wire format per "Transport / W
 - Move from reliable-ordered to unreliable-sequenced; drop stale packets at the receiver.
 - Bump protocol version; refuse cross-mode play.
 
-**Verify:** with 10% simulated packet loss, no input is ever missed at the receiver (every frame eventually gets a confirmed input within MaxRollback).
+**Verify:** `test_rollback_packet_loss.cpp` and `test_rollback_reorder.cpp` from the test matrix above.
 
 **Build artifact:** rollback survives lossy links without retransmit stalls.
 
@@ -340,7 +402,7 @@ Before frame-advantage (Step 8), change the input wire format per "Transport / W
 
 Each peer includes its current local frame number in input packets as `localDelta:u8` = `simFrame - baseFrame` (+1 byte, see "Step 8 frame-advantage encoding" above). If local is ≥2 frames ahead of remote, stall 1 frame. Mirrors GGPO's time-sync.
 
-**Verify:** under simulated 30/60/100 ms RTT, neither peer is >2 frames ahead of the other for sustained windows.
+**Verify:** `test_frame_advantage.cpp` from the test matrix above (asymmetric A→B / B→A delay; assert frame advantage stays within ±2 in steady state).
 
 **Build artifact:** smoother latency distribution.
 
@@ -350,7 +412,7 @@ Each peer includes its current local frame number in input packets as `localDelt
 - **Audio (simple version):** suppress during resim, accept that some transient sounds in mispredicted frames will be lost. Ship this first.
 - **Audio (correct version, optional):** capture `(frame, soundId, args)` during predicted frames, drop them on rollback, emit on confirmation. Defer unless missed sounds are noticeable in playtest.
 
-**Verify:** manual playtest with `tc qdisc netem` adding 80 ms ± 20 ms jitter on localhost.
+**Verify:** manual playtest using the dev-HUD jitter knobs (see "Manual / interactive testing" above) at 80 ms ± 20 ms; both peers on the same machine.
 
 ### Step 10 — Desync detection under rollback
 
@@ -358,7 +420,7 @@ Current desync detection (multiplayer.md → "Runtime desync detection") sends a
 
 Change to: send `(confirmedFrame, checksum)` where `checksum` is cached from the snapshot taken at confirmation. Update `NetSession::onChecksum` to compare accordingly.
 
-**Verify:** intentionally introduce nondeterminism in a test build; confirm detection fires within a few seconds.
+**Verify:** `test_rollback_desync.cpp` from the test matrix — clean-run negative case + 1-bit injection positive case must fire detection within 200 frames.
 
 ### Step 11 — Settings, UX, defaults
 
