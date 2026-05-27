@@ -121,7 +121,6 @@ set(GAME_SOURCES ${SOURCES}
   src/game/inputState.cpp
   src/game/gamePlayState.cpp
   src/game/replay.cpp
-  src/game/sfx.cpp
   src/game/weapsel.cpp
   src/game/controller/commonController.cpp
   src/game/controller/localController.cpp
@@ -350,6 +349,13 @@ if(OPENLIERO_BUILD_TESTS)
   add_executable(test_tc_load src/tests/test_tc_load.cpp)
   target_link_libraries(test_tc_load PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_tc_load
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
+  )
+
+  add_executable(test_sound_player src/tests/test_sound_player.cpp)
+  target_link_libraries(test_sound_player PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_sound_player
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     DISCOVERY_MODE PRE_TEST
   )

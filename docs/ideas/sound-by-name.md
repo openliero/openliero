@@ -599,7 +599,7 @@ falsy under the `if(w.loopSound)` check at `worm.cpp:393`, so
 behavior is unchanged. That truthiness-as-null pattern is a
 pre-existing smell, out of scope here.
 
-### Step 6 — Unify Sfx and SoundPlayer
+### Step 6 — Unify Sfx and SoundPlayer ✅ (landed)
 
 **What.** Implement §4.5:
 
@@ -632,6 +632,36 @@ pre-existing smell, out of scope here.
 * Determinism: `test_determinism` and the replay tests must
   still pass; if they fail, the Game-owned player push/pop is
   wrong.
+
+**As landed.** `SoundPlayer` in `src/game/mixer/player.hpp` grew a
+non-virtual `play(int, ...)` wrapper that early-returns on `sound <
+0` and otherwise dispatches to a protected virtual `playImpl`. A
+convenience overload `play(SOUND_DEF_T, ...)` resolves via a
+protected virtual `common()` (returns `Common*`, nullable) and
+indexes `Common::soundHook`. `DefaultSoundPlayer` moved out of the
+deleted `sfx.{hpp,cpp}` and into `mixer/player.{hpp,cpp}`, where it
+now owns the SDL audio device (the `Sfx::init` / `Sfx::deinit` SDL
+calls migrated verbatim into its ctor/dtor). `RecordSoundPlayer`
+and `NullSoundPlayer` were retrofitted onto the new `playImpl`
+API. A new global `SoundPlayer* g_soundPlayer` (declared in
+`mixer/player.hpp`) is set in `gameEntry` to the
+`DefaultSoundPlayer` owned by `gfx.soundPlayer` (a new
+`std::shared_ptr<SoundPlayer>` member). `Gfx`'s default ctor seeds
+`soundPlayer` with a `NullSoundPlayer` so test code that
+constructs controllers without going through `gameEntry` still
+sees a valid player. `Game` ctor saves the previous
+`g_soundPlayer` and installs its own; dtor restores. `postClone`
+clears the install flag so simulation copies (predictive AI,
+replay seed) don't trample the global on destruction. All
+`sfx.play(common, ...)` call sites became `g_soundPlayer->play(...)`.
+`weapon.cpp:101`'s `if(w.exploSound >= 0)` and `worm.cpp:1286`'s
+`if(w.launchSound >= 0)` guards were removed — the base-class
+wrapper owns the check. `sobject.cpp:21`'s `if(startSound >= 0)`
+guard stays because it gates an RNG-side-effectful
+`game.rand(numSounds)` call; folding it into the play wrapper
+would shift simulation state. New tests in
+`src/tests/test_sound_player.cpp` cover the four assertions above;
+all 101 tests pass.
 
 ### Step 7 — Final regression test for the issue #44 scenario
 

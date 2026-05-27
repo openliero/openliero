@@ -1,7 +1,7 @@
 #include "fileSelectorState.hpp"
 
 #include "gfx.hpp"
-#include "sfx.hpp"
+#include "mixer/player.hpp"
 #include "text.hpp"
 #include "keys.hpp"
 #include "level.hpp"
@@ -43,7 +43,7 @@ bool FileSelectorState::update()
 	 || gfx->testControlOnce(WormSettingsExtensions::Fire)
 	 || gfx->testGamepadButtonOnce(SDL_GAMEPAD_BUTTON_SOUTH))
 	{
-		sfx.play(*gfx->common, gfx->common->soundHook[SoundMenuSelect]);
+		g_soundPlayer->play(gfx->common->soundHook[SoundMenuSelect]);
 
 		auto* sel = selector_->enter();
 		if (sel)

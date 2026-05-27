@@ -2,15 +2,15 @@
 
 #include "menu.hpp"
 #include "menuItem.hpp"
-#include "../sfx.hpp"
+#include "../mixer/player.hpp"
 #include "../common.hpp"
 
 bool BooleanSwitchBehavior::onLeftRight(Menu& menu, MenuItem& item, int dir)
 {
 	if(dir > 0)
-		sfx.play(common, common.soundHook[SoundMenuMoveUp]);
+		g_soundPlayer->play(common.soundHook[SoundMenuMoveUp]);
 	else
-		sfx.play(common, common.soundHook[SoundMenuMoveDown]);
+		g_soundPlayer->play(common.soundHook[SoundMenuMoveDown]);
 
 	set(!v);
 	onUpdate(menu, item);
@@ -19,7 +19,7 @@ bool BooleanSwitchBehavior::onLeftRight(Menu& menu, MenuItem& item, int dir)
 
 int BooleanSwitchBehavior::onEnter(Menu& menu, MenuItem& item)
 {
-	sfx.play(common, common.soundHook[SoundMenuSelect]);
+	g_soundPlayer->play(common.soundHook[SoundMenuSelect]);
 	set(!v);
 	onUpdate(menu, item);
 	return -1;

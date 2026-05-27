@@ -1283,19 +1283,16 @@ void Worm::fire(Game& game)
 		}
 	}
 
-	if(w.launchSound >= 0)
+	if(w.loopSound)
 	{
-		if(w.loopSound)
+		if(!game.soundPlayer->isPlaying(&weapons[currentWeapon]))
 		{
-			if(!game.soundPlayer->isPlaying(&weapons[currentWeapon]))
-			{
-				game.soundPlayer->play(w.launchSound, &weapons[currentWeapon], -1);
-			}
+			game.soundPlayer->play(w.launchSound, &weapons[currentWeapon], -1);
 		}
-		else
-		{
-			game.soundPlayer->play(w.launchSound);
-		}
+	}
+	else
+	{
+		game.soundPlayer->play(w.launchSound);
 	}
 
 	int speed = w.speed;
