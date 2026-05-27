@@ -37,12 +37,17 @@ struct DefaultSoundPlayer : SoundPlayer
 	bool isPlaying(void* id);
 	void stop(void* id);
 
+	// Repoint at a new TC's Common. Called when the user switches TC at
+	// runtime — without this the player keeps reading sound samples and
+	// soundHook[] from the previous TC.
+	void setCommon(Common& common) { m_common = &common; }
+
 protected:
 	void playImpl(int sound, void* id, int loops);
-	Common* common() { return &m_common; }
+	Common* common() { return m_common; }
 
 private:
-	Common& m_common;
+	Common* m_common;
 	sfx_mixer* mixer;
 #if !DISABLE_SOUND
 	SDL_AudioStream* stream;

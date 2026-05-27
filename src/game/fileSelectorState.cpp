@@ -287,8 +287,9 @@ bool TcSelectorState::onSelected(FileNode* node)
 	std::unique_ptr<Common> newCommon(new Common());
 	newCommon->load(node->getFsNode());
 	gfx->settings->tc = node->name;
-	// TODO: mixer may still be using sounds from the old common
 	gfx->common.reset(newCommon.release());
+	if (auto* dp = dynamic_cast<DefaultSoundPlayer*>(gfx->soundPlayer.get()))
+		dp->setCommon(*gfx->common);
 	gfx->pendingMenuSelection = MainMenu::MaTc;
 	return true;
 }

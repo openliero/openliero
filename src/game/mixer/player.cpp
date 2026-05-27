@@ -31,7 +31,7 @@ static void SDLCALL DefaultSoundPlayer_stream_callback(
 #endif
 
 DefaultSoundPlayer::DefaultSoundPlayer(Common& c)
-: m_common(c)
+: m_common(&c)
 , mixer(nullptr)
 #if !DISABLE_SOUND
 , stream(nullptr)
@@ -88,7 +88,7 @@ void DefaultSoundPlayer::playImpl(int sound, void* id, int loops)
 
 	sfx_mixer_add(
 		mixer,
-		m_common.sounds[sound].sound,
+		m_common->sounds[sound].sound,
 		sfx_mixer_now(mixer),
 		id,
 		loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
