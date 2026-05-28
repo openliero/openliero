@@ -422,14 +422,14 @@ Change to: send `(confirmedFrame, checksum)` where `checksum` is cached from the
 
 **Verify:** `test_rollback_desync.cpp` from the test matrix — clean-run negative case + 1-bit injection positive case must fire detection within 200 frames.
 
-### Step 11 — Settings, UX, defaults
+### Step 11 — Settings, UX, defaults — ✅ done
 
 Sub-steps to keep blast radius small:
-- 11a — Transport wire format: `PacketInputBatch` + handshake protocol-version byte.
-- 11b — Wire `RollbackController` through `NetSession` / `NetTransport`.
-- 11c — `useRollback` / `maxRollback` / `inputDelay` in `Settings` + `MatchSettingsData` sync.
-- 11d — Dev-HUD `RB:n` indicator + jitter knobs (Step 9 deferred playtest).
-- 11e — Promote `RollbackController` to default; update `multiplayer.md`.
+- 11a — ✅ Transport wire format: `PacketInputBatch` + handshake protocol-version byte.
+- 11b — ✅ Wire `RollbackController` through `NetSession` / `NetTransport`.
+- 11c — ✅ `useRollback` / `maxRollback` / `inputDelay` in `Settings` + `MatchSettingsData` sync.
+- 11d — ✅ Dev-HUD `RB:n` indicator. Live jitter knobs deferred (automated coverage via `JitterTransport` already in place).
+- 11e — ✅ Promote `RollbackController` to default; update `multiplayer.md`.
 
 Settings (host-authoritative, synced via existing `MatchSettingsData`):
 
@@ -622,6 +622,34 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   test added here — the existing speculative-suppression and rollback
   correctness tests already cover the only behaviours a render/audio
   test could observe.
+
+### Step 11e — Flip default + multiplayer.md (2026-05-28)
+
+- `Settings::Settings()` now initialises `useRollback` to `true`.
+  New installs default to rollback; users upgrading from a v2 TOML
+  config get rollback after the new field is defaulted on first
+  load (`TomlInputArchive::loadValue` no-ops on missing keys, so
+  the constructor value sticks).
+- The lockstep `NetworkController` stays alive behind
+  `settings.useRollback = false`. Per the plan, this is the "~1
+  release regression fallback" — kept compiled and tested
+  (`test_session` pins `useRollback = false` in its fixture)
+  but no longer the default. A future commit can remove it once
+  the rollback path has lived through a release.
+- `test_session`'s `SessionFixture` explicitly sets
+  `settings->useRollback = false` so its 8 lockstep test cases
+  (handshake, settings sync, player info sync, frames over real
+  network, disconnect, no-such-host, TC sync ×2) continue to
+  exercise the lockstep code path. `test_session_rollback`
+  unchanged — it already opts in via the fixture.
+- `multiplayer.md` updated: Phase 2 description switched from
+  "TBD" to "shipped 2026-05-28" with a pointer to this file; the
+  Future Work entry struck through.
+- No code change to `RollbackController` or its tests — 11a–11d
+  did all the structural work, 11e is the policy flip.
+- New: `useRollback(true)` in `Settings::Settings`, header comment
+  reframed; `test_session::SessionFixture` lockstep pin; Phase 2
+  and Future Work entries in `multiplayer.md` marked shipped.
 
 ### Step 11d — Dev-HUD `RB:n` resim indicator (2026-05-28)
 
