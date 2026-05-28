@@ -100,6 +100,12 @@ struct RollbackController : CommonController {
   // mispredicting).
   uint64_t rollbackCount() const { return rollbackCount_; }
 
+  // Step 11d — number of frames the resim loop replayed during the
+  // most recent process() tick. 0 when no rollback fired this tick.
+  // Used by the dev HUD overlay (`RB:n`) and by tests asserting the
+  // resim window size.
+  uint32_t lastTickResimFrames() const { return lastTickResimFrames_; }
+
   // Step 8 introspection — sender-side simFrame from the most recent
   // batched packet we accepted. -1 before any packet arrives. Used by
   // tests asserting the frame-advantage stall keeps the peers tightly
@@ -188,6 +194,7 @@ struct RollbackController : CommonController {
   uint8_t lastRemoteInput_;
 
   uint64_t rollbackCount_ = 0;
+  uint32_t lastTickResimFrames_ = 0;  // Step 11d — reset each tick.
 
   // Step 8 — sender-side simFrame from the most recent batched packet
   // we accepted (monotonic; stale packets carrying smaller frames are

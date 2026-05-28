@@ -217,13 +217,22 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
         b->injectRemoteBatch(bf, c, in, lf);
       };
 
+      // Step 11d — track that lastTickResimFrames() goes non-zero at
+      // some point during the run. Catches a regression where rollback
+      // counting falls back to the cumulative rollbackCount() metric.
+      uint32_t maxResimInATick = 0;
       for (int i = 0; i < kTicks; ++i) {
         a->setLocalControlState(script.a[i]);
         b->setLocalControlState(script.b[i]);
         a->process();
         b->process();
+        if (a->lastTickResimFrames() > maxResimInATick)
+          maxResimInATick = a->lastTickResimFrames();
+        if (b->lastTickResimFrames() > maxResimInATick)
+          maxResimInATick = b->lastTickResimFrames();
         transport.tick(deliverA, deliverB);
       }
+      REQUIRE(maxResimInATick > 0);
 
       // Flush any in-flight tail packets, then run additional ticks
       // until both peers' confirmedFrame catches up. We use idle inputs

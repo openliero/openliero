@@ -5,6 +5,7 @@
 #include "../viewport.hpp"
 #include "../spectatorviewport.hpp"
 
+#include <cstdio>
 #include <cstring>
 #include <miniz.h>
 
@@ -337,6 +338,10 @@ bool RollbackController::process() {
     return true;
   }
 
+  // Step 11d — per-tick resim counter for the dev HUD. advanceSimulation
+  // bumps it inside the rollback branch; weapon-select doesn't rollback.
+  lastTickResimFrames_ = 0;
+
   if (state == StateWeaponSelection) {
     advanceWeaponSelection();
   } else if (state == StateGame || state == StateGameEnded) {
@@ -529,6 +534,10 @@ void RollbackController::advanceSimulation() {
   // duplicate (Step 5's flag).
   if (rollbackTo >= 0) {
     ++rollbackCount_;
+    // Step 11d HUD counter: how many frames the resim loop will replay
+    // (= the gap between rollbackTo+1 and simFrame-1, inclusive).
+    lastTickResimFrames_ +=
+        static_cast<uint32_t>(static_cast<int32_t>(simFrame) - rollbackTo - 1);
     auto* lastGood = rollbackBuffer_.find(rollbackTo);
     // Resident by construction: the stall guard caps simFrame - confirmedSimFrame_
     // at kMaxRollback, and the ring holds kMaxRollback+1 slots.
@@ -706,6 +715,17 @@ void RollbackController::draw(Renderer& renderer, bool useSpectatorViewports) {
     game.draw(renderer, state, useSpectatorViewports);
   }
   renderer.fadeValue = fadeValue;
+
+  // Step 11d dev HUD: when this tick's resim window was non-empty,
+  // print a small `RB:n` indicator at the top-left of the framebuffer.
+  // No separate enable flag — the plan calls for it to show only when
+  // there's something to show, so non-jittery sessions stay clean.
+  if (lastTickResimFrames_ > 0 && state == StateGame) {
+    Font& font = game.common->font;
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "RB:%u", lastTickResimFrames_);
+    font.drawText(renderer.bmp, buf, 2, 2, 50);
+  }
 
   if (isPaused()) {
     fill(renderer.bmp, 0);

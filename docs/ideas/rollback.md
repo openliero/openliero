@@ -623,6 +623,40 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   correctness tests already cover the only behaviours a render/audio
   test could observe.
 
+### Step 11d — Dev-HUD `RB:n` resim indicator (2026-05-28)
+
+- Added `uint32_t lastTickResimFrames_` to `RollbackController`,
+  reset at the top of every `process()` and incremented inside
+  the rollback branch of `advanceSimulation` by exactly the size
+  of the resim window (`simFrame - rollbackTo - 1`). Per-tick
+  counter, not cumulative — `rollbackCount()` already covers the
+  cumulative metric.
+- `RollbackController::draw` paints a one-line `RB:n` overlay at
+  `(2, 2)` using the existing `game.common->font`. No separate
+  enable flag: per the plan, the indicator only shows when there's
+  something to show (`lastTickResimFrames_ > 0` and the controller
+  is in `StateGame`), so non-jittery sessions stay clean.
+- Test: `test_rollback_correctness` gained an inline assertion that
+  the maximum per-tick resim window across the run is > 0. Catches
+  a regression where the counter stops tracking but the cumulative
+  `rollbackCount()` still grows.
+- **Deferred from 11d**: live in-game jitter knobs (`+/-` for delay,
+  `[/]` for loss). Implementing them well means instrumenting
+  `NetTransport` with a per-send delay/loss queue plus the
+  gamePlayState key-handling surface. Mechanically straightforward
+  but not strictly needed for the default flip in 11e — the
+  controller-level `JitterTransport` already drives the automated
+  regression coverage in `test_rollback_correctness` /
+  `test_rollback_packet_loss` / `test_rollback_reorder` /
+  `test_frame_advantage`. Pulling the knobs in becomes worthwhile
+  the moment a real-world playtest reveals a behaviour the
+  automated harness missed; until then they would be polish on a
+  diagnostic surface that's already covered programmatically.
+- New: `lastTickResimFrames()` accessor + `lastTickResimFrames_`
+  field + per-tick reset + resim-window increment, font overlay
+  in `RollbackController::draw`, `<cstdio>` include for `snprintf`,
+  inline test assertion in `test_rollback_correctness`.
+
 ### Step 11c — Settings + MatchSettings sync (2026-05-28)
 
 - Added three host-authoritative fields to `Settings`:
