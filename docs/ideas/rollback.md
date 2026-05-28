@@ -299,7 +299,7 @@ void SoundPlayer::stop(...) { if (game.speculative) return; /* ... */ }
 
 **Build artifact:** behavior-neutral in non-rollback play.
 
-### Step 6 — Prediction (no rollback yet)
+### Step 6 — Prediction (no rollback yet) — ✅ done
 
 When remote input is absent for `simFrame`, predict it = last received remote input (GGPO's default). Advance up to `MaxRollback` frames ahead, then stall. Mark each speculative frame.
 
@@ -511,3 +511,17 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - Added a missing `virtual ~StatsRecorder() = default;` while editing the header — `Game` holds it via `shared_ptr<StatsRecorder>` so deletion was already polymorphic, but the base lacked a virtual dtor.
 - The test (`src/tests/test_speculative_suppression.cpp`) uses a counting mock for both sides. Two cases: (a) `200 normal → snapshot → 200 speculative → restore → 200 normal` produces the exact same counts as a single `400`-frame control run; (b) `setSpeculative` propagation invariant. The mocks check `speculative` themselves to confirm the *flag* is being toggled correctly — separate from the production paths, which test the actual gating.
 - New: `bool speculative` + `setSpeculative()` on `Game`, `bool speculative` on `SoundPlayer`/`StatsRecorder` bases, early-returns in `RecordSoundPlayer::stop` / `DefaultSoundPlayer::play+stop` / all `NormalStatsRecorder` writers, `src/tests/test_speculative_suppression.cpp`, CMake entry.
+
+### Step 6 — Prediction without rollback (2026-05-28)
+
+- Added two pieces of state to `RollbackController`: `confirmedSimFrame_` (highest already-advanced frame whose remote input was real) and `lastRemoteInput_` (used as the predicted byte when the current frame's slot is empty). GGPO's default — predict = repeat the last received input.
+- `advanceSimulation` now has a **promote** loop at the top: when a remote-input ring slot for a frame in `(confirmedSimFrame_, simFrame)` is ready, the test advances `confirmedSimFrame_` and updates `lastRemoteInput_` without touching the buffer slot. The Predicted snapshot stays Predicted on purpose — Step 7 will compare predicted vs real input there and decide whether to rollback. Touching the slot here would lose the prediction.
+- **Stall guard**: `simFrame - confirmedSimFrame_ > kMaxRollback` → bail. After the tick `simFrame` becomes `simFrame+1`, so this caps the in-flight predicted count at exactly `kMaxRollback`. The ring buffer's `kMaxRollback + 1` slots still fit.
+- The frame execution itself flips `game.setSpeculative(predicted)` around `processFrame()` and back to `false` after, so Step 5's suppression handles sound/stats automatically. The buffer slot's `remoteState` is tagged accordingly.
+- **Checksums for predicted frames are not sent.** Predicted state will trivially disagree with the real peer's confirmed state and would spam the desync detector. Step 10 generalises this rule to "checksum cached at confirmation time"; Step 6 just gates the existing send. Confirmed pure-lockstep behaviour (and the existing `RollbackController writes confirmed snapshots…` test) is unchanged because zero jitter means `predicted` is always false.
+- Zero-jitter parity from Step 4 still holds — verified by re-running the parity test. With `inputDelay=3` and synchronous delivery, every frame's remote input is already in the ring before its slot comes up, so prediction never fires.
+- Test (`test_prediction_no_rollback.cpp`) has two cases:
+  - **Zero jitter**: 500 ticks of loopback with random inputs → every resident slot is `Confirmed`; `confirmedFrame == currentFrame - 1`.
+  - **Starvation/recovery**: drive a single controller with `injectRemoteInput`, warm up `kWarm` frames, stop delivering → controller predicts exactly `kMaxRollback` more frames (asserted via `currentFrame`) then stalls. Inject the missing inputs → next `process()` drains the promote loop and `confirmedFrame` catches up. One subtle bit: seed *only* `[0..kWarm-1]` of remote inputs; an off-by-3 here (mirroring `inputDelay`) leaves extra ready slots that get consumed before prediction begins.
+- Public introspection: `RollbackController::confirmedFrame()` for tests/HUD.
+- New: prediction logic in `advanceSimulation`, `confirmedFrame()` accessor + `confirmedSimFrame_`/`lastRemoteInput_` fields on `RollbackController`, `src/tests/test_prediction_no_rollback.cpp`, CMake entry.

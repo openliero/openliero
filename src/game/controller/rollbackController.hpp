@@ -1,16 +1,17 @@
 #pragma once
 
-// Rollback Step 4 — RollbackController in lockstep mode.
+// Rollback Step 4–6 — RollbackController.
 //
-// Structurally a copy of NetworkController: same wire/edge-detection logic,
-// same input delay, same pause/menu plumbing. The only behavioural addition
-// is that after every confirmed simulation frame we snapshot the game into
-// the rollback ring buffer (rollback::RollbackBuffer). Prediction and
-// resimulation arrive in later steps (5+); for now the controller stalls
-// when remote input is missing, exactly like NetworkController. This makes
-// the lockstep-parity test (test_rollback_lockstep_parity.cpp) the bar
-// for Step 4: the two controllers must produce frame-by-frame identical
-// state given identical inputs.
+// Structurally a copy of NetworkController for the lockstep path. Step 6
+// adds GGPO-style prediction: when remote input for the current frame
+// hasn't arrived, predict it = last received remote input and advance the
+// sim with game.speculative = true. Predictions are bounded by
+// rollback::kMaxRollback in-flight frames; past that the controller
+// stalls. Rollback on misprediction lands in Step 7 — for now a wrong
+// prediction simply produces divergent state, which is acceptable under
+// zero jitter (predictions never happen) and visible-but-untreated under
+// jitter (the Step 7 verification test will be what proves the algorithm
+// recovers).
 
 #include <array>
 #include <cstdint>
@@ -73,6 +74,10 @@ struct RollbackController : CommonController {
   // Access the rollback ring buffer (Step 4: writes only; Step 5+ reads).
   rollback::RollbackBuffer const& rollbackBuffer() const { return rollbackBuffer_; }
 
+  // Step 6 introspection — highest simFrame for which we ran with real
+  // (received) remote input. Anything past this is currently a prediction.
+  int32_t confirmedFrame() const { return confirmedSimFrame_; }
+
   Game game;
 
  private:
@@ -127,4 +132,13 @@ struct RollbackController : CommonController {
   // once the level is generated. Not consulted yet (Step 4 only writes).
   rollback::RollbackBuffer rollbackBuffer_;
   bool rollbackBufferPrepared_;
+
+  // Step 6 prediction state.
+  // confirmedSimFrame_ — highest simFrame already advanced whose remote
+  //   input was the real (received) byte. -1 before the first frame.
+  // lastRemoteInput_ — most recent real remote input byte; used as the
+  //   prediction when remote input for the current frame is missing
+  //   (matches GGPO's "input duplication" default).
+  int32_t confirmedSimFrame_;
+  uint8_t lastRemoteInput_;
 };

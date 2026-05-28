@@ -23,6 +23,8 @@ RollbackController::RollbackController(
     , inputDelay(3)
     , lastSentFrame(UINT32_MAX)
     , rollbackBufferPrepared_(false)
+    , confirmedSimFrame_(-1)
+    , lastRemoteInput_(0)
 {
   localPrevInput = 0;
   remotePrevInput = 0;
@@ -430,13 +432,44 @@ void RollbackController::advanceSimulation() {
     }
   }
 
-  uint32_t currentSlot = simFrame % INPUT_BUFFER_SIZE;
-  if (!remoteInputReady[currentSlot]) {
+  // Step 6 — promote past predicted frames whose real input has now
+  // arrived. Bookkeeping only: we update confirmedSimFrame_ and
+  // lastRemoteInput_ so the stall guard and next prediction see the
+  // truth, but leave the buffer slot's Predicted snapshot alone — Step 7
+  // will compare predicted vs real input and rollback if they differ.
+  while (confirmedSimFrame_ + 1 < static_cast<int32_t>(simFrame)) {
+    int32_t F = confirmedSimFrame_ + 1;
+    uint32_t s = static_cast<uint32_t>(F) % INPUT_BUFFER_SIZE;
+    if (!remoteInputReady[s]) break;
+    lastRemoteInput_ = remoteInputs[s];
+    remoteInputReady[s] = false;
+    confirmedSimFrame_ = F;
+  }
+
+  // Step 6 — stall guard. After this tick simFrame becomes simFrame+1,
+  // so the count of in-flight predicted frames would be
+  // (simFrame+1) - confirmedSimFrame_ - 1 = simFrame - confirmedSimFrame_.
+  // Cap that at kMaxRollback so the ring buffer (kMaxRollback+1 slots)
+  // can still cover the post-tick window.
+  if (static_cast<int32_t>(simFrame) - confirmedSimFrame_ > rollback::kMaxRollback) {
     return;
   }
 
+  uint32_t currentSlot = simFrame % INPUT_BUFFER_SIZE;
+
   uint8_t curLocal = localInputs[currentSlot];
-  uint8_t curRemote = remoteInputs[currentSlot];
+  uint8_t curRemote;
+  bool predicted;
+  if (remoteInputReady[currentSlot]) {
+    curRemote = remoteInputs[currentSlot];
+    remoteInputReady[currentSlot] = false;
+    lastRemoteInput_ = curRemote;
+    predicted = false;
+  } else {
+    curRemote = lastRemoteInput_;
+    predicted = true;
+  }
+
   uint8_t risingLocal = curLocal & ~localPrevInput;
   uint8_t risingRemote = curRemote & ~remotePrevInput;
   uint8_t releasedLocal = localPrevInput & ~curLocal;
@@ -450,25 +483,31 @@ void RollbackController::advanceSimulation() {
   localPrevInput = curLocal;
   remotePrevInput = curRemote;
 
-  remoteInputReady[currentSlot] = false;
-
+  game.setSpeculative(predicted);
   game.processFrame();
+  game.setSpeculative(false);
   ++simFrame;
 
-  // Rollback Step 4: snapshot every confirmed frame. The slot keyed to
-  // simFrame-1 holds the post-frame state and the inputs that produced it.
-  // Stored as Confirmed because in lockstep mode we only ever advance with
-  // inputs received from the remote — there is no prediction yet.
+  if (!predicted) confirmedSimFrame_ = static_cast<int32_t>(simFrame) - 1;
+
+  // Snapshot the post-frame state. Stored as Predicted/Confirmed per
+  // whether the input that produced it was real or guessed — Step 7
+  // reads this to decide whether to rollback when the real byte arrives.
   {
     int snapFrame = static_cast<int>(simFrame) - 1;
     rollback::Slot& slot = rollbackBuffer_.write(snapFrame);
     slot.localInput = (localIdx == 0) ? curLocal : curRemote;
     slot.remoteInput = (localIdx == 0) ? curRemote : curLocal;
-    slot.remoteState = rollback::RemoteState::Confirmed;
+    slot.remoteState = predicted
+        ? rollback::RemoteState::Predicted
+        : rollback::RemoteState::Confirmed;
     game.saveSnapshotFast(slot.snapshot);
   }
 
-  if (sendChecksum) {
+  // Checksums for predicted frames would race the remote side and trip
+  // the desync alarm spuriously; only emit on confirmed frames. Step 10
+  // generalises this to "checksum captured at confirmation time".
+  if (!predicted && sendChecksum) {
     sendChecksum(simFrame - 1, fastGameChecksum(game));
   }
 
