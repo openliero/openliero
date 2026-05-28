@@ -9,12 +9,15 @@
 
 NetSession::NetSession(std::shared_ptr<Common> common,
                        std::shared_ptr<Settings> settings,
-                       FsNode tcRoot)
+                       FsNode tcRoot,
+                       bool useRollback)
     : role_(Host)
     , sessionState_(Idle)
     , common_(std::move(common))
     , settings_(std::move(settings))
+    , useRollback_(useRollback)
     , controllerPtr_(nullptr)
+    , rollbackPtr_(nullptr)
     , gameSeed_(0)
     , localSettingsHash_(0)
     , handshakeReceived_(false)
@@ -42,6 +45,63 @@ NetSession::~NetSession() {
   disconnect();
 }
 
+void NetSession::createController(int localIdx) {
+  if (useRollback_) {
+    rollback_ = std::make_unique<RollbackController>(common_, settings_, localIdx);
+  } else {
+    controller_ = std::make_unique<NetworkController>(common_, settings_, localIdx);
+  }
+}
+
+void NetSession::wireActiveController() {
+  // Common wiring: checksum + pause + endMatch are identical on both
+  // controllers. Inputs differ — lockstep emits single PacketInput,
+  // rollback emits PacketInputBatch with the redundancy + frame
+  // delta encoding (Step 11a wire format).
+  auto checksumCb = [this](uint32_t frame, uint32_t checksum) {
+    transport_.sendChecksum(frame, checksum);
+    onLocalChecksum(frame, checksum);
+  };
+  auto pauseCb = [this]() { transport_.sendPause(); };
+  auto resumeCb = [this]() { transport_.sendResume(); };
+  auto endMatchCb = [this]() { transport_.sendEndMatch(); };
+
+  if (useRollback_) {
+    rollback_->setInputCallbacks(
+        [this](uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+               uint32_t localFrame) {
+          // localDelta = simFrame - baseFrame at send time (Step 8).
+          // Encoded as uint8_t — range guaranteed by the controller
+          // (it constructs `count = MaxRollback + 1`, `localFrame` is
+          // within `[baseFrame, baseFrame + count - 1]`).
+          uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
+          transport_.sendInputBatch(baseFrame, count, localDelta, inputs);
+        },
+        nullptr);
+    rollback_->setChecksumCallback(checksumCb);
+    rollback_->setPauseCallbacks(pauseCb, resumeCb);
+    rollback_->setEndMatchCallback(endMatchCb);
+  } else {
+    controller_->setInputCallbacks(
+        [this](uint32_t frame, uint8_t input) {
+          transport_.sendInput(frame, input);
+        },
+        nullptr);
+    controller_->setChecksumCallback(checksumCb);
+    controller_->setPauseCallbacks(pauseCb, resumeCb);
+    controller_->setEndMatchCallback(endMatchCb);
+  }
+}
+
+Game& NetSession::activeGame() {
+  return useRollback_ ? rollback_->game : controller_->game;
+}
+
+void NetSession::injectRemoteInputActive(uint32_t frame, uint8_t input) {
+  if (useRollback_) rollback_->injectRemoteInput(frame, input);
+  else controller_->injectRemoteInput(frame, input);
+}
+
 bool NetSession::hostGame(uint16_t port) {
   if (sessionState_ != Idle)
     return false;
@@ -50,7 +110,7 @@ bool NetSession::hostGame(uint16_t port) {
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
 
   // Create controller: host is player 0
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 0);
+  createController(0);
 
   if (!transport_.host(port)) {
     sessionState_ = Failed;
@@ -68,7 +128,7 @@ bool NetSession::joinGame(const std::string& address, uint16_t port) {
   gameSeed_ = 0;  // Will be set by host's handshake
 
   // Create controller: client is player 1
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 1);
+  createController(1);
 
   if (!transport_.connect(address, port)) {
     sessionState_ = Failed;
@@ -84,7 +144,7 @@ bool NetSession::hostWithTransport(NetTransport&& transport) {
 
   role_ = Host;
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 0);
+  createController(0);
 
   transport_ = std::move(transport);
   wireCallbacks();
@@ -99,7 +159,7 @@ bool NetSession::connectWithTransport(NetTransport&& transport,
 
   role_ = Client;
   gameSeed_ = 0;
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 1);
+  createController(1);
 
   transport_ = std::move(transport);
   wireCallbacks();
@@ -137,7 +197,9 @@ void NetSession::disconnect() {
   wireCallbacks();
   sessionState_ = Idle;
   controller_.reset();
+  rollback_.reset();
   controllerPtr_ = nullptr;
+  rollbackPtr_ = nullptr;
   handshakeReceived_ = false;
   handshakeSent_ = false;
   playerInfoReceived_ = false;
@@ -238,10 +300,27 @@ void NetSession::onHandshake(uint32_t seed, uint32_t settingsHash) {
 }
 
 void NetSession::onRemoteInput(uint32_t frame, uint8_t input) {
+  // Lockstep wire path. Rollback peers receive via onRemoteInputBatch.
   if (controllerPtr_)
     controllerPtr_->injectRemoteInput(frame, input);
-  else
+  else if (!useRollback_)
     pendingInputs_.push_back({frame, input});
+  // useRollback_ but no rollbackPtr_ yet — drop. Rollback's
+  // K-wide redundancy makes the post-Playing batches cover the gap.
+}
+
+void NetSession::onRemoteInputBatch(uint32_t baseFrame, uint8_t count,
+                                    uint8_t const* inputs,
+                                    uint32_t remoteLocalFrame) {
+  // Rollback wire path. Lockstep peers shouldn't be receiving batches
+  // (different protocol version would prevent the handshake in the
+  // first place); if one slips through under a misconfigured test,
+  // silently drop.
+  if (rollbackPtr_)
+    rollbackPtr_->injectRemoteBatch(baseFrame, count, inputs, remoteLocalFrame);
+  // Pre-Playing batches are dropped on purpose: the controller isn't
+  // wired yet, redundancy guarantees the next batch (~14 ms later)
+  // re-delivers the same frames.
 }
 
 void NetSession::onPlayerInfo(const NetTransport::PlayerInfo& info) {
@@ -305,18 +384,18 @@ void NetSession::onMapData(const void* data, size_t len) {
 }
 
 void NetSession::onPause() {
-  if (controllerPtr_)
-    controllerPtr_->setRemotePaused(true);
+  if (controllerPtr_) controllerPtr_->setRemotePaused(true);
+  else if (rollbackPtr_) rollbackPtr_->setRemotePaused(true);
 }
 
 void NetSession::onResume() {
-  if (controllerPtr_)
-    controllerPtr_->setRemotePaused(false);
+  if (controllerPtr_) controllerPtr_->setRemotePaused(false);
+  else if (rollbackPtr_) rollbackPtr_->setRemotePaused(false);
 }
 
 void NetSession::onRemoteEndMatch() {
-  if (controllerPtr_)
-    controllerPtr_->endMatch();
+  if (controllerPtr_) controllerPtr_->endMatch();
+  else if (rollbackPtr_) rollbackPtr_->endMatch();
 }
 
 void NetSession::sendPause() {
@@ -336,6 +415,11 @@ void NetSession::wireCallbacks() {
   transport_.onRemoteInput = [this](uint32_t frame, uint8_t input) {
     onRemoteInput(frame, input);
   };
+  transport_.onRemoteInputBatch =
+      [this](uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+             uint32_t remoteLocalFrame) {
+        onRemoteInputBatch(baseFrame, count, inputs, remoteLocalFrame);
+      };
   transport_.onPlayerInfo = [this](const NetTransport::PlayerInfo& info) {
     onPlayerInfo(info);
   };
@@ -440,7 +524,7 @@ void NetSession::tryStartGame() {
 
   // Apply remote player's info to the remote worm directly (not the persistent settings)
   int remoteIdx = (role_ == Host) ? 1 : 0;
-  Worm* remoteWorm = controller_->game.wormByIdx(remoteIdx);
+  Worm* remoteWorm = activeGame().wormByIdx(remoteIdx);
   // Create a distinct copy so we don't mutate the saved player profile
   auto remoteWs = std::make_shared<WormSettings>(*remoteWorm->settings);
   for (int i = 0; i < 5; ++i)
@@ -452,51 +536,34 @@ void NetSession::tryStartGame() {
   remoteWorm->settings = remoteWs;
 
   // Seed the game's RNG so both peers have identical state
-  controller_->game.rand.seed(gameSeed_);
+  activeGame().rand.seed(gameSeed_);
 
   if (role_ == Host) {
     // Host generates the level and sends it to the client
     generateAndSendMap();
-    controller_->setLevelPreloaded();
+    if (useRollback_) rollback_->setLevelPreloaded();
+    else controller_->setLevelPreloaded();
   } else {
     // Client loads the level from received compressed map data
-    controller_->loadLevelFromData(receivedMapData_);
+    if (useRollback_) rollback_->loadLevelFromData(receivedMapData_);
+    else controller_->loadLevelFromData(receivedMapData_);
     receivedMapData_.clear();
   }
 
-  // Wire the controller to send inputs via transport
-  controller_->setInputCallbacks(
-      [this](uint32_t frame, uint8_t input) {
-        transport_.sendInput(frame, input);
-      },
-      nullptr  // We use injectRemoteInput via onRemoteInput callback instead
-  );
-
-  // Wire checksum sending for desync detection
-  controller_->setChecksumCallback(
-      [this](uint32_t frame, uint32_t checksum) {
-        transport_.sendChecksum(frame, checksum);
-        onLocalChecksum(frame, checksum);
-      });
-
-  // Wire pause/resume callbacks
-  controller_->setPauseCallbacks(
-      [this]() { transport_.sendPause(); },
-      [this]() { transport_.sendResume(); });
-  controller_->setEndMatchCallback(
-      [this]() { transport_.sendEndMatch(); });
+  wireActiveController();
 
   // Pre-fill the input delay window with empty inputs so both sides
   // can advance past the initial frames without stalling.
   for (uint32_t i = 0; i < 3; ++i) {
-    controller_->injectRemoteInput(i, 0);
+    injectRemoteInputActive(i, 0);
   }
 
-  controllerPtr_ = controller_.get();
+  if (useRollback_) rollbackPtr_ = rollback_.get();
+  else              controllerPtr_ = controller_.get();
 
   // Flush any inputs that arrived before the controller was ready
   for (auto& pi : pendingInputs_) {
-    controllerPtr_->injectRemoteInput(pi.frame, pi.input);
+    injectRemoteInputActive(pi.frame, pi.input);
   }
   pendingInputs_.clear();
 
@@ -582,10 +649,10 @@ void NetSession::startRematch() {
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
 
   // Create a fresh controller (host = player 0)
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 0);
+  createController(0);
 
   // Apply remote player info
-  Worm* remoteWorm = controller_->game.wormByIdx(1);
+  Worm* remoteWorm = activeGame().wormByIdx(1);
   auto remoteWs = std::make_shared<WormSettings>(*remoteWorm->settings);
   for (int i = 0; i < 5; ++i)
     remoteWs->weapons[i] = remotePlayerInfo_.weapons[i];
@@ -595,37 +662,24 @@ void NetSession::startRematch() {
   remoteWs->name = remotePlayerInfo_.name;
   remoteWorm->settings = remoteWs;
 
-  controller_->game.rand.seed(gameSeed_);
+  activeGame().rand.seed(gameSeed_);
 
   // Send seed to client, then generate and send map
   transport_.sendHandshake(gameSeed_, 0);
   generateAndSendMap();
-  controller_->setLevelPreloaded();
+  if (useRollback_) rollback_->setLevelPreloaded();
+  else              controller_->setLevelPreloaded();
 
-  // Wire controller
-  controller_->setInputCallbacks(
-      [this](uint32_t frame, uint8_t input) {
-        transport_.sendInput(frame, input);
-      },
-      nullptr);
-  controller_->setChecksumCallback(
-      [this](uint32_t frame, uint32_t checksum) {
-        transport_.sendChecksum(frame, checksum);
-        onLocalChecksum(frame, checksum);
-      });
-  controller_->setPauseCallbacks(
-      [this]() { transport_.sendPause(); },
-      [this]() { transport_.sendResume(); });
-  controller_->setEndMatchCallback(
-      [this]() { transport_.sendEndMatch(); });
+  wireActiveController();
   for (uint32_t i = 0; i < 3; ++i)
-    controller_->injectRemoteInput(i, 0);
+    injectRemoteInputActive(i, 0);
 
-  controllerPtr_ = controller_.get();
+  if (useRollback_) rollbackPtr_ = rollback_.get();
+  else              controllerPtr_ = controller_.get();
 
   // Flush any inputs that arrived before the controller was ready
   for (auto& pi : pendingInputs_) {
-    controllerPtr_->injectRemoteInput(pi.frame, pi.input);
+    injectRemoteInputActive(pi.frame, pi.input);
   }
   pendingInputs_.clear();
 
@@ -640,10 +694,10 @@ void NetSession::startRematchClient() {
     return;
 
   // Create a fresh controller (client = player 1)
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 1);
+  createController(1);
 
   // Apply remote player info (host = player 0)
-  Worm* remoteWorm = controller_->game.wormByIdx(0);
+  Worm* remoteWorm = activeGame().wormByIdx(0);
   auto remoteWs = std::make_shared<WormSettings>(*remoteWorm->settings);
   for (int i = 0; i < 5; ++i)
     remoteWs->weapons[i] = remotePlayerInfo_.weapons[i];
@@ -653,34 +707,21 @@ void NetSession::startRematchClient() {
   remoteWs->name = remotePlayerInfo_.name;
   remoteWorm->settings = remoteWs;
 
-  controller_->game.rand.seed(gameSeed_);
-  controller_->loadLevelFromData(receivedMapData_);
+  activeGame().rand.seed(gameSeed_);
+  if (useRollback_) rollback_->loadLevelFromData(receivedMapData_);
+  else              controller_->loadLevelFromData(receivedMapData_);
   receivedMapData_.clear();
 
-  // Wire controller
-  controller_->setInputCallbacks(
-      [this](uint32_t frame, uint8_t input) {
-        transport_.sendInput(frame, input);
-      },
-      nullptr);
-  controller_->setChecksumCallback(
-      [this](uint32_t frame, uint32_t checksum) {
-        transport_.sendChecksum(frame, checksum);
-        onLocalChecksum(frame, checksum);
-      });
-  controller_->setPauseCallbacks(
-      [this]() { transport_.sendPause(); },
-      [this]() { transport_.sendResume(); });
-  controller_->setEndMatchCallback(
-      [this]() { transport_.sendEndMatch(); });
+  wireActiveController();
   for (uint32_t i = 0; i < 3; ++i)
-    controller_->injectRemoteInput(i, 0);
+    injectRemoteInputActive(i, 0);
 
-  controllerPtr_ = controller_.get();
+  if (useRollback_) rollbackPtr_ = rollback_.get();
+  else              controllerPtr_ = controller_.get();
 
   // Flush any inputs that arrived before the controller was ready
   for (auto& pi : pendingInputs_) {
-    controllerPtr_->injectRemoteInput(pi.frame, pi.input);
+    injectRemoteInputActive(pi.frame, pi.input);
   }
   pendingInputs_.clear();
 
@@ -692,19 +733,18 @@ void NetSession::startRematchClient() {
 
 void NetSession::generateAndSendMap() {
   // Generate the level on the host
-  controller_->game.level.generateFromSettings(
-      *controller_->game.common, *controller_->game.settings,
-      controller_->game.rand);
+  Game& g = activeGame();
+  g.level.generateFromSettings(*g.common, *g.settings, g.rand);
 
-  Level& level = controller_->game.level;
+  Level& level = g.level;
 
   // Serialize: width(2) + height(2) + rand_state_len(4) + rand_state(N)
   //          + rand_last(4) + pixel_data(w*h) + palette(768)
   uint16_t w = static_cast<uint16_t>(level.width);
   uint16_t h = static_cast<uint16_t>(level.height);
-  std::string randState = controller_->game.rand.serialize();
+  std::string randState = g.rand.serialize();
   uint32_t randStateLen = static_cast<uint32_t>(randState.size());
-  uint32_t randLast = controller_->game.rand.last;
+  uint32_t randLast = g.rand.last;
   size_t pixelDataSize = static_cast<size_t>(w) * h;
   size_t rawSize = 4 + 4 + randStateLen + 4 + pixelDataSize + 768;
 
@@ -748,7 +788,10 @@ void NetSession::generateAndSendMap() {
   transport_.sendMapData(packet.data(), packet.size());
 }
 
-std::unique_ptr<NetworkController> NetSession::releaseController() {
+std::unique_ptr<Controller> NetSession::releaseController() {
+  // Return whichever path is live as a polymorphic Controller. The
+  // session keeps its typed raw pointer for inject/pause/end dispatch.
+  if (useRollback_) return std::move(rollback_);
   return std::move(controller_);
 }
 

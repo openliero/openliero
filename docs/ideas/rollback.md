@@ -623,6 +623,67 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   correctness tests already cover the only behaviours a render/audio
   test could observe.
 
+### Step 11b — NetSession integration with RollbackController (2026-05-28)
+
+- `NetSession` gains an optional `useRollback` ctor flag (default
+  false). When set, the session builds and wires a `RollbackController`
+  in parallel to the existing lockstep `NetworkController` path.
+  Lockstep callers and their tests are unchanged.
+- Added two parallel members: `std::unique_ptr<RollbackController>
+  rollback_` and `RollbackController* rollbackPtr_` alongside the
+  existing `controller_`/`controllerPtr_`. Exactly one pair is
+  populated per session lifetime. `controller()` returns the lockstep
+  handle (null in rollback mode); new `rollbackController()` returns
+  the rollback handle (null in lockstep mode). `useRollback()`
+  exposes the mode flag.
+- `releaseController()` changed signature from
+  `unique_ptr<NetworkController>` to polymorphic
+  `unique_ptr<Controller>`. The two external callers
+  (`netConnectState`, `rematchState`) already store the result as a
+  `Controller*` base via `gfx->controller`, so the upcast was free.
+  Tests that touch `controller()->game.X` continue to compile — they
+  only exercise lockstep sessions.
+- Three private helpers consolidate the per-mode branching:
+  - `createController(int localIdx)` — instantiates either NC or RC.
+  - `wireActiveController()` — wires checksum/pause/end on either,
+    and routes the input callback: lockstep uses
+    `transport_.sendInput(frame, input)`; rollback uses
+    `transport_.sendInputBatch(baseFrame, count, localDelta, inputs)`
+    where `localDelta = localFrame - baseFrame` (Step 8 encoding).
+  - `activeGame()` / `injectRemoteInputActive(...)` — single-line
+    dispatch that replaces ~10 inline `controller_->game.X` / 
+    `controller_->injectRemoteInput(...)` sites across the 3 setup
+    paths (`tryStartGame`, `startRematch` host, `startRematchClient`)
+    and `generateAndSendMap`.
+- New `onRemoteInputBatch` handler on the session forwards
+  `transport_.onRemoteInputBatch` to `rollback_->injectRemoteBatch`.
+  The lockstep `onRemoteInput` handler now drops batches received
+  before `controllerPtr_` is wired only in lockstep mode; in rollback
+  mode pre-Playing batches are dropped on purpose because the K-wide
+  redundancy guarantees the next batch (~14 ms later) re-delivers
+  the same window.
+- `onPause` / `onResume` / `onRemoteEndMatch` dispatch by which
+  pointer is set — `controllerPtr_` first, then `rollbackPtr_` —
+  matching the mutex invariant above.
+- `test_session_rollback.cpp` exercises the end-to-end path: two
+  sessions over loopback in rollback mode, handshake → settings →
+  mapdata → Playing, then 50 sim ticks with zero jitter. Asserts
+  `rollbackController() != nullptr`, `controller() == nullptr`,
+  RNG parity, frame parity, `rollbackCount() == 0` (zero-jitter
+  loopback shouldn't mispredict), and no desync. Vacuity guards on
+  the frame number protect against the "session never advanced"
+  failure mode.
+- Production callsites (`netConnectState`, `rematchState`) still
+  construct sessions with the default `useRollback=false` — the
+  flip happens in 11e. 11c will plumb the runtime setting through
+  `MatchSettingsData` so the host can dictate the mode for the
+  session.
+- New: `useRollback_`/`rollback_`/`rollbackPtr_` on NetSession;
+  `createController`/`wireActiveController`/`activeGame`/
+  `injectRemoteInputActive` helpers; `rollbackController()` +
+  `useRollback()` accessors; `releaseController` polymorphic;
+  `onRemoteInputBatch` handler; `test_session_rollback.cpp` + CMake.
+
 ### Step 11a — Transport wire format + version bump (2026-05-28)
 
 - New `NetTransport::kProtocolVersion = 2` constant. The handshake

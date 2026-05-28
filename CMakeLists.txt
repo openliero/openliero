@@ -452,6 +452,13 @@ if(OPENLIERO_BUILD_TESTS)
     DISCOVERY_MODE PRE_TEST
   )
 
+  add_executable(test_session_rollback src/tests/test_session_rollback.cpp)
+  target_link_libraries(test_session_rollback PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_session_rollback
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
+  )
+
   add_executable(test_versioning src/tests/test_versioning.cpp)
   target_link_libraries(test_versioning PRIVATE
     game
