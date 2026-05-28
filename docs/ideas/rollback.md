@@ -273,7 +273,7 @@ Pre-allocate all snapshots at startup — no per-frame malloc.
 
 **Build artifact:** standalone data structure.
 
-### Step 4 — `RollbackController` in lockstep mode
+### Step 4 — `RollbackController` in lockstep mode — ✅ done
 
 New controller alongside `NetworkController`. Initially behaves *identically* to lockstep: only advances when remote input is present. Saves a snapshot after every confirmed frame.
 
@@ -490,3 +490,14 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - API mirrors the plan sketch but uses `write(frame)`/`find(frame)` rather than direct slot access. `write` repurposes the ring slot at `frame % kCapacity`; if the slot already holds `frame`, inputs/state are kept (cheap input-only updates), otherwise inputs reset to defaults. The snapshot field is **deliberately not cleared on eviction** — callers overwrite it via `saveSnapshotFast` when they actually re-snapshot. Keeps the hot path allocation-free and avoids zeroing ~200 KB on every wrap.
 - `oldestFrame()` returns 0 while the buffer is filling and tracks `newest - kCapacity + 1` after the first eviction; controllers compare incoming confirmed frames against this to detect stall conditions.
 - New: `src/game/rollback/buffer.hpp`, `src/tests/test_rollback_buffer.cpp` (8 cases: empty state, sequential fill, wrap-around eviction, idempotent same-frame writes, ring-slot collision reset, Predicted→Confirmed transition, clear/reuse, oldestFrame during fill), CMake entry.
+
+### Step 4 — `RollbackController` in lockstep mode (2026-05-28)
+
+- Implemented `RollbackController` as a structural copy of `NetworkController` (`src/game/controller/rollbackController.{hpp,cpp}`). Same wire format, same 3-frame input delay, same edge-detection and key-repeat logic, same pause / weapon-select / level-preload plumbing. The only behavioural addition is calling `game.saveSnapshotFast` into a `rollback::RollbackBuffer` slot after every confirmed frame, with the slot tagged `Confirmed`.
+- Chose duplication over inheritance / composition. Steps 5–7 mutate `advanceSimulation` heavily (prediction window, resim loop, speculative flag) and the plan explicitly keeps both controllers alive for ~1 release after rollback ships — sharing a base class would have meant `virtual` plumbing on a hot path for code that diverges anyway. Cost is ~570 lines of mirrored code; benefit is that future rollback work doesn't have to defend a stable lockstep interface.
+- `rollbackBuffer_.prepare(game)` runs at the end of `focus()` so per-slot snapshot vectors (level data, bobjects) are sized once before any sim frame runs. Re-runs after weapon selection finalises (the `startGame` path can resize state) — `prepare` is idempotent.
+- Snapshot per frame in Release is dominated by the existing fast path (~tens of µs); the ring is `kMaxRollback + 1 = 8` slots, so even worst-case the buffer working set is ~1.6 MB and fits in L2 as the plan estimated.
+- Parity test (`src/tests/test_rollback_lockstep_parity.cpp`) stands two loopbacks side-by-side — one running `NetworkController × NetworkController`, one running `RollbackController × RollbackController` — with identical scripted inputs (Rand 0xC0FFEE, fire-biased) and asserts `fastGameChecksum` matches frame-by-frame for 1000 ticks. Also a second case that confirms the ring fills with `Confirmed` slots after wrap-around.
+- All existing tests still pass (network controller fuzz, determinism, snapshot round-trip, rollback buffer).
+- The plan also mentions a `JitterTransport` test helper as Step 4 scope; deferred to Step 6/7 where it's actually needed. Step 4's parity test only needs zero-jitter loopback, which we already have.
+- New: `src/game/controller/rollbackController.{hpp,cpp}`, `src/tests/test_rollback_lockstep_parity.cpp`, CMake entries.

@@ -125,6 +125,7 @@ set(GAME_SOURCES ${SOURCES}
   src/game/controller/commonController.cpp
   src/game/controller/localController.cpp
   src/game/controller/networkController.cpp
+  src/game/controller/rollbackController.cpp
   src/game/controller/replayController.cpp
   src/game/net/transport.cpp
   src/game/net/session.cpp
@@ -394,6 +395,13 @@ if(OPENLIERO_BUILD_TESTS)
   add_executable(test_rollback_buffer src/tests/test_rollback_buffer.cpp)
   target_link_libraries(test_rollback_buffer PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_rollback_buffer DISCOVERY_MODE PRE_TEST)
+
+  add_executable(test_rollback_lockstep_parity src/tests/test_rollback_lockstep_parity.cpp)
+  target_link_libraries(test_rollback_lockstep_parity PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_rollback_lockstep_parity
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    DISCOVERY_MODE PRE_TEST
+  )
 
   add_executable(test_versioning src/tests/test_versioning.cpp)
   target_link_libraries(test_versioning PRIVATE
