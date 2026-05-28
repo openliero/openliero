@@ -47,7 +47,11 @@ struct RollbackController : CommonController {
   Game* currentGame() override;
   bool running() override;
 
-  void setInputCallbacks(InputSendCallback send, InputRecvCallback recv);
+  // Step 7.5: batched send replaces the per-frame InputSendCallback.
+  // `recv` is kept as a no-op-friendly pull hook for callers that still
+  // want pull-based delivery; production tests inject via injectRemoteInput
+  // on packet arrival instead.
+  void setInputCallbacks(InputBatchSendCallback send, InputRecvCallback recv);
   void setChecksumCallback(ChecksumSendCallback cb) { sendChecksum = std::move(cb); }
 
   void injectRemoteInput(uint32_t frame, uint8_t input);
@@ -89,6 +93,7 @@ struct RollbackController : CommonController {
  private:
   void advanceSimulation();
   void advanceWeaponSelection();
+  void sendInputWindow(uint32_t newestFrame);
 
   int localIdx;
   int remoteIdx;
@@ -123,7 +128,7 @@ struct RollbackController : CommonController {
   bool remotePaused_;
   Menu pauseMenu_;
 
-  InputSendCallback sendInput;
+  InputBatchSendCallback sendInputBatch;
   InputRecvCallback recvInput;
   ChecksumSendCallback sendChecksum;
 

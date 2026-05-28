@@ -386,7 +386,7 @@ When real input arrives for frame F and differs from prediction:
 
 **Build artifact:** rollback works end-to-end at the algorithm level.
 
-### Step 7.5 — Transport: input redundancy + protocol bump
+### Step 7.5 — Transport: input redundancy + protocol bump — ✅ done
 
 Before frame-advantage (Step 8), change the input wire format per "Transport / Wire Format Changes" above:
 
@@ -521,6 +521,79 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - Test cap on delay was set deliberately small (max 5). The 2-peer lockstep protocol has no input redundancy yet, so once one peer's `simFrame - confirmedSimFrame_` reaches `kMaxRollback + 1` the stall guard returns *before sending the next input* (`if (inputFrame != lastSentFrame)` blocks the resend). The peer stops emitting; the other peer starves and stalls in turn — a permanent cascade. Step 7.5's redundancy + unreliable-sequenced channel breaks the cycle. For Step 7's algorithmic correctness test, picking delays where the steady-state gap stays well under `kMaxRollback` keeps the cascade off the table.
 - Added `RollbackController::rollbackCount_` + accessor purely so the correctness test can assert "rollback actually fired" — otherwise a passing test with zero mispredictions would be vacuous. With the random inputs and any delay > 0 the predicted byte (last received) almost never matches the next real byte, so rollbacks fire constantly (~hundreds per 800-tick run).
 - New: rollback + resim path in `advanceSimulation`, `rollbackCount()` accessor + `rollbackCount_` field, `src/tests/jitter_transport.hpp`, `src/tests/test_rollback_correctness.cpp` (4 delay configurations), CMake entry.
+
+### Step 7.5 — Transport: input redundancy (2026-05-28)
+
+- Scope ended up controller-layer only, mirroring Steps 4/6/7. The plan's
+  three bullets split cleanly: (a) batched send/receive contract +
+  redundancy logic — done here; (b) ENet channel change to
+  unreliable-sequenced + protocol-version bump — deferred to Step 11
+  where the session actually wires `RollbackController` through
+  `NetTransport`. Doing the wire-format bump on a controller that no
+  caller in `NetSession` instantiates yet would have meant flipping
+  `PacketInput`'s layout under the still-shipping lockstep controller
+  and gaining nothing. Step 11's "promote RollbackController to default"
+  is the right place to introduce the new packet type and version bump
+  together.
+- `RollbackController`'s `InputSendCallback` retired; replaced with
+  `InputBatchSendCallback = void(uint32_t baseFrame, uint8_t count,
+  uint8_t const* inputs)` in `networkController.hpp`. `NetworkController`
+  keeps the old single-input callback. The two controller types now
+  diverge at the transport boundary, which is exactly the version-bump
+  contract Step 11 will enforce.
+- `sendInputWindow(newestFrame)` builds the last K = kMaxRollback + 1
+  bytes from `localInputs` each tick (truncated near frame 0) and fires
+  `sendInputBatch`. Always sends, regardless of whether `inputFrame`
+  changed — when the controller is stalled below the new-frame block,
+  the redundant batch is still what lets the remote peer promote out of
+  its own stall once a previously-dropped packet's contents arrive via
+  a later batch.
+- `injectRemoteInput` now drops `frame <= confirmedSimFrame_` at the
+  door. Without this guard the K-wide redundant batches would re-set
+  `remoteInputReady` for slots whose frame number has already wrapped
+  the 256-entry ring. With the 8-frame rollback window vs 256-entry
+  ring there's an enormous safety margin, but the rule keeps the
+  invariant local to one function and lets us drop input-validation
+  worries from the rest of the controller.
+- `JitterTransport` extended: batched packet payloads
+  (`baseFrame:u32, count:u8, inputs[count]:u8`),
+  `lossProbability` and `duplicateProbability` parameters. Loss is
+  drawn at enqueue; duplication produces a second copy with an
+  independently-rolled delivery delay (so the duplicate is itself
+  out-of-order vs the original most of the time — exactly what stresses
+  the dedup). Telemetry counters (`packetsSent`, `packetsDropped`,
+  `packetsDuplicated`) expose whether tests are vacuous.
+- `test_rollback_packet_loss.cpp` — 10% loss, delay [1,3], 1500 ticks.
+  Asserts: steady-state lag (currentFrame - confirmedFrame - 1) stays
+  ≤ kMaxRollback; no zero-progress stall ticks once warm; both peers
+  agree on final checksum after flush; `packetsDropped > 0` and
+  `rollbackCount() > 0` so the test isn't trivially passing.
+- `test_rollback_reorder.cpp` — wide delay band [1,5] + 30% duplication,
+  zero loss, 1000 ticks. Asserts: duplication actually fires, rollback
+  fires, peers converge to identical checksum after flush. The wide
+  delay range is what produces reordering naturally — no separate
+  reorder knob is needed because per-packet random delay over a wide
+  range guarantees out-of-order arrival.
+- One subtlety in `test_rollback_correctness` after the API switch:
+  with K-wide redundant sends, the existing zero-jitter loopback
+  pattern (push every send into a `vector<pair>`, drain every tick)
+  pushes K times more entries per tick. The dedup inside
+  `injectRemoteInput` absorbs them without behavior change. Test still
+  passes the same 4 delay-config sub-cases it did under Step 7.
+- `test_rollback_lockstep_parity` had to specialize the templated
+  Loopback wiring via `if constexpr (is_same_v<Ctrl, RollbackController>)`
+  since the send-callback signatures of the two controllers now
+  differ. Behavior unchanged.
+- `test_prediction_no_rollback`'s Loopback collapsed to direct
+  push-on-send (the receiving peer's `injectRemoteInput` runs inside the
+  sending lambda). The old recv-pull pattern made less sense with
+  batched sends; this matches what the production session will do once
+  Step 11 wires NetTransport's batched receive callback.
+- New: `InputBatchSendCallback` type, `RollbackController::sendInputBatch`
+  + `sendInputWindow()`, stale-frame drop in `injectRemoteInput`,
+  batched-packet `JitterTransport`, `src/tests/test_rollback_packet_loss.cpp`,
+  `src/tests/test_rollback_reorder.cpp`, CMake entries. All 112 tests
+  green.
 
 ### Step 6 — Prediction without rollback (2026-05-28)
 

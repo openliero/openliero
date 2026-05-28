@@ -17,7 +17,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <memory>
-#include <queue>
 
 #include "controller/rollbackController.hpp"
 #include "game.hpp"
@@ -27,13 +26,16 @@
 
 namespace {
 
+// Zero-jitter loopback: each peer's batched send fans straight into the
+// other peer's injectRemoteInput. The dedup inside injectRemoteInput
+// absorbs the redundant entries naturally; this is what a real session
+// would do once a batch packet is parsed.
 template <typename Ctrl>
 struct Loopback {
   std::shared_ptr<Common> common;
   std::shared_ptr<Settings> settings;
   std::unique_ptr<Ctrl> a;
   std::unique_ptr<Ctrl> b;
-  std::queue<std::pair<uint32_t, uint8_t>> aToB, bToA;
 
   Loopback(std::shared_ptr<Common> commonIn,
            std::shared_ptr<Settings> settingsIn,
@@ -46,41 +48,24 @@ struct Loopback {
     a->game.rand.seed(seed);
     b->game.rand.seed(seed);
     a->setInputCallbacks(
-        [this](uint32_t f, uint8_t in) { aToB.push({f, in}); },
-        [this](uint32_t f) -> int {
-          if (!bToA.empty() && bToA.front().first == f) {
-            int v = bToA.front().second;
-            bToA.pop();
-            return v;
-          }
-          return -1;
-        });
+        [this](uint32_t bf, uint8_t c, uint8_t const* inputs) {
+          for (uint8_t i = 0; i < c; ++i)
+            b->injectRemoteInput(bf + i, inputs[i]);
+        },
+        nullptr);
     b->setInputCallbacks(
-        [this](uint32_t f, uint8_t in) { bToA.push({f, in}); },
-        [this](uint32_t f) -> int {
-          if (!aToB.empty() && aToB.front().first == f) {
-            int v = aToB.front().second;
-            aToB.pop();
-            return v;
-          }
-          return -1;
-        });
+        [this](uint32_t bf, uint8_t c, uint8_t const* inputs) {
+          for (uint8_t i = 0; i < c; ++i)
+            a->injectRemoteInput(bf + i, inputs[i]);
+        },
+        nullptr);
     a->focus();
     b->focus();
   }
 
-  void deliverAll() {
-    while (!aToB.empty()) {
-      auto [f, in] = aToB.front();
-      aToB.pop();
-      b->injectRemoteInput(f, in);
-    }
-    while (!bToA.empty()) {
-      auto [f, in] = bToA.front();
-      bToA.pop();
-      a->injectRemoteInput(f, in);
-    }
-  }
+  // No-op now that send delivers directly; kept so the test reads as a
+  // tick loop even though there's nothing queued.
+  void deliverAll() {}
 };
 
 std::pair<std::shared_ptr<Common>, std::shared_ptr<Settings>> makeEnv() {

@@ -89,12 +89,18 @@ RefResult runReference(uint32_t worldSeed, ScriptedInputs const& script,
   b->game.rand.seed(worldSeed);
 
   std::vector<std::pair<uint32_t, uint8_t>> aToB, bToA;
+  auto enqueue = [](std::vector<std::pair<uint32_t, uint8_t>>& q,
+                    uint32_t baseFrame, uint8_t count,
+                    uint8_t const* inputs) {
+    for (uint8_t i = 0; i < count; ++i)
+      q.push_back({baseFrame + i, inputs[i]});
+  };
   a->setInputCallbacks(
-      [&](uint32_t f, uint8_t in) { aToB.push_back({f, in}); },
-      [](uint32_t) { return -1; });
+      [&](uint32_t bf, uint8_t c, uint8_t const* in) { enqueue(aToB, bf, c, in); },
+      nullptr);
   b->setInputCallbacks(
-      [&](uint32_t f, uint8_t in) { bToA.push_back({f, in}); },
-      [](uint32_t) { return -1; });
+      [&](uint32_t bf, uint8_t c, uint8_t const* in) { enqueue(bToA, bf, c, in); },
+      nullptr);
   a->focus();
   b->focus();
 
@@ -165,11 +171,15 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
           {tc.transportSeed, tc.minDelay, tc.maxDelay});
 
       a->setInputCallbacks(
-          [&](uint32_t f, uint8_t in) { transport.sendAToB(f, in); },
-          [](uint32_t) { return -1; });
+          [&](uint32_t bf, uint8_t c, uint8_t const* in) {
+            transport.sendAToB(bf, c, in);
+          },
+          nullptr);
       b->setInputCallbacks(
-          [&](uint32_t f, uint8_t in) { transport.sendBToA(f, in); },
-          [](uint32_t) { return -1; });
+          [&](uint32_t bf, uint8_t c, uint8_t const* in) {
+            transport.sendBToA(bf, c, in);
+          },
+          nullptr);
       a->focus();
       b->focus();
 
@@ -181,11 +191,11 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
         b->injectRemoteInput(f, 0);
       }
 
-      auto deliverA = [&](uint32_t f, uint8_t in) {
-        a->injectRemoteInput(f, in);
+      auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in) {
+        for (uint8_t i = 0; i < c; ++i) a->injectRemoteInput(bf + i, in[i]);
       };
-      auto deliverB = [&](uint32_t f, uint8_t in) {
-        b->injectRemoteInput(f, in);
+      auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in) {
+        for (uint8_t i = 0; i < c; ++i) b->injectRemoteInput(bf + i, in[i]);
       };
 
       for (int i = 0; i < kTicks; ++i) {

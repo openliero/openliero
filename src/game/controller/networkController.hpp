@@ -20,6 +20,13 @@ using InputSendCallback = std::function<void(uint32_t frame, uint8_t input)>;
 // Called each frame with: (frame_number) -> input byte, or -1 if not yet available
 using InputRecvCallback = std::function<int(uint32_t frame)>;
 
+// Rollback Step 7.5 — batched input send. RollbackController emits the
+// last K local inputs every tick (K = kMaxRollback + 1) so a dropped
+// packet is covered by the next K packets without a retransmit.
+// `inputs` points to `count` bytes covering frames [baseFrame, baseFrame+count).
+using InputBatchSendCallback =
+    std::function<void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs)>;
+
 // Callback type for sending a checksum to the remote peer for desync detection.
 using ChecksumSendCallback = std::function<void(uint32_t frame, uint32_t checksum)>;
 

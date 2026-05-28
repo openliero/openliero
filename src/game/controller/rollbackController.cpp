@@ -139,13 +139,38 @@ void RollbackController::loadLevelFromData(const std::vector<uint8_t>& data) {
   levelPreloaded = true;
 }
 
-void RollbackController::setInputCallbacks(InputSendCallback send,
+void RollbackController::setInputCallbacks(InputBatchSendCallback send,
                                            InputRecvCallback recv) {
-  sendInput = std::move(send);
+  sendInputBatch = std::move(send);
   recvInput = std::move(recv);
 }
 
+void RollbackController::sendInputWindow(uint32_t newestFrame) {
+  if (!sendInputBatch) return;
+  constexpr uint8_t K = static_cast<uint8_t>(rollback::kMaxRollback + 1);
+  uint8_t count;
+  uint32_t baseFrame;
+  if (newestFrame + 1u < K) {
+    count = static_cast<uint8_t>(newestFrame + 1u);
+    baseFrame = 0;
+  } else {
+    count = K;
+    baseFrame = newestFrame - (K - 1u);
+  }
+  std::array<uint8_t, K> window{};
+  for (uint8_t i = 0; i < count; ++i) {
+    window[i] = localInputs[(baseFrame + i) % INPUT_BUFFER_SIZE];
+  }
+  sendInputBatch(baseFrame, count, window.data());
+}
+
 void RollbackController::injectRemoteInput(uint32_t frame, uint8_t input) {
+  // Step 7.5: drop frames already confirmed. Redundant batch packets
+  // routinely overlap the confirmation boundary — the leading entries
+  // describe frames we've already advanced past, and re-injecting them
+  // would re-set remoteInputReady on a ring slot whose frame number
+  // wraps around into the live rollback window.
+  if (static_cast<int32_t>(frame) <= confirmedSimFrame_) return;
   uint32_t slot = frame % INPUT_BUFFER_SIZE;
   remoteInputs[slot] = input;
   remoteInputReady[slot] = true;
@@ -327,11 +352,12 @@ void RollbackController::advanceWeaponSelection() {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
     localInputs[slot] = localControlState.pack() & 0x7f;
     lastSentFrame = inputFrame;
-
-    if (sendInput) {
-      sendInput(inputFrame, localInputs[slot]);
-    }
   }
+
+  // Redundant window send — see advanceSimulation for the rationale; the
+  // weapon-selection path is lockstep (Step 11 plan) and won't roll back,
+  // but it shares the controller's transport and wire format.
+  sendInputWindow(inputFrame);
 
   if (recvInput) {
     int result = recvInput(simFrame);
@@ -419,11 +445,17 @@ void RollbackController::advanceSimulation() {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
     localInputs[slot] = localControlState.pack() & 0x7f;
     lastSentFrame = inputFrame;
-
-    if (sendInput) {
-      sendInput(inputFrame, localInputs[slot]);
-    }
   }
+
+  // Step 7.5: emit the last K = kMaxRollback + 1 local inputs as a
+  // redundant batch every tick, regardless of whether inputFrame
+  // changed. Under a lossy unreliable-sequenced channel the next batch
+  // covers any single dropped packet without a retransmit round-trip,
+  // which is what lets rollback tolerate higher RTT than lockstep.
+  // Sending continues even when the controller is stalled below so the
+  // remote peer still receives our latest known inputs and can promote
+  // out of its own stall.
+  sendInputWindow(inputFrame);
 
   if (recvInput) {
     int result = recvInput(simFrame);

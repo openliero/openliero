@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <memory>
 #include <queue>
+#include <type_traits>
 
 #include "controller/networkController.hpp"
 #include "controller/rollbackController.hpp"
@@ -39,26 +40,34 @@ struct Loopback {
     b->setSkipWeaponSelection(true);
     a->game.rand.seed(seed);
     b->game.rand.seed(seed);
-    a->setInputCallbacks(
-        [this](uint32_t frame, uint8_t input) { aToB.push({frame, input}); },
-        [this](uint32_t frame) -> int {
-          if (!bToA.empty() && bToA.front().first == frame) {
-            int v = bToA.front().second;
-            bToA.pop();
-            return v;
-          }
-          return -1;
-        });
-    b->setInputCallbacks(
-        [this](uint32_t frame, uint8_t input) { bToA.push({frame, input}); },
-        [this](uint32_t frame) -> int {
-          if (!aToB.empty() && aToB.front().first == frame) {
-            int v = aToB.front().second;
-            aToB.pop();
-            return v;
-          }
-          return -1;
-        });
+    auto popFront = [](std::queue<std::pair<uint32_t, uint8_t>>& q,
+                       uint32_t frame) -> int {
+      if (!q.empty() && q.front().first == frame) {
+        int v = q.front().second;
+        q.pop();
+        return v;
+      }
+      return -1;
+    };
+    if constexpr (std::is_same_v<Ctrl, RollbackController>) {
+      a->setInputCallbacks(
+          [this](uint32_t bf, uint8_t c, uint8_t const* in) {
+            for (uint8_t i = 0; i < c; ++i) aToB.push({bf + i, in[i]});
+          },
+          [this, popFront](uint32_t frame) { return popFront(bToA, frame); });
+      b->setInputCallbacks(
+          [this](uint32_t bf, uint8_t c, uint8_t const* in) {
+            for (uint8_t i = 0; i < c; ++i) bToA.push({bf + i, in[i]});
+          },
+          [this, popFront](uint32_t frame) { return popFront(aToB, frame); });
+    } else {
+      a->setInputCallbacks(
+          [this](uint32_t frame, uint8_t input) { aToB.push({frame, input}); },
+          [this, popFront](uint32_t frame) { return popFront(bToA, frame); });
+      b->setInputCallbacks(
+          [this](uint32_t frame, uint8_t input) { bToA.push({frame, input}); },
+          [this, popFront](uint32_t frame) { return popFront(aToB, frame); });
+    }
     a->focus();
     b->focus();
   }
