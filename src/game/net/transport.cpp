@@ -14,9 +14,13 @@
 #include <arpa/inet.h>
 #endif
 
-static constexpr int NUM_CHANNELS = 2;
+static constexpr int NUM_CHANNELS = 3;
 static constexpr int CHANNEL_RELIABLE = 0;
 static constexpr int CHANNEL_UNRELIABLE = 1;
+// Rollback PacketInputBatch: unreliable + sequenced. Newer batches
+// supersede older; redundancy in the payload (K = MaxRollback + 1
+// frames per batch) covers single-packet loss without retransmit.
+static constexpr int CHANNEL_UNRELIABLE_SEQUENCED = 2;
 
 // Single active transport pointer. Only one ENet host exists per process.
 static std::atomic<NetTransport*> sActiveTransport{nullptr};
@@ -240,11 +244,35 @@ bool NetTransport::poll() {
                 onRemoteInput(frame, data[5]);
               }
               break;
+            case PacketInputBatch:
+              // [type:1][baseFrame:u32 LE][count:u8][localDelta:u8]
+              // [input[count]:u8]. Validate that localDelta is in range
+              // (< count) and that the payload length matches count
+              // exactly — anything else is malformed or a version drift.
+              if (len >= 7 && onRemoteInputBatch) {
+                uint32_t baseFrame;
+                std::memcpy(&baseFrame, data + 1, 4);
+                uint8_t count = data[5];
+                uint8_t localDelta = data[6];
+                if (count == 0 || len != size_t{7} + count) break;
+                if (localDelta >= count) break;
+                uint32_t remoteLocalFrame = baseFrame + localDelta;
+                onRemoteInputBatch(baseFrame, count, data + 7,
+                                   remoteLocalFrame);
+              }
+              break;
             case PacketHandshake:
-              if (len == 9 && onHandshake) {
+              // Rollback bump: [type:1][version:1][seed:4][hash:4] = 10 B.
+              // Mismatched version → silently drop; the session times
+              // out waiting for handshake and surfaces as a normal
+              // connection failure to the user. Old (v1) peers send 9 B
+              // and will be dropped here too — protocol versions are
+              // mutually unintelligible by design.
+              if (len == 10 && onHandshake) {
+                if (data[1] != kProtocolVersion) break;
                 uint32_t seed, hash;
-                std::memcpy(&seed, data + 1, 4);
-                std::memcpy(&hash, data + 5, 4);
+                std::memcpy(&seed, data + 2, 4);
+                std::memcpy(&hash, data + 6, 4);
                 onHandshake(seed, hash);
               }
               break;
@@ -354,6 +382,35 @@ void NetTransport::sendInput(uint32_t frame, uint8_t input) {
   sendPacket(buf, sizeof(buf));
 }
 
+void NetTransport::sendInputBatch(uint32_t baseFrame, uint8_t count,
+                                  uint8_t localDelta,
+                                  uint8_t const* inputs) {
+  if (!peer_ || count == 0 || localDelta >= count) return;
+  // Cap to a defensive maximum so a misuse can't blow the stack
+  // buffer. Rollback uses count = kMaxRollback + 1 (= 8); accept
+  // anything up to 64 for headroom.
+  static constexpr uint8_t kMaxCount = 64;
+  if (count > kMaxCount) return;
+
+  uint8_t buf[7 + kMaxCount];
+  buf[0] = PacketInputBatch;
+  std::memcpy(buf + 1, &baseFrame, 4);
+  buf[5] = count;
+  buf[6] = localDelta;
+  std::memcpy(buf + 7, inputs, count);
+
+  size_t len = size_t{7} + count;
+  // ENet flag 0 = unreliable but sequenced — newer batches supersede
+  // older ones at the channel level, so a stale duplicate after a
+  // newer arrival is dropped before reaching the application. Within
+  // a batch we still de-dup at injectRemoteInput against
+  // confirmedSimFrame_.
+  ENetPacket* packet = enet_packet_create(buf, len, 0);
+  if (!packet) return;
+  if (enet_peer_send(peer_, CHANNEL_UNRELIABLE_SEQUENCED, packet) < 0)
+    enet_packet_destroy(packet);
+}
+
 void NetTransport::sendChecksum(uint32_t frame, uint32_t checksum) {
   uint8_t buf[9];
   buf[0] = PacketChecksum;
@@ -367,10 +424,11 @@ void NetTransport::sendChecksum(uint32_t frame, uint32_t checksum) {
 }
 
 void NetTransport::sendHandshake(uint32_t seed, uint32_t settingsHash) {
-  uint8_t buf[9];
+  uint8_t buf[10];
   buf[0] = PacketHandshake;
-  std::memcpy(buf + 1, &seed, 4);
-  std::memcpy(buf + 5, &settingsHash, 4);
+  buf[1] = kProtocolVersion;
+  std::memcpy(buf + 2, &seed, 4);
+  std::memcpy(buf + 6, &settingsHash, 4);
   sendPacket(buf, sizeof(buf));
 }
 

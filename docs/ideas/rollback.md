@@ -424,6 +424,13 @@ Change to: send `(confirmedFrame, checksum)` where `checksum` is cached from the
 
 ### Step 11 — Settings, UX, defaults
 
+Sub-steps to keep blast radius small:
+- 11a — Transport wire format: `PacketInputBatch` + handshake protocol-version byte.
+- 11b — Wire `RollbackController` through `NetSession` / `NetTransport`.
+- 11c — `useRollback` / `maxRollback` / `inputDelay` in `Settings` + `MatchSettingsData` sync.
+- 11d — Dev-HUD `RB:n` indicator + jitter knobs (Step 9 deferred playtest).
+- 11e — Promote `RollbackController` to default; update `multiplayer.md`.
+
 Settings (host-authoritative, synced via existing `MatchSettingsData`):
 
 - `useRollback` (bool)
@@ -615,6 +622,51 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   test added here — the existing speculative-suppression and rollback
   correctness tests already cover the only behaviours a render/audio
   test could observe.
+
+### Step 11a — Transport wire format + version bump (2026-05-28)
+
+- New `NetTransport::kProtocolVersion = 2` constant. The handshake
+  packet grew by one byte to `[type:1][version:1][seed:4][hash:4]`
+  (10 B). Receivers silently drop handshakes whose `len != 10` or
+  whose `version` byte doesn't match `kProtocolVersion`. The session
+  layer surfaces the resulting handshake timeout as a normal
+  connection failure to the user — no UI work needed in 11a.
+- Old (v1) builds send 9-byte handshakes and are rejected here; new
+  builds receiving from old peers do the same. Cross-version play is
+  impossible by construction; the plan's "rollback peer refuses to
+  play against a lockstep peer (or vice versa)" requirement is met by
+  the version byte, not by feature detection.
+- Added `PacketInputBatch = 15` for the K-wide redundant input window
+  Steps 7.5 and 8 already use at the controller boundary. Wire layout
+  is exactly the plan's "Step 8 frame-advantage encoding":
+  `[type:1][baseFrame:u32 LE][count:u8][localDelta:u8][input[count]:u8]`.
+  Receiver reconstructs `remoteLocalFrame = baseFrame + localDelta`
+  and forwards via `onRemoteInputBatch(bf, count, ptr, remoteLocalFrame)`.
+  Parser rejects `count == 0`, `len != 7 + count`, and
+  `localDelta >= count` so a malformed or version-drifted payload
+  can't drive the controller into an inconsistent state.
+- New channel `CHANNEL_UNRELIABLE_SEQUENCED = 2` (NUM_CHANNELS bumped
+  to 3). PacketInputBatch is sent with ENet flag = 0 — that's ENet's
+  "unreliable but sequenced" mode: stale duplicates after a newer
+  batch are dropped at the channel layer. Within a batch, the
+  controller's existing `injectRemoteInput` de-dups against
+  `confirmedSimFrame_` (Step 7.5's stale-frame drop guard).
+  Lockstep `PacketInput` continues to use the reliable channel — no
+  behaviour change to the existing `NetworkController` path.
+- Defensive cap on `sendInputBatch::count` (≤ 64) so a future caller
+  misuse can't blow the stack buffer. Rollback uses count = 8.
+- `test_transport.cpp` gained two cases: round-trip of a K=8 batch
+  asserting `baseFrame`/`count`/`remoteLocalFrame`/payload equality,
+  and a sanity case pinning `kProtocolVersion = 2`. Existing transport
+  + session tests still pass — the handshake test only checks the
+  callback delivers, not the byte length.
+- Deferred to 11b: wiring `RollbackController` to `NetTransport`
+  via `NetSession`. The new methods exist but no production code
+  calls them yet; only the new transport test exercises them.
+- New: `kProtocolVersion`, `PacketInputBatch`, `sendInputBatch` +
+  `onRemoteInputBatch` on `NetTransport`; handshake send/recv now
+  carries the version byte; `CHANNEL_UNRELIABLE_SEQUENCED` channel
+  added (NUM_CHANNELS = 3). Two transport tests added.
 
 ### Step 10 — Desync detection under rollback (2026-05-28)
 

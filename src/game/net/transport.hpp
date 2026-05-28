@@ -15,6 +15,12 @@ struct IceAgent;
 // Handles UDP communication between two peers using ENet.
 // Provides reliable ordered delivery of input packets.
 struct NetTransport {
+  // Bumped to 2 with the rollback wire format (handshake carries a
+  // version byte; PacketInputBatch replaces single-frame PacketInput on
+  // the rollback path). Peers running a different version handshake
+  // mismatch and disconnect rather than play with mismatched semantics.
+  static constexpr uint8_t kProtocolVersion = 2;
+
   // Packet types
   enum PacketType : uint8_t {
     PacketInput = 1,
@@ -31,6 +37,13 @@ struct NetTransport {
     PacketTcInfo = 12,
     PacketTcResponse = 13,
     PacketTcData = 14,
+    // Rollback (Step 7.5/8): K-wide redundant input window with the
+    // sender's current sim frame, delivered unreliable-sequenced.
+    //   [type:1][baseFrame:u32 LE][count:u8][localDelta:u8][input[count]:u8]
+    // localDelta is `simFrame - baseFrame` at send time; receiver
+    // reconstructs `remoteLocalFrame = baseFrame + localDelta` for
+    // Step 8 frame-advantage tracking.
+    PacketInputBatch = 15,
   };
 
   struct PlayerInfo {
@@ -100,6 +113,13 @@ struct NetTransport {
   bool poll();
 
   void sendInput(uint32_t frame, uint8_t input);
+  // Rollback batched input send. `inputs` covers frames
+  // [baseFrame, baseFrame + count - 1]. `localDelta` is the sender's
+  // `simFrame - baseFrame` at the moment of send (range
+  // [0, count - 1]). Unreliable-sequenced — newer packets supersede
+  // older; receiver dedups against confirmed frames.
+  void sendInputBatch(uint32_t baseFrame, uint8_t count,
+                      uint8_t localDelta, uint8_t const* inputs);
   void sendChecksum(uint32_t frame, uint32_t checksum);
   void sendHandshake(uint32_t seed, uint32_t settingsHash);
   void sendPlayerInfo(const PlayerInfo& info);
@@ -122,6 +142,13 @@ struct NetTransport {
 
   // Callbacks
   std::function<void(uint32_t frame, uint8_t input)> onRemoteInput;
+  // Rollback batched input arrival. `remoteLocalFrame` is the sender's
+  // simFrame at send time (= baseFrame + localDelta) — used by Step 8
+  // frame-advantage. `inputs` is valid only for the duration of the
+  // callback; copy if you need to keep it.
+  std::function<void(uint32_t baseFrame, uint8_t count,
+                     uint8_t const* inputs, uint32_t remoteLocalFrame)>
+      onRemoteInputBatch;
   std::function<void(uint32_t seed, uint32_t settingsHash)> onHandshake;
   std::function<void(uint32_t frame, uint32_t checksum)> onChecksum;
   std::function<void(const PlayerInfo& info)> onPlayerInfo;
