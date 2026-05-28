@@ -374,7 +374,7 @@ A debug menu toggle (Step 11) lets the user enable the same `JitterTransport` in
 
 This is how the developer feels rollback before promoting it to default in Step 11. Combined with the automated harness, no `tc qdisc netem` or two-machine setup is needed at any point.
 
-### Step 7 — Rollback on misprediction
+### Step 7 — Rollback on misprediction — ✅ done
 
 When real input arrives for frame F and differs from prediction:
 
@@ -511,6 +511,16 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - Added a missing `virtual ~StatsRecorder() = default;` while editing the header — `Game` holds it via `shared_ptr<StatsRecorder>` so deletion was already polymorphic, but the base lacked a virtual dtor.
 - The test (`src/tests/test_speculative_suppression.cpp`) uses a counting mock for both sides. Two cases: (a) `200 normal → snapshot → 200 speculative → restore → 200 normal` produces the exact same counts as a single `400`-frame control run; (b) `setSpeculative` propagation invariant. The mocks check `speculative` themselves to confirm the *flag* is being toggled correctly — separate from the production paths, which test the actual gating.
 - New: `bool speculative` + `setSpeculative()` on `Game`, `bool speculative` on `SoundPlayer`/`StatsRecorder` bases, early-returns in `RecordSoundPlayer::stop` / `DefaultSoundPlayer::play+stop` / all `NormalStatsRecorder` writers, `src/tests/test_speculative_suppression.cpp`, CMake entry.
+
+### Step 7 — Rollback on misprediction (2026-05-28)
+
+- The whole change sits inside `RollbackController::advanceSimulation` — no new module. After the existing send/receive plumbing, a single promote loop walks `confirmedSimFrame_+1 .. simFrame-1`, upgrading slots whose prediction matched the now-arrived real input. On the first mismatch it captures `rollbackTo = F-1`, breaks (without clearing `remoteInputReady` for F), and the block below restores `lastGood->snapshot`, replays the gap with `game.setSpeculative(true)`, and re-snapshots each replayed frame. localPrevInput / remotePrevInput are reseeded from the rollback slot's stored input bytes — they're controller-level edge-tracking state, not part of the snapshot.
+- **The headline bug** in the first cut was a wrong invariant in the new-frame block. The old code consumed `remoteInputReady[currentSlot]` and cleared it whenever the byte was present, even when an earlier frame's input was still missing (out-of-order delivery). The slot got marked Confirmed using a real value, but `confirmedSimFrame_` couldn't advance past the gap. When the missing predecessor finally arrived and rollback fired, the resim for the early-arrived frame had nothing to consume — its `remoteInputReady` had already been cleared — so the slot was re-marked Predicted using the prediction byte, the real value was lost, and the controller stalled forever. Fix: only consume real input (and clear the ring entry) when `confirmedSimFrame_ + 1 == simFrame`. Otherwise predict and leave the real byte in the ring for a later promote+rollback cycle. Same rule applies inside the resim loop.
+- That fix also collapsed several earlier contiguity guards: `!predicted` now *implies* the chain is contiguous through `simFrame-1`, so the post-increment update is unconditional and the checksum-send no longer needs the explicit chain check.
+- **`JitterTransport`** (src/tests/jitter_transport.hpp): seed-driven `std::mt19937`, per-packet random delay in `[min,max]` frames, no loss/duplication for Step 7 (those land in 7.5). Out-of-order arrival is real — the queue isn't sorted by delivery time, so a later-sent packet with a smaller random delay genuinely arrives before an earlier one. That's exactly what tickled the bug above.
+- Test cap on delay was set deliberately small (max 5). The 2-peer lockstep protocol has no input redundancy yet, so once one peer's `simFrame - confirmedSimFrame_` reaches `kMaxRollback + 1` the stall guard returns *before sending the next input* (`if (inputFrame != lastSentFrame)` blocks the resend). The peer stops emitting; the other peer starves and stalls in turn — a permanent cascade. Step 7.5's redundancy + unreliable-sequenced channel breaks the cycle. For Step 7's algorithmic correctness test, picking delays where the steady-state gap stays well under `kMaxRollback` keeps the cascade off the table.
+- Added `RollbackController::rollbackCount_` + accessor purely so the correctness test can assert "rollback actually fired" — otherwise a passing test with zero mispredictions would be vacuous. With the random inputs and any delay > 0 the predicted byte (last received) almost never matches the next real byte, so rollbacks fire constantly (~hundreds per 800-tick run).
+- New: rollback + resim path in `advanceSimulation`, `rollbackCount()` accessor + `rollbackCount_` field, `src/tests/jitter_transport.hpp`, `src/tests/test_rollback_correctness.cpp` (4 delay configurations), CMake entry.
 
 ### Step 6 — Prediction without rollback (2026-05-28)
 

@@ -1,17 +1,17 @@
 #pragma once
 
-// Rollback Step 4–6 — RollbackController.
+// Rollback Step 4–7 — RollbackController.
 //
 // Structurally a copy of NetworkController for the lockstep path. Step 6
 // adds GGPO-style prediction: when remote input for the current frame
 // hasn't arrived, predict it = last received remote input and advance the
 // sim with game.speculative = true. Predictions are bounded by
 // rollback::kMaxRollback in-flight frames; past that the controller
-// stalls. Rollback on misprediction lands in Step 7 — for now a wrong
-// prediction simply produces divergent state, which is acceptable under
-// zero jitter (predictions never happen) and visible-but-untreated under
-// jitter (the Step 7 verification test will be what proves the algorithm
-// recovers).
+// stalls. Step 7 closes the loop: when a real remote input arrives and
+// disagrees with the prediction stored for that frame, advanceSimulation
+// reloads the snapshot of the last confirmed frame and resimulates the
+// gap with the freshest input known, marking each replayed frame
+// speculative so side effects don't escape twice.
 
 #include <array>
 #include <cstdint>
@@ -78,6 +78,12 @@ struct RollbackController : CommonController {
   // (received) remote input. Anything past this is currently a prediction.
   int32_t confirmedFrame() const { return confirmedSimFrame_; }
 
+  // Step 7 introspection — total number of rollback events triggered so
+  // far. Exposed for tests that want to assert "rollback actually fired"
+  // (otherwise a correctness test could trivially pass by never
+  // mispredicting).
+  uint64_t rollbackCount() const { return rollbackCount_; }
+
   Game game;
 
  private:
@@ -141,4 +147,6 @@ struct RollbackController : CommonController {
   //   (matches GGPO's "input duplication" default).
   int32_t confirmedSimFrame_;
   uint8_t lastRemoteInput_;
+
+  uint64_t rollbackCount_ = 0;
 };

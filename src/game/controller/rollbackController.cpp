@@ -432,18 +432,100 @@ void RollbackController::advanceSimulation() {
     }
   }
 
-  // Step 6 — promote past predicted frames whose real input has now
-  // arrived. Bookkeeping only: we update confirmedSimFrame_ and
-  // lastRemoteInput_ so the stall guard and next prediction see the
-  // truth, but leave the buffer slot's Predicted snapshot alone — Step 7
-  // will compare predicted vs real input and rollback if they differ.
+  // Step 7 — promote past predicted frames whose real input has now
+  // arrived, and trigger a rollback when a prediction turns out to be
+  // wrong. The loop walks confirmedSimFrame_+1 .. simFrame-1 in order:
+  //   - Match (or non-Predicted slot): upgrade the slot to Confirmed
+  //     and advance confirmedSimFrame_/lastRemoteInput_.
+  //   - Mismatch: stop at the first wrong frame; the resim below
+  //     reloads its predecessor's snapshot and re-runs forward.
+  int32_t rollbackTo = -1;
   while (confirmedSimFrame_ + 1 < static_cast<int32_t>(simFrame)) {
     int32_t F = confirmedSimFrame_ + 1;
     uint32_t s = static_cast<uint32_t>(F) % INPUT_BUFFER_SIZE;
     if (!remoteInputReady[s]) break;
-    lastRemoteInput_ = remoteInputs[s];
+    uint8_t real = remoteInputs[s];
+
+    auto* slot = rollbackBuffer_.find(F);
+    bool match = true;
+    if (slot && slot->remoteState == rollback::RemoteState::Predicted) {
+      // slot stores inputs by worm index: localInput=worm0, remoteInput=worm1.
+      // The misprediction question is about the *other* peer's input.
+      uint8_t storedOther =
+          (localIdx == 0) ? slot->remoteInput : slot->localInput;
+      match = (storedOther == real);
+    }
+
+    if (!match) {
+      rollbackTo = F - 1;
+      break;
+    }
+
+    if (slot) slot->remoteState = rollback::RemoteState::Confirmed;
+    lastRemoteInput_ = real;
     remoteInputReady[s] = false;
     confirmedSimFrame_ = F;
+  }
+
+  // Rollback resim — load the last known-good snapshot, then replay
+  // every frame after it with the freshest input available. Speculative
+  // for the whole window so previously-emitted sounds/stats don't
+  // duplicate (Step 5's flag).
+  if (rollbackTo >= 0) {
+    ++rollbackCount_;
+    auto* lastGood = rollbackBuffer_.find(rollbackTo);
+    // Resident by construction: the stall guard caps simFrame - confirmedSimFrame_
+    // at kMaxRollback, and the ring holds kMaxRollback+1 slots.
+    game.loadSnapshotFast(lastGood->snapshot);
+
+    uint8_t lastGoodWorm0 = lastGood->localInput;
+    uint8_t lastGoodWorm1 = lastGood->remoteInput;
+    localPrevInput  = (localIdx == 0) ? lastGoodWorm0 : lastGoodWorm1;
+    remotePrevInput = (localIdx == 0) ? lastGoodWorm1 : lastGoodWorm0;
+
+    game.setSpeculative(true);
+    for (int32_t F = rollbackTo + 1; F < static_cast<int32_t>(simFrame); ++F) {
+      uint32_t s = static_cast<uint32_t>(F) % INPUT_BUFFER_SIZE;
+      uint8_t curLocal = localInputs[s];
+      uint8_t curRemote;
+      bool framePredicted;
+      // Same contiguity rule as the new-frame block — only consume real
+      // input (and clear the ring entry) when the chain reaches F-1.
+      // Out-of-order real inputs stay in the ring for a later promote.
+      bool resimContiguous = (confirmedSimFrame_ + 1 == F);
+      if (remoteInputReady[s] && resimContiguous) {
+        curRemote = remoteInputs[s];
+        remoteInputReady[s] = false;
+        lastRemoteInput_ = curRemote;
+        framePredicted = false;
+        confirmedSimFrame_ = F;
+      } else {
+        curRemote = lastRemoteInput_;
+        framePredicted = true;
+      }
+
+      uint8_t risingLocal  = curLocal  & ~localPrevInput;
+      uint8_t risingRemote = curRemote & ~remotePrevInput;
+      uint8_t releasedLocal  = localPrevInput  & ~curLocal;
+      uint8_t releasedRemote = remotePrevInput & ~curRemote;
+      game.worms[localIdx ]->controlStates.istate |= risingLocal;
+      game.worms[remoteIdx]->controlStates.istate |= risingRemote;
+      game.worms[localIdx ]->controlStates.istate &= ~releasedLocal;
+      game.worms[remoteIdx]->controlStates.istate &= ~releasedRemote;
+      localPrevInput  = curLocal;
+      remotePrevInput = curRemote;
+
+      game.processFrame();
+
+      auto& outSlot = rollbackBuffer_.write(static_cast<int>(F));
+      outSlot.localInput  = (localIdx == 0) ? curLocal  : curRemote;
+      outSlot.remoteInput = (localIdx == 0) ? curRemote : curLocal;
+      outSlot.remoteState = framePredicted
+          ? rollback::RemoteState::Predicted
+          : rollback::RemoteState::Confirmed;
+      game.saveSnapshotFast(outSlot.snapshot);
+    }
+    game.setSpeculative(false);
   }
 
   // Step 6 — stall guard. After this tick simFrame becomes simFrame+1,
@@ -460,7 +542,16 @@ void RollbackController::advanceSimulation() {
   uint8_t curLocal = localInputs[currentSlot];
   uint8_t curRemote;
   bool predicted;
-  if (remoteInputReady[currentSlot]) {
+  // Only consume real remote input here when the confirmed chain reaches
+  // simFrame-1 — out-of-order arrival (real input for a future frame
+  // when an earlier frame is still missing) must stay in the ring so the
+  // promote loop on a later tick can fold it into a contiguous chain.
+  // Consuming it now would clear the ring entry and leave us with no
+  // record that the real value was ever known, forcing a permanent
+  // stall the moment the missing predecessor finally arrives.
+  bool chainContiguous =
+      confirmedSimFrame_ + 1 == static_cast<int32_t>(simFrame);
+  if (remoteInputReady[currentSlot] && chainContiguous) {
     curRemote = remoteInputs[currentSlot];
     remoteInputReady[currentSlot] = false;
     lastRemoteInput_ = curRemote;
@@ -488,7 +579,12 @@ void RollbackController::advanceSimulation() {
   game.setSpeculative(false);
   ++simFrame;
 
-  if (!predicted) confirmedSimFrame_ = static_cast<int32_t>(simFrame) - 1;
+  // predicted=false only when chainContiguous was true above, which by
+  // construction means confirmedSimFrame_ + 1 == simFrame-1 after the
+  // increment — so the chain trivially extends to the just-run frame.
+  if (!predicted) {
+    confirmedSimFrame_ = static_cast<int32_t>(simFrame) - 1;
+  }
 
   // Snapshot the post-frame state. Stored as Predicted/Confirmed per
   // whether the input that produced it was real or guessed — Step 7
@@ -505,8 +601,13 @@ void RollbackController::advanceSimulation() {
   }
 
   // Checksums for predicted frames would race the remote side and trip
-  // the desync alarm spuriously; only emit on confirmed frames. Step 10
+  // the desync alarm spuriously; only emit on confirmed frames. The
+  // contiguity check matches the confirmedSimFrame_ guard above —
+  // out-of-order arrivals must wait until promote fills the gap. Step 10
   // generalises this to "checksum captured at confirmation time".
+  // !predicted implies the chain is contiguous through simFrame-1, so
+  // this checksum reflects state that the remote peer has also fully
+  // confirmed — no false-positive desync. Step 10 will generalise this.
   if (!predicted && sendChecksum) {
     sendChecksum(simFrame - 1, fastGameChecksum(game));
   }
