@@ -9,13 +9,12 @@
 
 NetSession::NetSession(std::shared_ptr<Common> common,
                        std::shared_ptr<Settings> settings,
-                       FsNode tcRoot,
-                       bool useRollback)
+                       FsNode tcRoot)
     : role_(Host)
     , sessionState_(Idle)
     , common_(std::move(common))
     , settings_(std::move(settings))
-    , useRollback_(useRollback)
+    , useRollback_(false)  // overwritten from settings_ once role is set
     , controllerPtr_(nullptr)
     , rollbackPtr_(nullptr)
     , gameSeed_(0)
@@ -48,7 +47,14 @@ NetSession::~NetSession() {
 void NetSession::createController(int localIdx) {
   if (useRollback_) {
     rollback_ = std::make_unique<RollbackController>(common_, settings_, localIdx);
+    // Step 11c: rollback peers honor the host-authoritative inputDelay
+    // (default 1 per the plan, down from lockstep's 3).
+    rollback_->setInputDelay(static_cast<uint32_t>(settings_->inputDelay));
   } else {
+    // Lockstep deliberately ignores Settings::inputDelay and keeps its
+    // hardcoded default of 3. The setting's lower default is tuned for
+    // rollback — applying it to lockstep would change long-standing
+    // network behavior for users who didn't opt into anything.
     controller_ = std::make_unique<NetworkController>(common_, settings_, localIdx);
   }
 }
@@ -107,10 +113,12 @@ bool NetSession::hostGame(uint16_t port) {
     return false;
 
   role_ = Host;
+  useRollback_ = settings_->useRollback;
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
 
-  // Create controller: host is player 0
-  createController(0);
+  // Controller is created in tryStartGame once both sides have agreed
+  // on settings (incl. useRollback). Pre-Playing transport callbacks
+  // tolerate a null controller — buffered inputs flush on creation.
 
   if (!transport_.host(port)) {
     sessionState_ = Failed;
@@ -125,10 +133,10 @@ bool NetSession::joinGame(const std::string& address, uint16_t port) {
     return false;
 
   role_ = Client;
+  // Client's useRollback is overwritten when MatchSettings arrives.
+  // Start permissively: same as Host's so any drift is settings-driven.
+  useRollback_ = settings_->useRollback;
   gameSeed_ = 0;  // Will be set by host's handshake
-
-  // Create controller: client is player 1
-  createController(1);
 
   if (!transport_.connect(address, port)) {
     sessionState_ = Failed;
@@ -143,8 +151,8 @@ bool NetSession::hostWithTransport(NetTransport&& transport) {
     return false;
 
   role_ = Host;
+  useRollback_ = settings_->useRollback;
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
-  createController(0);
 
   transport_ = std::move(transport);
   wireCallbacks();
@@ -158,8 +166,8 @@ bool NetSession::connectWithTransport(NetTransport&& transport,
     return false;
 
   role_ = Client;
+  useRollback_ = settings_->useRollback;
   gameSeed_ = 0;
-  createController(1);
 
   transport_ = std::move(transport);
   wireCallbacks();
@@ -264,6 +272,9 @@ void NetSession::onConnected() {
     msd.namesOnBonuses = settings_->namesOnBonuses ? 1 : 0;
     msd.bloodParticleMax = settings_->bloodParticleMax;
     msd.zoneTimeout = settings_->zoneTimeout;
+    msd.useRollback = settings_->useRollback ? 1 : 0;
+    msd.maxRollback = settings_->maxRollback;
+    msd.inputDelay = settings_->inputDelay;
     transport_.sendMatchSettings(msd);
     matchSettingsReceived_ = true;  // Host already has correct settings
     mapDataReceived_ = true;        // Host generates locally
@@ -350,6 +361,13 @@ void NetSession::onMatchSettings(const NetTransport::MatchSettingsData& data) {
     settings_->namesOnBonuses = data.namesOnBonuses != 0;
     settings_->bloodParticleMax = data.bloodParticleMax;
     settings_->zoneTimeout = data.zoneTimeout;
+    // Step 11c rollback fields. The host is authoritative — the
+    // client's controller (built in tryStartGame, after this point)
+    // sees the resolved mode/inputDelay.
+    settings_->useRollback = data.useRollback != 0;
+    settings_->maxRollback = data.maxRollback;
+    settings_->inputDelay = data.inputDelay;
+    useRollback_ = settings_->useRollback;
   }
 
   matchSettingsReceived_ = true;
@@ -506,7 +524,9 @@ void NetSession::onTcData(const void* data, size_t len) {
   newCommon->load(memFs->root());
 
   common_ = newCommon;
-  controller_ = std::make_unique<NetworkController>(common_, settings_, 1);
+  // Controller is built in tryStartGame using the freshly-loaded
+  // common_. Step 11c removed the eager construction here so the
+  // useRollback decision can wait for MatchSettings.
 
   if (onTcReloaded)
     onTcReloaded(newCommon);
@@ -521,6 +541,14 @@ void NetSession::onTcData(const void* data, size_t len) {
 void NetSession::tryStartGame() {
   if (sessionState_ == Playing)
     return;
+
+  // Step 11c: instantiate the controller now that both peers have
+  // agreed on useRollback (host's value was sent over MatchSettingsData
+  // and the client picked it up in onMatchSettings). Previously
+  // controllers were built eagerly in hostGame/joinGame, before the
+  // mode was known.
+  int localIdx = (role_ == Host) ? 0 : 1;
+  createController(localIdx);
 
   // Apply remote player's info to the remote worm directly (not the persistent settings)
   int remoteIdx = (role_ == Host) ? 1 : 0;

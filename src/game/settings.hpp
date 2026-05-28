@@ -81,9 +81,17 @@ struct Settings : GameplayExtensions, AppSettings {
   bool screenSync;
   int32_t bonusTimeout;  // max seconds a bonus stays on the map; 0 = no limit
 
+  // Rollback netcode (Step 11c). Host-authoritative — synced to the
+  // client via MatchSettingsData. Defaults match the plan in
+  // docs/ideas/rollback.md "Settings, UX, defaults". Disabled by
+  // default until the Step 11e flip.
+  bool useRollback;          // true → NetSession runs the rollback path
+  int32_t maxRollback;       // max in-flight predicted frames
+  int32_t inputDelay;        // frames of artificial input delay
+
   static int const NumWormSettings = 3;  // 0=left, 1=right, 2=network
   static int const NetworkPlayerIdx = 2;
-  static int const ConfigVersion = 2;  // bump when adding fields to the TOML config
+  static int const ConfigVersion = 3;  // bump when adding fields to the TOML config
   std::shared_ptr<WormSettings> wormSettings[NumWormSettings];
 
   uint64_t hash;

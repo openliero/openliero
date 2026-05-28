@@ -623,6 +623,61 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   correctness tests already cover the only behaviours a render/audio
   test could observe.
 
+### Step 11c — Settings + MatchSettings sync (2026-05-28)
+
+- Added three host-authoritative fields to `Settings`:
+  `useRollback` (bool, default false), `maxRollback` (int32, default
+  7), `inputDelay` (int32, default 1). All three persist via TOML
+  (`serializeSettingsScalars`) and bumped `Settings::ConfigVersion`
+  to 3 + `CEREAL_CLASS_VERSION(Settings, 3)`. v2 / older configs
+  silently default the new fields because `TomlInputArchive::loadValue`
+  no-ops on missing keys.
+- Extended `NetTransport::MatchSettingsData` with `uint8_t useRollback`
+  + `int32_t maxRollback` + `int32_t inputDelay`. Wire format size
+  change is safe by construction: 11a's protocol-version bump
+  guarantees old (v1) peers can't handshake into a session that
+  would observe an unexpected payload size.
+- `NetSession`'s 11b ctor flag is gone. Mode now comes exclusively
+  from `settings_->useRollback`. Host: read at `hostGame` /
+  `hostWithTransport`. Client: starts permissively from its own
+  settings, then `onMatchSettings` overwrites
+  `settings_->useRollback` (and `inputDelay` / `maxRollback`) from
+  the host's authoritative payload.
+- **Deferred controller construction.** Previously controllers were
+  built eagerly in `hostGame` / `joinGame` / `hostWithTransport` /
+  `connectWithTransport` (and the client TC-swap path). They're now
+  built in `tryStartGame`, after `matchSettingsReceived_` is true,
+  so the client's mode (and therefore controller type) is correct
+  by construction. Removed the now-dead controller instantiation
+  in `onTcData`. Rematch paths already created fresh controllers
+  in the right place — left untouched.
+- `RollbackController` and `NetworkController` both gained
+  `setInputDelay(uint32_t)`. `createController` applies
+  `settings_->inputDelay` only on the rollback path — lockstep keeps
+  its hardcoded default of 3 frames so existing network behavior is
+  unchanged for users who didn't opt in. (If a future settings UI
+  surfaces `inputDelay` independently of `useRollback` we can revisit.)
+- `maxRollback` is currently stored and synced but not consumed: the
+  rollback ring buffer's capacity is the compile-time
+  `rollback::kMaxRollback` constant. Making it runtime would mean
+  heap-allocated buffers + `K = kMaxRollback + 1` constants becoming
+  variables across the controller. Deferred — the setting is in
+  place so a future runtime knob has the wire format ready.
+- Existing `test_session_rollback` updated to flip
+  `settings->useRollback` instead of the removed ctor flag, and to
+  allow ±`kFrameAdvantage` frame drift between peers — with the new
+  `inputDelay=1` default, peers can be up to 2 frames apart at any
+  snapshot (Step 8's time-sync stall bounds the gap but doesn't pin
+  it). A new section verifies that a client whose local settings
+  diverge from the host's still ends up running rollback with the
+  host's `inputDelay` after MatchSettings arrives.
+- `test_versioning`'s "version = 2" string check bumped to "version = 3".
+- New: rollback settings fields + ctor inits + TOML/cereal entries;
+  ConfigVersion=3, Settings cereal class version=3; MatchSettingsData
+  wire fields; `setInputDelay` on both controllers; deferred
+  `createController` call in `tryStartGame`; MatchSettings apply-on-
+  client path; second `test_session_rollback` SECTION.
+
 ### Step 11b — NetSession integration with RollbackController (2026-05-28)
 
 - `NetSession` gains an optional `useRollback` ctor flag (default

@@ -82,6 +82,10 @@ struct RollbackController : CommonController {
 
   uint32_t currentFrame() const { return simFrame; }
   void setLocalControlState(uint8_t packed) { localControlState.unpack(packed); }
+  // Step 11c — apply the host-authoritative inputDelay from Settings.
+  // Must be called before the first sim tick (between construction and
+  // focus). Production callers (NetSession) set this in createController.
+  void setInputDelay(uint32_t frames) { inputDelay = frames; }
 
   // Access the rollback ring buffer (Step 4: writes only; Step 5+ reads).
   rollback::RollbackBuffer const& rollbackBuffer() const { return rollbackBuffer_; }

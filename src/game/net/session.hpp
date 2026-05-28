@@ -26,11 +26,12 @@ struct NetSession {
     Failed,          // Connection failed
   };
 
-  // useRollback selects the rollback controller path (Steps 4–10).
-  // Default false keeps existing callers on lockstep semantics until
-  // Step 11e flips the default.
+  // The rollback / lockstep mode is read from `settings->useRollback`
+  // (Step 11c) — host-authoritative. The host's value is sent to the
+  // client via MatchSettingsData; the client picks it up before the
+  // controller is constructed in tryStartGame.
   NetSession(std::shared_ptr<Common> common, std::shared_ptr<Settings> settings,
-             FsNode tcRoot, bool useRollback = false);
+             FsNode tcRoot);
   ~NetSession();
 
   // Start as host. Listens on the given port.

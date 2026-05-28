@@ -89,6 +89,9 @@ struct NetworkController : CommonController {
 
   // Set the local control state directly (for testing without key bindings)
   void setLocalControlState(uint8_t packed) { localControlState.unpack(packed); }
+  // Step 11c — apply Settings::inputDelay. Lockstep keeps the default
+  // of 3 unless explicitly overridden.
+  void setInputDelay(uint32_t frames) { inputDelay = frames; }
 
   Game game;
 

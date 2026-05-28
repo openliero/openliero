@@ -56,6 +56,9 @@ Settings::Settings()
 , map(true)
 , screenSync(true)
 , bonusTimeout(0)
+, useRollback(false)
+, maxRollback(7)
+, inputDelay(1)
 {
 	std::memset(weapTable, 0, sizeof(weapTable));
 

@@ -68,6 +68,13 @@ struct NetTransport {
     uint8_t namesOnBonuses;
     int32_t bloodParticleMax;
     int32_t zoneTimeout;
+    // Step 11c — rollback gameplay knobs. Host-authoritative. Bumping
+    // these requires a protocol-version bump (already done in 11a) so
+    // peers running older builds reject the handshake before they
+    // could observe an unexpected payload size.
+    uint8_t useRollback;
+    int32_t maxRollback;
+    int32_t inputDelay;
   };
 
   // Connection state
