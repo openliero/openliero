@@ -406,7 +406,7 @@ Each peer includes its current local frame number in input packets as `localDelt
 
 **Build artifact:** smoother latency distribution.
 
-### Step 9 — Render & audio polish
+### Step 9 — Render & audio polish — ✅ done
 
 - **Render:** only after `advance(currentFrame)` returns; never mid-resim
 - **Audio (simple version):** suppress during resim, accept that some transient sounds in mispredicted frames will be lost. Ship this first.
@@ -580,6 +580,41 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   `kFrameAdvantage` constant. `JitterTransport` and all rollback tests
   updated to thread `localFrame` through the batched send/deliver
   callbacks. `src/tests/test_frame_advantage.cpp` added.
+
+### Step 9 — Render & audio polish (2026-05-28)
+
+- No new code. Both polishes are already in place by construction:
+  - **Render gating** falls out of `GamePlayState`'s update/draw split
+    (`src/game/gamePlayState.cpp:48` and `:91`). `controller->process()`
+    runs the entire `advanceSimulation` (including any Step 7 resim
+    loop) inside `update()`. `draw()` is only invoked by the AppState
+    machinery after `update()` returns, so the renderer cannot observe
+    a mid-resim state. The plan's "render only after `advance` returns"
+    requirement is therefore an architectural invariant, not something
+    the controller has to enforce.
+  - **Audio simple-version suppression** was shipped in Step 5 via
+    `Game::setSpeculative` → `SoundPlayer::play/stop` early-returns.
+    `RollbackController` toggles `game.setSpeculative(predicted)` around
+    `processFrame()` on the forward path (`rollbackController.cpp:638`)
+    and wraps the entire resim window with `setSpeculative(true)`
+    (`:533` / `:575`), so both predicted-on-first-execution and resim
+    paths are covered. `test_speculative_suppression.cpp` already
+    asserts the round-trip count parity that this step calls for.
+- Audited menu-level audio (`sfx.play`) to confirm it doesn't leak into
+  the sim path. The only call sites inside `RollbackController` are in
+  `process()`'s pause-menu handling (`rollbackController.cpp:306` and
+  `:313`); they fire on the *local* `gfx.testSDLKeyOnce` edge while
+  `isPaused()` is true and never run inside `advanceSimulation`. All
+  other `sfx.play` users live in menu/AppState code outside the sim
+  loop. No additional gating needed.
+- Audio "correct version" (capture-and-replay keyed by frame) explicitly
+  deferred per the plan — Step 11 playtest will tell us whether the
+  missed transient sounds are noticeable enough to justify the buffer.
+- Manual playtest at 80 ms ± 20 ms is gated on the Step 11 dev-HUD
+  jitter knobs; deferred to Step 11 where the knobs land. No automated
+  test added here — the existing speculative-suppression and rollback
+  correctness tests already cover the only behaviours a render/audio
+  test could observe.
 
 ### Step 7.5 — Transport: input redundancy (2026-05-28)
 
