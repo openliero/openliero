@@ -39,10 +39,12 @@ struct JitterTransport {
     uint32_t baseFrame;
     uint8_t count;
     std::array<uint8_t, kMaxBatch> inputs;
+    uint32_t localFrame;
   };
 
   using Deliver = std::function<
-      void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs)>;
+      void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+           uint32_t localFrame)>;
 
   Params params;
   std::mt19937 rng;
@@ -70,11 +72,13 @@ struct JitterTransport {
     return d(rng) < p;
   }
 
-  void sendAToB(uint32_t baseFrame, uint8_t count, uint8_t const* inputs) {
-    enqueue(aToB, baseFrame, count, inputs);
+  void sendAToB(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+                uint32_t localFrame) {
+    enqueue(aToB, baseFrame, count, inputs, localFrame);
   }
-  void sendBToA(uint32_t baseFrame, uint8_t count, uint8_t const* inputs) {
-    enqueue(bToA, baseFrame, count, inputs);
+  void sendBToA(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+                uint32_t localFrame) {
+    enqueue(bToA, baseFrame, count, inputs, localFrame);
   }
 
   // Drain anything whose deliverAtFrame has elapsed, then advance the
@@ -90,8 +94,10 @@ struct JitterTransport {
   // Force-deliver every in-flight packet. Used at the end of a test to
   // converge both peers regardless of how late tail packets were.
   void flush(Deliver const& deliverA, Deliver const& deliverB) {
-    for (auto const& p : aToB) deliverB(p.baseFrame, p.count, p.inputs.data());
-    for (auto const& p : bToA) deliverA(p.baseFrame, p.count, p.inputs.data());
+    for (auto const& p : aToB)
+      deliverB(p.baseFrame, p.count, p.inputs.data(), p.localFrame);
+    for (auto const& p : bToA)
+      deliverA(p.baseFrame, p.count, p.inputs.data(), p.localFrame);
     aToB.clear();
     bToA.clear();
   }
@@ -100,7 +106,7 @@ struct JitterTransport {
 
  private:
   void enqueue(std::vector<InFlight>& q, uint32_t baseFrame, uint8_t count,
-               uint8_t const* inputs) {
+               uint8_t const* inputs, uint32_t localFrame) {
     ++packetsSent;
     if (roll(params.lossProbability)) {
       ++packetsDropped;
@@ -111,6 +117,7 @@ struct JitterTransport {
     p.baseFrame = baseFrame;
     p.count = count;
     for (uint8_t i = 0; i < count; ++i) p.inputs[i] = inputs[i];
+    p.localFrame = localFrame;
     q.push_back(p);
     if (roll(params.duplicateProbability)) {
       ++packetsDuplicated;
@@ -124,7 +131,7 @@ struct JitterTransport {
     auto it = q.begin();
     while (it != q.end()) {
       if (it->deliverAtFrame <= currentFrame) {
-        deliver(it->baseFrame, it->count, it->inputs.data());
+        deliver(it->baseFrame, it->count, it->inputs.data(), it->localFrame);
         it = q.erase(it);
       } else {
         ++it;

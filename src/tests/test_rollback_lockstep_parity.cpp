@@ -51,12 +51,12 @@ struct Loopback {
     };
     if constexpr (std::is_same_v<Ctrl, RollbackController>) {
       a->setInputCallbacks(
-          [this](uint32_t bf, uint8_t c, uint8_t const* in) {
+          [this](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t /*lf*/) {
             for (uint8_t i = 0; i < c; ++i) aToB.push({bf + i, in[i]});
           },
           [this, popFront](uint32_t frame) { return popFront(bToA, frame); });
       b->setInputCallbacks(
-          [this](uint32_t bf, uint8_t c, uint8_t const* in) {
+          [this](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t /*lf*/) {
             for (uint8_t i = 0; i < c; ++i) bToA.push({bf + i, in[i]});
           },
           [this, popFront](uint32_t frame) { return popFront(aToB, frame); });

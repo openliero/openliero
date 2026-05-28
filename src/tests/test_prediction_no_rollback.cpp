@@ -48,15 +48,13 @@ struct Loopback {
     a->game.rand.seed(seed);
     b->game.rand.seed(seed);
     a->setInputCallbacks(
-        [this](uint32_t bf, uint8_t c, uint8_t const* inputs) {
-          for (uint8_t i = 0; i < c; ++i)
-            b->injectRemoteInput(bf + i, inputs[i]);
+        [this](uint32_t bf, uint8_t c, uint8_t const* inputs, uint32_t lf) {
+          b->injectRemoteBatch(bf, c, inputs, lf);
         },
         nullptr);
     b->setInputCallbacks(
-        [this](uint32_t bf, uint8_t c, uint8_t const* inputs) {
-          for (uint8_t i = 0; i < c; ++i)
-            a->injectRemoteInput(bf + i, inputs[i]);
+        [this](uint32_t bf, uint8_t c, uint8_t const* inputs, uint32_t lf) {
+          a->injectRemoteBatch(bf, c, inputs, lf);
         },
         nullptr);
     a->focus();

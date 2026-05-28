@@ -85,21 +85,32 @@ RefResult runReference(uint32_t worldSeed, ScriptedInputs const& script,
   auto b = std::make_unique<RollbackController>(common, settings, 1);
   a->setSkipWeaponSelection(true);
   b->setSkipWeaponSelection(true);
+  // Step 7 test — isolate the rollback algorithm from Step 8's time-sync
+  // stall so the peers freely run ahead and exercise prediction.
+  a->setFrameAdvantageEnabled(false);
+  b->setFrameAdvantageEnabled(false);
   a->game.rand.seed(worldSeed);
   b->game.rand.seed(worldSeed);
 
-  std::vector<std::pair<uint32_t, uint8_t>> aToB, bToA;
-  auto enqueue = [](std::vector<std::pair<uint32_t, uint8_t>>& q,
-                    uint32_t baseFrame, uint8_t count,
-                    uint8_t const* inputs) {
-    for (uint8_t i = 0; i < count; ++i)
-      q.push_back({baseFrame + i, inputs[i]});
+  struct Pkt { uint32_t baseFrame; uint8_t count;
+               std::array<uint8_t, rollback::kMaxRollback + 1> inputs;
+               uint32_t localFrame; };
+  std::vector<Pkt> aToB, bToA;
+  auto enqueue = [](std::vector<Pkt>& q, uint32_t bf, uint8_t c,
+                    uint8_t const* in, uint32_t lf) {
+    Pkt p{}; p.baseFrame = bf; p.count = c; p.localFrame = lf;
+    for (uint8_t i = 0; i < c; ++i) p.inputs[i] = in[i];
+    q.push_back(p);
   };
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in) { enqueue(aToB, bf, c, in); },
+      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        enqueue(aToB, bf, c, in, lf);
+      },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in) { enqueue(bToA, bf, c, in); },
+      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        enqueue(bToA, bf, c, in, lf);
+      },
       nullptr);
   a->focus();
   b->focus();
@@ -114,8 +125,10 @@ RefResult runReference(uint32_t worldSeed, ScriptedInputs const& script,
     b->setLocalControlState(script.b[i]);
     a->process();
     b->process();
-    for (auto const& [f, in] : aToB) b->injectRemoteInput(f, in);
-    for (auto const& [f, in] : bToA) a->injectRemoteInput(f, in);
+    for (auto const& p : aToB)
+      b->injectRemoteBatch(p.baseFrame, p.count, p.inputs.data(), p.localFrame);
+    for (auto const& p : bToA)
+      a->injectRemoteBatch(p.baseFrame, p.count, p.inputs.data(), p.localFrame);
     aToB.clear();
     bToA.clear();
   }
@@ -164,6 +177,10 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
       auto b = std::make_unique<RollbackController>(common, settings, 1);
       a->setSkipWeaponSelection(true);
       b->setSkipWeaponSelection(true);
+      // Disable Step 8 frame-advantage stall so the rollback algorithm
+      // is exercised under jitter without the time-sync clamp.
+      a->setFrameAdvantageEnabled(false);
+      b->setFrameAdvantageEnabled(false);
       a->game.rand.seed(kWorldSeed);
       b->game.rand.seed(kWorldSeed);
 
@@ -171,13 +188,13 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
           {tc.transportSeed, tc.minDelay, tc.maxDelay});
 
       a->setInputCallbacks(
-          [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-            transport.sendAToB(bf, c, in);
+          [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+            transport.sendAToB(bf, c, in, lf);
           },
           nullptr);
       b->setInputCallbacks(
-          [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-            transport.sendBToA(bf, c, in);
+          [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+            transport.sendBToA(bf, c, in, lf);
           },
           nullptr);
       a->focus();
@@ -191,11 +208,13 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
         b->injectRemoteInput(f, 0);
       }
 
-      auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-        for (uint8_t i = 0; i < c; ++i) a->injectRemoteInput(bf + i, in[i]);
+      auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in,
+                          uint32_t lf) {
+        a->injectRemoteBatch(bf, c, in, lf);
       };
-      auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-        for (uint8_t i = 0; i < c; ++i) b->injectRemoteInput(bf + i, in[i]);
+      auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in,
+                          uint32_t lf) {
+        b->injectRemoteBatch(bf, c, in, lf);
       };
 
       for (int i = 0; i < kTicks; ++i) {

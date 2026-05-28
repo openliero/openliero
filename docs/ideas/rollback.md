@@ -398,7 +398,7 @@ Before frame-advantage (Step 8), change the input wire format per "Transport / W
 
 **Build artifact:** rollback survives lossy links without retransmit stalls.
 
-### Step 8 — Frame-advantage / time sync
+### Step 8 — Frame-advantage / time sync — ✅ done
 
 Each peer includes its current local frame number in input packets as `localDelta:u8` = `simFrame - baseFrame` (+1 byte, see "Step 8 frame-advantage encoding" above). If local is ≥2 frames ahead of remote, stall 1 frame. Mirrors GGPO's time-sync.
 
@@ -521,6 +521,65 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - Test cap on delay was set deliberately small (max 5). The 2-peer lockstep protocol has no input redundancy yet, so once one peer's `simFrame - confirmedSimFrame_` reaches `kMaxRollback + 1` the stall guard returns *before sending the next input* (`if (inputFrame != lastSentFrame)` blocks the resend). The peer stops emitting; the other peer starves and stalls in turn — a permanent cascade. Step 7.5's redundancy + unreliable-sequenced channel breaks the cycle. For Step 7's algorithmic correctness test, picking delays where the steady-state gap stays well under `kMaxRollback` keeps the cascade off the table.
 - Added `RollbackController::rollbackCount_` + accessor purely so the correctness test can assert "rollback actually fired" — otherwise a passing test with zero mispredictions would be vacuous. With the random inputs and any delay > 0 the predicted byte (last received) almost never matches the next real byte, so rollbacks fire constantly (~hundreds per 800-tick run).
 - New: rollback + resim path in `advanceSimulation`, `rollbackCount()` accessor + `rollbackCount_` field, `src/tests/jitter_transport.hpp`, `src/tests/test_rollback_correctness.cpp` (4 delay configurations), CMake entry.
+
+### Step 8 — Frame-advantage / time sync (2026-05-28)
+
+- Each batched packet now carries the sender's `simFrame` at send
+  time (`InputBatchSendCallback` gained a `uint32_t localFrame`
+  parameter). The receiver tracks the largest such value seen via a
+  new `injectRemoteBatch(baseFrame, count, inputs, remoteLocalFrame)`
+  entry point that wraps per-frame `injectRemoteInput` and folds in
+  the frame-advantage estimate. `lastKnownRemoteFrame_` is `int32_t`
+  initialised to `-1` (sentinel) and updated monotonically — a
+  late-arriving stale packet must not pull the estimate backwards
+  because the stall guard uses it as a lower bound on the remote's
+  progress.
+- Stall logic in `advanceSimulation`: after Step 7's rollback-window
+  guard, if `simFrame - lastKnownRemoteFrame_ >= kFrameAdvantage` (= 2),
+  return early — the redundant batch send already happened so the
+  remote keeps hearing from us, we just skip the simulation step. The
+  -1 sentinel disarms the stall during warm-up before any packet
+  arrives. Counter `frameAdvantageStalls_` is exposed for tests so
+  they can assert the stall actually fires.
+- The wire-format byte (`localDelta:u8` per the plan's encoding
+  section) is deferred to Step 11 along with the rest of the
+  NetTransport bump — at the controller boundary the test transport
+  passes a full `uint32_t localFrame` and the Step 11 wire encoder
+  will compute the delta.
+- **Threshold choice.** kFrameAdvantage = 2 matches the plan's "≥2
+  frames ahead" wording. Initial back-of-envelope said this would
+  deadlock under D_AB=2, D_BA=6 (since each peer's steady-state
+  advantage equals its inbound delay), but tracing the actual
+  algorithm shows the redundant-batch send carries fresh `localFrame`
+  every tick so `lastKnownRemoteFrame_` rises even while the peer is
+  stalled. That broke the deadlock concern and the asymmetric case
+  settles to gap = ±2 around equilibrium, matching the plan's "±2"
+  assertion.
+- **`setFrameAdvantageEnabled(bool)`** added because the Step 7 / 7.5
+  tests (`test_rollback_correctness`, `test_rollback_packet_loss`,
+  `test_rollback_reorder`) assume peers freely run ahead to exercise
+  prediction + rollback. Step 8's stall clamps them to near-lockstep
+  and suppresses the rollback signal the tests are asserting on. The
+  setter raises the threshold to `INT32_MAX` (effectively off) for
+  those tests; production never calls it. Lockstep parity and
+  zero-jitter prediction tests work unchanged because their `lastKR`
+  rises to match `simFrame` within one tick — `simFrame - lastKR` stays
+  in {0, 1} and never trips the 2-frame threshold.
+- `test_frame_advantage.cpp` drives two `JitterTransport`s with fixed
+  one-way delays (D_AB=2 forward, D_BA=6 back) and asserts the gap
+  between the peers' `simFrame`s stays ≤ 2*kFrameAdvantage = 4 after
+  warm-up. Asserts at least one peer accumulated frame-advantage
+  stalls so the test isn't vacuous. A second SECTION runs the
+  symmetric (3, 3) case as a sanity check that the algorithm doesn't
+  break when delays are equal.
+- New: `lastKnownRemoteFrame_` / `frameAdvantageStalls_` /
+  `frameAdvantageThreshold_` fields on `RollbackController`,
+  `injectRemoteBatch` method, frame-advantage stall in
+  `advanceSimulation`, `setFrameAdvantageEnabled` setter,
+  `lastKnownRemoteFrame()` / `frameAdvantageStallCount()` accessors,
+  `kFrameAdvantage` constant. `JitterTransport` and all rollback tests
+  updated to thread `localFrame` through the batched send/deliver
+  callbacks. `src/tests/test_frame_advantage.cpp` added.
 
 ### Step 7.5 — Transport: input redundancy (2026-05-28)
 

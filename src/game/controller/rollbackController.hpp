@@ -14,6 +14,7 @@
 // speculative so side effects don't escape twice.
 
 #include <array>
+#include <climits>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -56,6 +57,13 @@ struct RollbackController : CommonController {
 
   void injectRemoteInput(uint32_t frame, uint8_t input);
 
+  // Step 8 — receive a batched packet plus the sender's simFrame at
+  // send time. Wraps per-frame injectRemoteInput and updates the
+  // frame-advantage estimate. Production receivers should prefer this
+  // entry point over the bare injectRemoteInput.
+  void injectRemoteBatch(uint32_t baseFrame, uint8_t count,
+                         uint8_t const* inputs, uint32_t remoteLocalFrame);
+
   void setRemotePaused(bool paused) { remotePaused_ = paused; }
   bool isPaused() const { return localPaused_ || remotePaused_; }
 
@@ -88,12 +96,34 @@ struct RollbackController : CommonController {
   // mispredicting).
   uint64_t rollbackCount() const { return rollbackCount_; }
 
+  // Step 8 introspection — sender-side simFrame from the most recent
+  // batched packet we accepted. -1 before any packet arrives. Used by
+  // tests asserting the frame-advantage stall keeps the peers tightly
+  // coupled.
+  int32_t lastKnownRemoteFrame() const { return lastKnownRemoteFrame_; }
+  uint64_t frameAdvantageStallCount() const { return frameAdvantageStalls_; }
+
+  // Threshold at which the frame-advantage stall fires: skip a tick
+  // when simFrame is at least this many frames ahead of the remote's
+  // last reported simFrame. See Step 8 learnings for the convergence
+  // math.
+  static constexpr int32_t kFrameAdvantage = 2;
+
+  // Tests that exercise other axes (rollback algorithm correctness
+  // under loss / reorder) want the time-sync stall out of the way so
+  // peers freely run ahead and exercise prediction + rollback. Setting
+  // false raises the threshold high enough that the stall never fires.
+  // Production never calls this — frame-advantage stays on by default.
+  void setFrameAdvantageEnabled(bool enabled) {
+    frameAdvantageThreshold_ = enabled ? kFrameAdvantage : INT32_MAX;
+  }
+
   Game game;
 
  private:
   void advanceSimulation();
   void advanceWeaponSelection();
-  void sendInputWindow(uint32_t newestFrame);
+  void sendInputWindow(uint32_t newestFrame, uint32_t localFrame);
 
   int localIdx;
   int remoteIdx;
@@ -154,4 +184,12 @@ struct RollbackController : CommonController {
   uint8_t lastRemoteInput_;
 
   uint64_t rollbackCount_ = 0;
+
+  // Step 8 — sender-side simFrame from the most recent batched packet
+  // we accepted (monotonic; stale packets carrying smaller frames are
+  // ignored). -1 sentinel until any packet arrives so the
+  // frame-advantage stall stays disarmed during warm-up.
+  int32_t lastKnownRemoteFrame_ = -1;
+  uint64_t frameAdvantageStalls_ = 0;
+  int32_t frameAdvantageThreshold_ = kFrameAdvantage;
 };

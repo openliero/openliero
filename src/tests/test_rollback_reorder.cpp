@@ -52,6 +52,11 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
   auto b = std::make_unique<RollbackController>(common, settings, 1);
   a->setSkipWeaponSelection(true);
   b->setSkipWeaponSelection(true);
+  // Frame-advantage stall clamps the peers to lockstep and
+  // suppresses the prediction window we need to exercise the reorder
+  // path — disable it so we measure the dedup mechanism directly.
+  a->setFrameAdvantageEnabled(false);
+  b->setFrameAdvantageEnabled(false);
   a->game.rand.seed(kWorldSeed);
   b->game.rand.seed(kWorldSeed);
 
@@ -65,13 +70,13 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
        /*lossProb*/ 0.0, /*dupProb*/ 0.30});
 
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-        transport.sendAToB(bf, c, in);
+      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendAToB(bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-        transport.sendBToA(bf, c, in);
+      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendBToA(bf, c, in, lf);
       },
       nullptr);
   a->focus();
@@ -82,11 +87,11 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
     b->injectRemoteInput(f, 0);
   }
 
-  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-    for (uint8_t i = 0; i < c; ++i) a->injectRemoteInput(bf + i, in[i]);
+  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+    a->injectRemoteBatch(bf, c, in, lf);
   };
-  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in) {
-    for (uint8_t i = 0; i < c; ++i) b->injectRemoteInput(bf + i, in[i]);
+  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+    b->injectRemoteBatch(bf, c, in, lf);
   };
 
   Rand inputRng(kInputSeed);

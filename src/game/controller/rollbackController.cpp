@@ -145,7 +145,8 @@ void RollbackController::setInputCallbacks(InputBatchSendCallback send,
   recvInput = std::move(recv);
 }
 
-void RollbackController::sendInputWindow(uint32_t newestFrame) {
+void RollbackController::sendInputWindow(uint32_t newestFrame,
+                                         uint32_t localFrame) {
   if (!sendInputBatch) return;
   constexpr uint8_t K = static_cast<uint8_t>(rollback::kMaxRollback + 1);
   uint8_t count;
@@ -161,7 +162,20 @@ void RollbackController::sendInputWindow(uint32_t newestFrame) {
   for (uint8_t i = 0; i < count; ++i) {
     window[i] = localInputs[(baseFrame + i) % INPUT_BUFFER_SIZE];
   }
-  sendInputBatch(baseFrame, count, window.data());
+  sendInputBatch(baseFrame, count, window.data(), localFrame);
+}
+
+void RollbackController::injectRemoteBatch(uint32_t baseFrame, uint8_t count,
+                                           uint8_t const* inputs,
+                                           uint32_t remoteLocalFrame) {
+  for (uint8_t i = 0; i < count; ++i) {
+    injectRemoteInput(baseFrame + i, inputs[i]);
+  }
+  // Monotonic update — out-of-order arrival of a stale packet must not
+  // pull our knowledge of the remote's progress backwards, since the
+  // frame-advantage stall reads this as "remote is at least here".
+  int32_t f = static_cast<int32_t>(remoteLocalFrame);
+  if (f > lastKnownRemoteFrame_) lastKnownRemoteFrame_ = f;
 }
 
 void RollbackController::injectRemoteInput(uint32_t frame, uint8_t input) {
@@ -357,7 +371,7 @@ void RollbackController::advanceWeaponSelection() {
   // Redundant window send — see advanceSimulation for the rationale; the
   // weapon-selection path is lockstep (Step 11 plan) and won't roll back,
   // but it shares the controller's transport and wire format.
-  sendInputWindow(inputFrame);
+  sendInputWindow(inputFrame, simFrame);
 
   if (recvInput) {
     int result = recvInput(simFrame);
@@ -455,7 +469,7 @@ void RollbackController::advanceSimulation() {
   // Sending continues even when the controller is stalled below so the
   // remote peer still receives our latest known inputs and can promote
   // out of its own stall.
-  sendInputWindow(inputFrame);
+  sendInputWindow(inputFrame, simFrame);
 
   if (recvInput) {
     int result = recvInput(simFrame);
@@ -566,6 +580,20 @@ void RollbackController::advanceSimulation() {
   // Cap that at kMaxRollback so the ring buffer (kMaxRollback+1 slots)
   // can still cover the post-tick window.
   if (static_cast<int32_t>(simFrame) - confirmedSimFrame_ > rollback::kMaxRollback) {
+    return;
+  }
+
+  // Step 8 — frame-advantage stall. Hold simFrame when we're too far
+  // ahead of the most recent local frame the remote peer reported.
+  // We always sent the K-wide redundant batch above, so the remote
+  // still hears from us this tick; only the *advance* is skipped, not
+  // the send. The -1 sentinel keeps this disarmed until we've seen at
+  // least one packet (avoiding a false stall at the very start of a
+  // session before any remote frame is known).
+  if (lastKnownRemoteFrame_ >= 0 &&
+      static_cast<int32_t>(simFrame) - lastKnownRemoteFrame_
+          >= frameAdvantageThreshold_) {
+    ++frameAdvantageStalls_;
     return;
   }
 

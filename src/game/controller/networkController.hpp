@@ -24,8 +24,11 @@ using InputRecvCallback = std::function<int(uint32_t frame)>;
 // last K local inputs every tick (K = kMaxRollback + 1) so a dropped
 // packet is covered by the next K packets without a retransmit.
 // `inputs` points to `count` bytes covering frames [baseFrame, baseFrame+count).
-using InputBatchSendCallback =
-    std::function<void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs)>;
+// Step 8 adds `localFrame` — the sender's `simFrame` at the moment of
+// send. The receiver uses it for the frame-advantage / time-sync stall.
+using InputBatchSendCallback = std::function<
+    void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+         uint32_t localFrame)>;
 
 // Callback type for sending a checksum to the remote peer for desync detection.
 using ChecksumSendCallback = std::function<void(uint32_t frame, uint32_t checksum)>;
