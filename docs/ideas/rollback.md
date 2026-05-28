@@ -414,7 +414,7 @@ Each peer includes its current local frame number in input packets as `localDelt
 
 **Verify:** manual playtest using the dev-HUD jitter knobs (see "Manual / interactive testing" above) at 80 ms ± 20 ms; both peers on the same machine.
 
-### Step 10 — Desync detection under rollback
+### Step 10 — Desync detection under rollback — ✅ done
 
 Current desync detection (multiplayer.md → "Runtime desync detection") sends a checksum every frame using *current* state. Under prediction this is wrong — predicted frames will trivially disagree.
 
@@ -615,6 +615,60 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   test added here — the existing speculative-suppression and rollback
   correctness tests already cover the only behaviours a render/audio
   test could observe.
+
+### Step 10 — Desync detection under rollback (2026-05-28)
+
+- Added a `uint32_t checksum` field to `rollback::Slot`. Every
+  `processFrame()` on the forward path and inside the resim loop now
+  caches `fastGameChecksum(game)` into the slot it just snapshotted —
+  regardless of whether the frame was predicted or confirmed. The
+  cached value is what the desync detector ultimately sees.
+- The emit policy is "send exactly once at confirmation time". Three
+  paths converge into that rule:
+  - **Forward, `!predicted`**: confirmed on first execution; send the
+    cached value immediately (same site as Step 6's gate, now reading
+    from the slot instead of recomputing).
+  - **Promote loop**: when a previously-Predicted slot transitions to
+    Confirmed because the real input matched the prediction, the slot's
+    cached checksum is correct by construction (the snapshot was
+    produced from the input that matched) — send it now. This is the
+    only chance, since the forward path skipped the send.
+  - **Resim**: when a replayed frame consumes real (chain-contiguous)
+    input, send after re-snapshotting. Resim frames whose remote input
+    is still predicted stay silent and wait for a future cycle.
+- A `wasPredicted` flag in the promote loop avoids re-sending a slot
+  that was already Confirmed in a prior tick. Forward-confirmed and
+  resim-confirmed paths are mutually exclusive by frame, so no
+  single frame's checksum is sent twice in normal operation.
+- The plan's "cache in snapshot" wording suggested putting the field on
+  `GameSnapshot`. Chose `Slot` instead: the checksum isn't part of the
+  serialisable game state — it's metadata about *when this slot was
+  confirmed* — and putting it on `Slot` keeps `GameSnapshot::prepare`
+  unchanged and `saveSnapshotFast` allocation-free.
+- `test_rollback_desync.cpp` runs two `RollbackController`s through
+  `JitterTransport([1,4])` for 1500 ticks and observes the
+  (frame, checksum) emission streams. Two SECTIONs:
+  - **Clean**: both peers' checksums match on every frame both emit
+    one. Vacuity guards assert >50% of frames produce a comparable
+    pair on each side, and that rollback actually fired.
+  - **Injection**: peer B's emit callback XORs bit 0 of the checksum
+    starting at frame 200 (chose the emit boundary rather than poking
+    sim state mid-frame — that would feed back into B's snapshot and
+    get restored on rollback, turning a 1-bit drift into a structural
+    divergence). The test asserts the first mismatch lands within 200
+    frames of injection, which it does immediately (the first
+    confirmed emit ≥ frame 200 triggers).
+- Producer-side only, per the plan: no changes to `NetSession`'s
+  `pendingRemoteChecksums_` ring or `onChecksum` comparator. The wire
+  format (`PacketChecksum` in `transport.cpp`) is unchanged; what
+  travels on the wire is still `(frame, checksum)` and the existing
+  comparison logic already handles the lower checksum rate under
+  predicted-frame stalls.
+- New: `uint32_t checksum` on `rollback::Slot` + `clear()`/`write()`
+  reset, slot.checksum write at the forward snapshot site (now wrapping
+  the send), promote-loop wasPredicted send, resim-loop send, and
+  `src/tests/test_rollback_desync.cpp` (2 cases) + CMake entry. All
+  rollback, snapshot, network, and determinism tests still green.
 
 ### Step 7.5 — Transport: input redundancy (2026-05-28)
 

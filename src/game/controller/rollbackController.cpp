@@ -494,7 +494,9 @@ void RollbackController::advanceSimulation() {
 
     auto* slot = rollbackBuffer_.find(F);
     bool match = true;
-    if (slot && slot->remoteState == rollback::RemoteState::Predicted) {
+    bool wasPredicted =
+        slot && slot->remoteState == rollback::RemoteState::Predicted;
+    if (wasPredicted) {
       // slot stores inputs by worm index: localInput=worm0, remoteInput=worm1.
       // The misprediction question is about the *other* peer's input.
       uint8_t storedOther =
@@ -511,6 +513,14 @@ void RollbackController::advanceSimulation() {
     lastRemoteInput_ = real;
     remoteInputReady[s] = false;
     confirmedSimFrame_ = F;
+
+    // Step 10: a promoted slot transitions Predicted → Confirmed without
+    // resimming. The cached checksum on the slot is correct (prediction
+    // matched), so emit it now — this is the only chance, the forward
+    // path skipped sending when the frame was first run as predicted.
+    if (wasPredicted && sendChecksum) {
+      sendChecksum(static_cast<uint32_t>(F), slot->checksum);
+    }
   }
 
   // Rollback resim — load the last known-good snapshot, then replay
@@ -570,6 +580,14 @@ void RollbackController::advanceSimulation() {
           ? rollback::RemoteState::Predicted
           : rollback::RemoteState::Confirmed;
       game.saveSnapshotFast(outSlot.snapshot);
+      outSlot.checksum = fastGameChecksum(game);
+
+      // Step 10: emit checksum at resim-confirmation time. Predicted
+      // resim frames stay silent — their checksum is cached for a later
+      // promote/resim pass when real input finally arrives.
+      if (!framePredicted && sendChecksum) {
+        sendChecksum(static_cast<uint32_t>(F), outSlot.checksum);
+      }
     }
     game.setSpeculative(false);
   }
@@ -658,18 +676,18 @@ void RollbackController::advanceSimulation() {
         ? rollback::RemoteState::Predicted
         : rollback::RemoteState::Confirmed;
     game.saveSnapshotFast(slot.snapshot);
-  }
+    // Step 10: cache the post-frame checksum on every slot, predicted
+    // or not. The send below only fires for !predicted; predicted slots
+    // hold their cached value until a later promote or resim pass
+    // confirms them, at which point that pass emits the cached value.
+    slot.checksum = fastGameChecksum(game);
 
-  // Checksums for predicted frames would race the remote side and trip
-  // the desync alarm spuriously; only emit on confirmed frames. The
-  // contiguity check matches the confirmedSimFrame_ guard above —
-  // out-of-order arrivals must wait until promote fills the gap. Step 10
-  // generalises this to "checksum captured at confirmation time".
-  // !predicted implies the chain is contiguous through simFrame-1, so
-  // this checksum reflects state that the remote peer has also fully
-  // confirmed — no false-positive desync. Step 10 will generalise this.
-  if (!predicted && sendChecksum) {
-    sendChecksum(simFrame - 1, fastGameChecksum(game));
+    // !predicted implies the chain is contiguous through simFrame-1, so
+    // this checksum reflects state that the remote peer has also fully
+    // confirmed — no false-positive desync.
+    if (!predicted && sendChecksum) {
+      sendChecksum(simFrame - 1, slot.checksum);
+    }
   }
 
   if (game.isGameOver()) {

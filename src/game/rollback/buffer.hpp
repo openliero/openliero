@@ -37,6 +37,12 @@ struct Slot {
   uint8_t localInput = 0;
   uint8_t remoteInput = 0;
   RemoteState remoteState = RemoteState::Predicted;
+  // Step 10: post-frame checksum cached when the snapshot was written.
+  // The controller sends it (to the desync detector) only when the frame
+  // is confirmed — either on the forward path with real input, on
+  // promote of a previously-predicted slot whose prediction matched, or
+  // at the end of a resim frame that consumed real input.
+  uint32_t checksum = 0;
 };
 
 class RollbackBuffer {
@@ -58,6 +64,7 @@ class RollbackBuffer {
       slot.localInput = 0;
       slot.remoteInput = 0;
       slot.remoteState = RemoteState::Predicted;
+      slot.checksum = 0;
     }
     newest_ = -1;
   }
@@ -78,6 +85,7 @@ class RollbackBuffer {
       slot.localInput = 0;
       slot.remoteInput = 0;
       slot.remoteState = RemoteState::Predicted;
+      slot.checksum = 0;
     }
     if (frame > newest_) newest_ = frame;
     return slot;
