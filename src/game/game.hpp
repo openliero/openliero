@@ -95,6 +95,16 @@ struct Game
 
 	void spawnZone();
 
+	// Rollback Step 5: while speculative is true, sim-driven side effects
+	// (SoundPlayer::play/stop, StatsRecorder writes) are suppressed. Set
+	// during predicted frames and during resim. See docs/ideas/rollback.md.
+	void setSpeculative(bool s)
+	{
+		speculative = s;
+		if (soundPlayer) soundPlayer->speculative = s;
+		if (statsRecorder) statsRecorder->speculative = s;
+	}
+
 	Material pixelMat(int x, int y)
 	{
 		return common->materials[level.pixel(x, y)];
@@ -140,6 +150,11 @@ struct Game
 	BObjectList bobjects;
 
 	bool quickSim;
+
+	// Rollback Step 5: true during predicted/resim frames. Mirrored onto
+	// soundPlayer/statsRecorder via setSpeculative(). Read by Game-internal
+	// code that wants to short-circuit a side effect at its source.
+	bool speculative = false;
 };
 
 bool checkRespawnPosition(Game& game, int x2, int y2, int oldX, int oldY, int x, int y);

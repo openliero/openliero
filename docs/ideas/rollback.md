@@ -281,7 +281,7 @@ New controller alongside `NetworkController`. Initially behaves *identically* to
 
 **Build artifact:** menu still uses `NetworkController`; rollback controller selectable via a hidden debug flag.
 
-### Step 5 — `Game::speculative` flag + side-effect suppression
+### Step 5 — `Game::speculative` flag + side-effect suppression — ✅ done
 
 Add `bool Game::speculative = false`. Set to `true` both during initial prediction (frames whose remote input is predicted) **and** during resim. See "Side-effect suppression during *prediction*" above for the rationale. Suppress when `speculative`:
 
@@ -501,3 +501,13 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
 - All existing tests still pass (network controller fuzz, determinism, snapshot round-trip, rollback buffer).
 - The plan also mentions a `JitterTransport` test helper as Step 4 scope; deferred to Step 6/7 where it's actually needed. Step 4's parity test only needs zero-jitter loopback, which we already have.
 - New: `src/game/controller/rollbackController.{hpp,cpp}`, `src/tests/test_rollback_lockstep_parity.cpp`, CMake entries.
+
+### Step 5 — `Game::speculative` flag + side-effect suppression (2026-05-28)
+
+- `bool speculative = false` lives on three places: `Game`, `SoundPlayer` (base), `StatsRecorder` (base). `Game::setSpeculative(bool)` is the single setter — it mirrors the value onto `soundPlayer` and `statsRecorder` so callers never touch them directly. Read-side of `Game::speculative` is still useful for sim code that wants to short-circuit a side effect inline (none exist yet, but the hook is there).
+- Suppression sits inside each concrete implementation, not at the call sites — there are ~30 sound sites in sim code and gating each would have been churn for no behavioural gain. `RecordSoundPlayer::stop`, `DefaultSoundPlayer::play/stop`, every `NormalStatsRecorder::*` writer all early-return when `speculative`. `NullSoundPlayer` already no-ops so it inherits the flag harmlessly.
+- `SoundPlayer::isPlaying` is **not** gated. It's read by sim code (e.g. `worm.cpp` launch-loop) to decide whether to call `play`. With `play`/`stop` already suppressed during speculation, letting `isPlaying` pass through is safe — the worst it does is gate a `play` that would have been suppressed anyway. This matches the "Sound During Resim" Option A in the plan.
+- `StatsRecorder::finish` is suppression-gated for consistency but it's called once per match from the controller, not from `processFrame` — speculation cannot reach it in practice.
+- Added a missing `virtual ~StatsRecorder() = default;` while editing the header — `Game` holds it via `shared_ptr<StatsRecorder>` so deletion was already polymorphic, but the base lacked a virtual dtor.
+- The test (`src/tests/test_speculative_suppression.cpp`) uses a counting mock for both sides. Two cases: (a) `200 normal → snapshot → 200 speculative → restore → 200 normal` produces the exact same counts as a single `400`-frame control run; (b) `setSpeculative` propagation invariant. The mocks check `speculative` themselves to confirm the *flag* is being toggled correctly — separate from the production paths, which test the actual gating.
+- New: `bool speculative` + `setSpeculative()` on `Game`, `bool speculative` on `SoundPlayer`/`StatsRecorder` bases, early-returns in `RecordSoundPlayer::stop` / `DefaultSoundPlayer::play+stop` / all `NormalStatsRecorder` writers, `src/tests/test_speculative_suppression.cpp`, CMake entry.

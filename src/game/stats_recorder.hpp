@@ -9,6 +9,8 @@ struct Renderer;
 
 struct StatsRecorder
 {
+	virtual ~StatsRecorder() = default;
+
 	virtual void damagePotential(Worm* byWorm, WormWeapon* weapon, int hp);
 	virtual void damageDealt(Worm* byWorm, WormWeapon* weapon, Worm* toWorm, int hp, bool hasHit);
 
@@ -22,6 +24,10 @@ struct StatsRecorder
 	virtual void finish(Game& game);
 
 	virtual void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
+
+	// Rollback: when true, all recording is suppressed. See
+	// docs/ideas/rollback.md "Side-effect suppression during prediction".
+	bool speculative = false;
 };
 
 struct WeaponStats
