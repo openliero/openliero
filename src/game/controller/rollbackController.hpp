@@ -81,6 +81,9 @@ struct RollbackController : CommonController {
   void setLevelPreloaded() { levelPreloaded = true; }
 
   uint32_t currentFrame() const { return simFrame; }
+  // Lets tests observe the phase transition without poking at private
+  // member state.
+  GameState gameState() const { return state; }
   void setLocalControlState(uint8_t packed) { localControlState.unpack(packed); }
   // Step 11c — apply the host-authoritative inputDelay from Settings.
   // Must be called before the first sim tick (between construction and
@@ -117,7 +120,12 @@ struct RollbackController : CommonController {
   // when simFrame is at least this many frames ahead of the remote's
   // last reported simFrame. See Step 8 learnings for the convergence
   // math.
-  static constexpr int32_t kFrameAdvantage = 2;
+  // Was 2; raised to 5 to absorb natural ±1-2 frame timing jitter between
+  // two independent 70 fps processes. The previous threshold caused a
+  // ~25% stall rate even on a quiet loopback link, slowing the effective
+  // sim rate from 70 fps to ~52 fps. 5 still leaves 2 frames of headroom
+  // before the kMaxRollback=7 stall fires.
+  static constexpr int32_t kFrameAdvantage = 5;
 
   // Tests that exercise other axes (rollback algorithm correctness
   // under loss / reorder) want the time-sync stall out of the way so
@@ -130,9 +138,28 @@ struct RollbackController : CommonController {
 
   Game game;
 
+ public:
+  // Save / restore the mutable state touched during weapon selection.
+  // Public so tests can drive a round-trip. The snapshot covers:
+  //   - per-worm: settings->weapons[], isReady[i], menu cursor/scroll,
+  //               controlStates, currentWeapon
+  //   - controller-level: edge inputs, held-frames
+  //   - game.rand (the "Randomize" option calls it)
+  // worm.weapons[].type and menu item display strings are re-derived on
+  // restore from the snapshotted weapon IDs via Common.
+  void saveWeaponSelectSnap(WeaponSelectSnap& snap) const;
+  void loadWeaponSelectSnap(WeaponSelectSnap const& snap);
+
  private:
   void advanceSimulation();
   void advanceWeaponSelection();
+  // Apply (curLocal, curRemote) to worm control states, run one ws tick,
+  // and return whether weapon selection is now complete. Pure helper
+  // shared between the forward path and the rollback resim.
+  bool weaponSelectStep(uint8_t curLocal, uint8_t curRemote);
+  // Perform the StateWeaponSelection -> StateGame transition. Idempotent
+  // via the state check.
+  void finishWeaponSelect();
   void sendInputWindow(uint32_t newestFrame, uint32_t localFrame);
 
   int localIdx;

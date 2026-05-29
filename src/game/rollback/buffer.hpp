@@ -13,6 +13,7 @@
 // processFrame, or the wire format. It only owns slots.
 
 #include "serialization/fast_snapshot.hpp"
+#include "serialization/weapsel_snapshot.hpp"
 
 #include <array>
 #include <cstddef>
@@ -34,6 +35,11 @@ struct Slot {
   // Frame number stored here, or -1 if the slot is empty.
   int frame = -1;
   GameSnapshot snapshot;
+  // Weapon-select rollback uses `wsSnap` instead of `snapshot`. Only one
+  // of the two is meaningful per frame (a slot is either pre-game-start
+  // weapon-select state or in-game sim state). `wsSnap.valid` indicates
+  // which.
+  WeaponSelectSnap wsSnap;
   uint8_t localInput = 0;
   uint8_t remoteInput = 0;
   RemoteState remoteState = RemoteState::Predicted;
@@ -65,6 +71,7 @@ class RollbackBuffer {
       slot.remoteInput = 0;
       slot.remoteState = RemoteState::Predicted;
       slot.checksum = 0;
+      slot.wsSnap.valid = false;
     }
     newest_ = -1;
   }
@@ -86,6 +93,7 @@ class RollbackBuffer {
       slot.remoteInput = 0;
       slot.remoteState = RemoteState::Predicted;
       slot.checksum = 0;
+      slot.wsSnap.valid = false;
     }
     if (frame > newest_) newest_ = frame;
     return slot;

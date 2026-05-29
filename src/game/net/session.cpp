@@ -1,5 +1,6 @@
 #include "session.hpp"
 
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <miniz.h>
@@ -580,9 +581,20 @@ void NetSession::tryStartGame() {
 
   wireActiveController();
 
-  // Pre-fill the input delay window with empty inputs so both sides
-  // can advance past the initial frames without stalling.
-  for (uint32_t i = 0; i < 3; ++i) {
+  // Pre-fill the input-delay window with empty inputs so the local
+  // controller can advance past the initial frames without stalling.
+  //
+  // Only inputDelay frames are pre-filled — those are the frames whose
+  // remote input the remote peer literally cannot have recorded yet
+  // (with inputDelay=D, the remote first records localInputs[0+D] at
+  // its simFrame=0). Pre-filling further would overwrite frames the
+  // remote *will* fill in, causing a wrong-data false confirm on the
+  // local side and leaving the rollback path unable to correct itself
+  // when the real input arrives later (injectRemoteInput drops frames
+  // <= confirmedSimFrame_).
+  uint32_t preFillCount = 3;  // lockstep default
+  if (useRollback_) preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+  for (uint32_t i = 0; i < preFillCount; ++i) {
     injectRemoteInputActive(i, 0);
   }
 
@@ -699,8 +711,13 @@ void NetSession::startRematch() {
   else              controller_->setLevelPreloaded();
 
   wireActiveController();
-  for (uint32_t i = 0; i < 3; ++i)
-    injectRemoteInputActive(i, 0);
+  {
+    // Same logic as in tryStartGame — see comment there.
+    uint32_t preFillCount = 3;
+    if (useRollback_) preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+    for (uint32_t i = 0; i < preFillCount; ++i)
+      injectRemoteInputActive(i, 0);
+  }
 
   if (useRollback_) rollbackPtr_ = rollback_.get();
   else              controllerPtr_ = controller_.get();
@@ -741,8 +758,13 @@ void NetSession::startRematchClient() {
   receivedMapData_.clear();
 
   wireActiveController();
-  for (uint32_t i = 0; i < 3; ++i)
-    injectRemoteInputActive(i, 0);
+  {
+    // Same logic as in tryStartGame — see comment there.
+    uint32_t preFillCount = 3;
+    if (useRollback_) preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+    for (uint32_t i = 0; i < preFillCount; ++i)
+      injectRemoteInputActive(i, 0);
+  }
 
   if (useRollback_) rollbackPtr_ = rollback_.get();
   else              controllerPtr_ = controller_.get();

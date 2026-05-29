@@ -365,33 +365,10 @@ bool RollbackController::process() {
   return true;
 }
 
-void RollbackController::advanceWeaponSelection() {
-  uint32_t inputFrame = simFrame + inputDelay;
-  if (inputFrame != lastSentFrame) {
-    uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
-    localInputs[slot] = localControlState.pack() & 0x7f;
-    lastSentFrame = inputFrame;
-  }
-
-  // Redundant window send — see advanceSimulation for the rationale; the
-  // weapon-selection path is lockstep (Step 11 plan) and won't roll back,
-  // but it shares the controller's transport and wire format.
-  sendInputWindow(inputFrame, simFrame);
-
-  if (recvInput) {
-    int result = recvInput(simFrame);
-    if (result >= 0) {
-      injectRemoteInput(simFrame, static_cast<uint8_t>(result));
-    }
-  }
-
-  uint32_t currentSlot = simFrame % INPUT_BUFFER_SIZE;
-  if (!remoteInputReady[currentSlot]) {
-    return;
-  }
-
-  uint8_t curLocal = localInputs[currentSlot];
-  uint8_t curRemote = remoteInputs[currentSlot];
+bool RollbackController::weaponSelectStep(uint8_t curLocal, uint8_t curRemote) {
+  // Apply rising / released edges to worm control states and run the
+  // key-repeat ticker. Deterministic function of (curLocal, curRemote,
+  // localPrevInput, remotePrevInput, localHeldFrames, remoteHeldFrames).
   uint8_t risingLocal = curLocal & ~localPrevInput;
   uint8_t risingRemote = curRemote & ~remotePrevInput;
   uint8_t releasedLocal = localPrevInput & ~curLocal;
@@ -431,31 +408,304 @@ void RollbackController::advanceWeaponSelection() {
   localPrevInput = curLocal;
   remotePrevInput = curRemote;
 
-  remoteInputReady[currentSlot] = false;
+  return ws->processFrame();
+}
 
-  if (ws->processFrame()) {
-    ws->finalize();
-    ws.reset();
-
-    localPrevInput = 0;
-    remotePrevInput = 0;
-    localHeldFrames.fill(0);
-    remoteHeldFrames.fill(0);
-
-    for (auto const& w : game.worms) {
-      w->lives = game.settings->lives;
+void RollbackController::saveWeaponSelectSnap(WeaponSelectSnap& snap) const {
+  snap.valid = true;
+  for (int i = 0; i < 2; ++i) {
+    Worm const& w = *game.worms[i];
+    WormSettings const& wsCfg = *w.settings;
+    auto& p = snap.players[i];
+    for (int j = 0; j < Settings::selectableWeapons; ++j) {
+      p.weapons[j] = wsCfg.weapons[j];
     }
-    game.startGame();
-    game.resetWorms();
-    state = StateGame;
+    p.isReady = ws->isReady[i];
+    p.menuSelection = ws->menus[i].selection();
+    p.menuTopItem = ws->menus[i].topItem;
+    p.menuBottomItem = ws->menus[i].bottomItem;
+    p.wormControlStates = static_cast<uint16_t>(w.controlStates.istate);
+    p.currentWeapon = w.currentWeapon;
+  }
+  snap.rand = game.rand;
+  snap.localPrevInput = localPrevInput;
+  snap.remotePrevInput = remotePrevInput;
+  snap.localHeldFrames = localHeldFrames;
+  snap.remoteHeldFrames = remoteHeldFrames;
+}
 
-    // Game state vectors are now fully sized — make sure the rollback
-    // buffer's snapshots track them. Safe even if already prepared.
-    rollbackBuffer_.prepare(game);
-    rollbackBufferPrepared_ = true;
+void RollbackController::loadWeaponSelectSnap(WeaponSelectSnap const& snap) {
+  Common const& common = *game.common;
+  for (int i = 0; i < 2; ++i) {
+    Worm& w = *game.worms[i];
+    WormSettings& wsCfg = *w.settings;
+    auto const& p = snap.players[i];
+    for (int j = 0; j < Settings::selectableWeapons; ++j) {
+      wsCfg.weapons[j] = p.weapons[j];
+      // Re-derive worm.weapons[j].type and the menu item display string
+      // from the weapon ID. WeaponSelection writes both whenever the
+      // user cycles, so the snapshot's weapon IDs are sufficient to
+      // reconstruct both.
+      int weapOrderIdx = static_cast<int>(p.weapons[j]) - 1;
+      if (weapOrderIdx >= 0 &&
+          weapOrderIdx < static_cast<int>(common.weapOrder.size())) {
+        int w_idx = common.weapOrder[weapOrderIdx];
+        w.weapons[j].type = &common.weapons[w_idx];
+        // menus[i].items index 0 is "Randomize", indices [1..N] are the
+        // weapon slots, index N+1 is "Done".
+        if (j + 1 < static_cast<int>(ws->menus[i].items.size())) {
+          ws->menus[i].items[j + 1].string = common.weapons[w_idx].name;
+        }
+      }
+    }
+    ws->isReady[i] = p.isReady;
+    ws->menus[i].setSelection(p.menuSelection);
+    ws->menus[i].topItem = p.menuTopItem;
+    ws->menus[i].bottomItem = p.menuBottomItem;
+    w.controlStates.istate = p.wormControlStates;
+    w.currentWeapon = p.currentWeapon;
+  }
+  game.rand = snap.rand;
+  localPrevInput = snap.localPrevInput;
+  remotePrevInput = snap.remotePrevInput;
+  localHeldFrames = snap.localHeldFrames;
+  remoteHeldFrames = snap.remoteHeldFrames;
+}
+
+void RollbackController::finishWeaponSelect() {
+  // Idempotent — only the first call from inside StateWeaponSelection
+  // does any work.
+  if (state != StateWeaponSelection) return;
+
+  ws->finalize();
+  ws.reset();
+
+  localPrevInput = 0;
+  remotePrevInput = 0;
+  localHeldFrames.fill(0);
+  remoteHeldFrames.fill(0);
+
+  for (auto const& w : game.worms) {
+    w->lives = game.settings->lives;
+  }
+  game.startGame();
+  game.resetWorms();
+  state = StateGame;
+
+  // Game state vectors are now fully sized — make sure the rollback
+  // buffer's snapshots track them. Safe even if already prepared.
+  rollbackBuffer_.prepare(game);
+  rollbackBufferPrepared_ = true;
+
+  // simFrame was already ++'d by the new-frame block in
+  // advanceWeaponSelection; the transition happens at simFrame-1, the
+  // post-startGame state. Mark everything through that frame as confirmed
+  // (weapon select reached this point through real, matching input on
+  // both peers) and seed a game-phase snapshot so a misprediction on the
+  // next sim tick can rollback here cleanly.
+  int seedFrame = static_cast<int>(simFrame) - 1;
+  confirmedSimFrame_ = seedFrame;
+  lastRemoteInput_ = remoteInputs[static_cast<uint32_t>(seedFrame) %
+                                  INPUT_BUFFER_SIZE];
+
+  rollback::Slot& seed = rollbackBuffer_.write(seedFrame);
+  seed.localInput = 0;
+  seed.remoteInput = 0;
+  seed.remoteState = rollback::RemoteState::Confirmed;
+  // Invalidate the wsSnap on this slot — the slot now holds a game
+  // snapshot, not weapon-select state. (write() already does this when
+  // the slot was repurposed, but be explicit.)
+  seed.wsSnap.valid = false;
+  game.saveSnapshotFast(seed.snapshot);
+  seed.checksum = fastGameChecksum(game);
+}
+
+void RollbackController::advanceWeaponSelection() {
+  // Record local input + send the redundant K-wide batch (same plumbing
+  // as the game phase).
+  uint32_t inputFrame = simFrame + inputDelay;
+  if (inputFrame != lastSentFrame) {
+    uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
+    localInputs[slot] = localControlState.pack() & 0x7f;
+    lastSentFrame = inputFrame;
+  }
+  sendInputWindow(inputFrame, simFrame);
+
+  if (recvInput) {
+    int result = recvInput(simFrame);
+    if (result >= 0) {
+      injectRemoteInput(simFrame, static_cast<uint8_t>(result));
+    }
   }
 
+  // Promote loop — confirm previously-predicted weapon-select frames
+  // whose real remote input has now arrived and matches.
+  int32_t rollbackTo = -1;
+  while (confirmedSimFrame_ + 1 < static_cast<int32_t>(simFrame)) {
+    int32_t F = confirmedSimFrame_ + 1;
+    uint32_t s = static_cast<uint32_t>(F) % INPUT_BUFFER_SIZE;
+    if (!remoteInputReady[s]) break;
+    uint8_t real = remoteInputs[s];
+
+    auto* slot = rollbackBuffer_.find(F);
+    bool match = true;
+    bool wasPredicted =
+        slot && slot->remoteState == rollback::RemoteState::Predicted;
+    if (wasPredicted) {
+      uint8_t storedOther =
+          (localIdx == 0) ? slot->remoteInput : slot->localInput;
+      match = (storedOther == real);
+    }
+
+    if (!match) {
+      rollbackTo = F - 1;
+      break;
+    }
+
+    if (slot) slot->remoteState = rollback::RemoteState::Confirmed;
+    lastRemoteInput_ = real;
+    remoteInputReady[s] = false;
+    confirmedSimFrame_ = F;
+  }
+
+  // Rollback resim for the weapon-select phase. Identical structure to
+  // advanceSimulation's resim, but with weaponSelectStep / wsSnap in
+  // place of processFrame / GameSnapshot.
+  if (rollbackTo >= 0) {
+    ++rollbackCount_;
+    lastTickResimFrames_ +=
+        static_cast<uint32_t>(static_cast<int32_t>(simFrame) - rollbackTo - 1);
+    auto* lastGood = rollbackBuffer_.find(rollbackTo);
+    if (lastGood && lastGood->wsSnap.valid) {
+      loadWeaponSelectSnap(lastGood->wsSnap);
+    }
+
+    uint8_t lastGoodWorm0 = lastGood ? lastGood->localInput : 0;
+    uint8_t lastGoodWorm1 = lastGood ? lastGood->remoteInput : 0;
+    localPrevInput  = (localIdx == 0) ? lastGoodWorm0 : lastGoodWorm1;
+    remotePrevInput = (localIdx == 0) ? lastGoodWorm1 : lastGoodWorm0;
+
+    game.setSpeculative(true);
+    for (int32_t F = rollbackTo + 1; F < static_cast<int32_t>(simFrame); ++F) {
+      uint32_t s = static_cast<uint32_t>(F) % INPUT_BUFFER_SIZE;
+      uint8_t curLocal = localInputs[s];
+      uint8_t curRemote;
+      bool framePredicted;
+      bool resimContiguous = (confirmedSimFrame_ + 1 == F);
+      if (remoteInputReady[s] && resimContiguous) {
+        curRemote = remoteInputs[s];
+        remoteInputReady[s] = false;
+        lastRemoteInput_ = curRemote;
+        framePredicted = false;
+        confirmedSimFrame_ = F;
+      } else {
+        curRemote = lastRemoteInput_;
+        framePredicted = true;
+      }
+
+      bool wsDoneResim = weaponSelectStep(curLocal, curRemote);
+
+      auto& outSlot = rollbackBuffer_.write(static_cast<int>(F));
+      outSlot.localInput  = (localIdx == 0) ? curLocal  : curRemote;
+      outSlot.remoteInput = (localIdx == 0) ? curRemote : curLocal;
+      outSlot.remoteState = framePredicted
+          ? rollback::RemoteState::Predicted
+          : rollback::RemoteState::Confirmed;
+      saveWeaponSelectSnap(outSlot.wsSnap);
+      outSlot.wsSnap.wsDone = wsDoneResim;
+    }
+    game.setSpeculative(false);
+
+    // Rollback resim may have just confirmed the wsDone frame. Check
+    // here so both peers transition on the same simFrame regardless of
+    // whether wsDone was first observed via the new-frame block or via
+    // a resim that corrected a mispredicted Fire press. Without this,
+    // the peer whose remote Fire input arrived late transitions one
+    // frame after the other.
+    if (rollback::Slot const* confSlot =
+            rollbackBuffer_.find(confirmedSimFrame_)) {
+      if (confSlot->wsSnap.valid && confSlot->wsSnap.wsDone) {
+        finishWeaponSelect();
+        return;
+      }
+    }
+  }
+
+  // Stall guards — share the same kMaxRollback / frameAdvantageThreshold
+  // as advanceSimulation so jitter behavior is uniform across phases.
+  if (static_cast<int32_t>(simFrame) - confirmedSimFrame_ > rollback::kMaxRollback) {
+    return;
+  }
+  if (lastKnownRemoteFrame_ >= 0 &&
+      static_cast<int32_t>(simFrame) - lastKnownRemoteFrame_
+          >= frameAdvantageThreshold_) {
+    ++frameAdvantageStalls_;
+    return;
+  }
+
+  // New-frame block — predict if remote input not yet ready, run ws tick,
+  // snapshot. Symmetric with advanceSimulation.
+  uint32_t currentSlot = simFrame % INPUT_BUFFER_SIZE;
+  uint8_t curLocal = localInputs[currentSlot];
+  uint8_t curRemote;
+  bool predicted;
+  bool chainContiguous =
+      confirmedSimFrame_ + 1 == static_cast<int32_t>(simFrame);
+  if (remoteInputReady[currentSlot] && chainContiguous) {
+    curRemote = remoteInputs[currentSlot];
+    remoteInputReady[currentSlot] = false;
+    lastRemoteInput_ = curRemote;
+    predicted = false;
+  } else {
+    curRemote = lastRemoteInput_;
+    predicted = true;
+  }
+
+  game.setSpeculative(predicted);
+  bool wsDone = weaponSelectStep(curLocal, curRemote);
+  game.setSpeculative(false);
   ++simFrame;
+
+  if (!predicted) {
+    confirmedSimFrame_ = static_cast<int32_t>(simFrame) - 1;
+  }
+
+  // Snapshot post-frame weapon-select state.
+  {
+    int snapFrame = static_cast<int>(simFrame) - 1;
+    rollback::Slot& slot = rollbackBuffer_.write(snapFrame);
+    slot.localInput = (localIdx == 0) ? curLocal : curRemote;
+    slot.remoteInput = (localIdx == 0) ? curRemote : curLocal;
+    slot.remoteState = predicted
+        ? rollback::RemoteState::Predicted
+        : rollback::RemoteState::Confirmed;
+    saveWeaponSelectSnap(slot.wsSnap);
+    slot.wsSnap.wsDone = wsDone;
+  }
+
+  (void)wsDone;  // The transition is gated below on the snapshot of the
+                 // most-recently-confirmed frame, not on the current
+                 // tick's possibly-predicted wsDone — that handles
+                 // promote-loop catches of predicted-wsDone frames too.
+
+  // Transition rule: enter game phase as soon as the highest confirmed
+  // frame's snapshot shows wsDone=true. This catches three paths into
+  // the transition:
+  //   1. Forward, predicted=false, wsDone=true — conf just became
+  //      simFrame-1 above, slot has wsDone=true. Transition this tick.
+  //   2. Promote loop confirmed a previously-predicted slot whose
+  //      cached wsSnap.wsDone is true — conf jumped to that slot.
+  //   3. Rollback resim ended on a real-input frame that produced
+  //      wsDone=true — same as (2), conf advanced inside the resim.
+  // Predicted wsDone snapshots NEVER fire the transition; if a later
+  // rollback proves the prediction wrong, the resim resets the cached
+  // wsDone for that frame.
+  if (rollback::Slot const* confSlot =
+          rollbackBuffer_.find(confirmedSimFrame_)) {
+    if (confSlot->wsSnap.valid && confSlot->wsSnap.wsDone) {
+      finishWeaponSelect();
+    }
+  }
 }
 
 void RollbackController::advanceSimulation() {

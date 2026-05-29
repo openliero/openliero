@@ -124,6 +124,116 @@ TEST_CASE("NetSession in rollback mode reaches Playing and runs ticks",
   REQUIRE(!client.desyncDetected());
 }
 
+TEST_CASE("Rollback weapon select transitions to game over a real session",
+          "[session][rollback][weapsel]") {
+  // End-to-end version of test_rollback_weapsel's "jitter" case: spin up
+  // two NetSessions in rollback mode over loopback ENet, drive both
+  // peers' navigation inputs through weapon select, and confirm both
+  // sides transition to StateGame at the same simFrame. Guards the
+  // weapon-select-rollback integration with the session/transport layer
+  // (not just the controller in isolation).
+  Env e;
+  e.settings->useRollback = true;
+  e.settings->inputDelay = 1;
+  e.settings->selectBotWeapons = 0;
+
+  auto clientSettings = std::make_shared<Settings>(*e.settings);
+  // Settings's default copy ctor shallow-copies the wormSettings vector
+  // of shared_ptrs, leaving both peers' local worm pointing at the same
+  // wormSettings[NetworkPlayerIdx] object. In production this is fine
+  // (host and client are separate processes), but in this single-process
+  // test it means host's worm0 and client's worm1 share state — every
+  // weapon-select mutation on host bleeds into client and vice versa,
+  // making determinism impossible. Replace each entry with a fresh
+  // shared_ptr so the two peers have fully independent profiles.
+  for (auto& ws : clientSettings->wormSettings) {
+    if (ws) ws = std::make_shared<WormSettings>(*ws);
+  }
+
+  NetSession host(e.common, e.settings, e.tcRoot);
+  NetSession client(e.common, clientSettings, e.tcRoot);
+
+  REQUIRE(host.hostGame(0));
+  uint16_t port = host.transport().listeningPort();
+  REQUIRE(client.joinGame("127.0.0.1", port));
+
+  bool ready = pollUntil(host, client, [&]() {
+    return host.sessionState() == NetSession::Playing &&
+           client.sessionState() == NetSession::Playing;
+  });
+  REQUIRE(ready);
+
+  auto* hc = host.rollbackController();
+  auto* cc = client.rollbackController();
+  REQUIRE(hc != nullptr);
+  REQUIRE(cc != nullptr);
+
+  hc->focus();
+  cc->focus();
+
+  constexpr uint8_t BIT_DOWN = uint8_t{1} << Worm::Down;
+  constexpr uint8_t BIT_FIRE = uint8_t{1} << Worm::Fire;
+
+  // Same script the controller-level test uses: 6× Down (each press is
+  // on/off to produce a clean rising edge), a short idle pad, then a
+  // single Fire press.
+  std::vector<uint8_t> script;
+  for (int i = 0; i < 6; ++i) {
+    script.push_back(BIT_DOWN);
+    script.push_back(0);
+  }
+  script.push_back(0);
+  script.push_back(BIT_FIRE);
+  script.push_back(0);
+
+  uint32_t hostTransitionFrame = 0;
+  uint32_t clientTransitionFrame = 0;
+  bool hostTransitioned = false;
+  bool clientTransitioned = false;
+
+  auto runTick = [&](uint8_t inByte) {
+    hc->setLocalControlState(inByte);
+    cc->setLocalControlState(inByte);
+    bool hostInWs = !hostTransitioned;
+    bool clientInWs = !clientTransitioned;
+    hc->process();
+    cc->process();
+    host.update();
+    client.update();
+    if (hostInWs && hc->gameState() == StateGame) {
+      hostTransitioned = true;
+      hostTransitionFrame = hc->currentFrame();
+    }
+    if (clientInWs && cc->gameState() == StateGame) {
+      clientTransitioned = true;
+      clientTransitionFrame = cc->currentFrame();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
+
+  for (uint8_t inByte : script) runTick(inByte);
+  // Idle tail to let promote loops drain and the transition fire on
+  // both peers under loopback's small but non-zero RTT.
+  for (int i = 0; i < 200 && !(hostTransitioned && clientTransitioned); ++i) {
+    runTick(0);
+  }
+
+  REQUIRE(hostTransitioned);
+  REQUIRE(clientTransitioned);
+  REQUIRE(hostTransitionFrame == clientTransitionFrame);
+
+  // Both peers picked the same weapons.
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < Settings::selectableWeapons; ++j) {
+      REQUIRE(hc->game.worms[i]->settings->weapons[j] ==
+              cc->game.worms[i]->settings->weapons[j]);
+    }
+  }
+
+  REQUIRE(!host.desyncDetected());
+  REQUIRE(!client.desyncDetected());
+}
+
 TEST_CASE("Host's useRollback / inputDelay sync to the client over MatchSettings",
           "[session][rollback]") {
   Env e;
