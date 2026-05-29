@@ -278,19 +278,20 @@ bool NetTransport::poll() {
               }
               break;
             case PacketInputBatch:
-              // [type:1][baseFrame:u32 LE][count:u8][localDelta:u8]
+              // [type:1][gen:1][baseFrame:u32 LE][count:u8][localDelta:u8]
               // [input[count]:u8]. Validate that localDelta is in range
               // (< count) and that the payload length matches count
               // exactly — anything else is malformed or a version drift.
-              if (len >= 7 && onRemoteInputBatch) {
+              if (len >= 8 && onRemoteInputBatch) {
+                uint8_t gen = data[1];
                 uint32_t baseFrame;
-                std::memcpy(&baseFrame, data + 1, 4);
-                uint8_t count = data[5];
-                uint8_t localDelta = data[6];
-                if (count == 0 || len != size_t{7} + count) break;
+                std::memcpy(&baseFrame, data + 2, 4);
+                uint8_t count = data[6];
+                uint8_t localDelta = data[7];
+                if (count == 0 || len != size_t{8} + count) break;
                 if (localDelta >= count) break;
                 uint32_t remoteLocalFrame = baseFrame + localDelta;
-                onRemoteInputBatch(baseFrame, count, data + 7,
+                onRemoteInputBatch(gen, baseFrame, count, data + 8,
                                    remoteLocalFrame);
               }
               break;
@@ -310,11 +311,13 @@ bool NetTransport::poll() {
               }
               break;
             case PacketChecksum:
-              if (len == 9 && onChecksum) {
+              // [type:1][gen:1][frame:u32 LE][checksum:u32 LE] = 10 B.
+              if (len == 10 && onChecksum) {
+                uint8_t gen = data[1];
                 uint32_t frame, checksum;
-                std::memcpy(&frame, data + 1, 4);
-                std::memcpy(&checksum, data + 5, 4);
-                onChecksum(frame, checksum);
+                std::memcpy(&frame, data + 2, 4);
+                std::memcpy(&checksum, data + 6, 4);
+                onChecksum(gen, frame, checksum);
               }
               break;
             case PacketPlayerInfo:
@@ -415,8 +418,8 @@ void NetTransport::sendInput(uint32_t frame, uint8_t input) {
   sendPacket(buf, sizeof(buf));
 }
 
-void NetTransport::sendInputBatch(uint32_t baseFrame, uint8_t count,
-                                  uint8_t localDelta,
+void NetTransport::sendInputBatch(uint8_t generation, uint32_t baseFrame,
+                                  uint8_t count, uint8_t localDelta,
                                   uint8_t const* inputs) {
   if (!peer_ || count == 0 || localDelta >= count) return;
   // Cap to a defensive maximum so a misuse can't blow the stack
@@ -425,14 +428,15 @@ void NetTransport::sendInputBatch(uint32_t baseFrame, uint8_t count,
   static constexpr uint8_t kMaxCount = 64;
   if (count > kMaxCount) return;
 
-  uint8_t buf[7 + kMaxCount];
+  uint8_t buf[8 + kMaxCount];
   buf[0] = PacketInputBatch;
-  std::memcpy(buf + 1, &baseFrame, 4);
-  buf[5] = count;
-  buf[6] = localDelta;
-  std::memcpy(buf + 7, inputs, count);
+  buf[1] = generation;
+  std::memcpy(buf + 2, &baseFrame, 4);
+  buf[6] = count;
+  buf[7] = localDelta;
+  std::memcpy(buf + 8, inputs, count);
 
-  size_t len = size_t{7} + count;
+  size_t len = size_t{8} + count;
   // ENet flag 0 = unreliable but sequenced — newer batches supersede
   // older ones at the channel level, so a stale duplicate after a
   // newer arrival is dropped before reaching the application. Within
@@ -444,11 +448,13 @@ void NetTransport::sendInputBatch(uint32_t baseFrame, uint8_t count,
     enet_packet_destroy(packet);
 }
 
-void NetTransport::sendChecksum(uint32_t frame, uint32_t checksum) {
-  uint8_t buf[9];
+void NetTransport::sendChecksum(uint8_t generation, uint32_t frame,
+                                uint32_t checksum) {
+  uint8_t buf[10];
   buf[0] = PacketChecksum;
-  std::memcpy(buf + 1, &frame, 4);
-  std::memcpy(buf + 5, &checksum, 4);
+  buf[1] = generation;
+  std::memcpy(buf + 2, &frame, 4);
+  std::memcpy(buf + 6, &checksum, 4);
 
   if (!peer_) return;
   ENetPacket* packet =

@@ -113,8 +113,9 @@ struct NetSession {
   void onRematchReady(bool ready);
   void onRematchLevel(bool randomLevel, std::string levelFile);
   void onRemoteInput(uint32_t frame, uint8_t input);
-  void onRemoteInputBatch(uint32_t baseFrame, uint8_t count,
-                          uint8_t const* inputs, uint32_t remoteLocalFrame);
+  void onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
+                          uint8_t count, uint8_t const* inputs,
+                          uint32_t remoteLocalFrame);
   void onTcInfo(uint32_t hash, std::string name);
   void onTcResponse(bool needData);
   void onTcData(const void* data, size_t len);
@@ -179,7 +180,7 @@ struct NetSession {
   // Desync detection
   bool desyncDetected_;
   uint32_t desyncFrame_;
-  void onChecksum(uint32_t frame, uint32_t checksum);
+  void onChecksum(uint8_t generation, uint32_t frame, uint32_t checksum);
   void onLocalChecksum(uint32_t frame, uint32_t checksum);
 
   // Ring buffer of local checksums for frame-accurate comparison

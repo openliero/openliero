@@ -474,20 +474,20 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 **Phase 1 — Wire protocol generation**
 
-#### Task 14.1: Add generation byte to PacketInputBatch and PacketChecksum
+#### Task 14.1: Add generation byte to PacketInputBatch and PacketChecksum — ✅ done
 **Description:** Extend the on-wire format of the two rollback-path packets so receivers can identify and reject packets from a previous phase. Bump `kProtocolVersion`.
 
 **Acceptance criteria:**
-- [ ] `PacketInputBatch` layout becomes `[type:1][gen:1][baseFrame:u32][count:u8][localDelta:u8][input[count]:u8]` (9 + count bytes).
-- [ ] `PacketChecksum` layout becomes `[type:1][gen:1][frame:u32][checksum:u32]` (10 bytes).
-- [ ] `NetTransport::sendInputBatch` / `sendChecksum` take a `uint8_t generation` argument and write it.
-- [ ] Receive paths read generation and pass it to the callback signatures `onRemoteInputBatch(gen, baseFrame, …)` / `onChecksum(gen, frame, checksum)`.
-- [ ] `kProtocolVersion` bumped.
+- [x] `PacketInputBatch` layout becomes `[type:1][gen:1][baseFrame:u32][count:u8][localDelta:u8][input[count]:u8]` (9 + count bytes).
+- [x] `PacketChecksum` layout becomes `[type:1][gen:1][frame:u32][checksum:u32]` (10 bytes).
+- [x] `NetTransport::sendInputBatch` / `sendChecksum` take a `uint8_t generation` argument and write it.
+- [x] Receive paths read generation and pass it to the callback signatures `onRemoteInputBatch(gen, baseFrame, …)` / `onChecksum(gen, frame, checksum)`.
+- [x] `kProtocolVersion` bumped (2 → 3).
 
 **Verification:**
-- [ ] `cmake --build` clean.
-- [ ] Existing `test_session_rollback` still passes (both peers stay at generation 0 throughout these tests; behavior unchanged).
-- [ ] `test_versioning` still asserts that an older-version peer fails handshake.
+- [x] `cmake --build` clean.
+- [x] Existing `test_session_rollback` still passes (both peers stay at generation 0 throughout these tests; behavior unchanged).
+- [x] `test_versioning` still asserts that an older-version peer fails handshake.
 
 **Dependencies:** None.
 
@@ -748,6 +748,15 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.1 — Generation byte on rollback wire (2026-05-29)
+
+- Wire layouts: `PacketInputBatch` grew from `[type][baseFrame:u32][count][localDelta][inputs]` (7+count bytes) to `[type][gen:u8][baseFrame:u32][count][localDelta][inputs]` (8+count). `PacketChecksum` grew from `[type][frame:u32][checksum:u32]` (9 B) to `[type][gen:u8][frame:u32][checksum:u32]` (10 B). All offsets updated in the receive switch and the corresponding send buffers; the `OPENLIERO_CHECKSUM_LOG` rx counter at the top of `poll()` only looks at `data[0]` so it didn't need to know about the new byte.
+- `kProtocolVersion` 2 → 3 keeps cross-version peers from observing the new size — by the time the wire change matters, the handshake has already rejected the older build. `test_transport`'s `kProtocolVersion` pin updated alongside.
+- `NetTransport::sendInputBatch` / `sendChecksum` and the `onRemoteInputBatch` / `onChecksum` callbacks all gained a leading `uint8_t generation` parameter. `NetSession` passes `0` for sends (Task 14.2 will plumb the controller's real value) and ignores it on receive — `(void)generation;` plus a comment pointing forward. No behavior change yet; this task is pure pipe.
+- Defensive parser invariant unchanged: localDelta < count, len = 8 + count for input batches, len = 10 for checksum. The "version drift" guard naturally rejects payloads from a v2 peer because the size won't match — but the handshake would already have stopped them, so this is belt-and-braces.
+- All 123 tests green. No new test added per the plan (Task 14.2's `test_rollback_generation_drop` is where receive-side filtering gets coverage).
+- Files: `src/game/net/transport.{hpp,cpp}` (wire format + callbacks), `src/game/net/session.{hpp,cpp}` (callbacks + passthrough), `src/tests/test_transport.cpp` (batch test asserts gen=0, protocol-version pin bumped to 3).
 
 ### Step 13 — Online (ICE) desync detection (2026-05-29)
 

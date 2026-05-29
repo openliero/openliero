@@ -66,7 +66,9 @@ void NetSession::wireActiveController() {
   // rollback emits PacketInputBatch with the redundancy + frame
   // delta encoding (Step 11a wire format).
   auto checksumCb = [this](uint32_t frame, uint32_t checksum) {
-    transport_.sendChecksum(frame, checksum);
+    // Step 14 Task 14.1: generation byte is wired through but
+    // controllers stay at generation 0 until Task 14.2/14.3 land.
+    transport_.sendChecksum(0, frame, checksum);
     onLocalChecksum(frame, checksum);
   };
   auto pauseCb = [this]() { transport_.sendPause(); };
@@ -82,7 +84,9 @@ void NetSession::wireActiveController() {
           // (it constructs `count = MaxRollback + 1`, `localFrame` is
           // within `[baseFrame, baseFrame + count - 1]`).
           uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
-          transport_.sendInputBatch(baseFrame, count, localDelta, inputs);
+          // Step 14 Task 14.1: hard-coded generation 0 here; Task 14.2
+          // will plumb the controller's current generation through.
+          transport_.sendInputBatch(0, baseFrame, count, localDelta, inputs);
         },
         nullptr);
     rollback_->setChecksumCallback(checksumCb);
@@ -321,13 +325,18 @@ void NetSession::onRemoteInput(uint32_t frame, uint8_t input) {
   // K-wide redundancy makes the post-Playing batches cover the gap.
 }
 
-void NetSession::onRemoteInputBatch(uint32_t baseFrame, uint8_t count,
-                                    uint8_t const* inputs,
+void NetSession::onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
+                                    uint8_t count, uint8_t const* inputs,
                                     uint32_t remoteLocalFrame) {
   // Rollback wire path. Lockstep peers shouldn't be receiving batches
   // (different protocol version would prevent the handshake in the
   // first place); if one slips through under a misconfigured test,
   // silently drop.
+  //
+  // Step 14 Task 14.1: generation is plumbed through but no filtering
+  // happens here yet — Task 14.2 will drop stale-generation packets
+  // once the controller starts incrementing its generation_.
+  (void)generation;
   if (rollbackPtr_)
     rollbackPtr_->injectRemoteBatch(baseFrame, count, inputs, remoteLocalFrame);
   // Pre-Playing batches are dropped on purpose: the controller isn't
@@ -435,9 +444,10 @@ void NetSession::wireCallbacks() {
     onRemoteInput(frame, input);
   };
   transport_.onRemoteInputBatch =
-      [this](uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
-             uint32_t remoteLocalFrame) {
-        onRemoteInputBatch(baseFrame, count, inputs, remoteLocalFrame);
+      [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
+             uint8_t const* inputs, uint32_t remoteLocalFrame) {
+        onRemoteInputBatch(generation, baseFrame, count, inputs,
+                           remoteLocalFrame);
       };
   transport_.onPlayerInfo = [this](const NetTransport::PlayerInfo& info) {
     onPlayerInfo(info);
@@ -451,8 +461,9 @@ void NetSession::wireCallbacks() {
   transport_.onPause = [this]() { onPause(); };
   transport_.onResume = [this]() { onResume(); };
   transport_.onEndMatch = [this]() { onRemoteEndMatch(); };
-  transport_.onChecksum = [this](uint32_t frame, uint32_t checksum) {
-    onChecksum(frame, checksum);
+  transport_.onChecksum = [this](uint8_t generation, uint32_t frame,
+                                 uint32_t checksum) {
+    onChecksum(generation, frame, checksum);
   };
   transport_.onRematchReady = [this](bool ready) { onRematchReady(ready); };
   transport_.onRematchLevel = [this](bool random, std::string file) {
@@ -900,7 +911,8 @@ void maybeLog(char const* who, uint64_t& counter, uint32_t frame,
 }
 }  // namespace
 
-void NetSession::onChecksum(uint32_t frame, uint32_t remoteChecksum) {
+void NetSession::onChecksum(uint8_t generation, uint32_t frame,
+                            uint32_t remoteChecksum) {
   // Bug fix: in rollback mode controllerPtr_ is null (only rollbackPtr_
   // is set), so the legacy `!controllerPtr_` guard silently dropped
   // every incoming checksum on the rollback path — leaving desync
@@ -909,6 +921,10 @@ void NetSession::onChecksum(uint32_t frame, uint32_t remoteChecksum) {
   if (desyncDetected_ || sessionState_ != Playing ||
       (!controllerPtr_ && !rollbackPtr_))
     return;
+
+  // Step 14 Task 14.1: generation is plumbed through but no filtering
+  // happens here yet — Task 14.2 will drop stale-generation packets.
+  (void)generation;
 
   static uint64_t remoteCount = 0;
   maybeLog("remote", remoteCount, frame, remoteChecksum);

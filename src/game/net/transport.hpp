@@ -15,11 +15,12 @@ struct IceAgent;
 // Handles UDP communication between two peers using ENet.
 // Provides reliable ordered delivery of input packets.
 struct NetTransport {
-  // Bumped to 2 with the rollback wire format (handshake carries a
-  // version byte; PacketInputBatch replaces single-frame PacketInput on
-  // the rollback path). Peers running a different version handshake
-  // mismatch and disconnect rather than play with mismatched semantics.
-  static constexpr uint8_t kProtocolVersion = 2;
+  // Bumped to 3 in Step 14 (Task 14.1): PacketInputBatch and
+  // PacketChecksum now carry a 1-byte phase generation so receivers can
+  // drop pre-transition packets after a WS→game reset. Peers running a
+  // different version handshake mismatch and disconnect rather than
+  // play with mismatched semantics.
+  static constexpr uint8_t kProtocolVersion = 3;
 
   // Packet types
   enum PacketType : uint8_t {
@@ -39,10 +40,11 @@ struct NetTransport {
     PacketTcData = 14,
     // Rollback (Step 7.5/8): K-wide redundant input window with the
     // sender's current sim frame, delivered unreliable-sequenced.
-    //   [type:1][baseFrame:u32 LE][count:u8][localDelta:u8][input[count]:u8]
+    //   [type:1][gen:1][baseFrame:u32 LE][count:u8][localDelta:u8][input[count]:u8]
     // localDelta is `simFrame - baseFrame` at send time; receiver
     // reconstructs `remoteLocalFrame = baseFrame + localDelta` for
-    // Step 8 frame-advantage tracking.
+    // Step 8 frame-advantage tracking. `gen` (Step 14) lets receivers
+    // drop pre-transition packets after a WS→game reset.
     PacketInputBatch = 15,
   };
 
@@ -123,11 +125,13 @@ struct NetTransport {
   // Rollback batched input send. `inputs` covers frames
   // [baseFrame, baseFrame + count - 1]. `localDelta` is the sender's
   // `simFrame - baseFrame` at the moment of send (range
-  // [0, count - 1]). Unreliable-sequenced — newer packets supersede
-  // older; receiver dedups against confirmed frames.
-  void sendInputBatch(uint32_t baseFrame, uint8_t count,
+  // [0, count - 1]). `generation` is the sender's phase generation
+  // (Step 14); receivers drop packets from an older generation.
+  // Unreliable-sequenced — newer packets supersede older; receiver
+  // dedups against confirmed frames.
+  void sendInputBatch(uint8_t generation, uint32_t baseFrame, uint8_t count,
                       uint8_t localDelta, uint8_t const* inputs);
-  void sendChecksum(uint32_t frame, uint32_t checksum);
+  void sendChecksum(uint8_t generation, uint32_t frame, uint32_t checksum);
   void sendHandshake(uint32_t seed, uint32_t settingsHash);
   void sendPlayerInfo(const PlayerInfo& info);
   void sendMatchSettings(const MatchSettingsData& data);
@@ -151,13 +155,15 @@ struct NetTransport {
   std::function<void(uint32_t frame, uint8_t input)> onRemoteInput;
   // Rollback batched input arrival. `remoteLocalFrame` is the sender's
   // simFrame at send time (= baseFrame + localDelta) — used by Step 8
-  // frame-advantage. `inputs` is valid only for the duration of the
-  // callback; copy if you need to keep it.
-  std::function<void(uint32_t baseFrame, uint8_t count,
+  // frame-advantage. `generation` is the sender's phase generation
+  // (Step 14). `inputs` is valid only for the duration of the callback;
+  // copy if you need to keep it.
+  std::function<void(uint8_t generation, uint32_t baseFrame, uint8_t count,
                      uint8_t const* inputs, uint32_t remoteLocalFrame)>
       onRemoteInputBatch;
   std::function<void(uint32_t seed, uint32_t settingsHash)> onHandshake;
-  std::function<void(uint32_t frame, uint32_t checksum)> onChecksum;
+  std::function<void(uint8_t generation, uint32_t frame, uint32_t checksum)>
+      onChecksum;
   std::function<void(const PlayerInfo& info)> onPlayerInfo;
   std::function<void(const MatchSettingsData& data)> onMatchSettings;
   std::function<void(const void* data, size_t len)> onMapData;

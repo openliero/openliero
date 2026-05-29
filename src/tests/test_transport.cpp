@@ -344,8 +344,10 @@ TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") 
   uint8_t rxCount = 0;
   uint32_t rxLocalFrame = 0xFFFFFFFF;
   std::vector<uint8_t> rxInputs;
-  host.onRemoteInputBatch = [&](uint32_t bf, uint8_t c, uint8_t const* in,
-                                uint32_t lf) {
+  uint8_t rxGen = 0xFF;
+  host.onRemoteInputBatch = [&](uint8_t gen, uint32_t bf, uint8_t c,
+                                uint8_t const* in, uint32_t lf) {
+    rxGen = gen;
     rxBaseFrame = bf;
     rxCount = c;
     rxLocalFrame = lf;
@@ -354,7 +356,7 @@ TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") 
 
   uint8_t inputs[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
   // baseFrame = 100, localDelta = 5, so remoteLocalFrame = 105.
-  client.sendInputBatch(100, 8, 5, inputs);
+  client.sendInputBatch(0, 100, 8, 5, inputs);
 
   deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
   while (rxBaseFrame == 0xFFFFFFFF &&
@@ -364,6 +366,7 @@ TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") 
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 
+  REQUIRE(rxGen == 0);
   REQUIRE(rxBaseFrame == 100);
   REQUIRE(rxCount == 8);
   REQUIRE(rxLocalFrame == 105);
@@ -410,5 +413,5 @@ TEST_CASE("Transport rejects handshake with wrong protocol version",
 
   // Now also confirm the constant lines up — the test would silently
   // pass against any version if this slipped to a stale value.
-  REQUIRE(NetTransport::kProtocolVersion == 2);
+  REQUIRE(NetTransport::kProtocolVersion == 3);
 }
