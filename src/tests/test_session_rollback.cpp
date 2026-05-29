@@ -19,9 +19,13 @@
 #include <memory>
 #include <thread>
 
+#include <algorithm>
+#include <cstdlib>
+
 #include "game.hpp"
 #include "math.hpp"
 #include "net/session.hpp"
+#include "rollback/buffer.hpp"
 
 namespace {
 
@@ -232,6 +236,142 @@ TEST_CASE("Rollback weapon select transitions to game over a real session",
 
   REQUIRE(!host.desyncDetected());
   REQUIRE(!client.desyncDetected());
+}
+
+// Step 14 Task 14.7 — end-to-end session test exercising the full
+// WS→game boundary plus a long-haul game-phase run. The regression
+// Step 14 fixes (asymmetric WS simFrames carried into the game phase)
+// surfaces only when both peers transition through real WS and then
+// keep producing checksums for several seconds. Catches anything that
+// makes Step 13's detector fire under realistic loopback play.
+TEST_CASE(
+    "Rollback session runs ≥5s game-phase post-WS without desync",
+    "[session][rollback][step14]") {
+  Env e;
+  e.settings->useRollback = true;
+  e.settings->inputDelay = 1;
+  e.settings->selectBotWeapons = 0;
+
+  auto clientSettings = std::make_shared<Settings>(*e.settings);
+  for (auto& ws : clientSettings->wormSettings) {
+    if (ws) ws = std::make_shared<WormSettings>(*ws);
+  }
+
+  NetSession host(e.common, e.settings, e.tcRoot);
+  NetSession client(e.common, clientSettings, e.tcRoot);
+
+  REQUIRE(host.hostGame(0));
+  uint16_t port = host.transport().listeningPort();
+  REQUIRE(client.joinGame("127.0.0.1", port));
+
+  bool ready = pollUntil(host, client, [&]() {
+    return host.sessionState() == NetSession::Playing &&
+           client.sessionState() == NetSession::Playing;
+  });
+  REQUIRE(ready);
+
+  auto* hc = host.rollbackController();
+  auto* cc = client.rollbackController();
+  REQUIRE(hc != nullptr);
+  REQUIRE(cc != nullptr);
+
+  hc->focus();
+  cc->focus();
+
+  constexpr uint8_t BIT_DOWN = uint8_t{1} << Worm::Down;
+  constexpr uint8_t BIT_FIRE = uint8_t{1} << Worm::Fire;
+
+  std::vector<uint8_t> wsScript;
+  for (int i = 0; i < 6; ++i) {
+    wsScript.push_back(BIT_DOWN);
+    wsScript.push_back(0);
+  }
+  wsScript.push_back(0);
+  wsScript.push_back(BIT_FIRE);
+  wsScript.push_back(0);
+
+  bool hostTransitioned = false, clientTransitioned = false;
+  uint32_t hostTransitionFrame = 0, clientTransitionFrame = 0;
+
+  auto runTick = [&](uint8_t inByte) {
+    hc->setLocalControlState(inByte);
+    cc->setLocalControlState(inByte);
+    bool hostInWs = !hostTransitioned;
+    bool clientInWs = !clientTransitioned;
+    hc->process();
+    cc->process();
+    host.update();
+    client.update();
+    if (hostInWs && hc->gameState() == StateGame) {
+      hostTransitioned = true;
+      hostTransitionFrame = hc->currentFrame();
+    }
+    if (clientInWs && cc->gameState() == StateGame) {
+      clientTransitioned = true;
+      clientTransitionFrame = cc->currentFrame();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
+
+  // Drive WS to completion.
+  for (uint8_t b : wsScript) runTick(b);
+  for (int i = 0; i < 200 && !(hostTransitioned && clientTransitioned); ++i) {
+    runTick(0);
+  }
+  REQUIRE(hostTransitioned);
+  REQUIRE(clientTransitioned);
+  // Task 14.4 guarantees both peers enter game phase at simFrame=0.
+  REQUIRE(hostTransitionFrame == 0);
+  REQUIRE(clientTransitionFrame == 0);
+
+  // Drive 5 seconds of game-phase ticks (~350 frames at 70 Hz). Use
+  // 400 ticks for headroom — even if one peer stalls a few frames via
+  // the frame-advantage clamp, both still cover well past 5s of sim.
+  constexpr int kGameTicks = 400;
+  for (int i = 0; i < kGameTicks; ++i) {
+    // Light scripted input to exercise weapon fire + movement so the
+    // checksum covers more than just the idle resting state. The exact
+    // input doesn't matter — both peers run the same script, so any
+    // mismatch must come from the sim path, not divergent inputs.
+    uint8_t in = 0;
+    if ((i / 20) % 3 == 0) in |= BIT_FIRE;
+    if ((i / 10) % 5 == 0) in |= (uint8_t{1} << Worm::Right);
+    runTick(in);
+  }
+
+  // Idle drain so both peers' confirmation chains catch up. With the
+  // frame-advantage clamp keeping the gap ≤ kFrameAdvantage, the
+  // overlap window between the two rings should hold several confirmed
+  // frames after the drain.
+  for (int i = 0; i < 64; ++i) {
+    runTick(0);
+  }
+
+  REQUIRE(hc->currentFrame() > 0);
+  REQUIRE(cc->currentFrame() > 0);
+
+  int32_t gap = static_cast<int32_t>(hc->currentFrame()) -
+                static_cast<int32_t>(cc->currentFrame());
+  REQUIRE(std::abs(gap) <= RollbackController::kFrameAdvantage);
+
+  // Headline: Step 13's detector did NOT fire across the run. This is
+  // the property Task 14 exists to restore on online play.
+  REQUIRE(!host.desyncDetected());
+  REQUIRE(!client.desyncDetected());
+
+  // Slot-level checksum agreement at a frame both peers have fully
+  // confirmed. Pick the most recent frame that's resident in both
+  // rings; under loopback both should comfortably hold the last
+  // kMaxRollback+1 confirmed frames.
+  rollback::RollbackBuffer const& bufH = hc->rollbackBuffer();
+  rollback::RollbackBuffer const& bufC = cc->rollbackBuffer();
+  int compareFrame = std::min(bufH.newestFrame(), bufC.newestFrame());
+  REQUIRE(compareFrame > 0);
+  auto* slotH = const_cast<rollback::RollbackBuffer&>(bufH).find(compareFrame);
+  auto* slotC = const_cast<rollback::RollbackBuffer&>(bufC).find(compareFrame);
+  REQUIRE(slotH != nullptr);
+  REQUIRE(slotC != nullptr);
+  REQUIRE(slotH->checksum == slotC->checksum);
 }
 
 TEST_CASE("Host's useRollback / inputDelay sync to the client over MatchSettings",
