@@ -124,7 +124,7 @@ void serialize(Archive& ar, Level& lvl) {
 // `hash` is a runtime cache, deliberately excluded.
 // v1: initial cereal migration (all original fields).
 // v2: added bonusTimeout (default 0 = no timeout).
-// v3: added useRollback / maxRollback / inputDelay.
+// v3: added inputDelay.
 
 // Scalar fields only (no wormSettings or weapTable). The weapTable is
 // handled separately because the TOML path writes it as an array while
@@ -165,9 +165,7 @@ void serializeSettingsScalars(Archive& ar, Settings& s) {
      cereal::make_nvp("screenSync", s.screenSync));
   ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
   // v3 fields. Missing on older configs → defaults remain.
-  ar(cereal::make_nvp("useRollback", s.useRollback),
-     cereal::make_nvp("maxRollback", s.maxRollback),
-     cereal::make_nvp("inputDelay", s.inputDelay));
+  ar(cereal::make_nvp("inputDelay", s.inputDelay));
 }
 
 // Full Settings fields for binary archives (indexed weapon keys).
@@ -218,9 +216,7 @@ void serializeGameplay(Archive& ar, Settings& s) {
      cereal::make_nvp("screenSync", s.screenSync));
   serializeArray(ar, "weapTable", s.weapTable);
   ar(cereal::make_nvp("bonusTimeout", s.bonusTimeout));
-  ar(cereal::make_nvp("useRollback", s.useRollback),
-     cereal::make_nvp("maxRollback", s.maxRollback),
-     cereal::make_nvp("inputDelay", s.inputDelay));
+  ar(cereal::make_nvp("inputDelay", s.inputDelay));
 }
 
 // ---- Viewport ----

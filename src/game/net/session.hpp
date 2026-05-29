@@ -6,14 +6,13 @@
 #include <string>
 #include <vector>
 
-#include "../controller/networkController.hpp"
 #include "../controller/rollbackController.hpp"
 #include "../filesystem.hpp"
 #include "memoryFs.hpp"
 #include "transport.hpp"
 
-// Wires NetworkController and NetTransport together.
-// Manages the connection lifecycle: connect → handshake → play → disconnect.
+// Wires RollbackController and NetTransport together. Manages the
+// connection lifecycle: connect → handshake → play → disconnect.
 struct NetSession {
   enum Role { Host, Client };
   enum SessionState {
@@ -26,9 +25,6 @@ struct NetSession {
     Failed,          // Connection failed
   };
 
-  // Rollback / lockstep mode is read from `settings->useRollback`
-  // (host-authoritative; the host's value is sent to the client via
-  // MatchSettingsData before the controller is constructed).
   NetSession(std::shared_ptr<Common> common, std::shared_ptr<Settings> settings,
              FsNode tcRoot);
   ~NetSession();
@@ -55,16 +51,10 @@ struct NetSession {
 
   SessionState sessionState() const { return sessionState_; }
 
-  // Lockstep controller. Null when useRollback was set at construction.
-  NetworkController* controller() { return controllerPtr_; }
-  // Rollback controller. Null when useRollback was not set.
   RollbackController* rollbackController() { return rollbackPtr_; }
-  // Whether this session is running on the rollback path.
-  bool useRollback() const { return useRollback_; }
 
-  // Release ownership of whichever controller is active (for handing
-  // to Gfx). The session keeps a raw pointer for injecting remote
-  // inputs. Polymorphic return type so callers don't have to fork.
+  // Release ownership of the controller (for handing to Gfx). The
+  // session keeps a raw pointer for injecting remote inputs.
   std::unique_ptr<Controller> releaseController();
 
   // Send pause/resume to remote peer
@@ -111,7 +101,6 @@ struct NetSession {
   void onRemoteEndMatch();
   void onRematchReady(bool ready);
   void onRematchLevel(bool randomLevel, std::string levelFile);
-  void onRemoteInput(uint32_t frame, uint8_t input);
   void onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
                           uint8_t count, uint8_t const* inputs,
                           uint32_t remoteLocalFrame);
@@ -124,31 +113,21 @@ struct NetSession {
   void generateAndSendMap();
   uint32_t computeSettingsHash() const;
 
-  // Build whichever controller is active for this session's mode, then
-  // wire its transport callbacks. Shared by all game-start paths.
+  // Build the rollback controller and wire its transport callbacks.
+  // Shared by all game-start paths.
   void createController(int localIdx);
   void wireActiveController();
 
-  // Dispatch helpers that route to the live controller without forcing
-  // every call site to branch on useRollback_.
   Game& activeGame();
-  void injectRemoteInputActive(uint32_t frame, uint8_t input);
 
   Role role_;
   SessionState sessionState_;
   NetTransport transport_;
-  std::unique_ptr<NetworkController> controller_;
   std::unique_ptr<RollbackController> rollback_;
   std::shared_ptr<Common> common_;
   std::shared_ptr<Settings> settings_;
-  bool useRollback_;
 
-  NetworkController* controllerPtr_;   // non-owning, lockstep only
-  RollbackController* rollbackPtr_;    // non-owning, rollback only
-
-  // Buffer for inputs arriving before controller is ready
-  struct PendingInput { uint32_t frame; uint8_t input; };
-  std::vector<PendingInput> pendingInputs_;
+  RollbackController* rollbackPtr_;    // non-owning
 
   uint32_t gameSeed_;
   uint32_t localSettingsHash_;

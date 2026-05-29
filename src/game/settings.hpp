@@ -81,12 +81,9 @@ struct Settings : GameplayExtensions, AppSettings {
   bool screenSync;
   int32_t bonusTimeout;  // max seconds a bonus stays on the map; 0 = no limit
 
-  // Rollback netcode (host-authoritative; synced to the client via
-  // MatchSettingsData). Phase 2 of the cleanup will remove useRollback
-  // and the lockstep fallback entirely.
-  bool useRollback;          // true → NetSession runs the rollback path
-  int32_t maxRollback;       // max in-flight predicted frames
-  int32_t inputDelay;        // frames of artificial input delay
+  // Frames of artificial input delay. Host-authoritative; synced to
+  // the client via MatchSettingsData.
+  int32_t inputDelay;
 
   static int const NumWormSettings = 3;  // 0=left, 1=right, 2=network
   static int const NetworkPlayerIdx = 2;

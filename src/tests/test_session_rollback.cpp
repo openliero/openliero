@@ -1,15 +1,9 @@
 // NetSession integration with RollbackController.
 //
-// Verifies that constructing NetSession with useRollback=true builds a
-// RollbackController and routes its batched send/receive through
-// NetTransport.
-//
-// This test stands two NetSession instances up over loopback in
-// rollback mode, drives the handshake → settings → mapdata → playing
-// transition, and runs a few simulation ticks. The peers must reach
-// Playing, expose rollbackController() (not controller()), and stay
-// frame-locked enough that a clean (zero-jitter) loopback never
-// triggers a rollback or a desync.
+// Stands two NetSession instances up over loopback, drives the
+// handshake → settings → mapdata → playing transition, and runs a few
+// simulation ticks. The peers must stay frame-locked enough that a
+// clean (zero-jitter) loopback never triggers a rollback or desync.
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
@@ -44,7 +38,6 @@ struct Env {
     settings->loadChange = true;
     settings->randomLevel = true;
     settings->gameMode = Settings::GMKillEmAll;
-    settings->useRollback = true;
   }
 };
 
@@ -62,19 +55,15 @@ bool pollUntil(NetSession& a, NetSession& b, Pred pred, int maxMs = 5000) {
 
 }  // namespace
 
-TEST_CASE("NetSession in rollback mode reaches Playing and runs ticks",
-          "[session][rollback]") {
+TEST_CASE("NetSession reaches Playing and runs ticks", "[session][rollback]") {
   Env e;
 
   NetSession host(e.common, e.settings, e.tcRoot);
   NetSession client(e.common, e.settings, e.tcRoot);
 
-  // useRollback comes from settings, not from a ctor flag.
   REQUIRE(host.hostGame(0));
   uint16_t port = host.transport().listeningPort();
   REQUIRE(client.joinGame("127.0.0.1", port));
-  REQUIRE(host.useRollback());
-  REQUIRE(client.useRollback());
 
   bool ready = pollUntil(host, client, [&]() {
     return host.sessionState() == NetSession::Playing &&
@@ -82,10 +71,6 @@ TEST_CASE("NetSession in rollback mode reaches Playing and runs ticks",
   });
   REQUIRE(ready);
 
-  // In rollback mode the lockstep accessor is null; the rollback
-  // accessor returns the live controller.
-  REQUIRE(host.controller() == nullptr);
-  REQUIRE(client.controller() == nullptr);
   REQUIRE(host.rollbackController() != nullptr);
   REQUIRE(client.rollbackController() != nullptr);
 
@@ -131,19 +116,13 @@ TEST_CASE("Rollback weapon select transitions to game over a real session",
   // weapon-select-rollback integration with the session/transport layer
   // (not just the controller in isolation).
   Env e;
-  e.settings->useRollback = true;
   e.settings->inputDelay = 1;
   e.settings->selectBotWeapons = 0;
 
   auto clientSettings = std::make_shared<Settings>(*e.settings);
-  // Settings's default copy ctor shallow-copies the wormSettings vector
-  // of shared_ptrs, leaving both peers' local worm pointing at the same
-  // wormSettings[NetworkPlayerIdx] object. In production this is fine
-  // (host and client are separate processes), but in this single-process
-  // test it means host's worm0 and client's worm1 share state — every
-  // weapon-select mutation on host bleeds into client and vice versa,
-  // making determinism impossible. Replace each entry with a fresh
-  // shared_ptr so the two peers have fully independent profiles.
+  // Default copy ctor shallow-copies the wormSettings shared_ptrs;
+  // give each peer its own copies so single-process weapon-select
+  // mutations on one side don't bleed into the other.
   for (auto& ws : clientSettings->wormSettings) {
     if (ws) ws = std::make_shared<WormSettings>(*ws);
   }
@@ -240,7 +219,6 @@ TEST_CASE(
     "Rollback session runs ≥5s game-phase post-WS without desync",
     "[session][rollback]") {
   Env e;
-  e.settings->useRollback = true;
   e.settings->inputDelay = 1;
   e.settings->selectBotWeapons = 0;
 
@@ -365,20 +343,16 @@ TEST_CASE(
   REQUIRE(slotH->checksum == slotC->checksum);
 }
 
-TEST_CASE("Host's useRollback / inputDelay sync to the client over MatchSettings",
+TEST_CASE("Host's inputDelay syncs to the client over MatchSettings",
           "[session][rollback]") {
   Env e;
-  // Host: rollback ON, inputDelay 2.
-  e.settings->useRollback = true;
   e.settings->inputDelay = 2;
-  e.settings->maxRollback = 7;
 
-  // Client starts with lockstep settings — host's values must overwrite
-  // them via MatchSettings before tryStartGame builds the controller.
+  // Client starts with a different inputDelay; host's value must
+  // overwrite it via MatchSettings before tryStartGame builds the
+  // controller.
   auto clientSettings = std::make_shared<Settings>(*e.settings);
-  clientSettings->useRollback = false;
   clientSettings->inputDelay = 5;
-  clientSettings->maxRollback = 99;
 
   NetSession host(e.common, e.settings, e.tcRoot);
   NetSession client(e.common, clientSettings, e.tcRoot);
@@ -393,14 +367,7 @@ TEST_CASE("Host's useRollback / inputDelay sync to the client over MatchSettings
   });
   REQUIRE(ready);
 
-  // Host's settings flowed through MatchSettingsData.
-  REQUIRE(clientSettings->useRollback);
   REQUIRE(clientSettings->inputDelay == 2);
-  REQUIRE(clientSettings->maxRollback == 7);
-
-  // The client built a RollbackController, not a NetworkController.
-  REQUIRE(client.useRollback());
   REQUIRE(client.rollbackController() != nullptr);
-  REQUIRE(client.controller() == nullptr);
 }
 

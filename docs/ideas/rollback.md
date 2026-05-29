@@ -1393,3 +1393,21 @@ finished rather than in-flight.
 
 - `git grep -E "Step [0-9]|Task 14" src/` returns nothing.
 - Build clean, 129/129 tests pass.
+
+### Phase 2 — Dead-code removal
+
+- **Task 4 (remove lockstep `NetworkController` + `useRollback`)**:
+  Deleted `src/game/controller/networkController.{cpp,hpp}`, the
+  `useRollback` and `maxRollback` fields on `Settings` and
+  `MatchSettingsData`, all `if (useRollback_) …` branches in
+  `NetSession`, the lockstep input-buffer (`pendingInputs_`), the
+  `onRemoteInput` callback, and the `NetworkController*` half of the
+  session's dual controller. Callback typedefs the rollback path needs
+  (InputBatchSendCallback, InputRecvCallback, ChecksumSendCallback)
+  moved into `rollbackController.hpp`. Tests: deleted
+  `test_network_controller.cpp` and `test_rollback_lockstep_parity.cpp`;
+  deleted the lockstep-only "plays frames over real network" case from
+  `test_session.cpp` (covered by `test_session_rollback.cpp`'s
+  end-to-end test); reduced "useRollback / inputDelay sync" to just
+  inputDelay sync. `desync_fuzzer` removed. CMake updated. Build clean;
+  120/120 tests pass.

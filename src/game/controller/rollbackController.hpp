@@ -14,7 +14,23 @@
 #include "../menu/menu.hpp"
 #include "../rollback/buffer.hpp"
 
-#include "networkController.hpp"
+// Batched input send: emits the last K = kMaxRollback + 1 local inputs
+// per tick so a dropped packet is covered by the next K-1.
+// `localFrame` = sender's simFrame at send time (frame-advantage
+// tracking); `generation` = sender's phase generation (receivers drop
+// stale ones).
+using InputBatchSendCallback = std::function<
+    void(uint8_t generation, uint32_t baseFrame, uint8_t count,
+         uint8_t const* inputs, uint32_t localFrame)>;
+
+// Pull-based remote input hook. Returns -1 when no input is yet
+// available for that frame.
+using InputRecvCallback = std::function<int(uint32_t frame)>;
+
+// Checksum emission for desync detection. `generation` = sender's
+// phase generation.
+using ChecksumSendCallback =
+    std::function<void(uint8_t generation, uint32_t frame, uint32_t checksum)>;
 
 struct RollbackController : CommonController {
   RollbackController(std::shared_ptr<Common> common,

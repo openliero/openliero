@@ -66,9 +66,6 @@ struct NetTransport {
     uint8_t namesOnBonuses;
     int32_t bloodParticleMax;
     int32_t zoneTimeout;
-    // Rollback gameplay knobs (host-authoritative).
-    uint8_t useRollback;
-    int32_t maxRollback;
     int32_t inputDelay;
   };
 

@@ -124,7 +124,6 @@ set(GAME_SOURCES ${SOURCES}
   src/game/weapsel.cpp
   src/game/controller/commonController.cpp
   src/game/controller/localController.cpp
-  src/game/controller/networkController.cpp
   src/game/controller/rollbackController.cpp
   src/game/controller/replayController.cpp
   src/game/net/transport.cpp
@@ -306,13 +305,6 @@ if(OPENLIERO_BUILD_TESTS)
     DISCOVERY_MODE PRE_TEST
   )
 
-  add_executable(test_network_controller src/tests/test_network_controller.cpp)
-  target_link_libraries(test_network_controller PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_network_controller
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    DISCOVERY_MODE PRE_TEST
-  )
-
   add_executable(test_transport src/tests/test_transport.cpp)
   target_link_libraries(test_transport PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_transport DISCOVERY_MODE PRE_TEST)
@@ -395,13 +387,6 @@ if(OPENLIERO_BUILD_TESTS)
   add_executable(test_rollback_buffer src/tests/test_rollback_buffer.cpp)
   target_link_libraries(test_rollback_buffer PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_rollback_buffer DISCOVERY_MODE PRE_TEST)
-
-  add_executable(test_rollback_lockstep_parity src/tests/test_rollback_lockstep_parity.cpp)
-  target_link_libraries(test_rollback_lockstep_parity PRIVATE game Catch2::Catch2WithMain)
-  catch_discover_tests(test_rollback_lockstep_parity
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    DISCOVERY_MODE PRE_TEST
-  )
 
   add_executable(test_speculative_suppression src/tests/test_speculative_suppression.cpp)
   target_link_libraries(test_speculative_suppression PRIVATE game Catch2::Catch2WithMain)
@@ -507,13 +492,6 @@ if(OPENLIERO_BUILD_TESTS)
     target_include_directories(test_sfx_loader PRIVATE src src/game)
     catch_discover_tests(test_sfx_loader DISCOVERY_MODE PRE_TEST)
   endif()
-endif()
-
-# desync fuzzer
-if(OPENLIERO_BUILD_FUZZER)
-  find_package(Threads REQUIRED)
-  add_executable(desync_fuzzer src/tools/desync_fuzzer.cpp)
-  target_link_libraries(desync_fuzzer PRIVATE game Threads::Threads)
 endif()
 
 # documentation

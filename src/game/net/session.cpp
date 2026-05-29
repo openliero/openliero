@@ -15,8 +15,6 @@ NetSession::NetSession(std::shared_ptr<Common> common,
     , sessionState_(Idle)
     , common_(std::move(common))
     , settings_(std::move(settings))
-    , useRollback_(false)  // overwritten from settings_ once role is set
-    , controllerPtr_(nullptr)
     , rollbackPtr_(nullptr)
     , gameSeed_(0)
     , localSettingsHash_(0)
@@ -46,20 +44,11 @@ NetSession::~NetSession() {
 }
 
 void NetSession::createController(int localIdx) {
-  if (useRollback_) {
-    rollback_ = std::make_unique<RollbackController>(common_, settings_, localIdx);
-    rollback_->setInputDelay(static_cast<uint32_t>(settings_->inputDelay));
-  } else {
-    // Lockstep ignores Settings::inputDelay and keeps its hardcoded
-    // default of 3 — the lower setting is tuned for rollback.
-    controller_ = std::make_unique<NetworkController>(common_, settings_, localIdx);
-  }
+  rollback_ = std::make_unique<RollbackController>(common_, settings_, localIdx);
+  rollback_->setInputDelay(static_cast<uint32_t>(settings_->inputDelay));
 }
 
 void NetSession::wireActiveController() {
-  // Checksum + pause + endMatch wiring is identical on both controllers.
-  // Inputs differ: lockstep emits PacketInput; rollback emits
-  // PacketInputBatch (redundant K-wide window + frame-delta encoding).
   auto checksumCb = [this](uint8_t generation, uint32_t frame,
                            uint32_t checksum) {
     transport_.sendChecksum(generation, frame, checksum);
@@ -69,39 +58,23 @@ void NetSession::wireActiveController() {
   auto resumeCb = [this]() { transport_.sendResume(); };
   auto endMatchCb = [this]() { transport_.sendEndMatch(); };
 
-  if (useRollback_) {
-    rollback_->setInputCallbacks(
-        [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
-               uint8_t const* inputs, uint32_t localFrame) {
-          // localDelta = simFrame - baseFrame at send time. Encoded as
-          // uint8_t; range guaranteed by the controller's K-wide window.
-          uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
-          transport_.sendInputBatch(generation, baseFrame, count, localDelta,
-                                    inputs);
-        },
-        nullptr);
-    rollback_->setChecksumCallback(checksumCb);
-    rollback_->setPauseCallbacks(pauseCb, resumeCb);
-    rollback_->setEndMatchCallback(endMatchCb);
-  } else {
-    controller_->setInputCallbacks(
-        [this](uint32_t frame, uint8_t input) {
-          transport_.sendInput(frame, input);
-        },
-        nullptr);
-    controller_->setChecksumCallback(checksumCb);
-    controller_->setPauseCallbacks(pauseCb, resumeCb);
-    controller_->setEndMatchCallback(endMatchCb);
-  }
+  rollback_->setInputCallbacks(
+      [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
+             uint8_t const* inputs, uint32_t localFrame) {
+        // localDelta = simFrame - baseFrame at send time. Encoded as
+        // uint8_t; range guaranteed by the controller's K-wide window.
+        uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
+        transport_.sendInputBatch(generation, baseFrame, count, localDelta,
+                                  inputs);
+      },
+      nullptr);
+  rollback_->setChecksumCallback(checksumCb);
+  rollback_->setPauseCallbacks(pauseCb, resumeCb);
+  rollback_->setEndMatchCallback(endMatchCb);
 }
 
 Game& NetSession::activeGame() {
-  return useRollback_ ? rollback_->game : controller_->game;
-}
-
-void NetSession::injectRemoteInputActive(uint32_t frame, uint8_t input) {
-  if (useRollback_) rollback_->injectRemoteInput(frame, input);
-  else controller_->injectRemoteInput(frame, input);
+  return rollback_->game;
 }
 
 bool NetSession::hostGame(uint16_t port) {
@@ -109,12 +82,11 @@ bool NetSession::hostGame(uint16_t port) {
     return false;
 
   role_ = Host;
-  useRollback_ = settings_->useRollback;
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
 
   // Controller is created in tryStartGame once both sides have agreed
-  // on settings (incl. useRollback). Pre-Playing transport callbacks
-  // tolerate a null controller — buffered inputs flush on creation.
+  // on settings. Pre-Playing transport callbacks tolerate a null
+  // controller — buffered inputs flush on creation.
 
   if (!transport_.host(port)) {
     sessionState_ = Failed;
@@ -129,9 +101,6 @@ bool NetSession::joinGame(const std::string& address, uint16_t port) {
     return false;
 
   role_ = Client;
-  // Client's useRollback is overwritten when MatchSettings arrives.
-  // Start permissively: same as Host's so any drift is settings-driven.
-  useRollback_ = settings_->useRollback;
   gameSeed_ = 0;  // Will be set by host's handshake
 
   if (!transport_.connect(address, port)) {
@@ -147,7 +116,6 @@ bool NetSession::hostWithTransport(NetTransport&& transport) {
     return false;
 
   role_ = Host;
-  useRollback_ = settings_->useRollback;
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
 
   transport_ = std::move(transport);
@@ -162,7 +130,6 @@ bool NetSession::connectWithTransport(NetTransport&& transport,
     return false;
 
   role_ = Client;
-  useRollback_ = settings_->useRollback;
   gameSeed_ = 0;
 
   transport_ = std::move(transport);
@@ -200,9 +167,7 @@ void NetSession::disconnect() {
   transport_.disconnect();
   wireCallbacks();
   sessionState_ = Idle;
-  controller_.reset();
   rollback_.reset();
-  controllerPtr_ = nullptr;
   rollbackPtr_ = nullptr;
   handshakeReceived_ = false;
   handshakeSent_ = false;
@@ -268,8 +233,6 @@ void NetSession::onConnected() {
     msd.namesOnBonuses = settings_->namesOnBonuses ? 1 : 0;
     msd.bloodParticleMax = settings_->bloodParticleMax;
     msd.zoneTimeout = settings_->zoneTimeout;
-    msd.useRollback = settings_->useRollback ? 1 : 0;
-    msd.maxRollback = settings_->maxRollback;
     msd.inputDelay = settings_->inputDelay;
     transport_.sendMatchSettings(msd);
     matchSettingsReceived_ = true;  // Host already has correct settings
@@ -306,29 +269,16 @@ void NetSession::onHandshake(uint32_t seed, uint32_t settingsHash) {
     tryStartGame();
 }
 
-void NetSession::onRemoteInput(uint32_t frame, uint8_t input) {
-  // Lockstep wire path. Rollback peers receive via onRemoteInputBatch.
-  if (controllerPtr_)
-    controllerPtr_->injectRemoteInput(frame, input);
-  else if (!useRollback_)
-    pendingInputs_.push_back({frame, input});
-  // useRollback_ but no rollbackPtr_ yet — drop. Rollback's
-  // K-wide redundancy makes the post-Playing batches cover the gap.
-}
-
 void NetSession::onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
                                     uint8_t count, uint8_t const* inputs,
                                     uint32_t remoteLocalFrame) {
-  // Rollback wire path; the controller owns the generation filter so
-  // we just forward. Lockstep peers shouldn't receive batches (protocol
-  // version blocks the handshake), but drop silently if one slips
-  // through.
+  // The controller owns the generation filter; we just forward.
+  // Pre-Playing batches are dropped on purpose — the controller isn't
+  // wired yet, and the K-wide redundancy re-delivers the same frames
+  // on the next batch (~14 ms later).
   if (rollbackPtr_)
     rollbackPtr_->injectRemoteBatch(generation, baseFrame, count, inputs,
                                     remoteLocalFrame);
-  // Pre-Playing batches are dropped on purpose: the controller isn't
-  // wired yet, redundancy guarantees the next batch (~14 ms later)
-  // re-delivers the same frames.
 }
 
 void NetSession::onPlayerInfo(const NetTransport::PlayerInfo& info) {
@@ -358,12 +308,8 @@ void NetSession::onMatchSettings(const NetTransport::MatchSettingsData& data) {
     settings_->namesOnBonuses = data.namesOnBonuses != 0;
     settings_->bloodParticleMax = data.bloodParticleMax;
     settings_->zoneTimeout = data.zoneTimeout;
-    // Rollback fields are host-authoritative; the client's controller
-    // (built in tryStartGame, after this point) sees the resolved values.
-    settings_->useRollback = data.useRollback != 0;
-    settings_->maxRollback = data.maxRollback;
+    // inputDelay is host-authoritative.
     settings_->inputDelay = data.inputDelay;
-    useRollback_ = settings_->useRollback;
   }
 
   matchSettingsReceived_ = true;
@@ -398,18 +344,15 @@ void NetSession::onMapData(const void* data, size_t len) {
 }
 
 void NetSession::onPause() {
-  if (controllerPtr_) controllerPtr_->setRemotePaused(true);
-  else if (rollbackPtr_) rollbackPtr_->setRemotePaused(true);
+  if (rollbackPtr_) rollbackPtr_->setRemotePaused(true);
 }
 
 void NetSession::onResume() {
-  if (controllerPtr_) controllerPtr_->setRemotePaused(false);
-  else if (rollbackPtr_) rollbackPtr_->setRemotePaused(false);
+  if (rollbackPtr_) rollbackPtr_->setRemotePaused(false);
 }
 
 void NetSession::onRemoteEndMatch() {
-  if (controllerPtr_) controllerPtr_->endMatch();
-  else if (rollbackPtr_) rollbackPtr_->endMatch();
+  if (rollbackPtr_) rollbackPtr_->endMatch();
 }
 
 void NetSession::sendPause() {
@@ -425,9 +368,6 @@ void NetSession::wireCallbacks() {
   transport_.onDisconnected = [this]() { onDisconnected(); };
   transport_.onHandshake = [this](uint32_t seed, uint32_t hash) {
     onHandshake(seed, hash);
-  };
-  transport_.onRemoteInput = [this](uint32_t frame, uint8_t input) {
-    onRemoteInput(frame, input);
   };
   transport_.onRemoteInputBatch =
       [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
@@ -522,8 +462,6 @@ void NetSession::onTcData(const void* data, size_t len) {
   newCommon->load(memFs->root());
 
   common_ = newCommon;
-  // Controller is built in tryStartGame using the freshly-loaded
-  // common_, so the useRollback decision can wait for MatchSettings.
 
   if (onTcReloaded)
     onTcReloaded(newCommon);
@@ -539,8 +477,6 @@ void NetSession::tryStartGame() {
   if (sessionState_ == Playing)
     return;
 
-  // Build the controller now that both peers have agreed on useRollback
-  // via MatchSettingsData.
   int localIdx = (role_ == Host) ? 0 : 1;
   createController(localIdx);
 
@@ -561,44 +497,27 @@ void NetSession::tryStartGame() {
   activeGame().rand.seed(gameSeed_);
 
   if (role_ == Host) {
-    // Host generates the level and sends it to the client
     generateAndSendMap();
-    if (useRollback_) rollback_->setLevelPreloaded();
-    else controller_->setLevelPreloaded();
+    rollback_->setLevelPreloaded();
   } else {
-    // Client loads the level from received compressed map data
-    if (useRollback_) rollback_->loadLevelFromData(receivedMapData_);
-    else controller_->loadLevelFromData(receivedMapData_);
+    rollback_->loadLevelFromData(receivedMapData_);
     receivedMapData_.clear();
   }
 
   wireActiveController();
 
-  // Pre-fill the input-delay window with empty inputs so the local
-  // controller can advance past the initial frames without stalling.
-  //
-  // Only inputDelay frames are pre-filled — those are the frames whose
-  // remote input the remote peer literally cannot have recorded yet
-  // (with inputDelay=D, the remote first records localInputs[0+D] at
-  // its simFrame=0). Pre-filling further would overwrite frames the
-  // remote *will* fill in, causing a wrong-data false confirm on the
-  // local side and leaving the rollback path unable to correct itself
-  // when the real input arrives later (injectRemoteInput drops frames
-  // <= confirmedSimFrame_).
-  uint32_t preFillCount = 3;  // lockstep default
-  if (useRollback_) preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+  // Pre-fill exactly inputDelay frames of empty remote input. These are
+  // the frames whose remote input the remote peer literally cannot have
+  // recorded yet (with inputDelay=D, the remote first records its
+  // localInputs[D] at simFrame=0). Pre-filling further would overwrite
+  // frames the remote *will* fill in — injectRemoteInput drops frames
+  // <= confirmedSimFrame_, so the rollback path couldn't correct later.
+  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
   for (uint32_t i = 0; i < preFillCount; ++i) {
-    injectRemoteInputActive(i, 0);
+    rollback_->injectRemoteInput(i, 0);
   }
 
-  if (useRollback_) rollbackPtr_ = rollback_.get();
-  else              controllerPtr_ = controller_.get();
-
-  // Flush any inputs that arrived before the controller was ready
-  for (auto& pi : pendingInputs_) {
-    injectRemoteInputActive(pi.frame, pi.input);
-  }
-  pendingInputs_.clear();
+  rollbackPtr_ = rollback_.get();
 
   sessionState_ = Playing;
 }
@@ -613,7 +532,7 @@ void NetSession::enterRematch() {
 
   // The old controller is still owned by Gfx. Clear our raw pointer since
   // it will be replaced when the rematch starts.
-  controllerPtr_ = nullptr;
+  rollbackPtr_ = nullptr;
 
   // Reset per-game handshake flags for the next round
   mapDataReceived_ = (role_ == Host);  // host generates locally
@@ -700,26 +619,14 @@ void NetSession::startRematch() {
   // Send seed to client, then generate and send map
   transport_.sendHandshake(gameSeed_, 0);
   generateAndSendMap();
-  if (useRollback_) rollback_->setLevelPreloaded();
-  else              controller_->setLevelPreloaded();
+  rollback_->setLevelPreloaded();
 
   wireActiveController();
-  {
-    // Same logic as in tryStartGame — see comment there.
-    uint32_t preFillCount = 3;
-    if (useRollback_) preFillCount = static_cast<uint32_t>(settings_->inputDelay);
-    for (uint32_t i = 0; i < preFillCount; ++i)
-      injectRemoteInputActive(i, 0);
-  }
+  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+  for (uint32_t i = 0; i < preFillCount; ++i)
+    rollback_->injectRemoteInput(i, 0);
 
-  if (useRollback_) rollbackPtr_ = rollback_.get();
-  else              controllerPtr_ = controller_.get();
-
-  // Flush any inputs that arrived before the controller was ready
-  for (auto& pi : pendingInputs_) {
-    injectRemoteInputActive(pi.frame, pi.input);
-  }
-  pendingInputs_.clear();
+  rollbackPtr_ = rollback_.get();
 
   localReady_ = false;
   remoteReady_ = false;
@@ -746,27 +653,15 @@ void NetSession::startRematchClient() {
   remoteWorm->settings = remoteWs;
 
   activeGame().rand.seed(gameSeed_);
-  if (useRollback_) rollback_->loadLevelFromData(receivedMapData_);
-  else              controller_->loadLevelFromData(receivedMapData_);
+  rollback_->loadLevelFromData(receivedMapData_);
   receivedMapData_.clear();
 
   wireActiveController();
-  {
-    // Same logic as in tryStartGame — see comment there.
-    uint32_t preFillCount = 3;
-    if (useRollback_) preFillCount = static_cast<uint32_t>(settings_->inputDelay);
-    for (uint32_t i = 0; i < preFillCount; ++i)
-      injectRemoteInputActive(i, 0);
-  }
+  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+  for (uint32_t i = 0; i < preFillCount; ++i)
+    rollback_->injectRemoteInput(i, 0);
 
-  if (useRollback_) rollbackPtr_ = rollback_.get();
-  else              controllerPtr_ = controller_.get();
-
-  // Flush any inputs that arrived before the controller was ready
-  for (auto& pi : pendingInputs_) {
-    injectRemoteInputActive(pi.frame, pi.input);
-  }
-  pendingInputs_.clear();
+  rollbackPtr_ = rollback_.get();
 
   localReady_ = false;
   remoteReady_ = false;
@@ -832,10 +727,9 @@ void NetSession::generateAndSendMap() {
 }
 
 std::unique_ptr<Controller> NetSession::releaseController() {
-  // Return whichever path is live as a polymorphic Controller. The
-  // session keeps its typed raw pointer for inject/pause/end dispatch.
-  if (useRollback_) return std::move(rollback_);
-  return std::move(controller_);
+  // Return the controller as a polymorphic Controller. The session keeps
+  // its typed raw pointer for inject/pause/end dispatch.
+  return std::move(rollback_);
 }
 
 uint32_t NetSession::computeSettingsHash() const {
@@ -895,14 +789,13 @@ void maybeLog(char const* who, uint64_t& counter, uint32_t frame,
 
 void NetSession::onChecksum(uint8_t generation, uint32_t frame,
                             uint32_t remoteChecksum) {
-  if (desyncDetected_ || sessionState_ != Playing ||
-      (!controllerPtr_ && !rollbackPtr_))
+  if (desyncDetected_ || sessionState_ != Playing || !rollbackPtr_)
     return;
 
   // Drop pre-transition checksums: they describe the peer's old
   // simFrame numbering and would compare against a WS-phase slot that
-  // no longer exists in our ring. Lockstep has no generation concept.
-  if (rollbackPtr_ && generation != rollbackPtr_->generation()) return;
+  // no longer exists in our ring.
+  if (generation != rollbackPtr_->generation()) return;
 
   static uint64_t remoteCount = 0;
   maybeLog("remote", remoteCount, frame, remoteChecksum);
