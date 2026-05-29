@@ -443,6 +443,276 @@ Update `multiplayer.md` Phase-2 section.
 
 Promote `RollbackController` to default for network games; keep `NetworkController` behind a debug flag for ~1 release in case of regressions.
 
+### Step 12 — Rollback-style weapon select + pre-fill fix — ✅ done
+
+Rework `advanceWeaponSelection` to mirror `advanceSimulation` (predict, snapshot, resim on misprediction). Fix a latent NetSession bug where `tryStartGame` pre-filled 3 remote-input frames as Confirmed regardless of `inputDelay`, causing the `frame ≤ confirmedSimFrame_` guard in `injectRemoteInput` to silently drop real subsequent inputs at `inputDelay=1`. See Learnings.
+
+### Step 13 — Online (ICE) desync detection — ✅ done
+
+Restore desync detection on the rollback path. Two issues fixed:
+- `NetSession::onChecksum` guarded on `!controllerPtr_`, which is null in rollback mode — every checksum packet received from the peer was silently dropped.
+- The narrow `fastGameChecksum` only covered worm pos/vel + `rand.last`, missing projectile pools, level damage, health/lives/ammo. Rollback path now uses `wideRollbackChecksum`; replay format keeps using `fastGameChecksum`.
+
+Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTransport` for diagnosing future desync/transport problems without a rebuild.
+
+**This step makes the simFrame-skew bug (Step 14) visible. It does not fix it.**
+
+### Step 14 — Fix WS→game simFrame skew — ⏳ planned
+
+**Problem.** Two peers' `simFrame` counters can advance at different rates during the WS phase (asymmetric `kFrameAdvantage` stalls + asymmetric WS rollback resims), so they enter `StateGame` at different simFrame indices. Reproduced in the user's two-binary ICE run: host transitioned at `simFrame=602`, client at `simFrame=600`, with byte-identical seed snapshots. After transition both peers' "frame N" refers to a different number of `processFrame` calls from the same seed — so the cached/sent checksums for frame N reflect different states, and the in-game terrain destruction visibly diverges. Step 13's detection now fires on this divergence (verified by user log: `DESYNC DETECTED at frame 555! local=35c6dd7a remote=1ab60ea4`); Step 14 fixes the root cause.
+
+**Design candidates considered.**
+1. *Roll `simFrame` back to `wsDone+1` at `finishWeaponSelect`.* Tried. Creates a permanent skew in the opposite direction (the rewound peer "wastes" `process()` calls the other already used in game phase), and corrupts already-sent `localInputs[]` on re-recording. Reverted.
+2. *Strict lockstep WS (no prediction).* Tried. Eliminates the skew but breaks the existing test scripts because input rising edges no longer align with WS frame timing under the slowed advancement. Reverted.
+3. **Protocol generation counter + reset at transition.** Chosen. WS-phase rollback stays (weapon select remains responsive). Game phase starts fresh on both peers regardless of when each transitioned, with stale WS-numbered packets dropped at the receiver via a generation byte.
+
+**Architecture decisions.**
+- A 1-byte `generation` field is added to `PacketInputBatch` and `PacketChecksum`. Generation 0 = pre-game-phase (WS), generation 1 = game phase. Future phases (rematch, etc.) bump further.
+- `RollbackController` holds `uint8_t generation_`. `finishWeaponSelect` increments it, resets `simFrame=0`, clears `localInputs[]`/`remoteInputs[]`/`remoteInputReady[]`, resets `confirmedSimFrame_=-1`, `lastSentFrame=UINT32_MAX`, `lastRemoteInput_=0`, `lastKnownRemoteFrame_=-1`. The seed snapshot is written at `slot[-1]` slot-wise (or equivalently, the first game tick at `simFrame=0` writes the first slot and uses no predecessor; same boundary handling as session start).
+- Wire receiver drops packets whose generation is **older** than the receiver's current generation. Future-generation packets (peer ahead) buffer or drop conservatively — see Task 14.5.
+- Protocol version bumps. Mismatched-version peers fail to handshake (existing behavior).
+
+**Phase 1 — Wire protocol generation**
+
+#### Task 14.1: Add generation byte to PacketInputBatch and PacketChecksum
+**Description:** Extend the on-wire format of the two rollback-path packets so receivers can identify and reject packets from a previous phase. Bump `kProtocolVersion`.
+
+**Acceptance criteria:**
+- [ ] `PacketInputBatch` layout becomes `[type:1][gen:1][baseFrame:u32][count:u8][localDelta:u8][input[count]:u8]` (9 + count bytes).
+- [ ] `PacketChecksum` layout becomes `[type:1][gen:1][frame:u32][checksum:u32]` (10 bytes).
+- [ ] `NetTransport::sendInputBatch` / `sendChecksum` take a `uint8_t generation` argument and write it.
+- [ ] Receive paths read generation and pass it to the callback signatures `onRemoteInputBatch(gen, baseFrame, …)` / `onChecksum(gen, frame, checksum)`.
+- [ ] `kProtocolVersion` bumped.
+
+**Verification:**
+- [ ] `cmake --build` clean.
+- [ ] Existing `test_session_rollback` still passes (both peers stay at generation 0 throughout these tests; behavior unchanged).
+- [ ] `test_versioning` still asserts that an older-version peer fails handshake.
+
+**Dependencies:** None.
+
+**Files likely touched:**
+- `src/game/net/transport.{cpp,hpp}`
+- `src/game/net/session.cpp` (callback signatures)
+- `src/game/controller/rollbackController.{cpp,hpp}` (callback typedefs)
+
+**Estimated scope:** S (1–2 files of meaningful logic; rest is plumbing.)
+
+---
+
+#### Task 14.2: Plumb generation through RollbackController send and receive
+**Description:** Have the controller send its current `generation_` on every batch + checksum, and accept incoming packets only when the generation matches the controller's current generation.
+
+**Acceptance criteria:**
+- [ ] `RollbackController` holds `uint8_t generation_ = 0`.
+- [ ] All `sendInputBatch(...)` and `sendChecksum(...)` calls pass `generation_`.
+- [ ] `injectRemoteBatch` drops packets whose generation < `generation_`.
+- [ ] `onChecksum` (in `NetSession`) drops packets whose generation < the active controller's `generation_`.
+- [ ] A short comment at each receive site explains why we drop, not buffer, older-generation packets (they describe a pre-transition simFrame numbering that the local controller has already abandoned).
+
+**Verification:**
+- [ ] All existing tests pass.
+- [ ] New unit test `test_rollback_generation_drop.cpp`: a controller at `generation_=1` ignores a batch tagged `generation=0` carrying a frame number that, if accepted, would corrupt a live game slot.
+
+**Dependencies:** 14.1.
+
+**Files likely touched:**
+- `src/game/controller/rollbackController.{cpp,hpp}`
+- `src/game/net/session.cpp`
+- `src/tests/test_rollback_generation_drop.cpp` (new)
+- `CMakeLists.txt`
+
+**Estimated scope:** S.
+
+---
+
+### Checkpoint: Phase 1
+- [ ] Generation flows on the wire and is honored at receive.
+- [ ] No behavior change in any test (everyone stays at generation 0).
+
+---
+
+**Phase 2 — Controller reset at transition**
+
+#### Task 14.3: Add `resetForGamePhase()` helper to RollbackController
+**Description:** Single helper that performs the full state reset for entering game phase. Called from `finishWeaponSelect`. Centralizing it avoids subtle leftover state.
+
+**Acceptance criteria:**
+- [ ] New private method clears: `localInputs.fill(0)`, `remoteInputs.fill(0)`, `remoteInputReady.fill(false)`, `simFrame=0`, `confirmedSimFrame_=-1`, `lastSentFrame=UINT32_MAX`, `lastRemoteInput_=0`, `lastKnownRemoteFrame_=-1`, `localPrevInput=0`, `remotePrevInput=0`, `localHeldFrames.fill(0)`, `remoteHeldFrames.fill(0)`.
+- [ ] Rollback ring buffer is rewritten/invalidated so no slot has `wsSnap.valid=true` (game-phase rollback never targets a wsSnap slot, but be explicit).
+- [ ] `generation_` is incremented.
+
+**Verification:**
+- [ ] After `finishWeaponSelect`, `currentFrame() == 0`, `confirmedFrame() == -1`, `generation_ == previous+1`.
+- [ ] No existing test breaks: existing tests assert transition behavior in terms of `gameState() == StateGame` and weapon picks, not in terms of simFrame value.
+
+**Dependencies:** 14.1, 14.2.
+
+**Files likely touched:**
+- `src/game/controller/rollbackController.{cpp,hpp}`
+
+**Estimated scope:** S.
+
+---
+
+#### Task 14.4: Rework `finishWeaponSelect` to use the reset path
+**Description:** Replace the current "write seed at `simFrame-1`" logic with: `ws->finalize()` → `game.startGame()` + `game.resetWorms()` → `resetForGamePhase()` → write the seed snapshot at `slot[0]` post-reset (treating `simFrame=0` as the seed frame, same way session-start does in advanceSimulation's first tick).
+
+**Acceptance criteria:**
+- [ ] After transition, both peers' `simFrame == 0` regardless of pre-transition simFrame or which path (new-frame block vs resim) triggered transition.
+- [ ] Seed slot at `slot[0]`/equivalent boundary contains the post-`startGame`/`resetWorms` game snapshot and matching `wideRollbackChecksum`.
+- [ ] No simFrame rewind; no `lastSentFrame` re-recording confusion.
+- [ ] Code comment near the reset block explains the why (links back to this design note).
+
+**Verification:**
+- [ ] `test_rollback_weapsel` "transitions cleanly under jitter" passes without test changes (because frame numbers reset deterministically on both peers).
+- [ ] `test_session_rollback` "weapon select transitions to game over a real session" passes.
+
+**Dependencies:** 14.3.
+
+**Files likely touched:**
+- `src/game/controller/rollbackController.cpp`
+
+**Estimated scope:** S.
+
+---
+
+#### Task 14.5: Decide and document handling of future-generation packets
+**Description:** If peer A transitions to generation 1 before peer B, A sends generation-1 batches that B receives while B is still at generation 0. B can either (a) drop them (A will resend via K-wide redundancy after B catches up — but A's K-window will have moved past B's first game frame within a few ticks), or (b) buffer them until B transitions. Pick one, document the tradeoff, implement it.
+
+**Acceptance criteria:**
+- [ ] Decision recorded in a comment at the receive site.
+- [ ] Implementation matches the decision.
+- [ ] Test `test_rollback_generation_future.cpp` (new): peer A advances to game phase ~5 frames before peer B. Verify that B catches up cleanly (no missing inputs) once it transitions.
+
+**Recommendation:** Buffer up to one window's worth (kMaxRollback+1 = 8 frames) of future-generation batches per phase boundary. Cheap, bounded, no protocol cost. The K-wide redundancy guarantees the boundary frames are re-sent for several ticks, so even a pure drop policy probably works — but buffering is safer.
+
+**Dependencies:** 14.3, 14.4.
+
+**Files likely touched:**
+- `src/game/controller/rollbackController.{cpp,hpp}`
+- `src/tests/test_rollback_generation_future.cpp` (new)
+- `CMakeLists.txt`
+
+**Estimated scope:** S–M.
+
+---
+
+### Checkpoint: Phase 2
+- [ ] Both peers transition to game phase at `simFrame=0` regardless of WS path taken.
+- [ ] No game-phase desync detected in any unit or session test.
+- [ ] All 123 existing tests still pass.
+
+---
+
+**Phase 3 — Coverage for the bug class**
+
+#### Task 14.6: Force-skew unit test
+**Description:** Add a controller-level test that deliberately forces peers' WS-phase simFrames to diverge (e.g., by stalling one peer's input delivery so it predicts more, or by using asymmetric `kFrameAdvantage`), then asserts that the post-transition state matches frame-by-frame.
+
+**Acceptance criteria:**
+- [ ] Test reliably produces a divergent WS simFrame count between peer A and peer B (asserted via an introspection helper).
+- [ ] After transition, both peers' `simFrame == 0`.
+- [ ] Cached `wideRollbackChecksum` for the first ~32 game-phase frames matches between peers (drives both forward, then compares slot checksums).
+- [ ] Fails fast if Step 14 regresses.
+
+**Verification:**
+- [ ] Test passes on the fix.
+- [ ] Test fails on `HEAD~1` (i.e., with Step 14 reverted), proving it catches the bug class.
+
+**Dependencies:** 14.4.
+
+**Files likely touched:**
+- `src/tests/test_rollback_skew_repro.cpp` (new)
+- `CMakeLists.txt`
+
+**Estimated scope:** M (test setup is fiddly).
+
+---
+
+#### Task 14.7: End-to-end session test with wider checksum
+**Description:** Extend `test_session_rollback` with a case that drives the full WS→game transition under jitter and asserts no `DESYNC DETECTED` fires through ~200 game-phase frames. Uses the wider checksum that lands in Step 13.
+
+**Acceptance criteria:**
+- [ ] New `TEST_CASE` in `test_session_rollback.cpp` exercising at least 5 seconds of in-game time after WS exit.
+- [ ] `host.desyncDetected() == false && client.desyncDetected() == false` at end.
+- [ ] Both peers' `wideRollbackChecksum(game)` agree at a fully-confirmed game frame.
+
+**Verification:**
+- [ ] Passes consistently across 20 seeded runs (no flakiness).
+
+**Dependencies:** 14.4.
+
+**Files likely touched:**
+- `src/tests/test_session_rollback.cpp`
+
+**Estimated scope:** S.
+
+---
+
+### Checkpoint: Phase 3
+- [ ] Force-skew test catches the bug class.
+- [ ] End-to-end test exercises the WS→game boundary realistically.
+
+---
+
+**Phase 4 — Production verification**
+
+#### Task 14.8: Two-binary smoke test (user-driven)
+**Description:** Have the user run the patched binaries against each other over ICE (the same configuration that originally produced the bug). With `OPENLIERO_CHECKSUM_LOG=1`, confirm `[checksum local]` and `[checksum remote]` counters track within a tick of each other and that no `DESYNC DETECTED` line ever fires across a multi-minute match including kills/respawns/weapon fire.
+
+**Acceptance criteria:**
+- [ ] No visible terrain divergence between the two windows.
+- [ ] No `DESYNC DETECTED` line in stderr after ≥ 2 minutes of active play.
+- [ ] Weapon select still feels responsive (regression check on Step 12).
+
+**Verification:** Manual.
+
+**Dependencies:** 14.4.
+
+**Estimated scope:** XS (no code, just a real-world run).
+
+---
+
+**Phase 5 — Cleanup**
+
+#### Task 14.9: Decide fate of OPENLIERO_CHECKSUM_LOG
+**Description:** Once Step 14 lands, decide whether to keep the env-flag instrumentation indefinitely (useful for future ICE/transport debugging) or remove it.
+
+**Acceptance criteria:**
+- [ ] Decision recorded in this doc.
+- [ ] If keeping: brief mention added to `docs/multiplayer.md` debug-flags section. If removing: clean up the `getenv` / counter code in `session.cpp` and `transport.cpp`.
+
+**Recommendation:** Keep it. Cost is one `getenv` per process boot + a few atomic increments; the value of having this on hand for the next user-reported online desync is high.
+
+**Dependencies:** 14.8.
+
+**Estimated scope:** XS.
+
+---
+
+### Checkpoint: Complete
+- [ ] All acceptance criteria met.
+- [ ] User confirmed via Task 14.8.
+- [ ] Doc Learnings entry written for Step 14.
+
+---
+
+**Risks and mitigations**
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Generation byte breaks an undocumented protocol consumer | Med | Bumping `kProtocolVersion` already gates this — mismatched-version peers fail handshake explicitly. |
+| Future-generation buffering grows unbounded | Med | Cap at 8 entries per boundary. Drop excess. Test 14.5 covers it. |
+| Reset clears state that game phase needs | Med | Task 14.3 lists every field explicitly; reuse session-start initialization as the authoritative reference. |
+| Test 14.6 is flaky because forcing skew is hard | Low | Use `setFrameAdvantageEnabled(false)` + asymmetric `injectRemoteBatch` delays to make skew deterministic, not RNG-driven. |
+| Bug surfaces at rematch (second WS→game transition) | Med | Generation increment applies at every transition, not just first. Add a rematch case to 14.7. |
+
+**Open questions**
+
+- Should the generation byte also gate session-control packets (pause/resume/end-match), or are they fine since they don't carry frame numbers? *Initial answer: leave them alone; they're phase-independent.*
+- Does `OPENLIERO_CHECKSUM_LOG` need to be promoted to a `Settings` toggle for non-CLI users? *Initial answer: no; env var is fine for ad-hoc debugging.*
+
 ## Key Risks
 
 | Risk | Likelihood | Impact | Mitigation |
@@ -478,6 +748,23 @@ Promote `RollbackController` to default for network games; keep `NetworkControll
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 13 — Online (ICE) desync detection (2026-05-29)
+
+- Root cause of "no DESYNC line in production" was a stale guard in `NetSession::onChecksum`: `if (… || !controllerPtr_) return;`. In rollback mode `controllerPtr_` is null (only `rollbackPtr_` is set), so every checksum packet from the peer was silently dropped. Fix: accept when either pointer is live. The wider checksum is what *makes* the detection useful but it would have been silent regardless until this guard was relaxed.
+- `wideRollbackChecksum` folds in projectile pools (wobjects/sobjects/nobjects), bonuses, level damage (`level.data`), per-worm health/lives/ammo, control state. The original `fastGameChecksum` covered only pos/vel + `rand.last` — narrow enough that visible terrain/projectile divergence wouldn't trip it.
+- Replay verification deliberately stays on `fastGameChecksum`. Changing replay's checksum would invalidate existing recorded games and isn't load-bearing for the rollback work.
+- `OPENLIERO_CHECKSUM_LOG=1` instruments two layers: `NetSession::onChecksum` / `onLocalChecksum` prints `[checksum local|remote] count=N frame=F value=...` once per ~70 events (1s at 70 Hz); `NetTransport::receive` prints `[transport rx] input=… batch=… checksum=… other=…` once per 140 packets. The two layers together let a single diagnostic run distinguish "controller never sends checksums" from "transport sends but receiver drops" from "checksums match but state diverges in non-checksum'd subsystem." All three of these had to be ruled in/out during the user's debug session that produced Step 13.
+- The user's bug **was not actually about checksum coverage**. Wider checksum + the guard fix simply made the underlying simFrame-skew bug visible. See Step 14 plan and Step 12's learning entry — the skew already existed under Step 12 and is what Step 14 will fix.
+- Files: `src/game/replay.cpp` (new `wideRollbackChecksum`), `src/game/game.hpp` (declaration), `src/game/controller/rollbackController.cpp` (switched 3 sites), `src/game/net/session.cpp` (guard relaxed + logging), `src/game/net/transport.cpp` (per-type rx counters).
+
+### Step 12 — Weapon-select rollback + pre-fill fix (2026-05-29)
+
+- WS was strict lockstep before Step 12. Reworked to mirror `advanceSimulation`: predict missing remote input, snapshot per frame in the rollback ring, resim on misprediction. New `WeaponSelectSnap` captures per-worm weapons / `isReady` / menu cursor + scroll + control state + currentWeapon, plus controller edge-detection state and `game.rand` (used by the "Randomize" option). Menu item display strings and `worm.weapons[].type` pointers are re-derived from snapshot weapon IDs via `Common`.
+- Independent bug found in `NetSession`: pre-fill count for remote inputs was hard-coded to 3 frames in `tryStartGame` / `startRematch{,Client}`. With `inputDelay=1` (the rollback default from Step 11c), the pre-fill marked real subsequent frames as already confirmed, and `injectRemoteInput`'s `frame ≤ confirmedSimFrame_` guard then silently dropped the real input when it later arrived. Pre-fill now matches `inputDelay`.
+- Tests: `test_rollback_weapsel.cpp` (snapshot round-trip + zero-jitter parity + jitter convergence) and a session-level `test_session_rollback.cpp` case over real ENet loopback. The session test deep-copies `clientSettings->wormSettings` so the single-process test doesn't accidentally share the local-worm profile between host and client.
+- **Limitation discovered during Step 13.** Asymmetric `kFrameAdvantage` stalls + asymmetric WS-rollback paths (one peer transitions via the new-frame block, the other via a resim that already speculated past `wsDone+1`) can leave the two peers at *different* `simFrame` values when entering game phase. Because the checksum comparison keys by `simFrame`, this produces a permanent divergence the in-game rollback cannot self-heal. Two attempted in-place fixes (rewinding `simFrame` at `finishWeaponSelect`; strict-lockstep WS) both broke tests in ways that revealed the bug requires a protocol-level fix. Step 14 plans this properly via a generation counter + state reset at transition.
+- Files: `src/game/serialization/weapsel_snapshot.hpp` (new), `src/game/rollback/buffer.hpp` (slot gains `wsSnap`), `src/game/menu/menu.hpp` (`setSelection` accessor), `src/game/controller/rollbackController.{cpp,hpp}` (rewrite of `advanceWeaponSelection`), `src/game/net/session.cpp` (pre-fill fix in three start paths), tests + CMake.
 
 ### Step 2 — Fast snapshot path (2026-05-27)
 
