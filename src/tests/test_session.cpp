@@ -29,10 +29,8 @@ struct SessionFixture {
     settings->loadingTime = 0;
     settings->randomLevel = true;
     settings->gameMode = Settings::GMKillEmAll;
-    // Step 11e — rollback is the new default. These tests exercise
-    // the lockstep NetworkController path explicitly, so pin
-    // useRollback off here. test_session_rollback covers the
-    // rollback path.
+    // These tests exercise the lockstep NetworkController path
+    // explicitly; test_session_rollback covers rollback.
     settings->useRollback = false;
   }
 };

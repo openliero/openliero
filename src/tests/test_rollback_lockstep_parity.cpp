@@ -1,9 +1,9 @@
-// Rollback Step 4 — RollbackController in lockstep mode must produce
-// frame-by-frame identical state to NetworkController given identical
-// inputs, no jitter, no loss. Two parallel loopback fixtures (one running
-// NetworkController × NetworkController, one running RollbackController ×
-// RollbackController) are stepped in lockstep with the same scripted
-// input sequence; their fastGameChecksum values are compared every frame.
+// RollbackController in lockstep mode must produce frame-by-frame
+// identical state to NetworkController given identical inputs, no
+// jitter, no loss. Two parallel loopback fixtures (one running
+// NetworkController × NetworkController, one running RollbackController
+// × RollbackController) are stepped with the same scripted input
+// sequence; their fastGameChecksum values are compared every frame.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>

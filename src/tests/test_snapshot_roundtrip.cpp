@@ -1,9 +1,9 @@
-// Rollback Step 1 — cereal-based snapshot round-trip baseline.
+// Cereal-based snapshot round-trip — correctness oracle for the fast
+// in-memory snapshot path.
 //
-// Plan: run N frames, save snapshot, run another N frames, restore, run
+// Run N frames, save snapshot, run another N frames, restore, run
 // another N frames; assert the per-frame state hash matches a control
-// simulation that never restored. This is the correctness oracle that
-// Step 2's faster memcpy path will be validated against.
+// simulation that never restored.
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
@@ -146,11 +146,9 @@ TEST_CASE("Snapshot round-trip preserves frame-by-frame state",
 }
 
 TEST_CASE("Snapshot save/restore microbenchmark", "[snapshot][rollback][!benchmark]") {
-  // Reports cereal save and restore wall-clock time. Per the plan
-  // (docs/ideas/rollback.md → "Snapshot Cost Measurement Plan"), if cereal
-  // exceeds ~2 ms per save the Step 4 parity test would be slow and we'd
-  // need to pull Step 2's fast path forward. This test is informational —
-  // it only asserts a generous upper bound to catch regressions.
+  // Informational; asserts a generous upper bound to catch regressions.
+  // Real cereal cost on commodity hw is ~1-3 ms; the fast path is
+  // ~100x faster.
 
   using clock = std::chrono::steady_clock;
 
@@ -178,8 +176,7 @@ TEST_CASE("Snapshot save/restore microbenchmark", "[snapshot][rollback][!benchma
   std::cout << "[snapshot bench] save=" << saveUs << " us, load=" << loadUs
             << " us, size=" << snap.size() << " bytes\n";
 
-  // Generous bound: 10 ms. Real cereal cost on commodity hw is ~1-3 ms.
-  // Tighter targets belong to Step 2's fast path.
+  // Generous bound: 10 ms.
   REQUIRE(saveUs < 10000.0);
   REQUIRE(loadUs < 10000.0);
 }

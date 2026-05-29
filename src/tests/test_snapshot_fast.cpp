@@ -1,13 +1,11 @@
-// Rollback Step 2 — fast (in-memory) snapshot path.
+// Fast (in-memory) snapshot path.
 //
-// Three things to prove:
-//   1. Round-trip: save → diverge → restore → resume matches a control run
-//      (same property as Step 1, now via the fast path).
-//   2. Cereal parity: at any frame, fast-save + fast-restore produces the
-//      same post-restore state as cereal-save + cereal-restore on a
-//      separate Game instance. Cereal is the oracle.
-//   3. Performance: save and load both well under 500 µs. The plan flags
-//      this as the threshold for "snapshot cost is negligible".
+// Verifies:
+//   1. Round-trip: save → diverge → restore → resume matches a control
+//      run.
+//   2. Cereal parity: fast-save + fast-restore produces the same
+//      post-restore state as cereal-save + cereal-restore.
+//   3. Performance: save and load both well under 500 µs.
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>

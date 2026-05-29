@@ -1,25 +1,17 @@
-// Rollback Step 7 — headline correctness test.
+// Headline rollback-correctness test.
 //
-// Two RollbackControllers exchange inputs through a JitterTransport that
-// delays delivery by a random amount within [minDelay, maxDelay] frames.
-// Because each peer cannot wait for the real input, it predicts the
-// remote side, advances speculatively, and reconciles via rollback when
-// the real byte arrives and disagrees with the prediction. The test
-// drives both peers with identical PRNG-generated inputs, runs for
-// kTicks frames, then flushes any in-flight packets so both peers
-// converge. After convergence both peers must agree on every checksum
-// they've still got resident in the rollback ring, and their state must
-// match a zero-jitter reference run driven by the same inputs.
+// Two RollbackControllers exchange inputs through a JitterTransport
+// that delays delivery by a random amount within [minDelay, maxDelay]
+// frames. Each peer predicts the remote side, advances speculatively,
+// and reconciles via rollback when a disagreement arrives. After a
+// convergence flush both peers must agree on every checksum still
+// resident in the ring, and their state must match a zero-jitter
+// reference run driven by the same inputs.
 //
-// Step 7 has no input redundancy (Step 7.5's job), so a stall in this
-// protocol is a *cascade*: when one peer falls behind by more than
-// kMaxRollback it stops sending, which starves the other peer, which
-// stops sending — and neither recovers. To exercise the rollback
-// algorithm in isolation from that transport problem the test runs
-// with delays small enough that the steady-state gap between simFrame
-// and confirmedFrame stays comfortably under kMaxRollback even when a
-// run of unlucky delays land back-to-back. Step 7.5's redundancy test
-// will be where larger delays / loss get exercised.
+// The test uses small delays so the steady-state gap between simFrame
+// and confirmedFrame stays comfortably under kMaxRollback even when
+// runs of unlucky delays land back-to-back; larger delays + loss are
+// covered by the redundancy / packet-loss tests.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
@@ -85,8 +77,8 @@ RefResult runReference(uint32_t worldSeed, ScriptedInputs const& script,
   auto b = std::make_unique<RollbackController>(common, settings, 1);
   a->setSkipWeaponSelection(true);
   b->setSkipWeaponSelection(true);
-  // Step 7 test — isolate the rollback algorithm from Step 8's time-sync
-  // stall so the peers freely run ahead and exercise prediction.
+  // Isolate the rollback algorithm from the frame-advantage stall so
+  // the peers freely run ahead and exercise prediction.
   a->setFrameAdvantageEnabled(false);
   b->setFrameAdvantageEnabled(false);
   a->game.rand.seed(worldSeed);
@@ -157,10 +149,8 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
     int maxDelay;
     uint32_t transportSeed;
   };
-  // Step 7 has no input redundancy, so we choose delays where the
-  // steady-state gap stays well under kMaxRollback even when unlucky
-  // runs of high-delay packets cluster. Step 7.5 will exercise larger
-  // delays + loss once redundancy makes that survivable.
+  // Delays are chosen so the steady-state gap stays well under
+  // kMaxRollback even when unlucky runs of high-delay packets cluster.
   std::vector<Case> cases = {
       {"delay [1,3]", 1, 3, 0x1111},
       {"delay [1,4]", 1, 4, 0x2222},
@@ -177,7 +167,7 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
       auto b = std::make_unique<RollbackController>(common, settings, 1);
       a->setSkipWeaponSelection(true);
       b->setSkipWeaponSelection(true);
-      // Disable Step 8 frame-advantage stall so the rollback algorithm
+      // Disable the frame-advantage stall so the rollback algorithm
       // is exercised under jitter without the time-sync clamp.
       a->setFrameAdvantageEnabled(false);
       b->setFrameAdvantageEnabled(false);
@@ -217,9 +207,9 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
         b->injectRemoteBatch(gen, bf, c, in, lf);
       };
 
-      // Step 11d — track that lastTickResimFrames() goes non-zero at
-      // some point during the run. Catches a regression where rollback
-      // counting falls back to the cumulative rollbackCount() metric.
+      // Track that lastTickResimFrames() goes non-zero at some point
+      // during the run, catching a regression where rollback counting
+      // falls back to the cumulative rollbackCount() metric.
       uint32_t maxResimInATick = 0;
       for (int i = 0; i < kTicks; ++i) {
         a->setLocalControlState(script.a[i]);

@@ -1,12 +1,11 @@
-// Rollback Step 5 — Game::speculative side-effect suppression.
+// Game::speculative side-effect suppression.
 //
-// The contract: while game.setSpeculative(true), SoundPlayer::play/stop and
-// StatsRecorder writes must not be observable. isPlaying may pass through.
+// Contract: while game.setSpeculative(true), SoundPlayer::play/stop and
+// StatsRecorder writes must not be observable. isPlaying may pass
+// through.
 //
-// Test shape per docs/ideas/rollback.md: an N-frame run that goes
-// run→snapshot→speculative-run→restore→run produces the same observable
-// counts as a single 2N-frame run. The speculative segment in the middle
-// must contribute zero events.
+// An N-frame run that goes run→snapshot→speculative-run→restore→run
+// must produce the same observable counts as a single 2N-frame run.
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>

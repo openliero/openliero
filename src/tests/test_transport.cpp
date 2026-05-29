@@ -319,9 +319,9 @@ TEST_CASE("Transport delivers large map data (100KB+)", "[transport]") {
   REQUIRE(receivedData == sendData);
 }
 
-// Step 11a: rollback K-wide input batch round-trip. Verifies the
-// PacketInputBatch wire format end-to-end, including localDelta
-// reconstruction (= remoteLocalFrame).
+// Rollback K-wide input batch round-trip. Verifies the PacketInputBatch
+// wire format end-to-end, including localDelta reconstruction
+// (= remoteLocalFrame).
 TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") {
   NetTransport host;
   REQUIRE(host.host(0));
@@ -374,11 +374,11 @@ TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") 
   for (int i = 0; i < 8; ++i) REQUIRE(rxInputs[i] == inputs[i]);
 }
 
-// Step 11a: the handshake now carries kProtocolVersion. A peer that
-// sends a mismatched version (raw-byte spoof, simulating an old or
-// future build) must NOT see its handshake delivered to the receiver.
-// Silent drop is intentional — the session-level timeout surfaces it
-// to the user as a normal connection failure.
+// The handshake carries kProtocolVersion. A peer that sends a
+// mismatched version (raw-byte spoof, simulating an old or future
+// build) must NOT see its handshake delivered. Silent drop is
+// intentional — the session-level timeout surfaces it as a normal
+// connection failure.
 TEST_CASE("Transport rejects handshake with wrong protocol version",
           "[transport][rollback]") {
   NetTransport host;

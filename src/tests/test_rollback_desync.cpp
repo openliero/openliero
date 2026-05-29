@@ -1,10 +1,9 @@
-// Rollback Step 10 — desync detection under rollback.
+// Desync detection under rollback.
 //
-// Step 6 introduced the rule "predicted frames don't emit a checksum";
-// Step 10 generalises this to "checksum is cached on the snapshot at
-// confirmation time and emitted once when the frame transitions to
-// Confirmed via any of the three confirmation paths" — forward path
-// with real input, promote loop, or resim that consumed real input.
+// Each rollback slot caches its post-frame checksum; the checksum is
+// emitted once when the frame transitions to Confirmed via any of the
+// three confirmation paths (forward with real input, promote loop, or
+// resim that consumed real input). Predicted frames never emit.
 //
 // This test wires two RollbackControllers through the JitterTransport
 // and watches the emitted (frame, checksum) stream. Two cases:
@@ -87,7 +86,7 @@ TEST_CASE("Rollback desync detection — clean run produces no alarms",
   auto b = std::make_unique<RollbackController>(common, settings, 1);
   a->setSkipWeaponSelection(true);
   b->setSkipWeaponSelection(true);
-  // Disable Step 8 frame-advantage stall so prediction + rollback are
+  // Disable the frame-advantage stall so prediction + rollback are
   // exercised at the same rate as in test_rollback_correctness.
   a->setFrameAdvantageEnabled(false);
   b->setFrameAdvantageEnabled(false);
@@ -107,10 +106,9 @@ TEST_CASE("Rollback desync detection — clean run produces no alarms",
       },
       nullptr);
 
-  // Step 10 — capture every emitted checksum. The last value wins on
-  // duplicates (e.g. a resim that overwrites a prior promote's value
-  // for the same frame after a misprediction cascade); see
-  // RollbackController::advanceSimulation for the emit sites.
+  // Capture every emitted checksum. The last value wins on duplicates
+  // (e.g. a resim that overwrites a prior promote's value for the same
+  // frame after a misprediction cascade).
   std::unordered_map<uint32_t, uint32_t> aChecks, bChecks;
   a->setChecksumCallback(
       [&](uint8_t /*gen*/, uint32_t f, uint32_t c) { aChecks[f] = c; });

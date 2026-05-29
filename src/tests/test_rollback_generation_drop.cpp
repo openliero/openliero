@@ -1,4 +1,4 @@
-// Rollback Step 14 Task 14.2 — generation drop.
+// Generation drop.
 //
 // A controller that has crossed the WS→game generation bump must ignore
 // any batch carrying the old (pre-transition) generation. The frame
@@ -42,9 +42,8 @@ TEST_CASE("Rollback controller drops batches from an older generation",
   a.game.rand.seed(0xC0FFEE);
   a.focus();
 
-  // Simulate having crossed the WS→game generation bump. Task 14.4 will
-  // wire the real bump into finishWeaponSelect; for this task the
-  // controller is just put into the post-transition state directly.
+  // Put the controller into the post-transition state directly
+  // (production code crosses this via finishWeaponSelect).
   a.setGenerationForTest(1);
   REQUIRE(a.generation() == 1);
   REQUIRE(a.droppedOldGenerationBatches() == 0);
@@ -76,10 +75,10 @@ TEST_CASE("Rollback controller drops batches from an older generation",
     REQUIRE(a.lastKnownRemoteFrame() == 3);
   }
 
-  SECTION("immediate-future generation is buffered (Task 14.5)") {
-    // Task 14.5 buffers gen+1 batches until our own resetForGamePhase
-    // bumps generation_. Until then no input is applied and the drop
-    // counter doesn't bump.
+  SECTION("immediate-future generation is buffered") {
+    // gen+1 batches are buffered until resetForGamePhase bumps
+    // generation_. Until then no input is applied and the drop counter
+    // doesn't bump.
     a.injectRemoteBatch(/*generation=*/2, /*baseFrame=*/0, /*count=*/8,
                         inputs, /*remoteLocalFrame=*/3);
 
@@ -100,10 +99,8 @@ TEST_CASE("Rollback controller drops batches from an older generation",
   }
 }
 
-// Step 14 Task 14.3 — the centralised phase-transition reset must clear
-// every piece of state listed in the plan so the post-bump game phase
-// starts from a known-empty baseline. Task 14.4 wires this into
-// finishWeaponSelect; here we drive the helper directly and assert.
+// resetForGamePhase must clear every piece of state so the post-bump
+// game phase starts from a known-empty baseline.
 TEST_CASE("resetForGamePhase clears controller state and bumps generation",
           "[rollback][generation]") {
   auto [common, settings] = makeEnv();

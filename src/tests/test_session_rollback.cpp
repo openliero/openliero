@@ -1,9 +1,8 @@
-// Rollback Step 11b — NetSession integration with RollbackController.
+// NetSession integration with RollbackController.
 //
-// Step 11a put the PacketInputBatch wire format and protocol-version
-// byte on the transport. Step 11b wires NetSession's setup paths so
-// that constructing it with useRollback=true builds a RollbackController
-// and routes its batched send/receive through NetTransport.
+// Verifies that constructing NetSession with useRollback=true builds a
+// RollbackController and routes its batched send/receive through
+// NetTransport.
 //
 // This test stands two NetSession instances up over loopback in
 // rollback mode, drives the handshake → settings → mapdata → playing
@@ -45,7 +44,6 @@ struct Env {
     settings->loadChange = true;
     settings->randomLevel = true;
     settings->gameMode = Settings::GMKillEmAll;
-    // Step 11c — NetSession reads useRollback from settings now.
     settings->useRollback = true;
   }
 };
@@ -71,8 +69,7 @@ TEST_CASE("NetSession in rollback mode reaches Playing and runs ticks",
   NetSession host(e.common, e.settings, e.tcRoot);
   NetSession client(e.common, e.settings, e.tcRoot);
 
-  // Step 11c — useRollback comes from settings (set in the fixture),
-  // not from a ctor flag.
+  // useRollback comes from settings, not from a ctor flag.
   REQUIRE(host.hostGame(0));
   uint16_t port = host.transport().listeningPort();
   REQUIRE(client.joinGame("127.0.0.1", port));
@@ -86,8 +83,7 @@ TEST_CASE("NetSession in rollback mode reaches Playing and runs ticks",
   REQUIRE(ready);
 
   // In rollback mode the lockstep accessor is null; the rollback
-  // accessor returns the live controller. This is the contract the
-  // Step 11e default flip will rely on.
+  // accessor returns the live controller.
   REQUIRE(host.controller() == nullptr);
   REQUIRE(client.controller() == nullptr);
   REQUIRE(host.rollbackController() != nullptr);
@@ -113,14 +109,12 @@ TEST_CASE("NetSession in rollback mode reaches Playing and runs ticks",
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 
-  // Step 11c — both peers ended up with the host's settings.
   REQUIRE(host.rollbackController()->rollbackCount() == 0);
   REQUIRE(client.rollbackController()->rollbackCount() == 0);
   REQUIRE(host.rollbackController()->currentFrame() > 0);
-  // With the new inputDelay=1 default (Step 11c) the peers can be up
-  // to kFrameAdvantage frames apart at any snapshot — the Step 8
-  // time-sync stall holds the gap within that bound but doesn't
-  // guarantee frame-by-frame parity mid-loop.
+  // With inputDelay=1 the peers can be up to kFrameAdvantage frames
+  // apart at any snapshot — the frame-advantage stall bounds the gap
+  // but doesn't guarantee frame-by-frame parity mid-loop.
   int32_t gap = static_cast<int32_t>(host.rollbackController()->currentFrame()) -
                 static_cast<int32_t>(client.rollbackController()->currentFrame());
   REQUIRE(std::abs(gap) <= RollbackController::kFrameAdvantage);
@@ -238,15 +232,13 @@ TEST_CASE("Rollback weapon select transitions to game over a real session",
   REQUIRE(!client.desyncDetected());
 }
 
-// Step 14 Task 14.7 — end-to-end session test exercising the full
-// WS→game boundary plus a long-haul game-phase run. The regression
-// Step 14 fixes (asymmetric WS simFrames carried into the game phase)
-// surfaces only when both peers transition through real WS and then
-// keep producing checksums for several seconds. Catches anything that
-// makes Step 13's detector fire under realistic loopback play.
+// End-to-end session test exercising the full WS→game boundary plus a
+// long-haul game-phase run. Catches the asymmetric-WS-simFrame
+// regression that only surfaces after both peers transition through
+// real WS and keep producing checksums for several seconds.
 TEST_CASE(
     "Rollback session runs ≥5s game-phase post-WS without desync",
-    "[session][rollback][step14]") {
+    "[session][rollback]") {
   Env e;
   e.settings->useRollback = true;
   e.settings->inputDelay = 1;
@@ -320,7 +312,7 @@ TEST_CASE(
   }
   REQUIRE(hostTransitioned);
   REQUIRE(clientTransitioned);
-  // Task 14.4 guarantees both peers enter game phase at simFrame=0.
+  // Both peers enter game phase at simFrame=0 (post-WS reset).
   REQUIRE(hostTransitionFrame == 0);
   REQUIRE(clientTransitionFrame == 0);
 
@@ -354,8 +346,7 @@ TEST_CASE(
                 static_cast<int32_t>(cc->currentFrame());
   REQUIRE(std::abs(gap) <= RollbackController::kFrameAdvantage);
 
-  // Headline: Step 13's detector did NOT fire across the run. This is
-  // the property Task 14 exists to restore on online play.
+  // Headline: the desync detector did NOT fire across the run.
   REQUIRE(!host.desyncDetected());
   REQUIRE(!client.desyncDetected());
 

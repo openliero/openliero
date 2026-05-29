@@ -1,4 +1,4 @@
-// Rollback Step 14 Task 14.5 — future-generation packet buffering.
+// Future-generation packet buffering.
 //
 // When peer A transitions from WS to game phase before peer B, A sends
 // generation-1 batches that B receives while still at generation 0.
@@ -48,9 +48,7 @@ TEST_CASE("Future-generation batches buffer and drain on reset",
 
   // Peer is ~5 game-phase frames ahead — sends generation-1 batches
   // covering its frames [0..7], [1..8], ... while we're still at gen 0.
-  // Each batch is the K-wide redundant window; for this test one batch
-  // is enough to exercise the path (Task 14.5's recommendation buffers
-  // one window's worth, which is exactly one full batch).
+  // The buffer holds one window's worth (= one full K-wide batch).
   uint8_t inputs[8] = {0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7};
   c.injectRemoteBatch(/*generation=*/1, /*baseFrame=*/0, /*count=*/8, inputs,
                       /*remoteLocalFrame=*/5);

@@ -1,4 +1,4 @@
-// Rollback Step 7.5 — out-of-order delivery is handled idempotently.
+// Out-of-order delivery is handled idempotently.
 //
 // JitterTransport's per-packet random delay naturally lets a later-sent
 // packet arrive ahead of an earlier-sent one. The receiver must apply

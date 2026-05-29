@@ -1,4 +1,4 @@
-// Rollback Step 3 — input + snapshot ring buffer.
+// Input + snapshot ring buffer.
 //
 // Pure data-structure test: nothing here drives processFrame or constructs a
 // Game. The buffer is treated as a key/value store keyed by frame number,

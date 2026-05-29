@@ -1379,3 +1379,17 @@ finished rather than in-flight.
   and the lockstep `networkController.hpp` callback typedef block.
   Speculative-suppression comments shortened to a single line each.
   Build + full ctest pass.
+
+- **Task 3 (tests)**: Stripped `Step N` / `Task 14.x` headers and
+  inline references from every rollback-related test in `src/tests/`
+  (including `jitter_transport.hpp`, all `test_rollback_*.cpp`,
+  `test_snapshot_*.cpp`, `test_speculative_*.cpp`,
+  `test_frame_advantage.cpp`, `test_prediction_no_rollback.cpp`,
+  `test_session_rollback.cpp`, plus the lockstep-touching
+  `test_session.cpp` / `test_transport.cpp`). Test bodies and
+  assertions unchanged; full ctest passes.
+
+### Phase 1 — Checkpoint A
+
+- `git grep -E "Step [0-9]|Task 14" src/` returns nothing.
+- Build clean, 129/129 tests pass.

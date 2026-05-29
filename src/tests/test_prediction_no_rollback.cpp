@@ -1,18 +1,12 @@
-// Rollback Step 6 — prediction without rollback.
+// Prediction without rollback.
 //
-// Two properties to verify:
-//
-//   1. Zero jitter: when remote input is always ready in time, prediction
-//      never kicks in. Every snapshot slot is Confirmed and the
-//      controller's confirmedFrame keeps up with simFrame-1. This proves
-//      Step 6 didn't regress the lockstep parity from Step 4.
-//
+// Two properties verified:
+//   1. Zero jitter: prediction never kicks in; every snapshot slot is
+//      Confirmed and confirmedFrame keeps up with simFrame-1.
 //   2. Starvation: when remote input stops arriving, the controller
 //      predicts up to kMaxRollback frames using the last received input
-//      and then stalls. When the missing inputs eventually arrive, the
-//      stall lifts and confirmedFrame catches up. Step 7 will add the
-//      reconciliation/rollback on misprediction; Step 6 only proves the
-//      buffer accounting is correct.
+//      and then stalls; when missing inputs arrive the stall lifts and
+//      confirmedFrame catches up.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
@@ -177,7 +171,7 @@ TEST_CASE("Starvation: predict up to kMaxRollback, then stall, then recover",
   // Late delivery: inject the previously-missing remote inputs. The
   // promote step on the next process() should catch confirmedFrame up
   // to simFrame-1 (we sent idle 0, predicted idle 0 — they match in
-  // *input* terms even though Step 6 doesn't reconcile state).
+  // *input* terms).
   uint32_t simFrameAtStall = a.currentFrame();
   for (uint32_t f = frameAtStarveStart; f < simFrameAtStall; ++f) {
     a.injectRemoteInput(f, 0);

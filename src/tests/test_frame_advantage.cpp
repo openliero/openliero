@@ -1,18 +1,13 @@
-// Rollback Step 8 — frame-advantage / time-sync stall.
+// Frame-advantage / time-sync stall.
 //
-// Each batched packet carries the sender's simFrame at send time. The
-// receiver tracks the largest such value seen so far; when its own
-// simFrame is at least kFrameAdvantage frames past that estimate it
-// holds (skips the advance) for one tick. The redundant send still
-// fires every tick — only the simulation step is held — so the remote
-// peer continues to receive position updates and the asymmetric peer
-// catches up.
+// Each batched packet carries the sender's simFrame. The receiver
+// tracks the largest such value; when its own simFrame is at least
+// kFrameAdvantage frames past that estimate it holds for one tick (the
+// redundant send still fires — only the sim step is held).
 //
 // Under wildly asymmetric one-way delays the algorithm settles to a
-// steady state where both peers' simFrames stay tightly coupled
-// despite the imbalance. This test drives D_AB = 2, D_BA = 6 (the
-// plan's headline scenario) and asserts the gap between the two
-// peers' simFrames stays bounded.
+// steady state where both peers' simFrames stay tightly coupled. This
+// test drives D_AB = 2, D_BA = 6 and asserts the gap stays bounded.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>

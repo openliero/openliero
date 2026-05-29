@@ -1,8 +1,8 @@
-// Rollback Step 7.5 — packet loss survives via input redundancy.
+// Packet loss survives via input redundancy.
 //
-// The wire format now carries the last K = kMaxRollback + 1 inputs per
-// packet, so a single dropped packet is covered by the next K-1 packets
-// arriving. Under steady-state moderate loss the controllers should
+// The wire format carries the last K = kMaxRollback + 1 inputs per
+// packet, so a single dropped packet is covered by the next K-1
+// packets. Under steady-state moderate loss the controllers should
 // never stall: every frame eventually receives confirmed input within
 // kMaxRollback frames of being run as a prediction.
 //
@@ -53,9 +53,8 @@ TEST_CASE("Rollback survives 10% packet loss via input redundancy",
   auto b = std::make_unique<RollbackController>(common, settings, 1);
   a->setSkipWeaponSelection(true);
   b->setSkipWeaponSelection(true);
-  // Step 8's frame-advantage stall is orthogonal to packet loss; turn
-  // it off so the peers freely run ahead and we measure the
-  // redundancy mechanism in isolation.
+  // Frame-advantage stall is orthogonal to packet loss; turn it off so
+  // the peers freely run ahead and we measure redundancy in isolation.
   a->setFrameAdvantageEnabled(false);
   b->setFrameAdvantageEnabled(false);
   a->game.rand.seed(kWorldSeed);

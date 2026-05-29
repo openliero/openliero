@@ -1,17 +1,9 @@
 #pragma once
 
-// Rollback Step 7 / 7.5 — in-process transport between two
-// RollbackControllers. Models per-packet random delivery delay, packet
-// loss, and optional duplication. Out-of-order arrival happens naturally
-// because per-packet delays are picked from a uniform distribution
-// independently — a packet sent later may have a smaller delay than one
-// sent earlier and arrive first.
-//
-// As of Step 7.5 the transport carries batched input packets
-// (baseFrame, count, inputs[count]) matching RollbackController's
-// InputBatchSendCallback contract. Tests typically wire each peer's send
-// callback to sendAToB / sendBToA and translate received batches into
-// per-frame injectRemoteInput calls.
+// In-process batched-input transport between two RollbackControllers.
+// Models per-packet random delivery delay, packet loss, and optional
+// duplication. Out-of-order arrival happens naturally because per-packet
+// delays are picked from a uniform distribution independently.
 
 #include <array>
 #include <cstdint>
@@ -43,10 +35,9 @@ struct JitterTransport {
     uint32_t localFrame;
   };
 
-  // Step 14 Task 14.2 — the on-wire generation byte travels through the
-  // transport so the receive side can exercise the controller's
-  // stale-generation drop. Tests that don't care about phase transitions
-  // just pass 0 through unchanged.
+  // The on-wire generation byte travels through the transport so the
+  // receive side can exercise the controller's stale-generation drop.
+  // Tests that don't care about phase transitions just pass 0.
   using Deliver = std::function<
       void(uint8_t generation, uint32_t baseFrame, uint8_t count,
            uint8_t const* inputs, uint32_t localFrame)>;

@@ -1,20 +1,18 @@
-// Rollback Step 14 Task 14.6 — force-skew repro.
+// Force-skew regression gate.
 //
 // Drives two RollbackControllers through weapon select over asymmetric
 // one-way delays, deliberately producing a WS-phase simFrame skew
-// between the peers (frame-advantage stalls fire on the slower side,
-// not the faster one). Asserts:
-//   * during WS, the two peers were observed at different simFrame
-//     values at least once (so the test isn't vacuous);
-//   * after the WS→game transition, BOTH peers land at simFrame=0;
+// between the peers. Asserts:
+//   * during WS, the peers were observed at different simFrame values
+//     at least once (so the test isn't vacuous);
+//   * after the WS→game transition, both peers land at simFrame=0;
 //   * the cached wideRollbackChecksum on rollback slots for the first
 //     ~32 game-phase frames matches between the peers.
 //
-// This is the regression gate for Step 14. Reverting Tasks 14.3+14.4
-// (resetForGamePhase + finishWeaponSelect rewrite) makes the
-// post-transition simFrame assertion fail: each peer transitions at
-// whatever simFrame WS reached on its side, and the asymmetry persists
-// into the game phase.
+// Removing the post-WS reset (resetForGamePhase + finishWeaponSelect)
+// makes the post-transition simFrame assertion fail: each peer would
+// transition at whatever simFrame WS reached on its side, and the
+// asymmetry would persist into the game phase.
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
@@ -175,11 +173,9 @@ TEST_CASE("WS simFrame skew is erased at the WS→game transition",
   REQUIRE(aTransitioned);
   REQUIRE(bTransitioned);
 
-  // Headline assertion: regardless of how much WS skew built up, both
-  // peers entered game phase at simFrame=0 thanks to Task 14.4's reset.
-  // This is the gate that fails fast if Step 14 regresses — the old
-  // finishWeaponSelect kept simFrame at whatever WS reached on each
-  // side, leaving the two peers at different game-phase frame counts.
+  // Headline: regardless of WS skew, both peers entered game phase at
+  // simFrame=0. Removing the post-WS reset would leave the peers at
+  // whatever simFrame WS reached on each side.
   REQUIRE(aTransitionFrame == 0);
   REQUIRE(bTransitionFrame == 0);
 
