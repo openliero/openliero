@@ -499,7 +499,8 @@ void NetworkController::advanceSimulation() {
 
   // Send checksum for desync detection
   if (sendChecksum) {
-    sendChecksum(simFrame - 1, fastGameChecksum(game));
+    // Lockstep has no phase generation; always 0.
+    sendChecksum(0, simFrame - 1, fastGameChecksum(game));
   }
 
   if (game.isGameOver()) {

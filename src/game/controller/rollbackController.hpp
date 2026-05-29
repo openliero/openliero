@@ -61,8 +61,24 @@ struct RollbackController : CommonController {
   // send time. Wraps per-frame injectRemoteInput and updates the
   // frame-advantage estimate. Production receivers should prefer this
   // entry point over the bare injectRemoteInput.
-  void injectRemoteBatch(uint32_t baseFrame, uint8_t count,
+  //
+  // Step 14 Task 14.2 — `generation` is the sender's phase generation.
+  // Packets from a generation older than ours are dropped at the door
+  // because they describe a pre-transition simFrame numbering that the
+  // local controller has already abandoned; injecting them would corrupt
+  // a live game slot (the slot's frame number is reused after reset).
+  // Packets from a newer generation are also dropped for now — see
+  // Task 14.5 for the future-generation handling decision.
+  void injectRemoteBatch(uint8_t generation, uint32_t baseFrame, uint8_t count,
                          uint8_t const* inputs, uint32_t remoteLocalFrame);
+  // Legacy two-arg overload used by tests written before Task 14.2.
+  // Assumes generation == generation_ (i.e. the test isn't probing the
+  // wire-level filter). Production callers (NetSession) use the 5-arg
+  // form so they pass through the on-wire generation.
+  void injectRemoteBatch(uint32_t baseFrame, uint8_t count,
+                         uint8_t const* inputs, uint32_t remoteLocalFrame) {
+    injectRemoteBatch(generation_, baseFrame, count, inputs, remoteLocalFrame);
+  }
 
   void setRemotePaused(bool paused) { remotePaused_ = paused; }
   bool isPaused() const { return localPaused_ || remotePaused_; }
@@ -115,6 +131,24 @@ struct RollbackController : CommonController {
   // coupled.
   int32_t lastKnownRemoteFrame() const { return lastKnownRemoteFrame_; }
   uint64_t frameAdvantageStallCount() const { return frameAdvantageStalls_; }
+
+  // Step 14 Task 14.2 — current phase generation. 0 = pre-game (weapon
+  // select), 1 = game, etc. Bumped at every WS→game transition (Task
+  // 14.4) so the wire layer can drop pre-transition packets. Exposed for
+  // tests and for NetSession (so onChecksum knows which generation is
+  // currently live).
+  uint8_t generation() const { return generation_; }
+  // Test-only — lets Task 14.2's unit test put the controller into a
+  // post-transition generation without going through the full WS→game
+  // path (that path is Task 14.4's job). Production code never calls
+  // this; the generation bump happens inside resetForGamePhase().
+  void setGenerationForTest(uint8_t g) { generation_ = g; }
+  // Test introspection: how many remote batches we dropped because
+  // their generation was older than ours. Lets the unit test assert
+  // the drop actually fired.
+  uint64_t droppedOldGenerationBatches() const {
+    return droppedOldGenerationBatches_;
+  }
 
   // Threshold at which the frame-advantage stall fires: skip a tick
   // when simFrame is at least this many frames ahead of the remote's
@@ -230,4 +264,11 @@ struct RollbackController : CommonController {
   int32_t lastKnownRemoteFrame_ = -1;
   uint64_t frameAdvantageStalls_ = 0;
   int32_t frameAdvantageThreshold_ = kFrameAdvantage;
+
+  // Step 14 Task 14.2 — phase generation. 0 until the first WS→game
+  // transition increments it (Task 14.4). The send path stamps every
+  // outbound batch/checksum with this value; the receive path drops
+  // anything tagged with an older generation.
+  uint8_t generation_ = 0;
+  uint64_t droppedOldGenerationBatches_ = 0;
 };

@@ -500,19 +500,19 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 ---
 
-#### Task 14.2: Plumb generation through RollbackController send and receive
+#### Task 14.2: Plumb generation through RollbackController send and receive — ✅ done
 **Description:** Have the controller send its current `generation_` on every batch + checksum, and accept incoming packets only when the generation matches the controller's current generation.
 
 **Acceptance criteria:**
-- [ ] `RollbackController` holds `uint8_t generation_ = 0`.
-- [ ] All `sendInputBatch(...)` and `sendChecksum(...)` calls pass `generation_`.
-- [ ] `injectRemoteBatch` drops packets whose generation < `generation_`.
-- [ ] `onChecksum` (in `NetSession`) drops packets whose generation < the active controller's `generation_`.
-- [ ] A short comment at each receive site explains why we drop, not buffer, older-generation packets (they describe a pre-transition simFrame numbering that the local controller has already abandoned).
+- [x] `RollbackController` holds `uint8_t generation_ = 0`.
+- [x] All `sendInputBatch(...)` and `sendChecksum(...)` calls pass `generation_`.
+- [x] `injectRemoteBatch` drops packets whose generation < `generation_` (and also != `generation_` — future-gen packets handled by Task 14.5).
+- [x] `onChecksum` (in `NetSession`) drops packets whose generation != the active controller's `generation_`.
+- [x] A short comment at each receive site explains why we drop, not buffer, older-generation packets (they describe a pre-transition simFrame numbering that the local controller has already abandoned).
 
 **Verification:**
-- [ ] All existing tests pass.
-- [ ] New unit test `test_rollback_generation_drop.cpp`: a controller at `generation_=1` ignores a batch tagged `generation=0` carrying a frame number that, if accepted, would corrupt a live game slot.
+- [x] All existing tests pass (124/124).
+- [x] New unit test `test_rollback_generation_drop.cpp`: a controller at `generation_=1` ignores a batch tagged `generation=0` carrying a frame number that, if accepted, would corrupt a live game slot. Also covers same-gen accept and future-gen drop.
 
 **Dependencies:** 14.1.
 
@@ -748,6 +748,16 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.2 — Generation plumbed through controller (2026-05-29)
+
+- `RollbackController` gains `uint8_t generation_ = 0` and stamps it on every outbound `sendInputBatch` / `sendChecksum`. The two callback typedefs (`InputBatchSendCallback` + `ChecksumSendCallback` in `networkController.hpp`) gained a leading `uint8_t generation` parameter. `NetworkController` (lockstep) hard-codes `0` since it has no phase concept; `NetSession`'s `checksumCb` forwards the value straight to `transport_.sendChecksum`.
+- New `injectRemoteBatch(uint8_t generation, ...)` is the canonical receive entry; the controller drops anything where `generation != generation_` and bumps `droppedOldGenerationBatches_`. Future-generation packets are also dropped for now — Task 14.5 will decide whether to buffer them. A 4-arg overload (`generation == generation_`) is kept so the pre-Task-14.2 tests that don't care about generation continue to compile unchanged.
+- `NetSession::onRemoteInputBatch` and `NetSession::onChecksum` both got the gen parameter. The session forwards batches to the controller (which does its own filter); for checksums it asks `rollbackPtr_->generation()` and drops mismatches at the session layer because the comparator below assumes simFrame numbering valid in the live phase. Lockstep path is a no-op (controller stays at 0, sender always sends 0).
+- `JitterTransport` gained a `generation` field on `InFlight` and threaded it through `sendAToB`/`sendBToA`/`Deliver`. Tests pass 0 transparently since none of them transition. The send-side lambdas in 6 rollback tests were updated to forward `gen` to the transport; the receive-side `deliverA`/`deliverB` lambdas use the 5-arg `injectRemoteBatch` so the wire generation is preserved across the transport rather than synthesised from `generation_`.
+- New test `test_rollback_generation_drop.cpp` — three sections: stale-gen dropped (counter increments, `lastKnownRemoteFrame_` unchanged), matching-gen accepted (`lastKnownRemoteFrame_` advances), future-gen dropped (symmetric drop). Uses a new `setGenerationForTest` accessor on the controller to place it into post-transition state without going through Task 14.4's `finishWeaponSelect` plumbing.
+- All 124 tests green (123 prior + the new generation-drop test).
+- Files: `src/game/controller/{rollbackController.hpp,rollbackController.cpp,networkController.hpp,networkController.cpp}`, `src/game/net/{session.hpp,session.cpp}`, `src/tests/jitter_transport.hpp` + 8 test files updated for new callback signatures, `src/tests/test_rollback_generation_drop.cpp` (new), `CMakeLists.txt`.
 
 ### Step 14 Task 14.1 — Generation byte on rollback wire (2026-05-29)
 

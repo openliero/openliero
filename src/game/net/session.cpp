@@ -65,10 +65,9 @@ void NetSession::wireActiveController() {
   // controllers. Inputs differ — lockstep emits single PacketInput,
   // rollback emits PacketInputBatch with the redundancy + frame
   // delta encoding (Step 11a wire format).
-  auto checksumCb = [this](uint32_t frame, uint32_t checksum) {
-    // Step 14 Task 14.1: generation byte is wired through but
-    // controllers stay at generation 0 until Task 14.2/14.3 land.
-    transport_.sendChecksum(0, frame, checksum);
+  auto checksumCb = [this](uint8_t generation, uint32_t frame,
+                           uint32_t checksum) {
+    transport_.sendChecksum(generation, frame, checksum);
     onLocalChecksum(frame, checksum);
   };
   auto pauseCb = [this]() { transport_.sendPause(); };
@@ -77,16 +76,15 @@ void NetSession::wireActiveController() {
 
   if (useRollback_) {
     rollback_->setInputCallbacks(
-        [this](uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
-               uint32_t localFrame) {
+        [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
+               uint8_t const* inputs, uint32_t localFrame) {
           // localDelta = simFrame - baseFrame at send time (Step 8).
           // Encoded as uint8_t — range guaranteed by the controller
           // (it constructs `count = MaxRollback + 1`, `localFrame` is
           // within `[baseFrame, baseFrame + count - 1]`).
           uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
-          // Step 14 Task 14.1: hard-coded generation 0 here; Task 14.2
-          // will plumb the controller's current generation through.
-          transport_.sendInputBatch(0, baseFrame, count, localDelta, inputs);
+          transport_.sendInputBatch(generation, baseFrame, count, localDelta,
+                                    inputs);
         },
         nullptr);
     rollback_->setChecksumCallback(checksumCb);
@@ -333,12 +331,11 @@ void NetSession::onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
   // first place); if one slips through under a misconfigured test,
   // silently drop.
   //
-  // Step 14 Task 14.1: generation is plumbed through but no filtering
-  // happens here yet — Task 14.2 will drop stale-generation packets
-  // once the controller starts incrementing its generation_.
-  (void)generation;
+  // Step 14 Task 14.2 — the controller does the generation filter
+  // itself (it owns generation_); we just forward.
   if (rollbackPtr_)
-    rollbackPtr_->injectRemoteBatch(baseFrame, count, inputs, remoteLocalFrame);
+    rollbackPtr_->injectRemoteBatch(generation, baseFrame, count, inputs,
+                                    remoteLocalFrame);
   // Pre-Playing batches are dropped on purpose: the controller isn't
   // wired yet, redundancy guarantees the next batch (~14 ms later)
   // re-delivers the same frames.
@@ -922,9 +919,12 @@ void NetSession::onChecksum(uint8_t generation, uint32_t frame,
       (!controllerPtr_ && !rollbackPtr_))
     return;
 
-  // Step 14 Task 14.1: generation is plumbed through but no filtering
-  // happens here yet — Task 14.2 will drop stale-generation packets.
-  (void)generation;
+  // Step 14 Task 14.2 — drop pre-transition checksums. They describe
+  // the peer's old simFrame numbering and would compare against a
+  // checksum slot from the WS phase that no longer exists in our ring.
+  // Lockstep has no generation concept (controllerPtr_ path always
+  // stays at 0), so the filter is a no-op there.
+  if (rollbackPtr_ && generation != rollbackPtr_->generation()) return;
 
   static uint64_t remoteCount = 0;
   maybeLog("remote", remoteCount, frame, remoteChecksum);

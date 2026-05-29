@@ -36,15 +36,20 @@ struct JitterTransport {
 
   struct InFlight {
     int deliverAtFrame;
+    uint8_t generation;
     uint32_t baseFrame;
     uint8_t count;
     std::array<uint8_t, kMaxBatch> inputs;
     uint32_t localFrame;
   };
 
+  // Step 14 Task 14.2 — the on-wire generation byte travels through the
+  // transport so the receive side can exercise the controller's
+  // stale-generation drop. Tests that don't care about phase transitions
+  // just pass 0 through unchanged.
   using Deliver = std::function<
-      void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
-           uint32_t localFrame)>;
+      void(uint8_t generation, uint32_t baseFrame, uint8_t count,
+           uint8_t const* inputs, uint32_t localFrame)>;
 
   Params params;
   std::mt19937 rng;
@@ -72,13 +77,13 @@ struct JitterTransport {
     return d(rng) < p;
   }
 
-  void sendAToB(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
-                uint32_t localFrame) {
-    enqueue(aToB, baseFrame, count, inputs, localFrame);
+  void sendAToB(uint8_t generation, uint32_t baseFrame, uint8_t count,
+                uint8_t const* inputs, uint32_t localFrame) {
+    enqueue(aToB, generation, baseFrame, count, inputs, localFrame);
   }
-  void sendBToA(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
-                uint32_t localFrame) {
-    enqueue(bToA, baseFrame, count, inputs, localFrame);
+  void sendBToA(uint8_t generation, uint32_t baseFrame, uint8_t count,
+                uint8_t const* inputs, uint32_t localFrame) {
+    enqueue(bToA, generation, baseFrame, count, inputs, localFrame);
   }
 
   // Drain anything whose deliverAtFrame has elapsed, then advance the
@@ -95,9 +100,11 @@ struct JitterTransport {
   // converge both peers regardless of how late tail packets were.
   void flush(Deliver const& deliverA, Deliver const& deliverB) {
     for (auto const& p : aToB)
-      deliverB(p.baseFrame, p.count, p.inputs.data(), p.localFrame);
+      deliverB(p.generation, p.baseFrame, p.count, p.inputs.data(),
+              p.localFrame);
     for (auto const& p : bToA)
-      deliverA(p.baseFrame, p.count, p.inputs.data(), p.localFrame);
+      deliverA(p.generation, p.baseFrame, p.count, p.inputs.data(),
+              p.localFrame);
     aToB.clear();
     bToA.clear();
   }
@@ -105,8 +112,9 @@ struct JitterTransport {
   bool empty() const { return aToB.empty() && bToA.empty(); }
 
  private:
-  void enqueue(std::vector<InFlight>& q, uint32_t baseFrame, uint8_t count,
-               uint8_t const* inputs, uint32_t localFrame) {
+  void enqueue(std::vector<InFlight>& q, uint8_t generation,
+               uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
+               uint32_t localFrame) {
     ++packetsSent;
     if (roll(params.lossProbability)) {
       ++packetsDropped;
@@ -114,6 +122,7 @@ struct JitterTransport {
     }
     InFlight p{};
     p.deliverAtFrame = currentFrame + randomDelay();
+    p.generation = generation;
     p.baseFrame = baseFrame;
     p.count = count;
     for (uint8_t i = 0; i < count; ++i) p.inputs[i] = inputs[i];
@@ -131,7 +140,8 @@ struct JitterTransport {
     auto it = q.begin();
     while (it != q.end()) {
       if (it->deliverAtFrame <= currentFrame) {
-        deliver(it->baseFrame, it->count, it->inputs.data(), it->localFrame);
+        deliver(it->generation, it->baseFrame, it->count, it->inputs.data(),
+                it->localFrame);
         it = q.erase(it);
       } else {
         ++it;

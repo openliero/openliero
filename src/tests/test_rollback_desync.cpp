@@ -97,13 +97,13 @@ TEST_CASE("Rollback desync detection — clean run produces no alarms",
   rollback_test::JitterTransport transport({kTransportSeed, 1, 4});
 
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendAToB(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendAToB(gen_, bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendBToA(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendBToA(gen_, bf, c, in, lf);
       },
       nullptr);
 
@@ -112,8 +112,10 @@ TEST_CASE("Rollback desync detection — clean run produces no alarms",
   // for the same frame after a misprediction cascade); see
   // RollbackController::advanceSimulation for the emit sites.
   std::unordered_map<uint32_t, uint32_t> aChecks, bChecks;
-  a->setChecksumCallback([&](uint32_t f, uint32_t c) { aChecks[f] = c; });
-  b->setChecksumCallback([&](uint32_t f, uint32_t c) { bChecks[f] = c; });
+  a->setChecksumCallback(
+      [&](uint8_t /*gen*/, uint32_t f, uint32_t c) { aChecks[f] = c; });
+  b->setChecksumCallback(
+      [&](uint8_t /*gen*/, uint32_t f, uint32_t c) { bChecks[f] = c; });
 
   a->focus();
   b->focus();
@@ -123,10 +125,10 @@ TEST_CASE("Rollback desync detection — clean run produces no alarms",
     b->injectRemoteInput(f, 0);
   }
 
-  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverA = [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     a->injectRemoteBatch(bf, c, in, lf);
   };
-  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverB = [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     b->injectRemoteBatch(bf, c, in, lf);
   };
 
@@ -199,25 +201,26 @@ TEST_CASE("Rollback desync detection — 1-bit injection fires within 200 frames
   rollback_test::JitterTransport transport({kTransportSeed, 1, 4});
 
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendAToB(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendAToB(gen_, bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendBToA(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendBToA(gen_, bf, c, in, lf);
       },
       nullptr);
 
   std::unordered_map<uint32_t, uint32_t> aChecks, bChecks;
-  a->setChecksumCallback([&](uint32_t f, uint32_t c) { aChecks[f] = c; });
+  a->setChecksumCallback(
+      [&](uint8_t /*gen*/, uint32_t f, uint32_t c) { aChecks[f] = c; });
   // Inject: corrupt B's reported checksum starting at kInjectFrame to
   // simulate a peer whose post-frame state has diverged by one bit.
   // We perturb at the emit boundary rather than poking sim state
   // mid-frame — the latter would feed back into B's snapshot, get
   // restored on rollback, and turn into a structural divergence rather
   // than the "1-bit drift" the plan calls for.
-  b->setChecksumCallback([&](uint32_t f, uint32_t c) {
+  b->setChecksumCallback([&](uint8_t /*gen*/, uint32_t f, uint32_t c) {
     if (f >= kInjectFrame) c ^= 1u;
     bChecks[f] = c;
   });
@@ -230,10 +233,10 @@ TEST_CASE("Rollback desync detection — 1-bit injection fires within 200 frames
     b->injectRemoteInput(f, 0);
   }
 
-  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverA = [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     a->injectRemoteBatch(bf, c, in, lf);
   };
-  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverB = [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     b->injectRemoteBatch(bf, c, in, lf);
   };
 

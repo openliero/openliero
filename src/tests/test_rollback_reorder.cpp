@@ -70,13 +70,13 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
        /*lossProb*/ 0.0, /*dupProb*/ 0.30});
 
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendAToB(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendAToB(gen_, bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendBToA(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendBToA(gen_, bf, c, in, lf);
       },
       nullptr);
   a->focus();
@@ -87,10 +87,10 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
     b->injectRemoteInput(f, 0);
   }
 
-  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverA = [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     a->injectRemoteBatch(bf, c, in, lf);
   };
-  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverB = [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     b->injectRemoteBatch(bf, c, in, lf);
   };
 

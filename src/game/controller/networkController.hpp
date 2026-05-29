@@ -26,12 +26,18 @@ using InputRecvCallback = std::function<int(uint32_t frame)>;
 // `inputs` points to `count` bytes covering frames [baseFrame, baseFrame+count).
 // Step 8 adds `localFrame` — the sender's `simFrame` at the moment of
 // send. The receiver uses it for the frame-advantage / time-sync stall.
+// Step 14 Task 14.2 adds `generation` — the sender's phase generation
+// (WS = 0, game = 1, etc.); receivers drop stale-generation packets.
 using InputBatchSendCallback = std::function<
-    void(uint32_t baseFrame, uint8_t count, uint8_t const* inputs,
-         uint32_t localFrame)>;
+    void(uint8_t generation, uint32_t baseFrame, uint8_t count,
+         uint8_t const* inputs, uint32_t localFrame)>;
 
 // Callback type for sending a checksum to the remote peer for desync detection.
-using ChecksumSendCallback = std::function<void(uint32_t frame, uint32_t checksum)>;
+// `generation` is the sender's phase generation (Step 14 Task 14.2). The
+// lockstep NetworkController has no phase concept and always passes 0;
+// RollbackController passes its current generation_.
+using ChecksumSendCallback =
+    std::function<void(uint8_t generation, uint32_t frame, uint32_t checksum)>;
 
 struct NetworkController : CommonController {
   NetworkController(std::shared_ptr<Common> common,

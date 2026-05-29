@@ -68,13 +68,13 @@ AsymmetricRun runAsymmetric(int dAB, int dBA, int ticks) {
   rollback_test::JitterTransport tBA({0x2222, dBA, dBA, 0.0, 0.0});
 
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        tAB.sendAToB(bf, c, in, lf);
+      [&](uint8_t gen, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        tAB.sendAToB(gen, bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        tBA.sendAToB(bf, c, in, lf);  // B's outbound rides the B→A pipe
+      [&](uint8_t gen, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        tBA.sendAToB(gen, bf, c, in, lf);  // B's outbound rides the B→A pipe
       },
       nullptr);
   a->focus();
@@ -85,13 +85,14 @@ AsymmetricRun runAsymmetric(int dAB, int dBA, int ticks) {
     b->injectRemoteInput(f, 0);
   }
 
-  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverB = [&](uint8_t /*gen*/, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     b->injectRemoteBatch(bf, c, in, lf);
   };
-  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+  auto deliverA = [&](uint8_t /*gen*/, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
     a->injectRemoteBatch(bf, c, in, lf);
   };
-  auto deliverNoop = [&](uint32_t, uint8_t, uint8_t const*, uint32_t) {};
+  auto deliverNoop =
+      [&](uint8_t, uint32_t, uint8_t, uint8_t const*, uint32_t) {};
 
   int maxAbsGap = 0;
   for (int i = 0; i < ticks; ++i) {

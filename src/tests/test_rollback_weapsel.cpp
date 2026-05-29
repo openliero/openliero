@@ -183,12 +183,12 @@ TEST_CASE("Weapon select reaches StateGame in sync under zero jitter",
     q.push_back(p);
   };
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         enqueue(aToB, bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         enqueue(bToA, bf, c, in, lf);
       },
       nullptr);
@@ -266,13 +266,13 @@ TEST_CASE("Weapon select transitions cleanly under jitter",
        /*loss=*/0.0, /*duplicate=*/0.0});
 
   a->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendAToB(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendAToB(gen_, bf, c, in, lf);
       },
       nullptr);
   b->setInputCallbacks(
-      [&](uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
-        transport.sendBToA(bf, c, in, lf);
+      [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
+        transport.sendBToA(gen_, bf, c, in, lf);
       },
       nullptr);
   a->focus();
@@ -281,13 +281,13 @@ TEST_CASE("Weapon select transitions cleanly under jitter",
   a->injectRemoteInput(0, 0);
   b->injectRemoteInput(0, 0);
 
-  auto deliverA = [&](uint32_t bf, uint8_t c, uint8_t const* in,
-                      uint32_t lf) {
-    a->injectRemoteBatch(bf, c, in, lf);
+  auto deliverA = [&](uint8_t gen, uint32_t bf, uint8_t c,
+                      uint8_t const* in, uint32_t lf) {
+    a->injectRemoteBatch(gen, bf, c, in, lf);
   };
-  auto deliverB = [&](uint32_t bf, uint8_t c, uint8_t const* in,
-                      uint32_t lf) {
-    b->injectRemoteBatch(bf, c, in, lf);
+  auto deliverB = [&](uint8_t gen, uint32_t bf, uint8_t c,
+                      uint8_t const* in, uint32_t lf) {
+    b->injectRemoteBatch(gen, bf, c, in, lf);
   };
 
   auto script = navigateToDoneAndConfirm(6);

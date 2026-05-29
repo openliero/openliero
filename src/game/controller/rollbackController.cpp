@@ -164,12 +164,24 @@ void RollbackController::sendInputWindow(uint32_t newestFrame,
   for (uint8_t i = 0; i < count; ++i) {
     window[i] = localInputs[(baseFrame + i) % INPUT_BUFFER_SIZE];
   }
-  sendInputBatch(baseFrame, count, window.data(), localFrame);
+  sendInputBatch(generation_, baseFrame, count, window.data(), localFrame);
 }
 
-void RollbackController::injectRemoteBatch(uint32_t baseFrame, uint8_t count,
+void RollbackController::injectRemoteBatch(uint8_t generation,
+                                           uint32_t baseFrame, uint8_t count,
                                            uint8_t const* inputs,
                                            uint32_t remoteLocalFrame) {
+  // Step 14 Task 14.2 — drop pre-transition packets. A peer that hasn't
+  // crossed the WS→game boundary yet is still sending batches keyed by
+  // its old simFrame numbering; injecting them would corrupt a live game
+  // slot (the slot's frame number wraps the ring after reset). Future-
+  // generation packets are also dropped here for now — Task 14.5 will
+  // decide whether to buffer or drop them when peer A transitions
+  // before peer B.
+  if (generation != generation_) {
+    ++droppedOldGenerationBatches_;
+    return;
+  }
   for (uint8_t i = 0; i < count; ++i) {
     injectRemoteInput(baseFrame + i, inputs[i]);
   }
@@ -775,7 +787,7 @@ void RollbackController::advanceSimulation() {
     // matched), so emit it now — this is the only chance, the forward
     // path skipped sending when the frame was first run as predicted.
     if (wasPredicted && sendChecksum) {
-      sendChecksum(static_cast<uint32_t>(F), slot->checksum);
+      sendChecksum(generation_, static_cast<uint32_t>(F), slot->checksum);
     }
   }
 
@@ -846,7 +858,7 @@ void RollbackController::advanceSimulation() {
       // resim frames stay silent — their checksum is cached for a later
       // promote/resim pass when real input finally arrives.
       if (!framePredicted && sendChecksum) {
-        sendChecksum(static_cast<uint32_t>(F), outSlot.checksum);
+        sendChecksum(generation_, static_cast<uint32_t>(F), outSlot.checksum);
       }
     }
     game.setSpeculative(false);
@@ -946,7 +958,7 @@ void RollbackController::advanceSimulation() {
     // this checksum reflects state that the remote peer has also fully
     // confirmed — no false-positive desync.
     if (!predicted && sendChecksum) {
-      sendChecksum(simFrame - 1, slot.checksum);
+      sendChecksum(generation_, simFrame - 1, slot.checksum);
     }
   }
 
