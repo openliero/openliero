@@ -555,18 +555,19 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 ---
 
-#### Task 14.4: Rework `finishWeaponSelect` to use the reset path
+#### Task 14.4: Rework `finishWeaponSelect` to use the reset path — ✅ done
 **Description:** Replace the current "write seed at `simFrame-1`" logic with: `ws->finalize()` → `game.startGame()` + `game.resetWorms()` → `resetForGamePhase()` → write the seed snapshot at `slot[0]` post-reset (treating `simFrame=0` as the seed frame, same way session-start does in advanceSimulation's first tick).
 
 **Acceptance criteria:**
-- [ ] After transition, both peers' `simFrame == 0` regardless of pre-transition simFrame or which path (new-frame block vs resim) triggered transition.
-- [ ] Seed slot at `slot[0]`/equivalent boundary contains the post-`startGame`/`resetWorms` game snapshot and matching `wideRollbackChecksum`.
-- [ ] No simFrame rewind; no `lastSentFrame` re-recording confusion.
-- [ ] Code comment near the reset block explains the why (links back to this design note).
+- [x] After transition, both peers' `simFrame == 0` regardless of pre-transition simFrame or which path (new-frame block vs resim) triggered transition.
+- [x] Seed slot at `slot[0]` contains the post-`startGame`/`resetWorms` game snapshot and matching `wideRollbackChecksum`.
+- [x] No simFrame rewind; no `lastSentFrame` re-recording confusion (both fields are zeroed by `resetForGamePhase`, not patched).
+- [x] Code comment near the reset block explains why (skew + generation bump rationale).
 
 **Verification:**
-- [ ] `test_rollback_weapsel` "transitions cleanly under jitter" passes without test changes (because frame numbers reset deterministically on both peers).
-- [ ] `test_session_rollback` "weapon select transitions to game over a real session" passes.
+- [x] `test_rollback_weapsel` "Weapon select transitions cleanly under jitter" passes without test changes.
+- [x] `test_session_rollback` "Rollback weapon select transitions to game over a real session" passes.
+- [x] All 125 tests still pass.
 
 **Dependencies:** 14.3.
 
@@ -748,6 +749,16 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.4 — finishWeaponSelect uses the reset path (2026-05-29)
+
+- The old `finishWeaponSelect` patched up the controller in place: ad-hoc field zeroing for edge-detection state, then `confirmedSimFrame_ = simFrame - 1` and the seed snapshot at `simFrame-1`. That kept the simFrame counter pointing at whatever WS reached on the local peer — which is exactly the asymmetric value the Step 14 design exists to eliminate. The new version delegates the field zeroing to `resetForGamePhase()` (Task 14.3) and writes the seed at `slot[0]` post-reset.
+- The `confirmedSimFrame_ = seedFrame` line is gone deliberately. After the reset both peers sit at simFrame=0 / confirmedSimFrame_=-1; the first game-phase `process()` runs frame 0 with predicted=true (no remote input in the ring yet), produces an identical post-frame-0 snapshot on both peers because `localInputs.fill(0)` post-reset means both peers' batches carry zeros for the input-delay window, and the next tick's promote loop confirms slot[0]. No pre-transition input-delay value gets propagated into the game phase.
+- The seed at slot[0] is overwritten by the first game-phase tick (which writes its own post-frame-0 snapshot to the same slot). It exists between `finishWeaponSelect` returning and that first tick so any `find(0)` lookup in the meantime returns a valid post-`startGame` state. Two ticks of "post-startGame" vs "post-frame-0 with all-zero input" produce very nearly identical state for openliero's deterministic sim, so the seed-vs-overwritten ambiguity is harmless even in an unusual rollback path.
+- Lockstep is unaffected. `NetworkController` doesn't share this code; `useRollback=false` sessions take the old path.
+- `test_rollback_weapsel` passed unchanged across both its "transitions cleanly under jitter" and snapshot-roundtrip sections, and `test_session_rollback`'s WS→game session test passed too — both are the verification gates the plan called out for this task. Full 125/125 suite stays green.
+- Step 14's headline bug (visible terrain divergence on online ICE play under Step 13's detector) is conceptually fixed by Tasks 14.1–14.4 acting together: 14.4 keeps the two peers at byte-identical simFrame numbering through the WS→game transition; 14.2's generation filter discards any pre-bump batches still in flight that would otherwise re-pollute the reset ring. Task 14.6 / 14.7 add the regression coverage; Task 14.8 confirms the real-world two-binary case.
+- Files: `src/game/controller/rollbackController.cpp` (`finishWeaponSelect` rewrite — net −7 lines of patch-in-place logic, +12 lines of clean reset+seed sequence with a "why" comment).
 
 ### Step 14 Task 14.3 — resetForGamePhase helper (2026-05-29)
 

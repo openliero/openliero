@@ -533,11 +533,6 @@ void RollbackController::finishWeaponSelect() {
   ws->finalize();
   ws.reset();
 
-  localPrevInput = 0;
-  remotePrevInput = 0;
-  localHeldFrames.fill(0);
-  remoteHeldFrames.fill(0);
-
   for (auto const& w : game.worms) {
     w->lives = game.settings->lives;
   }
@@ -546,28 +541,32 @@ void RollbackController::finishWeaponSelect() {
   state = StateGame;
 
   // Game state vectors are now fully sized — make sure the rollback
-  // buffer's snapshots track them. Safe even if already prepared.
+  // buffer's snapshots track them. Idempotent across re-prepare.
   rollbackBuffer_.prepare(game);
   rollbackBufferPrepared_ = true;
 
-  // simFrame was already ++'d by the new-frame block in
-  // advanceWeaponSelection; the transition happens at simFrame-1, the
-  // post-startGame state. Mark everything through that frame as confirmed
-  // (weapon select reached this point through real, matching input on
-  // both peers) and seed a game-phase snapshot so a misprediction on the
-  // next sim tick can rollback here cleanly.
-  int seedFrame = static_cast<int>(simFrame) - 1;
-  confirmedSimFrame_ = seedFrame;
-  lastRemoteInput_ = remoteInputs[static_cast<uint32_t>(seedFrame) %
-                                  INPUT_BUFFER_SIZE];
+  // Step 14 Task 14.4 — the WS phase can leave both peers at different
+  // simFrame counters (asymmetric kFrameAdvantage stalls + asymmetric
+  // WS-rollback resims). Carrying that skew into game phase makes every
+  // simFrame-keyed downstream comparison silently diverge: cached
+  // checksums for "frame N" reflect a different number of processFrame
+  // calls from the same seed on the two peers, terrain destruction
+  // drifts, and Step 13's detector eventually fires. Resetting here is
+  // what lets the game phase start from a known-symmetric baseline; the
+  // generation bump inside the reset makes any in-flight pre-transition
+  // batches from the peer drop at the wire layer so they can't refill
+  // the freshly-cleared input ring with stale WS data.
+  resetForGamePhase();
 
-  rollback::Slot& seed = rollbackBuffer_.write(seedFrame);
+  // Seed snapshot at slot[0] = post-startGame state, so a misprediction
+  // on the first game-phase frame has a valid rollback target. The first
+  // process() tick will overwrite this slot with the post-frame-0
+  // snapshot via the normal write path; the seed is what makes the slot
+  // exist between now and that tick.
+  rollback::Slot& seed = rollbackBuffer_.write(0);
   seed.localInput = 0;
   seed.remoteInput = 0;
   seed.remoteState = rollback::RemoteState::Confirmed;
-  // Invalidate the wsSnap on this slot — the slot now holds a game
-  // snapshot, not weapon-select state. (write() already does this when
-  // the slot was repurposed, but be explicit.)
   seed.wsSnap.valid = false;
   game.saveSnapshotFast(seed.snapshot);
   seed.checksum = wideRollbackChecksum(game);
