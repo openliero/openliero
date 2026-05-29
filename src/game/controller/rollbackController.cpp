@@ -1011,7 +1011,7 @@ Level* RollbackController::currentLevel() { return &game.level; }
 Game* RollbackController::currentGame() { return &game; }
 
 bool RollbackController::running() {
-  return state != StateGameEnded && state != StateInitial;
+  return state != StateGameEnded && state != StateInitial && resumable_;
 }
 
 void RollbackController::endMatch() {
@@ -1035,4 +1035,5 @@ void RollbackController::peerLeft() {
   remotePaused_ = false;
   fadeValue = 0;
   goingToMenu = true;
+  resumable_ = false;
 }

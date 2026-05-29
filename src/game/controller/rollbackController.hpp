@@ -81,6 +81,11 @@ struct RollbackController : CommonController {
   // Used by both the local "Disconnect" pause menu option and the wire
   // PeerLeft handler: drop to the menu without finalizing stats.
   void peerLeft();
+  // Mark the controller as no longer resumable. Called when the
+  // underlying NetSession has gone away (clean PeerLeft or socket
+  // close); makes `running()` return false so the main menu hides
+  // "RESUME GAME".
+  void markUnresumable() { resumable_ = false; }
 
   void setSkipWeaponSelection(bool skip) { skipWeaponSelection = skip; }
 
@@ -196,6 +201,7 @@ struct RollbackController : CommonController {
 
   bool localPaused_;
   bool remotePaused_;
+  bool resumable_ = true;
   Menu pauseMenu_;
 
   InputBatchSendCallback sendInputBatch;

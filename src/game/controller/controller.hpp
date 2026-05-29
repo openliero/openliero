@@ -30,6 +30,11 @@ struct Controller
 	// Returns true if the game is still running. The menu should check this to decide whether to show the resume option.
 	virtual bool running() = 0;
 
+	// Notify the controller that any underlying session it depended on
+	// is gone (peer left, socket closed, etc.) so it can stop reporting
+	// itself as resumable. Default no-op for single-player controllers.
+	virtual void markUnresumable() {}
+
 	virtual Level* currentLevel() = 0;
 
 	virtual Game* currentGame() = 0;
