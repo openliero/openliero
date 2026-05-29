@@ -961,12 +961,13 @@ void RollbackController::draw(Renderer& renderer, bool useSpectatorViewports) {
   }
   renderer.fadeValue = fadeValue;
 
-  // Dev HUD: shows `RB:n` only when there's a non-empty resim window.
-  if (lastTickResimFrames_ > 0 && state == StateGame) {
+  // Dev HUD: bottom-left `RB:n` resim indicator, always shown so the
+  // value doesn't blink as resim windows come and go.
+  if (state == StateGame) {
     Font& font = game.common->font;
     char buf[16];
     std::snprintf(buf, sizeof(buf), "RB:%u", lastTickResimFrames_);
-    font.drawText(renderer.bmp, buf, 2, 2, 50);
+    font.drawText(renderer.bmp, buf, 2, renderer.renderResY - 9, 50);
   }
 
   if (isPaused()) {
