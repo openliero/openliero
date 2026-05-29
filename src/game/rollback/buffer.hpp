@@ -1,16 +1,15 @@
 #pragma once
 
-// Rollback Step 3 — input + snapshot ring buffer.
+// Input + snapshot ring buffer.
 //
-// Holds the last (kMaxRollback + 1) frames of sim state and the input bytes
-// that produced them. Slots are pre-allocated; writing a new frame reuses the
-// slot at `frame % kCapacity`, evicting whatever frame was there before. The
-// rollback controller (Step 4 onward) reads from `find()` when it needs to
-// restore a snapshot, and calls `write()` after each advanced frame to
-// publish the new state into the buffer.
+// Holds the last (kMaxRollback + 1) frames of sim state and the input
+// bytes that produced them. Slots are pre-allocated; writing a new
+// frame reuses the slot at `frame % kCapacity`, evicting whatever was
+// there before. The rollback controller reads from `find()` to restore
+// a snapshot and calls `write()` after each advanced frame.
 //
-// The buffer is a pure data structure — it knows nothing about Game,
-// processFrame, or the wire format. It only owns slots.
+// Pure data structure — knows nothing about Game, processFrame, or the
+// wire format.
 
 #include "serialization/fast_snapshot.hpp"
 #include "serialization/weapsel_snapshot.hpp"
@@ -43,11 +42,10 @@ struct Slot {
   uint8_t localInput = 0;
   uint8_t remoteInput = 0;
   RemoteState remoteState = RemoteState::Predicted;
-  // Step 10: post-frame checksum cached when the snapshot was written.
-  // The controller sends it (to the desync detector) only when the frame
-  // is confirmed — either on the forward path with real input, on
-  // promote of a previously-predicted slot whose prediction matched, or
-  // at the end of a resim frame that consumed real input.
+  // Post-frame checksum cached when the snapshot was written. The
+  // controller sends it to the desync detector only once the frame is
+  // confirmed (forward with real input, on promote of a matching
+  // prediction, or at the end of a resim frame that consumed real input).
   uint32_t checksum = 0;
 };
 

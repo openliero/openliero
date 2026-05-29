@@ -1,19 +1,15 @@
 #pragma once
 
-// Rollback Step 2 — fast in-memory snapshot path.
-//
-// Where Step 1's cereal snapshot serialises to bytes (~200 KB, ~200 µs save),
-// this path stores the sim state directly in a `GameSnapshot` struct kept
-// resident next to the live `Game`. It is the snapshot format the rollback
-// ring buffer (Step 3) will use; the cereal path stays as the correctness
+// Fast in-memory snapshot path used by the rollback ring buffer. Stores
+// sim state directly in a GameSnapshot struct kept resident next to the
+// live Game. The cereal snapshot in snapshot.hpp stays as the correctness
 // oracle (see test_snapshot_fast.cpp).
 //
-// The struct deliberately mirrors the field inventory in docs/ideas/rollback.md
-// ("Game Field Inventory"). Worm is copied via `WormSimState` rather than
-// memcpy because Worm holds shared_ptrs; the raw `Worm*`/`Weapon const*`
-// pointers inside Ninjarope and WormWeapon are stable across the rollback
-// window (their targets are owned by the Game / Common) so plain assignment
-// is correct. Object pools and Level vectors are pure POD blocks.
+// Worm is copied via WormSimState rather than memcpy because Worm holds
+// shared_ptrs; the raw Worm*/Weapon const* pointers inside Ninjarope and
+// WormWeapon are stable across the rollback window (their targets are
+// owned by Game / Common) so plain assignment is correct. Object pools
+// and Level vectors are pure POD blocks.
 
 #include "bobject.hpp"
 #include "bonus.hpp"

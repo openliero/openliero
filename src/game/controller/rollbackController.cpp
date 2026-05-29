@@ -171,29 +171,15 @@ void RollbackController::injectRemoteBatch(uint8_t generation,
                                            uint32_t baseFrame, uint8_t count,
                                            uint8_t const* inputs,
                                            uint32_t remoteLocalFrame) {
-  // Step 14 Task 14.2 — drop pre-transition packets. A peer that hasn't
-  // crossed the WS→game boundary yet is still sending batches keyed by
-  // its old simFrame numbering; injecting them would corrupt a live game
-  // slot (the slot's frame number wraps the ring after reset).
-  //
-  // Step 14 Task 14.5 — buffer one window of next-generation packets so
-  // a peer that crosses the phase boundary before us doesn't lose the
-  // game-phase frames it sent while we were still in WS. We chose
-  // buffering over pure drop: drop relies on the K-wide redundancy
-  // resending the boundary frames for several ticks, which is *usually*
-  // enough but isn't guaranteed under bad jitter near the boundary.
-  // Buffering costs ~128 bytes per controller and gives a hard
-  // correctness guarantee that the first kMaxRollback+1 game-phase
-  // frames arrive intact. Anything older than the current generation,
-  // or further-future than gen+1, is still dropped — those packets are
-  // unrecoverable in any practical session.
+  // Same-generation packets feed the input ring; gen+1 packets are
+  // buffered until our own phase transition fires (replayed in
+  // resetForGamePhase). Older or further-future packets are unrecoverable.
   if (generation == generation_) {
     for (uint8_t i = 0; i < count; ++i) {
       injectRemoteInput(baseFrame + i, inputs[i]);
     }
-    // Monotonic update — out-of-order arrival of a stale packet must not
-    // pull our knowledge of the remote's progress backwards, since the
-    // frame-advantage stall reads this as "remote is at least here".
+    // Monotonic — an out-of-order stale packet must not pull our
+    // knowledge of the remote's progress backwards.
     int32_t f = static_cast<int32_t>(remoteLocalFrame);
     if (f > lastKnownRemoteFrame_) lastKnownRemoteFrame_ = f;
     return;
@@ -209,21 +195,15 @@ void RollbackController::injectRemoteBatch(uint8_t generation,
       slot.remoteLocalFrame = remoteLocalFrame;
       return;
     }
-    // Buffer full — the K-wide redundancy keeps re-sending these for a
-    // few ticks so a single overflow rarely loses unique information.
-    // Still count it as a drop so monitoring can detect pathological
-    // jitter near the boundary.
   }
 
   ++droppedOldGenerationBatches_;
 }
 
 void RollbackController::injectRemoteInput(uint32_t frame, uint8_t input) {
-  // Step 7.5: drop frames already confirmed. Redundant batch packets
-  // routinely overlap the confirmation boundary — the leading entries
-  // describe frames we've already advanced past, and re-injecting them
-  // would re-set remoteInputReady on a ring slot whose frame number
-  // wraps around into the live rollback window.
+  // Redundant batch packets routinely overlap the confirmation boundary;
+  // re-injecting already-confirmed frames would re-set remoteInputReady
+  // on a ring slot that wraps into the live rollback window.
   if (static_cast<int32_t>(frame) <= confirmedSimFrame_) return;
   uint32_t slot = frame % INPUT_BUFFER_SIZE;
   remoteInputs[slot] = input;
@@ -326,7 +306,7 @@ void RollbackController::focus() {
   fadeValue = 0;
 
   // Size the rollback ring buffer once the level (and therefore the
-  // GameSnapshot vector sizes) are known. Idempotent across re-focus.
+  // GameSnapshot vector sizes) are known.
   if (!rollbackBufferPrepared_) {
     rollbackBuffer_.prepare(game);
     rollbackBufferPrepared_ = true;
@@ -377,8 +357,6 @@ bool RollbackController::process() {
     return true;
   }
 
-  // Step 11d — per-tick resim counter for the dev HUD. advanceSimulation
-  // bumps it inside the rollback branch; weapon-select doesn't rollback.
   lastTickResimFrames_ = 0;
 
   if (state == StateWeaponSelection) {
@@ -405,9 +383,6 @@ bool RollbackController::process() {
 }
 
 bool RollbackController::weaponSelectStep(uint8_t curLocal, uint8_t curRemote) {
-  // Apply rising / released edges to worm control states and run the
-  // key-repeat ticker. Deterministic function of (curLocal, curRemote,
-  // localPrevInput, remotePrevInput, localHeldFrames, remoteHeldFrames).
   uint8_t risingLocal = curLocal & ~localPrevInput;
   uint8_t risingRemote = curRemote & ~remotePrevInput;
   uint8_t releasedLocal = localPrevInput & ~curLocal;
@@ -481,10 +456,6 @@ void RollbackController::loadWeaponSelectSnap(WeaponSelectSnap const& snap) {
     auto const& p = snap.players[i];
     for (int j = 0; j < Settings::selectableWeapons; ++j) {
       wsCfg.weapons[j] = p.weapons[j];
-      // Re-derive worm.weapons[j].type and the menu item display string
-      // from the weapon ID. WeaponSelection writes both whenever the
-      // user cycles, so the snapshot's weapon IDs are sufficient to
-      // reconstruct both.
       int weapOrderIdx = static_cast<int>(p.weapons[j]) - 1;
       if (weapOrderIdx >= 0 &&
           weapOrderIdx < static_cast<int>(common.weapOrder.size())) {
@@ -512,50 +483,33 @@ void RollbackController::loadWeaponSelectSnap(WeaponSelectSnap const& snap) {
 }
 
 void RollbackController::resetForGamePhase() {
-  // Input ring — both peers' frames and the readiness flags. After the
-  // bump, frame 0 is the first game-phase frame and must not see a
-  // pre-bump "ready" flag inherited from WS.
   localInputs.fill(0);
   remoteInputs.fill(0);
   remoteInputReady.fill(false);
 
-  // Frame counters and confirmation state. Match the controller's
-  // initial values from the constructor — frame 0 is the seed, no
-  // frame is yet confirmed, no batch has been sent.
   simFrame = 0;
   confirmedSimFrame_ = -1;
   lastSentFrame = UINT32_MAX;
   lastRemoteInput_ = 0;
   lastKnownRemoteFrame_ = -1;
 
-  // Edge-detection state for both peers' control bytes. Carrying these
-  // across the phase boundary would produce a spurious "rising" or
-  // "released" edge on the first game-phase frame.
+  // Edge-detection state — carrying these across the phase boundary
+  // would produce a spurious rising/released edge on the first frame.
   localPrevInput = 0;
   remotePrevInput = 0;
   localHeldFrames.fill(0);
   remoteHeldFrames.fill(0);
 
-  // Rollback ring. clear() resets every slot's frame to -1 and
-  // wsSnap.valid to false so a game-phase rollback can never target a
-  // WS slot. Snapshot vector capacities are kept (sized by prepare()).
   rollbackBuffer_.clear();
-
-  // Per-tick resim counter — the dev HUD reads this once per process()
-  // and a leftover value from the last WS tick would briefly mis-paint
-  // the indicator on the first game tick.
   lastTickResimFrames_ = 0;
 
-  // Step 14 — the generation bump is what makes the wire layer drop
-  // any pre-transition batches still in flight from the peer.
+  // The generation bump is what makes the wire layer drop any
+  // pre-transition batches still in flight from the peer.
   ++generation_;
 
-  // Step 14 Task 14.5 — drain anything we buffered while the peer ran
-  // ahead of us. Those batches were tagged with the now-current
-  // generation when they arrived; re-feeding them through the normal
-  // path populates remoteInputs/remoteInputReady and updates
-  // lastKnownRemoteFrame_ so the first game-phase tick can advance
-  // confirmed instead of starving.
+  // Drain anything we buffered while the peer ran ahead. Re-feeding
+  // through the normal path populates remoteInputs/remoteInputReady so
+  // the first game-phase tick can advance confirmed instead of starving.
   uint8_t pending = pendingFutureCount_;
   pendingFutureCount_ = 0;
   for (uint8_t i = 0; i < pending; ++i) {
@@ -566,8 +520,6 @@ void RollbackController::resetForGamePhase() {
 }
 
 void RollbackController::finishWeaponSelect() {
-  // Idempotent — only the first call from inside StateWeaponSelection
-  // does any work.
   if (state != StateWeaponSelection) return;
 
   ws->finalize();
@@ -580,29 +532,20 @@ void RollbackController::finishWeaponSelect() {
   game.resetWorms();
   state = StateGame;
 
-  // Game state vectors are now fully sized — make sure the rollback
-  // buffer's snapshots track them. Idempotent across re-prepare.
+  // Game state vectors are now fully sized.
   rollbackBuffer_.prepare(game);
   rollbackBufferPrepared_ = true;
 
-  // Step 14 Task 14.4 — the WS phase can leave both peers at different
-  // simFrame counters (asymmetric kFrameAdvantage stalls + asymmetric
-  // WS-rollback resims). Carrying that skew into game phase makes every
-  // simFrame-keyed downstream comparison silently diverge: cached
-  // checksums for "frame N" reflect a different number of processFrame
-  // calls from the same seed on the two peers, terrain destruction
-  // drifts, and Step 13's detector eventually fires. Resetting here is
-  // what lets the game phase start from a known-symmetric baseline; the
-  // generation bump inside the reset makes any in-flight pre-transition
-  // batches from the peer drop at the wire layer so they can't refill
-  // the freshly-cleared input ring with stale WS data.
+  // The WS phase can leave peers at different simFrame counters
+  // (asymmetric stalls + WS-rollback resims). Carrying that skew into
+  // game phase would silently diverge every simFrame-keyed comparison
+  // downstream (checksums, terrain destruction) and trip the desync
+  // detector. Resetting here gives the game phase a symmetric baseline.
   resetForGamePhase();
 
-  // Seed snapshot at slot[0] = post-startGame state, so a misprediction
-  // on the first game-phase frame has a valid rollback target. The first
-  // process() tick will overwrite this slot with the post-frame-0
-  // snapshot via the normal write path; the seed is what makes the slot
-  // exist between now and that tick.
+  // Seed slot[0] = post-startGame state so a misprediction on the first
+  // game-phase frame has a valid rollback target. The first process()
+  // tick will overwrite this with the post-frame-0 snapshot.
   rollback::Slot& seed = rollbackBuffer_.write(0);
   seed.localInput = 0;
   seed.remoteInput = 0;
@@ -613,8 +556,6 @@ void RollbackController::finishWeaponSelect() {
 }
 
 void RollbackController::advanceWeaponSelection() {
-  // Record local input + send the redundant K-wide batch (same plumbing
-  // as the game phase).
   uint32_t inputFrame = simFrame + inputDelay;
   if (inputFrame != lastSentFrame) {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
@@ -630,8 +571,8 @@ void RollbackController::advanceWeaponSelection() {
     }
   }
 
-  // Promote loop — confirm previously-predicted weapon-select frames
-  // whose real remote input has now arrived and matches.
+  // Promote previously-predicted WS frames whose real remote input has
+  // now arrived and matches the prediction.
   int32_t rollbackTo = -1;
   while (confirmedSimFrame_ + 1 < static_cast<int32_t>(simFrame)) {
     int32_t F = confirmedSimFrame_ + 1;
@@ -708,12 +649,10 @@ void RollbackController::advanceWeaponSelection() {
     }
     game.setSpeculative(false);
 
-    // Rollback resim may have just confirmed the wsDone frame. Check
-    // here so both peers transition on the same simFrame regardless of
-    // whether wsDone was first observed via the new-frame block or via
-    // a resim that corrected a mispredicted Fire press. Without this,
-    // the peer whose remote Fire input arrived late transitions one
-    // frame after the other.
+    // Resim may have just confirmed the wsDone frame. Re-check here so
+    // both peers transition on the same simFrame regardless of whether
+    // wsDone was first observed forward or via a resim correcting a
+    // mispredicted Fire press.
     if (rollback::Slot const* confSlot =
             rollbackBuffer_.find(confirmedSimFrame_)) {
       if (confSlot->wsSnap.valid && confSlot->wsSnap.wsDone) {
@@ -723,8 +662,7 @@ void RollbackController::advanceWeaponSelection() {
     }
   }
 
-  // Stall guards — share the same kMaxRollback / frameAdvantageThreshold
-  // as advanceSimulation so jitter behavior is uniform across phases.
+  // Stall guards — same thresholds as advanceSimulation.
   if (static_cast<int32_t>(simFrame) - confirmedSimFrame_ > rollback::kMaxRollback) {
     return;
   }
@@ -735,8 +673,7 @@ void RollbackController::advanceWeaponSelection() {
     return;
   }
 
-  // New-frame block — predict if remote input not yet ready, run ws tick,
-  // snapshot. Symmetric with advanceSimulation.
+  // Predict if remote input not yet ready, run ws tick, snapshot.
   uint32_t currentSlot = simFrame % INPUT_BUFFER_SIZE;
   uint8_t curLocal = localInputs[currentSlot];
   uint8_t curRemote;
@@ -775,23 +712,14 @@ void RollbackController::advanceWeaponSelection() {
     slot.wsSnap.wsDone = wsDone;
   }
 
-  (void)wsDone;  // The transition is gated below on the snapshot of the
-                 // most-recently-confirmed frame, not on the current
-                 // tick's possibly-predicted wsDone — that handles
-                 // promote-loop catches of predicted-wsDone frames too.
+  (void)wsDone;
 
-  // Transition rule: enter game phase as soon as the highest confirmed
-  // frame's snapshot shows wsDone=true. This catches three paths into
-  // the transition:
-  //   1. Forward, predicted=false, wsDone=true — conf just became
-  //      simFrame-1 above, slot has wsDone=true. Transition this tick.
-  //   2. Promote loop confirmed a previously-predicted slot whose
-  //      cached wsSnap.wsDone is true — conf jumped to that slot.
-  //   3. Rollback resim ended on a real-input frame that produced
-  //      wsDone=true — same as (2), conf advanced inside the resim.
-  // Predicted wsDone snapshots NEVER fire the transition; if a later
-  // rollback proves the prediction wrong, the resim resets the cached
-  // wsDone for that frame.
+  // Transition into game phase as soon as the highest confirmed frame's
+  // snapshot shows wsDone=true. Gating on the confirmed slot (rather
+  // than the current tick's possibly-predicted wsDone) means a forward
+  // confirm, a promote-loop confirm, or a resim-confirm all fire the
+  // transition on the same simFrame on both peers. Predicted wsDone
+  // snapshots never fire it.
   if (rollback::Slot const* confSlot =
           rollbackBuffer_.find(confirmedSimFrame_)) {
     if (confSlot->wsSnap.valid && confSlot->wsSnap.wsDone) {
@@ -808,14 +736,10 @@ void RollbackController::advanceSimulation() {
     lastSentFrame = inputFrame;
   }
 
-  // Step 7.5: emit the last K = kMaxRollback + 1 local inputs as a
-  // redundant batch every tick, regardless of whether inputFrame
-  // changed. Under a lossy unreliable-sequenced channel the next batch
-  // covers any single dropped packet without a retransmit round-trip,
-  // which is what lets rollback tolerate higher RTT than lockstep.
-  // Sending continues even when the controller is stalled below so the
-  // remote peer still receives our latest known inputs and can promote
-  // out of its own stall.
+  // Emit the last K = kMaxRollback + 1 local inputs as a redundant
+  // batch every tick. The redundancy covers single dropped packets
+  // without a retransmit RTT. Send continues even when stalled below so
+  // the remote peer can promote out of its own stall.
   sendInputWindow(inputFrame, simFrame);
 
   if (recvInput) {
@@ -825,13 +749,9 @@ void RollbackController::advanceSimulation() {
     }
   }
 
-  // Step 7 — promote past predicted frames whose real input has now
-  // arrived, and trigger a rollback when a prediction turns out to be
-  // wrong. The loop walks confirmedSimFrame_+1 .. simFrame-1 in order:
-  //   - Match (or non-Predicted slot): upgrade the slot to Confirmed
-  //     and advance confirmedSimFrame_/lastRemoteInput_.
-  //   - Mismatch: stop at the first wrong frame; the resim below
-  //     reloads its predecessor's snapshot and re-runs forward.
+  // Walk confirmedSimFrame_+1 .. simFrame-1 in order: promote slots whose
+  // prediction matched, stop at the first mismatch and let the resim
+  // below reload its predecessor's snapshot.
   int32_t rollbackTo = -1;
   while (confirmedSimFrame_ + 1 < static_cast<int32_t>(simFrame)) {
     int32_t F = confirmedSimFrame_ + 1;
@@ -861,23 +781,19 @@ void RollbackController::advanceSimulation() {
     remoteInputReady[s] = false;
     confirmedSimFrame_ = F;
 
-    // Step 10: a promoted slot transitions Predicted → Confirmed without
-    // resimming. The cached checksum on the slot is correct (prediction
-    // matched), so emit it now — this is the only chance, the forward
-    // path skipped sending when the frame was first run as predicted.
+    // The forward path skipped sending a checksum when the frame was
+    // first run as predicted; emit the cached value now that we've
+    // confirmed it.
     if (wasPredicted && sendChecksum) {
       sendChecksum(generation_, static_cast<uint32_t>(F), slot->checksum);
     }
   }
 
-  // Rollback resim — load the last known-good snapshot, then replay
-  // every frame after it with the freshest input available. Speculative
-  // for the whole window so previously-emitted sounds/stats don't
-  // duplicate (Step 5's flag).
+  // Load the last known-good snapshot, then replay every frame after it
+  // with the freshest input available. Speculative across the window so
+  // previously-emitted sounds/stats don't duplicate.
   if (rollbackTo >= 0) {
     ++rollbackCount_;
-    // Step 11d HUD counter: how many frames the resim loop will replay
-    // (= the gap between rollbackTo+1 and simFrame-1, inclusive).
     lastTickResimFrames_ +=
         static_cast<uint32_t>(static_cast<int32_t>(simFrame) - rollbackTo - 1);
     auto* lastGood = rollbackBuffer_.find(rollbackTo);
@@ -933,9 +849,8 @@ void RollbackController::advanceSimulation() {
       game.saveSnapshotFast(outSlot.snapshot);
       outSlot.checksum = wideRollbackChecksum(game);
 
-      // Step 10: emit checksum at resim-confirmation time. Predicted
-      // resim frames stay silent — their checksum is cached for a later
-      // promote/resim pass when real input finally arrives.
+      // Predicted resim frames stay silent — their checksum is cached
+      // for a later promote/resim pass.
       if (!framePredicted && sendChecksum) {
         sendChecksum(generation_, static_cast<uint32_t>(F), outSlot.checksum);
       }
@@ -943,22 +858,17 @@ void RollbackController::advanceSimulation() {
     game.setSpeculative(false);
   }
 
-  // Step 6 — stall guard. After this tick simFrame becomes simFrame+1,
-  // so the count of in-flight predicted frames would be
-  // (simFrame+1) - confirmedSimFrame_ - 1 = simFrame - confirmedSimFrame_.
-  // Cap that at kMaxRollback so the ring buffer (kMaxRollback+1 slots)
-  // can still cover the post-tick window.
+  // Stall guard: cap in-flight predicted frames at kMaxRollback so the
+  // ring buffer (kMaxRollback+1 slots) can still cover the post-tick
+  // window.
   if (static_cast<int32_t>(simFrame) - confirmedSimFrame_ > rollback::kMaxRollback) {
     return;
   }
 
-  // Step 8 — frame-advantage stall. Hold simFrame when we're too far
-  // ahead of the most recent local frame the remote peer reported.
-  // We always sent the K-wide redundant batch above, so the remote
-  // still hears from us this tick; only the *advance* is skipped, not
-  // the send. The -1 sentinel keeps this disarmed until we've seen at
-  // least one packet (avoiding a false stall at the very start of a
-  // session before any remote frame is known).
+  // Frame-advantage stall: hold simFrame when too far ahead of the
+  // remote's last reported simFrame. The send above already ran, so the
+  // remote still hears from us this tick. -1 keeps this disarmed before
+  // any packet has arrived.
   if (lastKnownRemoteFrame_ >= 0 &&
       static_cast<int32_t>(simFrame) - lastKnownRemoteFrame_
           >= frameAdvantageThreshold_) {
@@ -971,13 +881,10 @@ void RollbackController::advanceSimulation() {
   uint8_t curLocal = localInputs[currentSlot];
   uint8_t curRemote;
   bool predicted;
-  // Only consume real remote input here when the confirmed chain reaches
-  // simFrame-1 — out-of-order arrival (real input for a future frame
-  // when an earlier frame is still missing) must stay in the ring so the
-  // promote loop on a later tick can fold it into a contiguous chain.
-  // Consuming it now would clear the ring entry and leave us with no
-  // record that the real value was ever known, forcing a permanent
-  // stall the moment the missing predecessor finally arrives.
+  // Only consume real remote input when the confirmed chain reaches
+  // simFrame-1. Out-of-order arrival (real input for a future frame
+  // while an earlier one is still missing) must stay in the ring so a
+  // later promote can fold it into a contiguous chain.
   bool chainContiguous =
       confirmedSimFrame_ + 1 == static_cast<int32_t>(simFrame);
   if (remoteInputReady[currentSlot] && chainContiguous) {
@@ -1008,16 +915,12 @@ void RollbackController::advanceSimulation() {
   game.setSpeculative(false);
   ++simFrame;
 
-  // predicted=false only when chainContiguous was true above, which by
-  // construction means confirmedSimFrame_ + 1 == simFrame-1 after the
-  // increment — so the chain trivially extends to the just-run frame.
   if (!predicted) {
     confirmedSimFrame_ = static_cast<int32_t>(simFrame) - 1;
   }
 
-  // Snapshot the post-frame state. Stored as Predicted/Confirmed per
-  // whether the input that produced it was real or guessed — Step 7
-  // reads this to decide whether to rollback when the real byte arrives.
+  // Snapshot the post-frame state and cache the checksum (used by a
+  // later promote/resim if the frame was predicted).
   {
     int snapFrame = static_cast<int>(simFrame) - 1;
     rollback::Slot& slot = rollbackBuffer_.write(snapFrame);
@@ -1027,15 +930,8 @@ void RollbackController::advanceSimulation() {
         ? rollback::RemoteState::Predicted
         : rollback::RemoteState::Confirmed;
     game.saveSnapshotFast(slot.snapshot);
-    // Step 10: cache the post-frame checksum on every slot, predicted
-    // or not. The send below only fires for !predicted; predicted slots
-    // hold their cached value until a later promote or resim pass
-    // confirms them, at which point that pass emits the cached value.
     slot.checksum = wideRollbackChecksum(game);
 
-    // !predicted implies the chain is contiguous through simFrame-1, so
-    // this checksum reflects state that the remote peer has also fully
-    // confirmed — no false-positive desync.
     if (!predicted && sendChecksum) {
       sendChecksum(generation_, simFrame - 1, slot.checksum);
     }
@@ -1058,10 +954,7 @@ void RollbackController::draw(Renderer& renderer, bool useSpectatorViewports) {
   }
   renderer.fadeValue = fadeValue;
 
-  // Step 11d dev HUD: when this tick's resim window was non-empty,
-  // print a small `RB:n` indicator at the top-left of the framebuffer.
-  // No separate enable flag — the plan calls for it to show only when
-  // there's something to show, so non-jittery sessions stay clean.
+  // Dev HUD: shows `RB:n` only when there's a non-empty resim window.
   if (lastTickResimFrames_ > 0 && state == StateGame) {
     Font& font = game.common->font;
     char buf[16];

@@ -1,12 +1,11 @@
 #pragma once
 
-// Cereal glue for full mid-game Game snapshots.
-//
-// Step 1 of the rollback plan (docs/ideas/rollback.md): a correctness-only
-// baseline that round-trips the entire simulation state — including the
-// object pools (bonuses/wobjects/sobjects/nobjects/bobjects) and holdazone —
-// which the replay-oriented Game save/load in cereal_types.hpp does not
-// cover. Separate from the replay format so replays stay forward-compatible.
+// Cereal glue for full mid-game Game snapshots. Round-trips the entire
+// simulation state — including object pools (bonuses/wobjects/sobjects/
+// nobjects/bobjects) and holdazone — which the replay-oriented Game
+// save/load in cereal_types.hpp does not cover. Kept separate from the
+// replay format so replays stay forward-compatible. Used as the
+// correctness oracle for the fast in-memory snapshot path.
 
 #include "cereal_types.hpp"
 

@@ -1353,3 +1353,21 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - **Starvation/recovery**: drive a single controller with `injectRemoteInput`, warm up `kWarm` frames, stop delivering → controller predicts exactly `kMaxRollback` more frames (asserted via `currentFrame`) then stalls. Inject the missing inputs → next `process()` drains the promote loop and `confirmedFrame` catches up. One subtle bit: seed *only* `[0..kWarm-1]` of remote inputs; an off-by-3 here (mirroring `inputDelay`) leaves extra ready slots that get consumed before prediction begins.
 - Public introspection: `RollbackController::confirmedFrame()` for tests/HUD.
 - New: prediction logic in `advanceSimulation`, `confirmedFrame()` accessor + `confirmedSimFrame_`/`lastRemoteInput_` fields on `RollbackController`, `src/tests/test_prediction_no_rollback.cpp`, CMake entry.
+
+
+## Post-merge cleanup
+
+The 14 implementation steps above narrate how the rollback netcode was
+built; the in-tree code reflects the final design. The cleanup branch
+strips the step-by-step narration from the source so the code reads as
+finished rather than in-flight.
+
+### Phase 1 — Comment scrub
+
+- **Task 1 (rollback core)**: Stripped `Step N` / `Task 14.x` narration
+  from `rollbackController.{hpp,cpp}`, `rollback/buffer.hpp`, and the
+  three serialization headers (`snapshot.hpp`, `fast_snapshot.hpp`,
+  `weapsel_snapshot.hpp`). Comments explaining a real invariant
+  (frame-advantage tuning rationale, monotonic remote-frame update,
+  promote-loop checksum gating) were kept but rewritten without the
+  step label. Build + full ctest pass.

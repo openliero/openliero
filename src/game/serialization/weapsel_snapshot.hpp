@@ -1,21 +1,16 @@
 #pragma once
 
-// Rollback for the weapon-select phase.
+// Rollback snapshot for the weapon-select phase.
 //
-// advanceWeaponSelection used to be strict lockstep — every tick waited for
-// remote input before advancing. That made the phase as slow as the
-// slowest peer + worst-case latency, baking a wall-clock offset into the
-// game-phase transition. This snapshot captures the (small) mutable state
-// the WeaponSelection state machine touches each frame, so the rollback
-// controller can predict + resim weapon-select frames the same way it
-// does game frames.
+// Captures the mutable state WeaponSelection touches each frame so the
+// rollback controller can predict + resim weapon-select frames the same
+// way it does game frames: menus, isReady flags, picked weapon IDs
+// (= worm.settings->weapons[]), worm.controlStates, the controller's
+// edge-detection / key-repeat state, and game.rand (used by Randomize).
 //
-// The struct deliberately stays small: the menus, isReady flags, picked
-// weapon IDs (= worm.settings->weapons[]), worm.controlStates, plus the
-// controller's edge-detection / key-repeat state and game.rand (used by
-// the "Randomize" option). Menu item display strings and
-// worm.weapons[].type pointers are NOT stored — both are derivable from
-// the weapon IDs on restore via Common::weapOrder / Common::weapons.
+// Menu item display strings and worm.weapons[].type pointers are NOT
+// stored — both are derivable from the weapon IDs on restore via
+// Common::weapOrder / Common::weapons.
 
 #include "../rand.hpp"
 #include "../settings.hpp"
