@@ -76,14 +76,26 @@ TEST_CASE("Rollback controller drops batches from an older generation",
     REQUIRE(a.lastKnownRemoteFrame() == 3);
   }
 
-  SECTION("future generation is dropped (no buffering yet — Task 14.5)") {
-    // Task 14.5 will decide whether to buffer or drop future-gen
-    // packets. Task 14.2 keeps the simple symmetric drop so neither
-    // direction can corrupt the live ring.
+  SECTION("immediate-future generation is buffered (Task 14.5)") {
+    // Task 14.5 buffers gen+1 batches until our own resetForGamePhase
+    // bumps generation_. Until then no input is applied and the drop
+    // counter doesn't bump.
     a.injectRemoteBatch(/*generation=*/2, /*baseFrame=*/0, /*count=*/8,
                         inputs, /*remoteLocalFrame=*/3);
 
+    REQUIRE(a.droppedOldGenerationBatches() == 0);
+    REQUIRE(a.pendingFutureBatchCount() == 1);
+    REQUIRE(a.lastKnownRemoteFrame() == -1);
+  }
+
+  SECTION("far-future generation (gen+2 or more) is dropped") {
+    // Beyond one phase ahead, the packet describes a simFrame numbering
+    // we may never reach in this match. Drop conservatively.
+    a.injectRemoteBatch(/*generation=*/3, /*baseFrame=*/0, /*count=*/8,
+                        inputs, /*remoteLocalFrame=*/3);
+
     REQUIRE(a.droppedOldGenerationBatches() == 1);
+    REQUIRE(a.pendingFutureBatchCount() == 0);
     REQUIRE(a.lastKnownRemoteFrame() == -1);
   }
 }

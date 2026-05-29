@@ -153,6 +153,10 @@ struct RollbackController : CommonController {
   uint64_t droppedOldGenerationBatches() const {
     return droppedOldGenerationBatches_;
   }
+  // Step 14 Task 14.5 — current count of future-generation batches
+  // we're holding pending the next phase transition. Exposed so the
+  // unit test can assert the buffer fills + drains correctly.
+  uint8_t pendingFutureBatchCount() const { return pendingFutureCount_; }
 
   // Threshold at which the frame-advantage stall fires: skip a tick
   // when simFrame is at least this many frames ahead of the remote's
@@ -282,4 +286,21 @@ struct RollbackController : CommonController {
   // anything tagged with an older generation.
   uint8_t generation_ = 0;
   uint64_t droppedOldGenerationBatches_ = 0;
+
+  // Step 14 Task 14.5 — bounded queue for batches arriving from a peer
+  // that has already crossed the next phase boundary while we haven't
+  // yet. We buffer at most one window so the boundary frames replay
+  // cleanly once our own resetForGamePhase fires. Capacity matches the
+  // K-wide redundancy so even one full peer-side resend fits.
+  static constexpr uint8_t kMaxPendingFutureBatches =
+      static_cast<uint8_t>(rollback::kMaxRollback + 1);
+  struct PendingFutureBatch {
+    uint32_t baseFrame;
+    uint8_t count;
+    std::array<uint8_t, rollback::kMaxRollback + 1> inputs;
+    uint32_t remoteLocalFrame;
+  };
+  std::array<PendingFutureBatch, kMaxPendingFutureBatches>
+      pendingFutureBatches_{};
+  uint8_t pendingFutureCount_ = 0;
 };

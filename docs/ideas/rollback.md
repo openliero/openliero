@@ -578,15 +578,13 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 ---
 
-#### Task 14.5: Decide and document handling of future-generation packets
-**Description:** If peer A transitions to generation 1 before peer B, A sends generation-1 batches that B receives while B is still at generation 0. B can either (a) drop them (A will resend via K-wide redundancy after B catches up — but A's K-window will have moved past B's first game frame within a few ticks), or (b) buffer them until B transitions. Pick one, document the tradeoff, implement it.
+#### Task 14.5: Decide and document handling of future-generation packets — ✅ done
+**Decision:** Buffer (per the plan's recommendation) — up to `kMaxRollback+1 = 8` next-generation batches per phase boundary. Far-future (≥ gen+2) is still dropped.
 
 **Acceptance criteria:**
-- [ ] Decision recorded in a comment at the receive site.
-- [ ] Implementation matches the decision.
-- [ ] Test `test_rollback_generation_future.cpp` (new): peer A advances to game phase ~5 frames before peer B. Verify that B catches up cleanly (no missing inputs) once it transitions.
-
-**Recommendation:** Buffer up to one window's worth (kMaxRollback+1 = 8 frames) of future-generation batches per phase boundary. Cheap, bounded, no protocol cost. The K-wide redundancy guarantees the boundary frames are re-sent for several ticks, so even a pure drop policy probably works — but buffering is safer.
+- [x] Decision recorded in a comment at the receive site (`injectRemoteBatch` in `rollbackController.cpp`).
+- [x] Implementation matches the decision: gen-current applies, gen+1 buffers (cap = `kMaxPendingFutureBatches`), gen+2+ or older drops with counter bump. `resetForGamePhase` drains the buffer through `injectRemoteBatch(generation_, …)` after bumping `generation_`.
+- [x] `test_rollback_generation_future.cpp` (new): a peer at gen 0 receives a gen-1 batch covering frames [0..7], asserts the batch is held (counter 1, no drop, lastKnownRemoteFrame still sentinel); after `resetForGamePhaseForTest()` the drained batch advances `lastKnownRemoteFrame_` to the recorded value. Bounded-buffer SECTION pins the cap at `kMaxRollback+1` so a future enlargement is visible. `test_rollback_generation_drop.cpp` updated: the obsolete "future-gen drops" assertion split into "gen+1 buffers" and "gen+2 drops" sections.
 
 **Dependencies:** 14.3, 14.4.
 
@@ -749,6 +747,16 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.5 — Future-generation buffering (2026-05-29)
+
+- Picked buffer (recommendation) over pure drop. The K-wide redundancy + unreliable-sequenced channel make pure drop *usually* fine: the boundary frames keep getting resent for several ticks after the gen bump, so the receiver picks them up once it catches up. But "usually" leaves a window where bad jitter near the WS→game boundary can lose a unique input that the receiver never sees again. Buffering 8 entries (~128 bytes) closes that window for a trivial cost.
+- The buffer drains through `injectRemoteBatch(generation_, …)` after the bump rather than a separate code path. This keeps the boundary-replay semantics identical to any other batch arrival — same dedup vs `confirmedSimFrame_`, same monotonic `lastKnownRemoteFrame_` update, same future-gen filter (which can't fire because the buffered batches were stored at exactly the new generation).
+- Symmetric drop for **older** generations stays: a peer running behind us would only re-send pre-bump batches by mistake, and those describe a simFrame numbering we've abandoned. Drop counter bumps so monitoring can see pathological cases.
+- **Far-future** (≥ gen+2) is also dropped. Buffering further would require keeping multiple phase boundaries' worth of batches, and the only way a peer crosses two boundaries before us is a rematch-on-rematch within a single tick — not a real-world concern.
+- Overflow bumps the drop counter too. Was tempted to leave it silent (the redundancy hides it 99% of the time), but counting it makes pathological jitter near the boundary detectable from log output without a rebuild.
+- Test surface: a new `test_rollback_generation_future.cpp` covers the buffer + drain path and the bounded-buffer cap; the existing `test_rollback_generation_drop.cpp` was updated so the "future-gen drops" section split into "gen+1 buffers" (Task 14.5's path) and "gen+2 drops" (still-unreachable). 127/127 tests green.
+- Files: `src/game/controller/rollbackController.{hpp,cpp}` (storage + buffer/drain logic + counter), `src/tests/test_rollback_generation_future.cpp` (new), `src/tests/test_rollback_generation_drop.cpp` (section split), `CMakeLists.txt`.
 
 ### Step 14 Task 14.4 — finishWeaponSelect uses the reset path (2026-05-29)
 

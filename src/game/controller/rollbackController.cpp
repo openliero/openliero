@@ -174,22 +174,48 @@ void RollbackController::injectRemoteBatch(uint8_t generation,
   // Step 14 Task 14.2 — drop pre-transition packets. A peer that hasn't
   // crossed the WS→game boundary yet is still sending batches keyed by
   // its old simFrame numbering; injecting them would corrupt a live game
-  // slot (the slot's frame number wraps the ring after reset). Future-
-  // generation packets are also dropped here for now — Task 14.5 will
-  // decide whether to buffer or drop them when peer A transitions
-  // before peer B.
-  if (generation != generation_) {
-    ++droppedOldGenerationBatches_;
+  // slot (the slot's frame number wraps the ring after reset).
+  //
+  // Step 14 Task 14.5 — buffer one window of next-generation packets so
+  // a peer that crosses the phase boundary before us doesn't lose the
+  // game-phase frames it sent while we were still in WS. We chose
+  // buffering over pure drop: drop relies on the K-wide redundancy
+  // resending the boundary frames for several ticks, which is *usually*
+  // enough but isn't guaranteed under bad jitter near the boundary.
+  // Buffering costs ~128 bytes per controller and gives a hard
+  // correctness guarantee that the first kMaxRollback+1 game-phase
+  // frames arrive intact. Anything older than the current generation,
+  // or further-future than gen+1, is still dropped — those packets are
+  // unrecoverable in any practical session.
+  if (generation == generation_) {
+    for (uint8_t i = 0; i < count; ++i) {
+      injectRemoteInput(baseFrame + i, inputs[i]);
+    }
+    // Monotonic update — out-of-order arrival of a stale packet must not
+    // pull our knowledge of the remote's progress backwards, since the
+    // frame-advantage stall reads this as "remote is at least here".
+    int32_t f = static_cast<int32_t>(remoteLocalFrame);
+    if (f > lastKnownRemoteFrame_) lastKnownRemoteFrame_ = f;
     return;
   }
-  for (uint8_t i = 0; i < count; ++i) {
-    injectRemoteInput(baseFrame + i, inputs[i]);
+
+  if (generation == static_cast<uint8_t>(generation_ + 1) &&
+      count <= kMaxPendingFutureBatches) {
+    if (pendingFutureCount_ < kMaxPendingFutureBatches) {
+      auto& slot = pendingFutureBatches_[pendingFutureCount_++];
+      slot.baseFrame = baseFrame;
+      slot.count = count;
+      for (uint8_t i = 0; i < count; ++i) slot.inputs[i] = inputs[i];
+      slot.remoteLocalFrame = remoteLocalFrame;
+      return;
+    }
+    // Buffer full — the K-wide redundancy keeps re-sending these for a
+    // few ticks so a single overflow rarely loses unique information.
+    // Still count it as a drop so monitoring can detect pathological
+    // jitter near the boundary.
   }
-  // Monotonic update — out-of-order arrival of a stale packet must not
-  // pull our knowledge of the remote's progress backwards, since the
-  // frame-advantage stall reads this as "remote is at least here".
-  int32_t f = static_cast<int32_t>(remoteLocalFrame);
-  if (f > lastKnownRemoteFrame_) lastKnownRemoteFrame_ = f;
+
+  ++droppedOldGenerationBatches_;
 }
 
 void RollbackController::injectRemoteInput(uint32_t frame, uint8_t input) {
@@ -523,6 +549,20 @@ void RollbackController::resetForGamePhase() {
   // Step 14 — the generation bump is what makes the wire layer drop
   // any pre-transition batches still in flight from the peer.
   ++generation_;
+
+  // Step 14 Task 14.5 — drain anything we buffered while the peer ran
+  // ahead of us. Those batches were tagged with the now-current
+  // generation when they arrived; re-feeding them through the normal
+  // path populates remoteInputs/remoteInputReady and updates
+  // lastKnownRemoteFrame_ so the first game-phase tick can advance
+  // confirmed instead of starving.
+  uint8_t pending = pendingFutureCount_;
+  pendingFutureCount_ = 0;
+  for (uint8_t i = 0; i < pending; ++i) {
+    auto const& s = pendingFutureBatches_[i];
+    injectRemoteBatch(generation_, s.baseFrame, s.count, s.inputs.data(),
+                      s.remoteLocalFrame);
+  }
 }
 
 void RollbackController::finishWeaponSelect() {
