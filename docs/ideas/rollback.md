@@ -606,18 +606,18 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 **Phase 3 — Coverage for the bug class**
 
-#### Task 14.6: Force-skew unit test
+#### Task 14.6: Force-skew unit test — ✅ done
 **Description:** Add a controller-level test that deliberately forces peers' WS-phase simFrames to diverge (e.g., by stalling one peer's input delivery so it predicts more, or by using asymmetric `kFrameAdvantage`), then asserts that the post-transition state matches frame-by-frame.
 
 **Acceptance criteria:**
-- [ ] Test reliably produces a divergent WS simFrame count between peer A and peer B (asserted via an introspection helper).
-- [ ] After transition, both peers' `simFrame == 0`.
-- [ ] Cached `wideRollbackChecksum` for the first ~32 game-phase frames matches between peers (drives both forward, then compares slot checksums).
-- [ ] Fails fast if Step 14 regresses.
+- [x] Test reliably produces a divergent WS simFrame count between peer A and peer B (asserted via `maxObservedSkew >= 1` vacuity guard; in practice the asymmetric delays produce a 16-frame WS-phase gap before transition).
+- [x] After transition, both peers' `simFrame == 0` (the headline assertion).
+- [x] Cached `wideRollbackChecksum` for the first ~32 game-phase frames matches between peers — implemented as a comparison across the **resident** ring overlap after driving 32 game-phase ticks + drain, since the ring caps at kMaxRollback+1=8 slots. Drift in earlier frames would propagate forward and surface here.
+- [x] Fails fast if Step 14 regresses (headline assertion is checked before the vacuity guard).
 
 **Verification:**
-- [ ] Test passes on the fix.
-- [ ] Test fails on `HEAD~1` (i.e., with Step 14 reverted), proving it catches the bug class.
+- [x] Test passes on the fix (`test_rollback_skew_repro` green on current `HEAD`).
+- [x] Test fails on `HEAD~1` of 14.4 (pre-rewrite finishWeaponSelect): `aTransitionFrame=18` instead of 0, `REQUIRE(aTransitionFrame == 0)` fails immediately. Proves the test catches the bug class.
 
 **Dependencies:** 14.4.
 
@@ -747,6 +747,18 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.6 — Force-skew regression test (2026-05-29)
+
+- Skew driver: asymmetric one-way delays (A→B = 1 frame, B→A = 4 frames) plus `a->setFrameAdvantageEnabled(false)`. With B's frame-advantage stall fighting the lopsided pipe and A free to run ahead, the WS-phase simFrame gap reliably grows to ~16 frames before either peer crosses the wsDone boundary. This is louder than necessary — a 1-frame gap would already prove the bug class — but a wider gap makes the test resistant to small timing tweaks.
+- Headline assertion (`aTransitionFrame == 0 && bTransitionFrame == 0`) is checked first, BEFORE the vacuity guard. Reason: when the test fails under regression we want the headline failure to be the obvious one, not "the test didn't observe enough skew." A failed vacuity guard would just look like flakiness; a failed `aTransitionFrame == 0` points straight at Task 14.4.
+- The "first ~32 game-phase frames" wording in the plan ran into the ring's 8-slot cap. Compromise: drive 32 game-phase ticks + flush + 16 drain, then compare the resident ring overlap on both sides — typically the last 6–8 confirmed frames. Any drift in frames < the overlap window would propagate forward into the slots we do compare, so the partial coverage is still a meaningful determinism gate.
+- Dropped the planned `wideRollbackChecksum(a->game) == wideRollbackChecksum(b->game)` final-state check. With A's frame-advantage disabled the two peers end at different simFrame counts, so their *live* states are post-different-frame-counts and don't agree by construction. The slot-checksum overlap already covers determinism at matching frame numbers, which is the property we care about.
+- Verification matrix:
+  - `HEAD` (all 14.x landed): test passes; `maxObservedSkew=16`, both transition frames = 0. 128/128 suite green.
+  - `HEAD@14.3` (pre-Task-14.4): test fails at `REQUIRE(aTransitionFrame == 0)` with `aTransitionFrame=18`. Pre-rewrite finishWeaponSelect left simFrame at whatever WS reached. Restored HEAD after verification.
+- A subtle bug in the test setup: the JitterTransport `tick(deliverA, deliverB)` convention drains `aToB` into `deliverB`, not `deliverA`. The B→A transport had to be `tBA.tick(noop, deliverA)`, not `tBA.tick(deliverA, noop)`. `test_frame_advantage` already used the correct form; mirrored it here after a misroute caused A to never receive any of B's batches in WS, stalling both peers and timing out the WS loop.
+- Files: `src/tests/test_rollback_skew_repro.cpp` (new), `CMakeLists.txt`.
 
 ### Step 14 Task 14.5 — Future-generation buffering (2026-05-29)
 
