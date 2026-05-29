@@ -12,7 +12,7 @@ The game's replay system already implements lockstep: deterministic sim + per-fr
 
 **Phase 1 (Alpha):** Pure lockstep with fixed input delay (2-4 frames, ~28-56ms). Players exchange XOR-compressed input bitfields each frame over UDP. Both peers run identical simulations. Include periodic checksums to detect desync. Target: LAN and low-latency internet (<60ms RTT).
 
-**Phase 2 (Internet-quality):** ✅ Shipped — GGPO-style rollback is the default for network games (Step 11e, 2026-05-28). Local input applied immediately, remote input predicted, mismatches trigger snapshot-restore + resim. Implementation plan and per-step learnings are in [rollback.md](./rollback.md). The lockstep `NetworkController` is kept alive behind `settings.useRollback = false` for ~1 release as a regression fallback.
+**Phase 2 (Internet-quality):** ✅ Shipped — GGPO-style rollback is the only network path. Local input applied immediately, remote input predicted, mismatches trigger snapshot-restore + resim. Implementation lives under `src/game/controller/rollbackController.{cpp,hpp}`, `src/game/rollback/`, and `src/game/serialization/{snapshot,fast_snapshot,weapsel_snapshot}.hpp`.
 
 ### Why this works for Open Liero specifically:
 
@@ -257,7 +257,7 @@ Two issues had to be resolved:
 
 - ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `fastGameChecksum()` sent every frame, compared on receipt
 - **Replay recording of network games** — the data is already available (frame inputs)
-- ~~**Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play~~ ✅ Shipped 2026-05-28. See [rollback.md](./rollback.md).
+- ~~**Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play~~ ✅ Shipped 2026-05-28.
 - ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ ✅ Implemented: STUN + signaling + hole-punch + relay fallback (see Online Connect Flow below)
 - **Graceful disconnection** — pause + timeout + forfeit instead of immediate exit
 
@@ -381,7 +381,7 @@ Wired up the existing `PacketChecksum` transport to actually send/compare checks
 - `NetSession::onChecksum()` compares local vs remote, sets `desyncDetected_` flag
 - `GamePlayState` shows "DESYNC AT FRAME N" message and logs to stderr
 
-The rollback path uses `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) instead of the narrower `fastGameChecksum`; the replay format keeps `fastGameChecksum` so existing recordings remain valid. See `docs/ideas/rollback.md` Step 13.
+The rollback path uses `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) instead of the narrower `fastGameChecksum`; the replay format keeps `fastGameChecksum` so existing recordings remain valid.
 
 ### Debug instrumentation: OPENLIERO_CHECKSUM_LOG (2026-05-29)
 

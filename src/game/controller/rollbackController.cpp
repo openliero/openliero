@@ -712,8 +712,6 @@ void RollbackController::advanceWeaponSelection() {
     slot.wsSnap.wsDone = wsDone;
   }
 
-  (void)wsDone;
-
   // Transition into game phase as soon as the highest confirmed frame's
   // snapshot shows wsDone=true. Gating on the confirmed slot (rather
   // than the current tick's possibly-predicted wsDone) means a forward
