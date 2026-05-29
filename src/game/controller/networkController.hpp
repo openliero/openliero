@@ -20,22 +20,19 @@ using InputSendCallback = std::function<void(uint32_t frame, uint8_t input)>;
 // Called each frame with: (frame_number) -> input byte, or -1 if not yet available
 using InputRecvCallback = std::function<int(uint32_t frame)>;
 
-// Rollback Step 7.5 — batched input send. RollbackController emits the
-// last K local inputs every tick (K = kMaxRollback + 1) so a dropped
-// packet is covered by the next K packets without a retransmit.
-// `inputs` points to `count` bytes covering frames [baseFrame, baseFrame+count).
-// Step 8 adds `localFrame` — the sender's `simFrame` at the moment of
-// send. The receiver uses it for the frame-advantage / time-sync stall.
-// Step 14 Task 14.2 adds `generation` — the sender's phase generation
-// (WS = 0, game = 1, etc.); receivers drop stale-generation packets.
+// Batched input send used by RollbackController: emits the last K local
+// inputs every tick (K = kMaxRollback + 1) so a dropped packet is
+// covered by the next K packets without a retransmit. `inputs` points
+// to `count` bytes covering frames [baseFrame, baseFrame+count).
+// `localFrame` = sender's simFrame at send time (frame-advantage tracking).
+// `generation` = sender's phase generation; receivers drop stale ones.
 using InputBatchSendCallback = std::function<
     void(uint8_t generation, uint32_t baseFrame, uint8_t count,
          uint8_t const* inputs, uint32_t localFrame)>;
 
-// Callback type for sending a checksum to the remote peer for desync detection.
-// `generation` is the sender's phase generation (Step 14 Task 14.2). The
-// lockstep NetworkController has no phase concept and always passes 0;
-// RollbackController passes its current generation_.
+// Send a checksum to the remote peer for desync detection. `generation`
+// is the sender's phase generation (lockstep always passes 0;
+// RollbackController passes its current generation).
 using ChecksumSendCallback =
     std::function<void(uint8_t generation, uint32_t frame, uint32_t checksum)>;
 
@@ -95,8 +92,7 @@ struct NetworkController : CommonController {
 
   // Set the local control state directly (for testing without key bindings)
   void setLocalControlState(uint8_t packed) { localControlState.unpack(packed); }
-  // Step 11c — apply Settings::inputDelay. Lockstep keeps the default
-  // of 3 unless explicitly overridden.
+  // Lockstep keeps the default of 3 unless explicitly overridden.
   void setInputDelay(uint32_t frames) { inputDelay = frames; }
 
   Game game;

@@ -56,7 +56,7 @@ Settings::Settings()
 , map(true)
 , screenSync(true)
 , bonusTimeout(0)
-, useRollback(true)   // Step 11e — rollback is now the default
+, useRollback(true)
 , maxRollback(7)
 , inputDelay(1)
 {

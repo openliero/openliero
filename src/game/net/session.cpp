@@ -48,23 +48,18 @@ NetSession::~NetSession() {
 void NetSession::createController(int localIdx) {
   if (useRollback_) {
     rollback_ = std::make_unique<RollbackController>(common_, settings_, localIdx);
-    // Step 11c: rollback peers honor the host-authoritative inputDelay
-    // (default 1 per the plan, down from lockstep's 3).
     rollback_->setInputDelay(static_cast<uint32_t>(settings_->inputDelay));
   } else {
-    // Lockstep deliberately ignores Settings::inputDelay and keeps its
-    // hardcoded default of 3. The setting's lower default is tuned for
-    // rollback — applying it to lockstep would change long-standing
-    // network behavior for users who didn't opt into anything.
+    // Lockstep ignores Settings::inputDelay and keeps its hardcoded
+    // default of 3 — the lower setting is tuned for rollback.
     controller_ = std::make_unique<NetworkController>(common_, settings_, localIdx);
   }
 }
 
 void NetSession::wireActiveController() {
-  // Common wiring: checksum + pause + endMatch are identical on both
-  // controllers. Inputs differ — lockstep emits single PacketInput,
-  // rollback emits PacketInputBatch with the redundancy + frame
-  // delta encoding (Step 11a wire format).
+  // Checksum + pause + endMatch wiring is identical on both controllers.
+  // Inputs differ: lockstep emits PacketInput; rollback emits
+  // PacketInputBatch (redundant K-wide window + frame-delta encoding).
   auto checksumCb = [this](uint8_t generation, uint32_t frame,
                            uint32_t checksum) {
     transport_.sendChecksum(generation, frame, checksum);
@@ -78,10 +73,8 @@ void NetSession::wireActiveController() {
     rollback_->setInputCallbacks(
         [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
                uint8_t const* inputs, uint32_t localFrame) {
-          // localDelta = simFrame - baseFrame at send time (Step 8).
-          // Encoded as uint8_t — range guaranteed by the controller
-          // (it constructs `count = MaxRollback + 1`, `localFrame` is
-          // within `[baseFrame, baseFrame + count - 1]`).
+          // localDelta = simFrame - baseFrame at send time. Encoded as
+          // uint8_t; range guaranteed by the controller's K-wide window.
           uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
           transport_.sendInputBatch(generation, baseFrame, count, localDelta,
                                     inputs);
@@ -326,13 +319,10 @@ void NetSession::onRemoteInput(uint32_t frame, uint8_t input) {
 void NetSession::onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
                                     uint8_t count, uint8_t const* inputs,
                                     uint32_t remoteLocalFrame) {
-  // Rollback wire path. Lockstep peers shouldn't be receiving batches
-  // (different protocol version would prevent the handshake in the
-  // first place); if one slips through under a misconfigured test,
-  // silently drop.
-  //
-  // Step 14 Task 14.2 — the controller does the generation filter
-  // itself (it owns generation_); we just forward.
+  // Rollback wire path; the controller owns the generation filter so
+  // we just forward. Lockstep peers shouldn't receive batches (protocol
+  // version blocks the handshake), but drop silently if one slips
+  // through.
   if (rollbackPtr_)
     rollbackPtr_->injectRemoteBatch(generation, baseFrame, count, inputs,
                                     remoteLocalFrame);
@@ -368,9 +358,8 @@ void NetSession::onMatchSettings(const NetTransport::MatchSettingsData& data) {
     settings_->namesOnBonuses = data.namesOnBonuses != 0;
     settings_->bloodParticleMax = data.bloodParticleMax;
     settings_->zoneTimeout = data.zoneTimeout;
-    // Step 11c rollback fields. The host is authoritative — the
-    // client's controller (built in tryStartGame, after this point)
-    // sees the resolved mode/inputDelay.
+    // Rollback fields are host-authoritative; the client's controller
+    // (built in tryStartGame, after this point) sees the resolved values.
     settings_->useRollback = data.useRollback != 0;
     settings_->maxRollback = data.maxRollback;
     settings_->inputDelay = data.inputDelay;
@@ -534,8 +523,7 @@ void NetSession::onTcData(const void* data, size_t len) {
 
   common_ = newCommon;
   // Controller is built in tryStartGame using the freshly-loaded
-  // common_. Step 11c removed the eager construction here so the
-  // useRollback decision can wait for MatchSettings.
+  // common_, so the useRollback decision can wait for MatchSettings.
 
   if (onTcReloaded)
     onTcReloaded(newCommon);
@@ -551,11 +539,8 @@ void NetSession::tryStartGame() {
   if (sessionState_ == Playing)
     return;
 
-  // Step 11c: instantiate the controller now that both peers have
-  // agreed on useRollback (host's value was sent over MatchSettingsData
-  // and the client picked it up in onMatchSettings). Previously
-  // controllers were built eagerly in hostGame/joinGame, before the
-  // mode was known.
+  // Build the controller now that both peers have agreed on useRollback
+  // via MatchSettingsData.
   int localIdx = (role_ == Host) ? 0 : 1;
   createController(localIdx);
 
@@ -910,20 +895,13 @@ void maybeLog(char const* who, uint64_t& counter, uint32_t frame,
 
 void NetSession::onChecksum(uint8_t generation, uint32_t frame,
                             uint32_t remoteChecksum) {
-  // Bug fix: in rollback mode controllerPtr_ is null (only rollbackPtr_
-  // is set), so the legacy `!controllerPtr_` guard silently dropped
-  // every incoming checksum on the rollback path — leaving desync
-  // detection dead on online (ICE) games. Accept when either controller
-  // exists.
   if (desyncDetected_ || sessionState_ != Playing ||
       (!controllerPtr_ && !rollbackPtr_))
     return;
 
-  // Step 14 Task 14.2 — drop pre-transition checksums. They describe
-  // the peer's old simFrame numbering and would compare against a
-  // checksum slot from the WS phase that no longer exists in our ring.
-  // Lockstep has no generation concept (controllerPtr_ path always
-  // stays at 0), so the filter is a no-op there.
+  // Drop pre-transition checksums: they describe the peer's old
+  // simFrame numbering and would compare against a WS-phase slot that
+  // no longer exists in our ring. Lockstep has no generation concept.
   if (rollbackPtr_ && generation != rollbackPtr_->generation()) return;
 
   static uint64_t remoteCount = 0;

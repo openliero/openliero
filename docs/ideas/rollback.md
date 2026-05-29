@@ -1371,3 +1371,11 @@ finished rather than in-flight.
   (frame-advantage tuning rationale, monotonic remote-frame update,
   promote-loop checksum gating) were kept but rewritten without the
   step label. Build + full ctest pass.
+
+- **Task 2 (session / transport / game / settings / cereal /
+  networkController)**: Same scrub applied to `net/session.{cpp,hpp}`,
+  `net/transport.hpp`, `game.hpp`, `mixer/player.hpp`,
+  `stats_recorder.hpp`, `settings.{cpp,hpp}`, `serialization/cereal_types.hpp`,
+  and the lockstep `networkController.hpp` callback typedef block.
+  Speculative-suppression comments shortened to a single line each.
+  Build + full ctest pass.

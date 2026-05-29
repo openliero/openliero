@@ -25,8 +25,9 @@ struct SoundPlayer
 	virtual bool isPlaying(void* id) = 0;
 	virtual void stop(void* id) = 0;
 
-	// Rollback: when true, play()/stop() are suppressed. isPlaying() passes
-	// through.
+	// When true, play()/stop() are suppressed but isPlaying() passes
+	// through. Set during predicted/resim frames to avoid duplicate
+	// sound emission.
 	bool speculative = false;
 
 protected:

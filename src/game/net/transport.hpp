@@ -15,11 +15,8 @@ struct IceAgent;
 // Handles UDP communication between two peers using ENet.
 // Provides reliable ordered delivery of input packets.
 struct NetTransport {
-  // Bumped to 3 in Step 14 (Task 14.1): PacketInputBatch and
-  // PacketChecksum now carry a 1-byte phase generation so receivers can
-  // drop pre-transition packets after a WS→game reset. Peers running a
-  // different version handshake mismatch and disconnect rather than
-  // play with mismatched semantics.
+  // Peers running a different version handshake-mismatch and disconnect
+  // rather than play with mismatched packet semantics.
   static constexpr uint8_t kProtocolVersion = 3;
 
   // Packet types
@@ -38,13 +35,12 @@ struct NetTransport {
     PacketTcInfo = 12,
     PacketTcResponse = 13,
     PacketTcData = 14,
-    // Rollback (Step 7.5/8): K-wide redundant input window with the
-    // sender's current sim frame, delivered unreliable-sequenced.
+    // K-wide redundant input window with the sender's current sim
+    // frame, delivered unreliable-sequenced.
     //   [type:1][gen:1][baseFrame:u32 LE][count:u8][localDelta:u8][input[count]:u8]
-    // localDelta is `simFrame - baseFrame` at send time; receiver
-    // reconstructs `remoteLocalFrame = baseFrame + localDelta` for
-    // Step 8 frame-advantage tracking. `gen` (Step 14) lets receivers
-    // drop pre-transition packets after a WS→game reset.
+    // The receiver reconstructs `remoteLocalFrame = baseFrame + localDelta`
+    // for frame-advantage tracking; `gen` lets the receiver drop
+    // pre-transition packets after a WS→game reset.
     PacketInputBatch = 15,
   };
 
@@ -70,10 +66,7 @@ struct NetTransport {
     uint8_t namesOnBonuses;
     int32_t bloodParticleMax;
     int32_t zoneTimeout;
-    // Step 11c — rollback gameplay knobs. Host-authoritative. Bumping
-    // these requires a protocol-version bump (already done in 11a) so
-    // peers running older builds reject the handshake before they
-    // could observe an unexpected payload size.
+    // Rollback gameplay knobs (host-authoritative).
     uint8_t useRollback;
     int32_t maxRollback;
     int32_t inputDelay;
@@ -124,11 +117,10 @@ struct NetTransport {
   void sendInput(uint32_t frame, uint8_t input);
   // Rollback batched input send. `inputs` covers frames
   // [baseFrame, baseFrame + count - 1]. `localDelta` is the sender's
-  // `simFrame - baseFrame` at the moment of send (range
-  // [0, count - 1]). `generation` is the sender's phase generation
-  // (Step 14); receivers drop packets from an older generation.
-  // Unreliable-sequenced — newer packets supersede older; receiver
-  // dedups against confirmed frames.
+  // `simFrame - baseFrame` at send time (range [0, count - 1]).
+  // `generation` is the sender's phase generation; receivers drop
+  // older generations. Unreliable-sequenced; receiver dedups against
+  // confirmed frames.
   void sendInputBatch(uint8_t generation, uint32_t baseFrame, uint8_t count,
                       uint8_t localDelta, uint8_t const* inputs);
   void sendChecksum(uint8_t generation, uint32_t frame, uint32_t checksum);
@@ -153,11 +145,10 @@ struct NetTransport {
 
   // Callbacks
   std::function<void(uint32_t frame, uint8_t input)> onRemoteInput;
-  // Rollback batched input arrival. `remoteLocalFrame` is the sender's
-  // simFrame at send time (= baseFrame + localDelta) — used by Step 8
-  // frame-advantage. `generation` is the sender's phase generation
-  // (Step 14). `inputs` is valid only for the duration of the callback;
-  // copy if you need to keep it.
+  // Rollback batched input arrival. `remoteLocalFrame` = sender's
+  // simFrame at send time (= baseFrame + localDelta) — used for
+  // frame-advantage tracking. `inputs` is valid only for the duration
+  // of the callback; copy if you need to keep it.
   std::function<void(uint8_t generation, uint32_t baseFrame, uint8_t count,
                      uint8_t const* inputs, uint32_t remoteLocalFrame)>
       onRemoteInputBatch;

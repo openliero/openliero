@@ -81,23 +81,22 @@ struct Game
 	void doHealing(Worm& w, int amount);
 	void postClone(Game& original, bool complete = false);
 
-	// Full mid-game state snapshot (rollback Step 1 baseline). Round-trips
-	// every sim-affecting field via cereal; see
-	// src/game/serialization/snapshot.hpp.
+	// Full mid-game state snapshot (cereal-based). Round-trips every
+	// sim-affecting field; correctness oracle for the fast path.
 	void saveSnapshot(std::vector<uint8_t>& out) const;
 	void loadSnapshot(std::vector<uint8_t> const& in);
 
-	// Fast in-memory snapshot path (rollback Step 2). Writes/reads directly
-	// into a pre-allocated GameSnapshot — no serialisation, no allocation in
-	// the steady state. See src/game/serialization/fast_snapshot.hpp.
+	// Fast in-memory snapshot path used by the rollback ring buffer.
+	// Writes/reads directly into a pre-allocated GameSnapshot — no
+	// serialisation, no allocation in the steady state.
 	void saveSnapshotFast(struct GameSnapshot& out) const;
 	void loadSnapshotFast(struct GameSnapshot const& in);
 
 	void spawnZone();
 
-	// Rollback Step 5: while speculative is true, sim-driven side effects
-	// (SoundPlayer::play/stop, StatsRecorder writes) are suppressed. Set
-	// during predicted frames and during resim. See docs/ideas/rollback.md.
+	// While speculative is true, sim-driven side effects
+	// (SoundPlayer::play/stop, StatsRecorder writes) are suppressed.
+	// Set during predicted frames and during rollback resim.
 	void setSpeculative(bool s)
 	{
 		speculative = s;
@@ -151,9 +150,9 @@ struct Game
 
 	bool quickSim;
 
-	// Rollback Step 5: true during predicted/resim frames. Mirrored onto
-	// soundPlayer/statsRecorder via setSpeculative(). Read by Game-internal
-	// code that wants to short-circuit a side effect at its source.
+	// True during predicted/resim frames. Mirrored onto soundPlayer /
+	// statsRecorder via setSpeculative(). Read by Game-internal code
+	// that short-circuits a side effect at its source.
 	bool speculative = false;
 };
 

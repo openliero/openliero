@@ -25,8 +25,8 @@ struct StatsRecorder
 
 	virtual void aiProcessTime(Worm* worm, std::chrono::nanoseconds time);
 
-	// Rollback: when true, all recording is suppressed. See
-	// docs/ideas/rollback.md "Side-effect suppression during prediction".
+	// When true, all recording is suppressed. Set during predicted /
+	// resim frames to avoid double-counting.
 	bool speculative = false;
 };
 

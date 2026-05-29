@@ -26,10 +26,9 @@ struct NetSession {
     Failed,          // Connection failed
   };
 
-  // The rollback / lockstep mode is read from `settings->useRollback`
-  // (Step 11c) — host-authoritative. The host's value is sent to the
-  // client via MatchSettingsData; the client picks it up before the
-  // controller is constructed in tryStartGame.
+  // Rollback / lockstep mode is read from `settings->useRollback`
+  // (host-authoritative; the host's value is sent to the client via
+  // MatchSettingsData before the controller is constructed).
   NetSession(std::shared_ptr<Common> common, std::shared_ptr<Settings> settings,
              FsNode tcRoot);
   ~NetSession();
@@ -125,10 +124,8 @@ struct NetSession {
   void generateAndSendMap();
   uint32_t computeSettingsHash() const;
 
-  // Setup helpers (Step 11b): build whichever controller is active for
-  // this session's mode, then wire its transport callbacks. The three
-  // game-start paths (tryStartGame, startRematch host, startRematchClient)
-  // all converge on these.
+  // Build whichever controller is active for this session's mode, then
+  // wire its transport callbacks. Shared by all game-start paths.
   void createController(int localIdx);
   void wireActiveController();
 
