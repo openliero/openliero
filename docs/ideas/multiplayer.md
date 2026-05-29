@@ -25,20 +25,22 @@ The game's replay system already implements lockstep: deterministic sim + per-fr
 ## Key Assumptions to Validate
 
 - [x] **Sim is fully deterministic given same seed + inputs** — Verified! Test harness runs two identical Game instances with random inputs for 1000 frames and confirms byte-identical state after each frame. No desync detected.
-- [ ] **No AI needed in network games** — If multiplayer is human-only, threaded AI non-determinism is irrelevant. If AI is needed, it must be made single-threaded/deterministic.
-- [ ] **State serialization is complete** — The replay serialization captures all sim-affecting state. Verify by: save state, advance N frames, restore state, advance N frames again → must match.
+- [x] **No AI needed in network games** — Confirmed: multiplayer is human-only; the network code paths never touch the AI threading.
+- [x] **State serialization is complete** — Verified by the rollback path itself: every frame, `RollbackBuffer` snapshots full sim state, restores it on misprediction, and resims to the same checksum. Any missing field would have surfaced as a wide-checksum mismatch by now.
 - [x] **UDP hole-punching is feasible for later** — Replaced with full ICE (libjuice + coturn). Handles all NAT types including symmetric NATs via TURN relay. See "Online connect flow" section below.
 
-## MVP Scope (Alpha)
+## MVP Scope (Alpha) — shipped
+
+> The Alpha MVP shipped via `NetworkController`; that controller has since been deleted (commit `bedef3f`) and the items below now live in `RollbackController` and the surrounding `src/game/net/` + `src/game/rollback/` code. Kept here as a record of what Alpha covered.
 
 ### In scope:
 
-- `NetworkController` — new controller type that exchanges inputs over UDP
+- `RollbackController` (formerly `NetworkController`) — controller type that exchanges inputs over UDP
 - Determinism audit + test harness (run two instances, verify frame-by-frame checksum match)
-- Fixed input delay buffer (configurable, default 3 frames)
-- Direct IP connection (one player hosts, other connects)
-- Connection setup UI (host/join with IP:port)
-- Periodic desync detection (checksum every N frames, disconnect on mismatch)
+- Fixed input delay buffer (configurable, default 3 frames; clamped to `kMaxRollback`)
+- Direct IP (LAN) connection plus ICE-based online connection via the signaling server
+- Connection setup UI (HOST/JOIN LAN and ONLINE)
+- Periodic desync detection (per-frame `wideRollbackChecksum`, disconnect on mismatch)
 - Human vs Human only (no AI in network games)
 
 ### Architecture:
@@ -75,7 +77,7 @@ The game's replay system already implements lockstep: deterministic sim + per-fr
 2. Player A: select **HOST LAN GAME** from the main menu — shows "HOSTING ON PORT 19532"
 3. Player B: select **JOIN LAN GAME**, type the host's IP address, press Enter
 4. Both see connection status, then the game starts automatically
-5. Press Escape during gameplay to disconnect and return to menu
+5. Press Escape during gameplay to open the pause menu (RESUME / END MATCH / DISCONNECT); the chosen action is mirrored on the peer
 
 ### Online (NAT traversal)
 
@@ -152,13 +154,18 @@ game logic.
 
 The `NetTransport` (`src/game/net/transport.hpp`) wraps ENet and provides:
 
-- **Three packet types:** `PacketInput` (6 bytes: type + frame + input), `PacketHandshake`
-  (9 bytes: type + seed + settingsHash), `PacketChecksum` (9 bytes: type + frame + checksum).
-  Additional types: `PacketPlayerInfo` (4), `PacketMatchSettings` (5), `PacketMapData` (6),
-  `PacketPause` (7), `PacketResume` (8), `PacketRematchReady` (9), `PacketRematchLevel` (10),
-  `PacketEndMatch` (11), `PacketTcInfo` (12), `PacketTcResponse` (13), `PacketTcData` (14).
-- **Two ENet channels:** Channel 0 = reliable ordered (inputs, handshake), Channel 1 =
-  unreliable (checksums — losing one is fine)
+- **Packet types (protocol v4):** `PacketInput` (1, legacy single-frame input from the
+  lockstep era — no longer emitted but the receiver still accepts it for compatibility),
+  `PacketHandshake` (2), `PacketChecksum` (3), `PacketPlayerInfo` (4), `PacketMatchSettings` (5),
+  `PacketMapData` (6), `PacketPause` (7), `PacketResume` (8), `PacketRematchReady` (9),
+  `PacketRematchLevel` (10), `PacketEndMatch` (11), `PacketTcInfo` (12),
+  `PacketTcResponse` (13), `PacketTcData` (14), `PacketInputBatch` (15 — K-wide redundant
+  window with generation byte and `localDelta` for frame-advantage tracking),
+  `PacketPeerLeft` (16 — clean disconnect notice; receiver routes straight to menu, skipping
+  the stats screen and the "PEER DISCONNECTED" InfoBox).
+- **Three ENet channels:** Channel 0 = reliable ordered (handshake, control packets,
+  end-match / peer-left), Channel 1 = unreliable (checksums — losing one is fine), Channel 2 =
+  unreliable + sequenced (rollback `PacketInputBatch`, where newer batches subsume older).
 - **Callback-based:** `onRemoteInput`, `onHandshake`, `onChecksum`, `onConnected`,
   `onDisconnected` callbacks drive the controller without polling
 - **Non-blocking poll:** `poll()` returns immediately; call it once per game frame
@@ -259,7 +266,9 @@ Two issues had to be resolved:
 - **Replay recording of network games** — the data is already available (frame inputs)
 - ~~**Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play~~ ✅ Shipped 2026-05-28.
 - ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ ✅ Implemented: STUN + signaling + hole-punch + relay fallback (see Online Connect Flow below)
-- **Graceful disconnection** — pause + timeout + forfeit instead of immediate exit
+- ~~**Synchronized end-of-match / disconnect** — both peers should leave at the same instant, not via socket-timeout~~ ✅ Shipped 2026-05-30 (`PacketPeerLeft` + clean-pause-on-EndMatch).
+- **Graceful disconnection on link loss** — pause + timeout + forfeit instead of immediate exit (clean disconnect via `PacketPeerLeft` is done; unexpected socket loss still kicks straight to the InfoBox)
+- **Adaptive input delay** — measure RTT and adjust `inputDelay` (currently fixed, host-authoritative, clamped to `kMaxRollback=7`)
 
 ### Map transfer (2026-05-17)
 
@@ -392,6 +401,18 @@ Setting `OPENLIERO_CHECKSUM_LOG=1` in the environment enables periodic stderr li
 
 Cost is one `getenv` per process boot (cached after first read) plus a few atomic increments. Kept enabled in production builds — when a user reports an online desync, the first ask is to re-run with this flag set and post the log tail. Lives in `src/game/net/session.cpp` and `src/game/net/transport.cpp`.
 
+### Pause / End match / Disconnect protocol (2026-05-30)
+
+Pause and end-of-match are mirrored across peers over the reliable channel so neither side ever sits in a stuck pause menu or stale "RESUME GAME" main-menu entry. The flow:
+
+- **Pause / Resume** (`PacketPause`, `PacketResume`): a peer opening its pause menu fires `onLocalPause` → `sendPause`; the other side sets `remotePaused_` and shows "PAUSED BY PEER / PRESS ESC TO DISCONNECT". Closing the menu fires `onLocalResume` → `sendResume`. `isPaused() = localPaused_ || remotePaused_` gates simulation on both sides.
+- **End match** (`PacketEndMatch`): the pause-menu "END MATCH" item sends Resume + EndMatch and then calls `endMatch()` locally. `endMatch()` transitions to `StateGameEnded`, sets `goingToMenu = true`, and now **clears `localPaused_`/`remotePaused_`** so the fade-out isn't blocked if the receiver was in its own pause menu when EndMatch arrived. Both sides route to the stats screen, then rematch.
+- **Disconnect** (`PacketPeerLeft`, new in protocol v4): the pause-menu "DISCONNECT" item — and the "remote paused + I press Escape" path — fires `onPeerLeft` → `sendPeerLeft` and then calls `peerLeft()` locally. `peerLeft()` clears pause flags, sets `goingToMenu = true` with `fadeValue = 0`, sets `resumable_ = false`, and intentionally does NOT transition to `StateGameEnded` (which would trigger `statsRecorder->finish()` and route the peer to the stats screen). Both sides land back in the main menu with no stats screen and no "PEER DISCONNECTED" InfoBox.
+- **Unexpected socket loss**: same outcome as before — `NetSession::Disconnected` is detected by `GamePlayState`, which calls `controller->markUnresumable()`, tears down the session, and replaces the state with the "PEER DISCONNECTED" InfoBox.
+- **`Controller::running()` / `markUnresumable()`**: the main menu shows "RESUME GAME" iff `controller->running()`. `RollbackController::running()` now also returns false when `resumable_` is cleared, so neither a clean disconnect nor a socket loss leaves a stale "RESUME GAME" entry pointing at a destroyed session.
+
+Wire format for `PacketPeerLeft` is one byte (type=16). Sent on the reliable channel. Protocol bumped to v4; older peers fail the version check at handshake.
+
 ### STUN external IP discovery (2026-05-19)
 
 When hosting a game, the "CONNECT USING:" screen now shows the host's external (public) IP
@@ -470,6 +491,27 @@ source IP, or longer codes.
 | Risk | Likelihood | Impact | Mitigation | Status |
 |------|-----------|--------|------------|--------|
 | Hidden non-determinism | ~~Medium~~ **Low** | Critical (desync) | Determinism + death fuzz test (5000+ frames per seed, 5 seeds) | ✅ Validated with fix |
-| Input delay feels bad at >80ms RTT | High | Medium (UX) | Document as "alpha limitation", plan rollback for Phase 2 | Pending |
+| Input delay feels bad at >80ms RTT | ~~High~~ **Low** | Medium (UX) | Rollback hides remote delay; local input is immediate | ✅ Mitigated by Phase 2 rollback |
 | NAT/firewall blocks connections | ~~High~~ **Low** | High (unusable) | ICE (libjuice) with TURN relay via coturn — handles all NAT types | ✅ Implemented |
 | Platform-specific fixed-point behavior | Low | Critical | Fixed-point is integer-based, should be identical; verify in harness | Pending (cross-platform CI) |
+
+## Next Steps
+
+The Phase 2 rollback work and the 2026-05-30 pause/disconnect cleanup leave the multiplayer system functionally complete for the originally scoped use case. The remaining work is mostly hardening, observability, and small UX gaps. In rough priority order:
+
+1. **Graceful handling of unexpected disconnects.** A clean DISCONNECT now mirrors across peers via `PacketPeerLeft`, but an actual link drop still kicks the surviving peer straight to an InfoBox. Add a short reconnect grace window (`NetSession::WaitingForPeer` re-entry?) before declaring the match dead. Files: `src/game/net/session.{cpp,hpp}`, `src/game/gamePlayState.cpp`.
+2. **Cross-platform determinism CI.** The "Platform-specific fixed-point behavior" risk is still Pending. Add a CI job that runs `test_determinism` (and ideally `test_rollback_lockstep_parity`) on Linux, macOS, and Windows runners and fails on any byte-level divergence. Files: `.github/workflows/*`, no source changes expected.
+3. **Replay recording of network games.** Per-frame inputs already flow through the rollback controller; capturing them to the existing replay format should be mostly plumbing. Files: `src/game/replay.cpp`, `src/game/controller/rollbackController.cpp`.
+4. **Adaptive `inputDelay`.** Today it's host-authoritative and fixed (default 3, clamped to `kMaxRollback=7`). Use the existing frame-advantage / RTT signal to nudge it within `[1, 7]` at match start. Avoid mid-match changes — they require re-running pre-fill. Files: `src/game/net/session.cpp`, `src/game/controller/rollbackController.cpp`.
+5. **Signaling server hardening.** Documented limitations (no auth, 30-bit room codes) are acceptable for now but worth revisiting if the server sees abuse: add per-IP rate limiting and HMAC-signed room codes. Files: `server/`.
+
+### What NOT to update
+
+Several sections of this document are historical and should be preserved rather than rewritten:
+
+- **Dated "Learnings" subsections** (2026-05-17 through 2026-05-30). They record the decision *and the rationale* behind it. Even when the code they refer to has moved (e.g. `NetworkController` → `RollbackController`), the lesson is still load-bearing — leave them in place and add a forward-pointer at the top if needed rather than editing in-place.
+- **"Not Doing (and Why)" section.** It captures explicit out-of-scope decisions. Tick items off as they ship, but don't delete entries — the "why" is the value.
+- **"Answered open questions"**, struck-through items in Future Work, and crossed-out risks in the Risk Assessment. They're the audit trail showing how the design converged.
+- **The Phase 1 vs Phase 2 framing in "Recommended Direction".** Both phases are useful context for a reader landing cold on this doc — Phase 1 shows where the design started, Phase 2 shows where it ended up.
+
+If a section is genuinely outdated (e.g. references a deleted class as if it still exists), prefer adding a short "Superseded by …" callout at the top of that section over rewriting its body.
