@@ -485,6 +485,46 @@ void RollbackController::loadWeaponSelectSnap(WeaponSelectSnap const& snap) {
   remoteHeldFrames = snap.remoteHeldFrames;
 }
 
+void RollbackController::resetForGamePhase() {
+  // Input ring — both peers' frames and the readiness flags. After the
+  // bump, frame 0 is the first game-phase frame and must not see a
+  // pre-bump "ready" flag inherited from WS.
+  localInputs.fill(0);
+  remoteInputs.fill(0);
+  remoteInputReady.fill(false);
+
+  // Frame counters and confirmation state. Match the controller's
+  // initial values from the constructor — frame 0 is the seed, no
+  // frame is yet confirmed, no batch has been sent.
+  simFrame = 0;
+  confirmedSimFrame_ = -1;
+  lastSentFrame = UINT32_MAX;
+  lastRemoteInput_ = 0;
+  lastKnownRemoteFrame_ = -1;
+
+  // Edge-detection state for both peers' control bytes. Carrying these
+  // across the phase boundary would produce a spurious "rising" or
+  // "released" edge on the first game-phase frame.
+  localPrevInput = 0;
+  remotePrevInput = 0;
+  localHeldFrames.fill(0);
+  remoteHeldFrames.fill(0);
+
+  // Rollback ring. clear() resets every slot's frame to -1 and
+  // wsSnap.valid to false so a game-phase rollback can never target a
+  // WS slot. Snapshot vector capacities are kept (sized by prepare()).
+  rollbackBuffer_.clear();
+
+  // Per-tick resim counter — the dev HUD reads this once per process()
+  // and a leftover value from the last WS tick would briefly mis-paint
+  // the indicator on the first game tick.
+  lastTickResimFrames_ = 0;
+
+  // Step 14 — the generation bump is what makes the wire layer drop
+  // any pre-transition batches still in flight from the peer.
+  ++generation_;
+}
+
 void RollbackController::finishWeaponSelect() {
   // Idempotent — only the first call from inside StateWeaponSelection
   // does any work.

@@ -143,6 +143,10 @@ struct RollbackController : CommonController {
   // path (that path is Task 14.4's job). Production code never calls
   // this; the generation bump happens inside resetForGamePhase().
   void setGenerationForTest(uint8_t g) { generation_ = g; }
+  // Test-only — exposes the private Step 14 Task 14.3 reset path so
+  // its unit test can drive it directly before Task 14.4 wires it into
+  // finishWeaponSelect.
+  void resetForGamePhaseForTest() { resetForGamePhase(); }
   // Test introspection: how many remote batches we dropped because
   // their generation was older than ours. Lets the unit test assert
   // the drop actually fired.
@@ -195,6 +199,13 @@ struct RollbackController : CommonController {
   // via the state check.
   void finishWeaponSelect();
   void sendInputWindow(uint32_t newestFrame, uint32_t localFrame);
+  // Step 14 Task 14.3 — full controller state reset for a phase
+  // transition. Clears the input ring, snapshot ring, frame counters,
+  // and edge-detection state; bumps generation_. Centralised so the
+  // WS→game transition (Task 14.4) doesn't have to enumerate every
+  // field, and so future phase transitions (rematch, etc.) can reuse
+  // the same path. Public test-only entry via resetForGamePhaseForTest.
+  void resetForGamePhase();
 
   int localIdx;
   int remoteIdx;

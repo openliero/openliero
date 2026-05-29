@@ -534,17 +534,17 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 **Phase 2 — Controller reset at transition**
 
-#### Task 14.3: Add `resetForGamePhase()` helper to RollbackController
+#### Task 14.3: Add `resetForGamePhase()` helper to RollbackController — ✅ done
 **Description:** Single helper that performs the full state reset for entering game phase. Called from `finishWeaponSelect`. Centralizing it avoids subtle leftover state.
 
 **Acceptance criteria:**
-- [ ] New private method clears: `localInputs.fill(0)`, `remoteInputs.fill(0)`, `remoteInputReady.fill(false)`, `simFrame=0`, `confirmedSimFrame_=-1`, `lastSentFrame=UINT32_MAX`, `lastRemoteInput_=0`, `lastKnownRemoteFrame_=-1`, `localPrevInput=0`, `remotePrevInput=0`, `localHeldFrames.fill(0)`, `remoteHeldFrames.fill(0)`.
-- [ ] Rollback ring buffer is rewritten/invalidated so no slot has `wsSnap.valid=true` (game-phase rollback never targets a wsSnap slot, but be explicit).
-- [ ] `generation_` is incremented.
+- [x] New private method clears: `localInputs.fill(0)`, `remoteInputs.fill(0)`, `remoteInputReady.fill(false)`, `simFrame=0`, `confirmedSimFrame_=-1`, `lastSentFrame=UINT32_MAX`, `lastRemoteInput_=0`, `lastKnownRemoteFrame_=-1`, `localPrevInput=0`, `remotePrevInput=0`, `localHeldFrames.fill(0)`, `remoteHeldFrames.fill(0)`. (Also `lastTickResimFrames_=0` — see Learnings.)
+- [x] Rollback ring buffer is rewritten/invalidated so no slot has `wsSnap.valid=true` (via the existing `RollbackBuffer::clear()` — every slot's frame goes back to -1 and wsSnap.valid to false).
+- [x] `generation_` is incremented.
 
 **Verification:**
-- [ ] After `finishWeaponSelect`, `currentFrame() == 0`, `confirmedFrame() == -1`, `generation_ == previous+1`.
-- [ ] No existing test breaks: existing tests assert transition behavior in terms of `gameState() == StateGame` and weapon picks, not in terms of simFrame value.
+- [x] After `resetForGamePhase()`, `currentFrame() == 0`, `confirmedFrame() == -1`, `generation_ == previous+1`. (Wiring into `finishWeaponSelect` is Task 14.4.)
+- [x] No existing test breaks: 125/125 still pass. Helper is defined but not yet called from production — verification of the post-`finishWeaponSelect` shape lands with Task 14.4.
 
 **Dependencies:** 14.1, 14.2.
 
@@ -748,6 +748,14 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.3 — resetForGamePhase helper (2026-05-29)
+
+- Defined `RollbackController::resetForGamePhase()` as a private method that clears every field the plan enumerates plus one not in the original list — `lastTickResimFrames_`. Reason: it's read once per `process()` by the dev HUD overlay; a leftover value from the last WS tick would mis-paint the indicator on the first game tick. Cheap to clear, easy to miss.
+- Used the existing `RollbackBuffer::clear()` instead of an ad-hoc loop. That method already invalidates every `wsSnap.valid` and resets `frame` to -1, which is exactly the "no slot has a wsSnap" invariant the plan asks for. Avoids open-coding the same loop a second time.
+- Did **not** wire the helper into `finishWeaponSelect` — that's Task 14.4's scope. The helper is callable today via `resetForGamePhaseForTest()` (a thin public shim) so the unit test can drive it directly without a full WS-completion fixture. Production wiring + seed-snapshot reordering happens together in 14.4, where they have to land atomically to keep `test_session_rollback` green.
+- Test `resetForGamePhase clears controller state and bumps generation` in `test_rollback_generation_drop.cpp` drives a controller past frame 0 (sim ticks + a batched packet), captures the pre-reset generation, runs the helper, and asserts all the post-conditions (frames back to 0/-1/sentinel, ring empty, generation bumped). The "and the new generation took effect" tail asserts: a batch tagged with `prevGen` is dropped, a batch tagged with `prevGen+1` is accepted. That last bit ties Task 14.3 to Task 14.2's filter — the helper isn't useful unless the bumped generation actually changes the filter behaviour.
+- Files: `src/game/controller/rollbackController.{hpp,cpp}` (helper + test-only public shim), `src/tests/test_rollback_generation_drop.cpp` (new TEST_CASE).
 
 ### Step 14 Task 14.2 — Generation plumbed through controller (2026-05-29)
 

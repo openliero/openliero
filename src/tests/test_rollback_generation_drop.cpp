@@ -87,3 +87,59 @@ TEST_CASE("Rollback controller drops batches from an older generation",
     REQUIRE(a.lastKnownRemoteFrame() == -1);
   }
 }
+
+// Step 14 Task 14.3 — the centralised phase-transition reset must clear
+// every piece of state listed in the plan so the post-bump game phase
+// starts from a known-empty baseline. Task 14.4 wires this into
+// finishWeaponSelect; here we drive the helper directly and assert.
+TEST_CASE("resetForGamePhase clears controller state and bumps generation",
+          "[rollback][generation]") {
+  auto [common, settings] = makeEnv();
+  RollbackController c(common, settings, 0);
+  c.setSkipWeaponSelection(true);
+  c.game.rand.seed(0xC0FFEE);
+  c.focus();
+
+  // Drive a handful of frames so simFrame, confirmedFrame, the rollback
+  // ring, lastKnownRemoteFrame, etc. are non-default. Seed remote inputs
+  // for the input-delay window so frames advance as confirmed.
+  for (uint32_t f = 0; f < 16; ++f) c.injectRemoteInput(f, 0);
+  for (int i = 0; i < 10; ++i) {
+    c.setLocalControlState(0);
+    c.process();
+  }
+  // Also feed a batched packet so lastKnownRemoteFrame advances.
+  uint8_t bytes[2] = {0, 0};
+  c.injectRemoteBatch(/*generation=*/0, /*baseFrame=*/8, /*count=*/2, bytes,
+                      /*remoteLocalFrame=*/9);
+
+  REQUIRE(c.currentFrame() > 0);
+  REQUIRE(c.confirmedFrame() >= 0);
+  REQUIRE(c.lastKnownRemoteFrame() >= 0);
+  REQUIRE_FALSE(c.rollbackBuffer().empty());
+  uint8_t prevGen = c.generation();
+
+  c.resetForGamePhaseForTest();
+
+  REQUIRE(c.currentFrame() == 0);
+  REQUIRE(c.confirmedFrame() == -1);
+  REQUIRE(c.lastKnownRemoteFrame() == -1);
+  REQUIRE(c.lastTickResimFrames() == 0);
+  REQUIRE(c.generation() == static_cast<uint8_t>(prevGen + 1));
+  // Ring is empty: no slot can be looked up by frame, oldest/newest
+  // sentinel back to -1.
+  REQUIRE(c.rollbackBuffer().empty());
+  REQUIRE(c.rollbackBuffer().newestFrame() == -1);
+  REQUIRE(c.rollbackBuffer().oldestFrame() == -1);
+
+  // And the post-reset filter accepts gen-1 (= prevGen+1) batches but
+  // drops gen-prevGen ones — proving the new generation took effect.
+  c.injectRemoteBatch(prevGen, /*baseFrame=*/0, /*count=*/2, bytes,
+                      /*remoteLocalFrame=*/1);
+  REQUIRE(c.droppedOldGenerationBatches() >= 1);
+  REQUIRE(c.confirmedFrame() == -1);
+
+  c.injectRemoteBatch(static_cast<uint8_t>(prevGen + 1), /*baseFrame=*/0,
+                      /*count=*/2, bytes, /*remoteLocalFrame=*/1);
+  REQUIRE(c.lastKnownRemoteFrame() == 1);
+}
