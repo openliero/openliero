@@ -381,6 +381,17 @@ Wired up the existing `PacketChecksum` transport to actually send/compare checks
 - `NetSession::onChecksum()` compares local vs remote, sets `desyncDetected_` flag
 - `GamePlayState` shows "DESYNC AT FRAME N" message and logs to stderr
 
+The rollback path uses `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) instead of the narrower `fastGameChecksum`; the replay format keeps `fastGameChecksum` so existing recordings remain valid. See `docs/ideas/rollback.md` Step 13.
+
+### Debug instrumentation: OPENLIERO_CHECKSUM_LOG (2026-05-29)
+
+Setting `OPENLIERO_CHECKSUM_LOG=1` in the environment enables periodic stderr lines from `NetSession` and `NetTransport` to help diagnose online desync / transport issues without a rebuild:
+
+- `[checksum local]` / `[checksum remote]` — printed once per ~70 events (~1s at 70 Hz) by `NetSession::onChecksum` / `onLocalChecksum`. Shows the running counter, frame number, and 32-bit checksum value. The two streams should track within a tick of each other on a healthy session.
+- `[transport rx]` — printed once per ~140 packets by `NetTransport::poll`. Breaks the rx stream down into `input=`, `batch=`, `checksum=`, `other=` counters so you can tell whether a particular packet type is reaching the wire at all (vs being lost in the ICE bridge or never sent).
+
+Cost is one `getenv` per process boot (cached after first read) plus a few atomic increments. Kept enabled in production builds — when a user reports an online desync, the first ask is to re-run with this flag set and post the log tail. Lives in `src/game/net/session.cpp` and `src/game/net/transport.cpp`.
+
 ### STUN external IP discovery (2026-05-19)
 
 When hosting a game, the "CONNECT USING:" screen now shows the host's external (public) IP

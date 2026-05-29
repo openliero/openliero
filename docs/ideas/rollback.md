@@ -457,7 +457,7 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 **This step makes the simFrame-skew bug (Step 14) visible. It does not fix it.**
 
-### Step 14 — Fix WS→game simFrame skew — ⏳ planned
+### Step 14 — Fix WS→game simFrame skew — ✅ done
 
 **Problem.** Two peers' `simFrame` counters can advance at different rates during the WS phase (asymmetric `kFrameAdvantage` stalls + asymmetric WS rollback resims), so they enter `StateGame` at different simFrame indices. Reproduced in the user's two-binary ICE run: host transitioned at `simFrame=602`, client at `simFrame=600`, with byte-identical seed snapshots. After transition both peers' "frame N" refers to a different number of `processFrame` calls from the same seed — so the cached/sent checksums for frame N reflect different states, and the in-game terrain destruction visibly diverges. Step 13's detection now fires on this divergence (verified by user log: `DESYNC DETECTED at frame 555! local=35c6dd7a remote=1ab60ea4`); Step 14 fixes the root cause.
 
@@ -675,14 +675,12 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 
 **Phase 5 — Cleanup**
 
-#### Task 14.9: Decide fate of OPENLIERO_CHECKSUM_LOG
-**Description:** Once Step 14 lands, decide whether to keep the env-flag instrumentation indefinitely (useful for future ICE/transport debugging) or remove it.
+#### Task 14.9: Decide fate of OPENLIERO_CHECKSUM_LOG — ✅ done
+**Decision:** Keep. Task 14.8 paid the keep-it argument off immediately — the smoke test verification was only possible because the instrumentation was already there. Removing it now would re-introduce the "rebuild to debug an online issue" friction that made Step 13 itself hard.
 
 **Acceptance criteria:**
-- [ ] Decision recorded in this doc.
-- [ ] If keeping: brief mention added to `docs/multiplayer.md` debug-flags section. If removing: clean up the `getenv` / counter code in `session.cpp` and `transport.cpp`.
-
-**Recommendation:** Keep it. Cost is one `getenv` per process boot + a few atomic increments; the value of having this on hand for the next user-reported online desync is high.
+- [x] Decision recorded here.
+- [x] Brief mention added to `docs/ideas/multiplayer.md` under a new "Debug instrumentation: OPENLIERO_CHECKSUM_LOG" learning entry, documenting both the `[checksum local|remote]` and `[transport rx]` line formats, the cost rationale (one `getenv` per process + a few atomic increments), and the code locations.
 
 **Dependencies:** 14.8.
 
@@ -691,9 +689,9 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
 ---
 
 ### Checkpoint: Complete
-- [ ] All acceptance criteria met.
-- [ ] User confirmed via Task 14.8.
-- [ ] Doc Learnings entry written for Step 14.
+- [x] All acceptance criteria met across Tasks 14.1–14.9.
+- [x] User confirmed via Task 14.8 (Release binary over ICE, no DESYNC across an active match).
+- [x] Doc Learnings entries written for each task (14.1 through 14.9).
 
 ---
 
@@ -747,6 +745,14 @@ Adds `OPENLIERO_CHECKSUM_LOG=1` periodic counters in `NetSession` + `NetTranspor
   - well under the 2 ms threshold the plan flagged as the trigger for pulling Step 2 forward, so we don't need to.
 - Debug build is ~10× slower (save 549 µs, load 2.4 ms). Worth running snapshot tests under Release if they become slow.
 - New: `src/game/serialization/snapshot.hpp`, `Game::saveSnapshot/loadSnapshot` in `game.cpp`/`game.hpp`, `src/tests/test_snapshot_roundtrip.cpp` (correctness + microbench).
+
+### Step 14 Task 14.9 — Keep OPENLIERO_CHECKSUM_LOG (2026-05-29)
+
+- Decision: keep the env-flag instrumentation in place indefinitely. The Task 14.8 smoke test would have been a guessing game without it — the user couldn't have confirmed "the fix works" without seeing the local/remote checksum streams converge in real time. That value paid the keep-it cost (one cached `getenv` + a few atomic increments) many times over in a single use.
+- Documentation lives in `docs/ideas/multiplayer.md` under a new "Debug instrumentation: OPENLIERO_CHECKSUM_LOG" subsection. Two line formats described — the `[checksum local|remote]` pair from `NetSession` and the `[transport rx]` per-type counter from `NetTransport` — plus the code locations so the next person debugging an online issue can find where to look. Put it next to the Runtime desync detection entry so the chain "detect → diagnose" reads naturally.
+- Also took the opportunity to backfill a missing note in the Runtime desync detection learning that the rollback path now uses `wideRollbackChecksum` (Step 13's switch), pointing at the rollback doc for the rationale. The two docs were drifting; this re-stitches them.
+- No code change for 14.9. Pure doc work that closes the Step 14 verification loop.
+- Files: `docs/ideas/multiplayer.md` (new debug-instrumentation subsection + the rollback-checksum cross-reference), `docs/ideas/rollback.md` (task + checkpoint marked ✅, Step 14 header flipped to ✅).
 
 ### Step 14 Task 14.8 — Two-binary ICE smoke test (2026-05-29)
 
