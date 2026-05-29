@@ -73,7 +73,7 @@ The game's replay system already implements lockstep: deterministic sim + per-fr
 
 ### LAN / Direct IP
 
-1. Both players configure match settings (Match Setup) before connecting
+1. The host configures match settings (Match Setup) before connecting — host settings are authoritative and overwrite the client's on connect
 2. Player A: select **HOST LAN GAME** from the main menu — shows "HOSTING ON PORT 19532"
 3. Player B: select **JOIN LAN GAME**, type the host's IP address, press Enter
 4. Both see connection status, then the game starts automatically
@@ -81,12 +81,12 @@ The game's replay system already implements lockstep: deterministic sim + per-fr
 
 ### Online (NAT traversal)
 
-1. Player A: select **HOST ONLINE** — discovers external IP via STUN, creates a room on the signaling server, and displays a 6-character room code
+1. Player A: select **HOST ONLINE** — creates a room on the signaling server and displays a 6-character room code
 2. Player B: select **JOIN ONLINE**, type the room code, press Enter
-3. Both peers perform STUN to learn their external address+port, then report addresses to the signaling server
-4. The server signals both peers to begin UDP hole-punching simultaneously
-5. If hole-punch succeeds → direct peer-to-peer connection (same as LAN)
-6. If hole-punch fails → server allocates a UDP relay port and both peers connect through it (higher latency)
+3. Both peers gather ICE candidates via libjuice (host, server-reflexive through STUN, and relayed through TURN) and exchange them through the signaling server
+4. libjuice runs connectivity checks across all candidate pairs; the first working pair wins
+5. If a direct (host or srflx) pair succeeds → peer-to-peer connection (same latency as LAN)
+6. If only the TURN-relayed pair works → traffic transits the relay (higher latency, but works through any NAT/firewall)
 7. Press Escape at any point to cancel and return to menu
 
 ## Not Doing (and Why)
@@ -262,7 +262,7 @@ Two issues had to be resolved:
 
 ## Future Work
 
-- ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `fastGameChecksum()` sent every frame, compared on receipt
+- ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) sent every advanced frame, compared on receipt. Replay format still uses `fastGameChecksum` for compatibility.
 - **Replay recording of network games** — the data is already available (frame inputs)
 - ~~**Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play~~ ✅ Shipped 2026-05-28.
 - ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ ✅ Implemented: STUN + signaling + hole-punch + relay fallback (see Online Connect Flow below)
