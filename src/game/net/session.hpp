@@ -99,6 +99,7 @@ struct NetSession {
   void onPause();
   void onResume();
   void onRemoteEndMatch();
+  void onRemotePeerLeft();
   void onRematchReady(bool ready);
   void onRematchLevel(bool randomLevel, std::string levelFile);
   void onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,

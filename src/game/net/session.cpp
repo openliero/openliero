@@ -64,6 +64,7 @@ void NetSession::wireActiveController() {
   auto pauseCb = [this]() { transport_.sendPause(); };
   auto resumeCb = [this]() { transport_.sendResume(); };
   auto endMatchCb = [this]() { transport_.sendEndMatch(); };
+  auto peerLeftCb = [this]() { transport_.sendPeerLeft(); };
 
   rollback_->setInputCallbacks(
       [this](uint8_t generation, uint32_t baseFrame, uint8_t count,
@@ -78,6 +79,7 @@ void NetSession::wireActiveController() {
   rollback_->setChecksumCallback(checksumCb);
   rollback_->setPauseCallbacks(pauseCb, resumeCb);
   rollback_->setEndMatchCallback(endMatchCb);
+  rollback_->setPeerLeftCallback(peerLeftCb);
 }
 
 Game& NetSession::activeGame() {
@@ -362,6 +364,10 @@ void NetSession::onRemoteEndMatch() {
   if (rollbackPtr_) rollbackPtr_->endMatch();
 }
 
+void NetSession::onRemotePeerLeft() {
+  if (rollbackPtr_) rollbackPtr_->peerLeft();
+}
+
 void NetSession::sendPause() {
   transport_.sendPause();
 }
@@ -394,6 +400,7 @@ void NetSession::wireCallbacks() {
   transport_.onPause = [this]() { onPause(); };
   transport_.onResume = [this]() { onResume(); };
   transport_.onEndMatch = [this]() { onRemoteEndMatch(); };
+  transport_.onPeerLeft = [this]() { onRemotePeerLeft(); };
   transport_.onChecksum = [this](uint8_t generation, uint32_t frame,
                                  uint32_t checksum) {
     onChecksum(generation, frame, checksum);

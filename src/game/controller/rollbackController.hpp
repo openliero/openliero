@@ -76,7 +76,11 @@ struct RollbackController : CommonController {
   }
 
   void setEndMatchCallback(std::function<void()> cb) { onEndMatch = std::move(cb); }
+  void setPeerLeftCallback(std::function<void()> cb) { onPeerLeft = std::move(cb); }
   void endMatch();
+  // Used by both the local "Disconnect" pause menu option and the wire
+  // PeerLeft handler: drop to the menu without finalizing stats.
+  void peerLeft();
 
   void setSkipWeaponSelection(bool skip) { skipWeaponSelection = skip; }
 
@@ -201,6 +205,7 @@ struct RollbackController : CommonController {
   std::function<void()> onLocalPause;
   std::function<void()> onLocalResume;
   std::function<void()> onEndMatch;
+  std::function<void()> onPeerLeft;
 
   std::unique_ptr<WeaponSelection> ws;
 

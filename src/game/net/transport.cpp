@@ -362,6 +362,9 @@ bool NetTransport::poll() {
             case PacketEndMatch:
               if (onEndMatch) onEndMatch();
               break;
+            case PacketPeerLeft:
+              if (onPeerLeft) onPeerLeft();
+              break;
             case PacketTcInfo:
               if (len >= 5 && onTcInfo) {
                 uint32_t hash;
@@ -526,6 +529,11 @@ void NetTransport::sendRematchLevel(bool randomLevel, const std::string& levelFi
 
 void NetTransport::sendEndMatch() {
   uint8_t buf[1] = {PacketEndMatch};
+  sendPacket(buf, sizeof(buf));
+}
+
+void NetTransport::sendPeerLeft() {
+  uint8_t buf[1] = {PacketPeerLeft};
   sendPacket(buf, sizeof(buf));
 }
 

@@ -252,9 +252,11 @@ void RollbackController::onKey(int key, bool keyState) {
       localPaused_ = false;
       if (onLocalResume) onLocalResume();
     } else if (remotePaused_ && !goingToMenu) {
-      remotePaused_ = false;
-      fadeValue = 0;
-      goingToMenu = true;
+      // Remote is paused, local Escapes — treat as a disconnect so the
+      // peer learns and tears down in lockstep instead of waiting for
+      // socket timeout.
+      if (onPeerLeft) onPeerLeft();
+      peerLeft();
     } else if (!goingToMenu) {
       localPaused_ = true;
       pauseMenu_.moveToFirstVisible();
@@ -347,9 +349,9 @@ bool RollbackController::process() {
           if (onEndMatch) onEndMatch();
           endMatch();
         } else {
-          localPaused_ = false;
-          fadeValue = 0;
-          goingToMenu = true;
+          if (onLocalResume) onLocalResume();
+          if (onPeerLeft) onPeerLeft();
+          peerLeft();
         }
       }
     }
@@ -1017,5 +1019,20 @@ void RollbackController::endMatch() {
     state = StateGameEnded;
     goingToMenu = true;
     fadeValue = 33;
+    // Clear pause flags so the goingToMenu fade isn't gated by either
+    // peer still being in their own pause menu when EndMatch arrives.
+    localPaused_ = false;
+    remotePaused_ = false;
   }
+}
+
+void RollbackController::peerLeft() {
+  // Mirrors the local Disconnect pause-menu branch: skip the fade and
+  // do NOT transition to StateGameEnded — that keeps statsRecorder
+  // unfinalized so the host loop routes us back to the menu rather
+  // than to the stats screen.
+  localPaused_ = false;
+  remotePaused_ = false;
+  fadeValue = 0;
+  goingToMenu = true;
 }

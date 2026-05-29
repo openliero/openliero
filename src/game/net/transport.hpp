@@ -17,7 +17,7 @@ struct IceAgent;
 struct NetTransport {
   // Peers running a different version handshake-mismatch and disconnect
   // rather than play with mismatched packet semantics.
-  static constexpr uint8_t kProtocolVersion = 3;
+  static constexpr uint8_t kProtocolVersion = 4;
 
   // Packet types
   enum PacketType : uint8_t {
@@ -42,6 +42,10 @@ struct NetTransport {
     // for frame-advantage tracking; `gen` lets the receiver drop
     // pre-transition packets after a WS→game reset.
     PacketInputBatch = 15,
+    // Sender is leaving the match (pause menu "Disconnect"). Receiver
+    // should drop back to the menu without showing stats or a
+    // "peer disconnected" InfoBox.
+    PacketPeerLeft = 16,
   };
 
   struct PlayerInfo {
@@ -130,6 +134,7 @@ struct NetTransport {
   void sendRematchReady(bool ready);
   void sendRematchLevel(bool randomLevel, const std::string& levelFile);
   void sendEndMatch();
+  void sendPeerLeft();
   void sendTcInfo(uint32_t hash, const std::string& name);
   void sendTcResponse(bool needData);
   void sendTcData(const void* data, size_t len);
@@ -160,6 +165,7 @@ struct NetTransport {
   std::function<void(bool ready)> onRematchReady;
   std::function<void(bool randomLevel, std::string levelFile)> onRematchLevel;
   std::function<void()> onEndMatch;
+  std::function<void()> onPeerLeft;
   std::function<void(uint32_t hash, std::string name)> onTcInfo;
   std::function<void(bool needData)> onTcResponse;
   std::function<void(const void* data, size_t len)> onTcData;

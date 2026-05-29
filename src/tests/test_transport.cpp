@@ -413,5 +413,5 @@ TEST_CASE("Transport rejects handshake with wrong protocol version",
 
   // Now also confirm the constant lines up — the test would silently
   // pass against any version if this slipped to a stale value.
-  REQUIRE(NetTransport::kProtocolVersion == 3);
+  REQUIRE(NetTransport::kProtocolVersion == 4);
 }
