@@ -86,8 +86,14 @@ struct RollbackController : CommonController {
   uint32_t currentFrame() const { return simFrame; }
   GameState gameState() const { return state; }
   void setLocalControlState(uint8_t packed) { localControlState.unpack(packed); }
-  // Must be called before the first sim tick.
-  void setInputDelay(uint32_t frames) { inputDelay = frames; }
+  // Must be called before the first sim tick. Clamped to kMaxRollback:
+  // the send path encodes (localFrame - baseFrame) as a uint8_t equal to
+  // (K-1) - inputDelay, which underflows once inputDelay exceeds K-1.
+  void setInputDelay(uint32_t frames) {
+    inputDelay = frames > rollback::kMaxRollback
+                     ? static_cast<uint32_t>(rollback::kMaxRollback)
+                     : frames;
+  }
 
   rollback::RollbackBuffer const& rollbackBuffer() const { return rollbackBuffer_; }
 

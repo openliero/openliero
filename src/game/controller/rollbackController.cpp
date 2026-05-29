@@ -505,6 +505,11 @@ void RollbackController::resetForGamePhase() {
 
   // The generation bump is what makes the wire layer drop any
   // pre-transition batches still in flight from the peer.
+  // generation_ is uint8_t and wraps. After 256 WS->game transitions an
+  // ancient stale batch could collide with generation_+1 in
+  // injectRemoteBatch; not reachable in any real match (one WS phase per
+  // round) but worth knowing if this ever gets wired into a longer-lived
+  // session.
   ++generation_;
 
   // Drain anything we buffered while the peer ran ahead. Re-feeding
@@ -559,6 +564,8 @@ void RollbackController::advanceWeaponSelection() {
   uint32_t inputFrame = simFrame + inputDelay;
   if (inputFrame != lastSentFrame) {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
+    // Mask to the 7 ControlState bits (Up/Down/Left/Right/Fire/Change/
+    // Jump); bit 7 is reserved and must not leak onto the wire.
     localInputs[slot] = localControlState.pack() & 0x7f;
     lastSentFrame = inputFrame;
   }
@@ -730,6 +737,8 @@ void RollbackController::advanceSimulation() {
   uint32_t inputFrame = simFrame + inputDelay;
   if (inputFrame != lastSentFrame) {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
+    // Mask to the 7 ControlState bits (Up/Down/Left/Right/Fire/Change/
+    // Jump); bit 7 is reserved and must not leak onto the wire.
     localInputs[slot] = localControlState.pack() & 0x7f;
     lastSentFrame = inputFrame;
   }

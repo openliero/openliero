@@ -44,6 +44,13 @@ NetSession::~NetSession() {
 }
 
 void NetSession::createController(int localIdx) {
+  // Wire protocol caps inputDelay at kMaxRollback (see setInputDelay).
+  // Clamp the settings value too so pre-fill loops below stay in sync
+  // with the controller.
+  if (settings_->inputDelay < 0)
+    settings_->inputDelay = 0;
+  else if (settings_->inputDelay > rollback::kMaxRollback)
+    settings_->inputDelay = rollback::kMaxRollback;
   rollback_ = std::make_unique<RollbackController>(common_, settings_, localIdx);
   rollback_->setInputDelay(static_cast<uint32_t>(settings_->inputDelay));
 }
