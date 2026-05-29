@@ -162,3 +162,13 @@ bool checkRespawnPosition(Game& game, int x2, int y2, int oldX, int oldY, int x,
 // Lightweight checksum of game state for desync detection.
 // Covers RNG state + worm positions/velocities.
 uint32_t fastGameChecksum(Game& game);
+
+// Wider checksum used by the rollback path. Same wire format (uint32) as
+// fastGameChecksum but folds in projectile pools, worm health/lives,
+// level damage, and other sim state the fast checksum ignores. The
+// rollback controller's checksum send path uses this so visible-but-
+// silent desyncs (e.g. mid-air projectile divergence with worm pos
+// still matching) trip the receiver's checksum comparison instead of
+// going undetected. Replay uses fastGameChecksum only — leaving the
+// replay format untouched.
+uint32_t wideRollbackChecksum(Game& game);

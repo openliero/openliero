@@ -6,6 +6,7 @@
 #include "../spectatorviewport.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <miniz.h>
 
@@ -517,7 +518,7 @@ void RollbackController::finishWeaponSelect() {
   // the slot was repurposed, but be explicit.)
   seed.wsSnap.valid = false;
   game.saveSnapshotFast(seed.snapshot);
-  seed.checksum = fastGameChecksum(game);
+  seed.checksum = wideRollbackChecksum(game);
 }
 
 void RollbackController::advanceWeaponSelection() {
@@ -839,7 +840,7 @@ void RollbackController::advanceSimulation() {
           ? rollback::RemoteState::Predicted
           : rollback::RemoteState::Confirmed;
       game.saveSnapshotFast(outSlot.snapshot);
-      outSlot.checksum = fastGameChecksum(game);
+      outSlot.checksum = wideRollbackChecksum(game);
 
       // Step 10: emit checksum at resim-confirmation time. Predicted
       // resim frames stay silent — their checksum is cached for a later
@@ -939,7 +940,7 @@ void RollbackController::advanceSimulation() {
     // or not. The send below only fires for !predicted; predicted slots
     // hold their cached value until a later promote or resim pass
     // confirms them, at which point that pass emits the cached value.
-    slot.checksum = fastGameChecksum(game);
+    slot.checksum = wideRollbackChecksum(game);
 
     // !predicted implies the chain is contiguous through simFrame-1, so
     // this checksum reflects state that the remote peer has also fully

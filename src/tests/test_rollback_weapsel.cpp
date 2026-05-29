@@ -347,6 +347,7 @@ TEST_CASE("Weapon select transitions cleanly under jitter",
               b->game.worms[i]->settings->weapons[j]);
     }
   }
+
   REQUIRE(fastGameChecksum(a->game) == fastGameChecksum(b->game));
 
   // Vacuity guard: jitter must have caused at least some prediction

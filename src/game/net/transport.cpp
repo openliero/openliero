@@ -1,6 +1,7 @@
 #include "transport.hpp"
 #include "iceAgent.hpp"
 
+#include <cstdlib>
 #include <cstring>
 #include <cstdio>
 #include <atomic>
@@ -233,6 +234,38 @@ bool NetTransport::poll() {
         if (len > MaxPacketSize) {
           enet_packet_destroy(event.packet);
           break;
+        }
+
+        // Behind OPENLIERO_CHECKSUM_LOG=1: count received packet types
+        // so we can tell whether checksum packets are reaching the wire
+        // at all (vs being lost in the ICE bridge or never sent).
+        if (len >= 1) {
+          static int logEnabled = -1;
+          if (logEnabled < 0) {
+            char const* e = std::getenv("OPENLIERO_CHECKSUM_LOG");
+            logEnabled = (e && *e && *e != '0') ? 1 : 0;
+          }
+          if (logEnabled) {
+            static uint64_t cntInput = 0, cntBatch = 0, cntChecksum = 0,
+                            cntOther = 0;
+            switch (data[0]) {
+              case PacketInput: ++cntInput; break;
+              case PacketInputBatch: ++cntBatch; break;
+              case PacketChecksum: ++cntChecksum; break;
+              default: ++cntOther; break;
+            }
+            uint64_t total =
+                cntInput + cntBatch + cntChecksum + cntOther;
+            if (total > 0 && total % 140 == 0) {
+              std::fprintf(stderr,
+                           "[transport rx] input=%llu batch=%llu "
+                           "checksum=%llu other=%llu\n",
+                           (unsigned long long)cntInput,
+                           (unsigned long long)cntBatch,
+                           (unsigned long long)cntChecksum,
+                           (unsigned long long)cntOther);
+            }
+          }
         }
 
         if (len >= 1) {

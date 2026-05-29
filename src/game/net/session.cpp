@@ -873,9 +873,45 @@ uint32_t NetSession::computeSettingsHash() const {
   return hash;
 }
 
+namespace {
+// Behind OPENLIERO_CHECKSUM_LOG=1 we periodically dump counts of
+// checksums sent locally and received from the peer. If both stay 0
+// the desync detector is silent because no data is flowing, not
+// because state matches.
+bool checksumLogEnabled() {
+  static int v = -1;
+  if (v < 0) {
+    char const* e = std::getenv("OPENLIERO_CHECKSUM_LOG");
+    v = (e && *e && *e != '0') ? 1 : 0;
+  }
+  return v != 0;
+}
+
+void maybeLog(char const* who, uint64_t& counter, uint32_t frame,
+              uint32_t checksum) {
+  if (!checksumLogEnabled()) return;
+  ++counter;
+  if (counter % 70 == 0) {  // ~1 second at 70 Hz
+    std::fprintf(stderr,
+                 "[checksum %s] count=%llu frame=%u value=%08x\n",
+                 who, static_cast<unsigned long long>(counter), frame,
+                 checksum);
+  }
+}
+}  // namespace
+
 void NetSession::onChecksum(uint32_t frame, uint32_t remoteChecksum) {
-  if (desyncDetected_ || sessionState_ != Playing || !controllerPtr_)
+  // Bug fix: in rollback mode controllerPtr_ is null (only rollbackPtr_
+  // is set), so the legacy `!controllerPtr_` guard silently dropped
+  // every incoming checksum on the rollback path — leaving desync
+  // detection dead on online (ICE) games. Accept when either controller
+  // exists.
+  if (desyncDetected_ || sessionState_ != Playing ||
+      (!controllerPtr_ && !rollbackPtr_))
     return;
+
+  static uint64_t remoteCount = 0;
+  maybeLog("remote", remoteCount, frame, remoteChecksum);
 
   // Look up our stored local checksum for this exact frame
   size_t slot = frame % CHECKSUM_BUFFER_SIZE;
@@ -895,6 +931,9 @@ void NetSession::onChecksum(uint32_t frame, uint32_t remoteChecksum) {
 }
 
 void NetSession::onLocalChecksum(uint32_t frame, uint32_t checksum) {
+  static uint64_t localCount = 0;
+  maybeLog("local", localCount, frame, checksum);
+
   // Store in ring buffer
   size_t slot = frame % CHECKSUM_BUFFER_SIZE;
   checksumBuffer_[slot] = {frame, checksum, true};

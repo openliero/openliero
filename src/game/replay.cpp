@@ -123,6 +123,101 @@ uint32_t fastGameChecksum(Game& game)
 	return checksum;
 }
 
+namespace {
+inline void mix32(uint32_t& h, uint32_t v) {
+	h ^= v + 0x9e3779b9u + (h << 6) + (h >> 2);
+}
+inline void mixBytes(uint32_t& h, void const* p, std::size_t n) {
+	auto* b = static_cast<uint8_t const*>(p);
+	for (std::size_t i = 0; i < n; ++i) mix32(h, b[i]);
+}
+}  // namespace
+
+uint32_t wideRollbackChecksum(Game& game)
+{
+	// Folds in projectile pools, level damage, and per-worm sim state the
+	// fast checksum drops. Order matters for reproducibility — both peers
+	// walk the same fields in the same sequence.
+	uint32_t h = game.rand.last;
+	mix32(h, static_cast<uint32_t>(game.cycles));
+
+	for (auto const& w_sp : game.worms) {
+		Worm const& w = *w_sp;
+		mix32(h, static_cast<uint32_t>(w.pos.x));
+		mix32(h, static_cast<uint32_t>(w.pos.y));
+		mix32(h, static_cast<uint32_t>(w.vel.x));
+		mix32(h, static_cast<uint32_t>(w.vel.y));
+		mix32(h, static_cast<uint32_t>(w.aimingAngle));
+		mix32(h, static_cast<uint32_t>(w.aimingSpeed));
+		mix32(h, static_cast<uint32_t>(w.health));
+		mix32(h, static_cast<uint32_t>(w.lives));
+		mix32(h, static_cast<uint32_t>(w.kills));
+		mix32(h, static_cast<uint32_t>(w.timer));
+		mix32(h, static_cast<uint32_t>(w.killedTimer));
+		mix32(h, static_cast<uint32_t>(w.currentFrame));
+		mix32(h, static_cast<uint32_t>(w.currentWeapon));
+		mix32(h, static_cast<uint32_t>(w.direction));
+		mix32(h, static_cast<uint32_t>(w.flags));
+		mix32(h, w.visible ? 1u : 0u);
+		mix32(h, w.ready ? 1u : 0u);
+		mix32(h, w.ableToJump ? 1u : 0u);
+		mix32(h, w.ableToDig ? 1u : 0u);
+		mix32(h, static_cast<uint32_t>(w.controlStates.istate));
+		mix32(h, static_cast<uint32_t>(w.prevControlStates.istate));
+		for (int i = 0; i < NUM_WEAPONS; ++i) {
+			WormWeapon const& ww = w.weapons[i];
+			mix32(h, static_cast<uint32_t>(ww.ammo));
+			mix32(h, static_cast<uint32_t>(ww.delayLeft));
+			mix32(h, static_cast<uint32_t>(ww.loadingLeft));
+		}
+	}
+
+	mix32(h, static_cast<uint32_t>(game.wobjects.count));
+	for (std::size_t i = 0; i < game.wobjects.count; ++i) {
+		WObject const& o = game.wobjects.arr[i];
+		mix32(h, static_cast<uint32_t>(o.pos.x));
+		mix32(h, static_cast<uint32_t>(o.pos.y));
+		mix32(h, static_cast<uint32_t>(o.vel.x));
+		mix32(h, static_cast<uint32_t>(o.vel.y));
+		mix32(h, static_cast<uint32_t>(o.curFrame));
+		mix32(h, static_cast<uint32_t>(o.timeLeft));
+		mix32(h, static_cast<uint32_t>(o.ownerIdx));
+	}
+	mix32(h, static_cast<uint32_t>(game.sobjects.count));
+	for (std::size_t i = 0; i < game.sobjects.count; ++i) {
+		SObject const& o = game.sobjects.arr[i];
+		mix32(h, static_cast<uint32_t>(o.x));
+		mix32(h, static_cast<uint32_t>(o.y));
+		mix32(h, static_cast<uint32_t>(o.curFrame));
+		mix32(h, static_cast<uint32_t>(o.id));
+	}
+	mix32(h, static_cast<uint32_t>(game.nobjects.count));
+	for (std::size_t i = 0; i < game.nobjects.count; ++i) {
+		NObject const& o = game.nobjects.arr[i];
+		mix32(h, static_cast<uint32_t>(o.pos.x));
+		mix32(h, static_cast<uint32_t>(o.pos.y));
+		mix32(h, static_cast<uint32_t>(o.vel.x));
+		mix32(h, static_cast<uint32_t>(o.vel.y));
+		mix32(h, static_cast<uint32_t>(o.curFrame));
+	}
+	mix32(h, static_cast<uint32_t>(game.bonuses.count));
+	for (std::size_t i = 0; i < game.bonuses.count; ++i) {
+		Bonus const& b = game.bonuses.arr[i];
+		mix32(h, static_cast<uint32_t>(b.x));
+		mix32(h, static_cast<uint32_t>(b.y));
+		mix32(h, static_cast<uint32_t>(b.frame));
+		mix32(h, static_cast<uint32_t>(b.timer));
+	}
+
+	std::size_t const cells = static_cast<std::size_t>(game.level.width) *
+	                          static_cast<std::size_t>(game.level.height);
+	if (cells > 0) {
+		mixBytes(h, game.level.data.data(), cells);
+	}
+
+	return h;
+}
+
 bool ReplayReader::playbackFrame(Renderer& renderer)
 {
 	Game& game = *this->game;
