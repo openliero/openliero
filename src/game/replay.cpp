@@ -108,21 +108,6 @@ void ReplayWriter::endRecord()
 	writer.put(0x83);
 }
 
-uint32_t fastGameChecksum(Game& game)
-{
-	uint32_t checksum = game.rand.last;
-	for(std::size_t i = 0; i < game.worms.size(); ++i)
-	{
-		Worm& worm = *game.worms[i];
-		checksum ^= worm.pos.x;
-		checksum += worm.vel.x;
-		checksum ^= worm.pos.y;
-		checksum += worm.vel.y;
-	}
-
-	return checksum;
-}
-
 namespace {
 inline void mix32(uint32_t& h, uint32_t v) {
 	h ^= v + 0x9e3779b9u + (h << 6) + (h >> 2);
@@ -279,7 +264,7 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 	if((game.cycles % (70 * 15)) == 0)
 	{
 		uint32_t expected = io::read_uint32(reader);
-		uint32_t actual = fastGameChecksum(game);
+		uint32_t actual = wideRollbackChecksum(game);
 		if(actual != expected)
 			throw io::ArchiveCheckError("Replay has desynced");
 	}
@@ -341,7 +326,7 @@ void ReplayWriter::recordFrame()
 
 	if((game.cycles % (70 * 15)) == 0)
 	{
-		uint32_t checksum = fastGameChecksum(game);
+		uint32_t checksum = wideRollbackChecksum(game);
 		io::write_uint32(writer, checksum);
 	}
 }

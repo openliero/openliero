@@ -120,5 +120,5 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
   REQUIRE(a->rollbackCount() > 0);
   REQUIRE(b->rollbackCount() > 0);
   REQUIRE(a->currentFrame() == b->currentFrame());
-  REQUIRE(fastGameChecksum(a->game) == fastGameChecksum(b->game));
+  REQUIRE(wideRollbackChecksum(a->game) == wideRollbackChecksum(b->game));
 }

@@ -262,7 +262,7 @@ Two issues had to be resolved:
 
 ## Future Work
 
-- ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) sent every advanced frame, compared on receipt. Replay format still uses `fastGameChecksum` for compatibility.
+- ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) sent every advanced frame, compared on receipt. Replay format uses the same function, so the live and recorded desync gates can't drift apart.
 - **Replay recording of network games** — the data is already available (frame inputs)
 - ~~**Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play~~ ✅ Shipped 2026-05-28.
 - ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ ✅ Implemented: STUN + signaling + hole-punch + relay fallback (see Online Connect Flow below)
@@ -390,7 +390,7 @@ Wired up the existing `PacketChecksum` transport to actually send/compare checks
 - `NetSession::onChecksum()` compares local vs remote, sets `desyncDetected_` flag
 - `GamePlayState` shows "DESYNC AT FRAME N" message and logs to stderr
 
-The rollback path uses `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) instead of the narrower `fastGameChecksum`; the replay format keeps `fastGameChecksum` so existing recordings remain valid.
+**Update (2026-05-30):** the narrow `fastGameChecksum` was deleted and `wideRollbackChecksum` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) is now the single function used by both the rollback path and the replay format. Pre-release, so no existing recordings to preserve.
 
 ### Debug instrumentation: OPENLIERO_CHECKSUM_LOG (2026-05-29)
 

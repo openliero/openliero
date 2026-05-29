@@ -149,5 +149,5 @@ TEST_CASE("Rollback survives 10% packet loss via input redundancy",
     transport.tick(deliverA, deliverB);
   }
   REQUIRE(a->currentFrame() == b->currentFrame());
-  REQUIRE(fastGameChecksum(a->game) == fastGameChecksum(b->game));
+  REQUIRE(wideRollbackChecksum(a->game) == wideRollbackChecksum(b->game));
 }

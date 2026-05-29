@@ -63,7 +63,7 @@ ScriptedInputs generateInputs(uint32_t seed, int ticks) {
 }
 
 // Drive a zero-jitter reference run of `ticks` ticks with the given
-// input sequence. Returns the final fastGameChecksum and the simFrame
+// input sequence. Returns the final wideRollbackChecksum and the simFrame
 // the peer reached.
 struct RefResult {
   uint32_t checksum;
@@ -126,8 +126,8 @@ RefResult runReference(uint32_t worldSeed, ScriptedInputs const& script,
   }
 
   REQUIRE(a->currentFrame() == b->currentFrame());
-  uint32_t cA = fastGameChecksum(a->game);
-  uint32_t cB = fastGameChecksum(b->game);
+  uint32_t cA = wideRollbackChecksum(a->game);
+  uint32_t cB = wideRollbackChecksum(b->game);
   REQUIRE(cA == cB);
   return {cA, a->currentFrame()};
 }
@@ -250,8 +250,8 @@ TEST_CASE("Rollback recovers from mispredictions under random delay",
       REQUIRE(a->rollbackCount() > 0);
       REQUIRE(b->rollbackCount() > 0);
 
-      uint32_t cA = fastGameChecksum(a->game);
-      uint32_t cB = fastGameChecksum(b->game);
+      uint32_t cA = wideRollbackChecksum(a->game);
+      uint32_t cB = wideRollbackChecksum(b->game);
       REQUIRE(cA == cB);
 
       // And it has to match what a zero-jitter peer would have produced

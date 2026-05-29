@@ -251,7 +251,7 @@ TEST_CASE("Weapon select reaches StateGame in sync under zero jitter",
   }
 
   // Game-phase state hashes match after transition.
-  REQUIRE(fastGameChecksum(a->game) == fastGameChecksum(b->game));
+  REQUIRE(wideRollbackChecksum(a->game) == wideRollbackChecksum(b->game));
 }
 
 TEST_CASE("Weapon select transitions cleanly under jitter",
@@ -348,7 +348,7 @@ TEST_CASE("Weapon select transitions cleanly under jitter",
     }
   }
 
-  REQUIRE(fastGameChecksum(a->game) == fastGameChecksum(b->game));
+  REQUIRE(wideRollbackChecksum(a->game) == wideRollbackChecksum(b->game));
 
   // Vacuity guard: jitter must have caused at least some prediction
   // events; otherwise this test devolves into the zero-jitter case.
