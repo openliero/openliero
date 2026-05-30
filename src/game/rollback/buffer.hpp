@@ -15,6 +15,7 @@
 #include "serialization/weapsel_snapshot.hpp"
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -84,6 +85,10 @@ class RollbackBuffer {
   // pure input-only updates (e.g. arriving remote input for a future frame)
   // cheap.
   Slot& write(int frame) {
+    // indexOf masks via unsigned, so a negative frame would land on a
+    // valid slot and corrupt the ring (frame stored as -1, newest_ not
+    // updated). Callers must pass a non-negative sim frame.
+    assert(frame >= 0);
     Slot& slot = slots_[indexOf(frame)];
     if (slot.frame != frame) {
       slot.frame = frame;
