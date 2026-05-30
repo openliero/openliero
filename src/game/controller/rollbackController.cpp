@@ -595,6 +595,11 @@ void RollbackController::setupShadowGame() {
                     * static_cast<std::size_t>(game.level.height);
   shadowGame_->level.data.resize(cells);
   shadowGame_->level.materials.resize(cells);
+  // origpal is the level's palette. It isn't sim state, so the fast
+  // snapshot doesn't carry it — but the cereal Game serializer used by
+  // ReplayWriter::beginRecord does. Without this copy the recorded
+  // file embeds a zeroed palette and playback renders garbage colors.
+  shadowGame_->level.origpal = game.level.origpal;
 
   // Match the post-WS setup the live controller did in
   // finishWeaponSelect: initWeapons before startGame, then startGame

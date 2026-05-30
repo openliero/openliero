@@ -64,12 +64,14 @@ std::vector<uint8_t> navigateAndConfirm(int nDown) {
 
 }  // namespace
 
-TEST_CASE("Multiplayer replay round-trip matches live shadow",
-          "[rollback][replay]") {
+// Common round-trip body parameterised on which peer (localIdx) records.
+// Both indices use the same makePeer fixture so the test exercises the
+// host (localIdx=0) and client (localIdx=1) paths symmetrically.
+static void runRoundTrip(int recorderIdx) {
   constexpr uint32_t kWorldSeed = 0xDEADBEEF;
   auto [common, settings] = makeEnv();
-  auto a = makePeer(common, settings, 0, kWorldSeed);
-  auto b = makePeer(common, settings, 1, kWorldSeed);
+  auto a = makePeer(common, settings, recorderIdx, kWorldSeed);
+  auto b = makePeer(common, settings, recorderIdx ^ 1, kWorldSeed);
 
   // Capture peer A's replay stream into a vector via VectorWriter, so
   // the test can read it back after the match without touching disk.
@@ -174,4 +176,32 @@ TEST_CASE("Multiplayer replay round-trip matches live shadow",
   // doesn't faithfully reproduce the simulation it captured.
   REQUIRE(playback->cycles == shadowCycles);
   REQUIRE(wideRollbackChecksum(*playback) == shadowChecksum);
+
+  // The recorded level palette must round-trip to the same bytes the
+  // shadow saw when it began recording. Regression guard for the
+  // multiplayer-replay palette-corruption bug: the fast snapshot
+  // doesn't carry origpal, and beginRecord uses cereal which does.
+  for (int i = 0; i < 256; ++i) {
+    REQUIRE(playback->level.origpal.entries[i].r == shadow->level.origpal.entries[i].r);
+    REQUIRE(playback->level.origpal.entries[i].g == shadow->level.origpal.entries[i].g);
+    REQUIRE(playback->level.origpal.entries[i].b == shadow->level.origpal.entries[i].b);
+  }
+  // And the shadow's origpal must match the live game's (the controller
+  // that captured the recording). If these diverge, the file is
+  // recording a palette the player never saw.
+  for (int i = 0; i < 256; ++i) {
+    REQUIRE(shadow->level.origpal.entries[i].r == a->game.level.origpal.entries[i].r);
+    REQUIRE(shadow->level.origpal.entries[i].g == a->game.level.origpal.entries[i].g);
+    REQUIRE(shadow->level.origpal.entries[i].b == a->game.level.origpal.entries[i].b);
+  }
+}
+
+TEST_CASE("Multiplayer replay round-trip matches live shadow (host)",
+          "[rollback][replay]") {
+  runRoundTrip(0);
+}
+
+TEST_CASE("Multiplayer replay round-trip matches live shadow (client)",
+          "[rollback][replay]") {
+  runRoundTrip(1);
 }
