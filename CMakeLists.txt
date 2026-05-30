@@ -394,6 +394,13 @@ else()
   install(DIRECTORY data/Resources DESTINATION ${OPENLIERO_INSTALL_DATADIR})
   install(DIRECTORY data/Setups    DESTINATION ${OPENLIERO_INSTALL_DATADIR})
   install(DIRECTORY data/TC        DESTINATION ${OPENLIERO_INSTALL_DATADIR})
+
+  if(NOT WIN32)
+    install(FILES packaging/openliero.desktop
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES packaging/openliero.metainfo.xml
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+  endif()
 endif()
 
 # tests

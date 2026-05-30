@@ -162,6 +162,30 @@ rm liero-1.36-bundle.zip
 rm -rf liero-1.36-bundle
 ```
 
+## Upgrading from an older version
+
+Previous releases stored saves, replays, and settings in the same directory as
+the game binary. OpenLiero now stores user data in the platform's standard
+location:
+
+| Platform | Save location |
+|---|---|
+| Linux | `~/.local/share/openliero/openliero/` |
+| macOS | `~/Library/Application Support/openliero/openliero/` |
+| Windows | `%APPDATA%\openliero\openliero\` |
+
+To carry over your data from an old single-directory install, copy these
+folders to the save location above:
+
+- `Setups/` — game settings and custom configs
+- `Profiles/` — player profiles
+- `Replays/` — recorded replays
+- `TC/` — custom Torture Chambers (stock TC is supplied by the new install)
+
+**Portable installs** (USB drives, manual zip extracts) are unaffected — if a
+`portable.txt` file is present next to the binary, OpenLiero keeps everything
+in the same directory as before.
+
 ## License
 
 Open Liero is licensed with the [BSD-2-Clause](LICENSE). Since the copyright

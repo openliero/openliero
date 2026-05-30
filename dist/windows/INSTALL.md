@@ -51,3 +51,29 @@ publish the certificate thumbprint above so you can verify it matches before
 importing. The build provenance attestation (verifiable with `gh attestation
 verify`) proves the artifacts were produced from the source repository by the
 CI workflow.
+
+## Where are my saves and settings?
+
+OpenLiero stores your saves, replays, profiles, and settings in your user data
+folder — **not** in the install directory. This is especially important for the
+MSIX package, where the install directory is read-only.
+
+| Install type | Save location |
+|---|---|
+| MSIX | `%LOCALAPPDATA%\Packages\OpenLiero.OpenLiero_*\LocalCache\Roaming\openliero\openliero\` |
+| Zip (portable) | Same folder as `openliero.exe` (single-directory mode) |
+
+The portable zip uses a `portable.txt` sentinel file to keep everything
+self-contained. If you delete `portable.txt`, the game switches to the
+roaming profile path above.
+
+### Upgrading from an older version
+
+If you previously ran OpenLiero from a zip and want to carry your data over
+to the MSIX build, copy these folders from the old zip directory into the
+MSIX save location above:
+
+- `Setups/` — game settings and custom configs
+- `Profiles/` — player profiles
+- `Replays/` — recorded replays
+- `TC/` — custom Torture Chambers
