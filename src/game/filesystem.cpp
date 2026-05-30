@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
+#include <cstring>
 #include <sys/stat.h>
 #if _WIN32
 #include <io.h>
@@ -764,14 +765,22 @@ namespace paths
 
 FsNode userDataRoot()
 {
+	// Runtime override for tests and advanced portable usage.
+	if (const char* env = std::getenv("OPENLIERO_USER_DIR"))
+	{
+		if (env[0] != '\0')
+		{
+			create_directories(env);
+			return FsNode(std::string(env));
+		}
+	}
+
 	char* p = SDL_GetPrefPath("openliero", "openliero");
 	if (!p)
 		return FsNode();
 	std::string path(p);
 	SDL_free(p);
 
-	// SDL_GetPrefPath already creates the directory, but defend against
-	// edge cases (e.g. mocked-out test environments) by ensuring it.
 	create_directories(path);
 
 	return FsNode(path);
@@ -808,6 +817,71 @@ FsNode systemDataRoot()
 	}
 
 	return FsNode();
+}
+
+ResolvedPaths resolve(int argc, char* argv[], std::string const& basePath)
+{
+	ResolvedPaths r;
+	r.port = 0;
+
+	std::string configRoot;
+
+	for (int i = 1; i < argc; ++i)
+	{
+		if (argv[i][0] == '-' && argv[i][1] == '-')
+		{
+			if (std::strcmp(argv[i] + 2, "config-root") == 0 && i + 1 < argc)
+			{
+				++i;
+				configRoot = argv[i];
+			}
+			else if (std::strcmp(argv[i] + 2, "port") == 0 && i + 1 < argc)
+			{
+				++i;
+				r.port = static_cast<uint16_t>(std::atoi(argv[i]));
+			}
+		}
+		else if (argv[i][0] != '-')
+		{
+			r.positionalArgs.emplace_back(argv[i]);
+		}
+	}
+
+	if (!configRoot.empty())
+	{
+		// Explicit single-directory override (Emscripten, CI, power users).
+		r.configNode     = FsNode(configRoot);
+		r.userConfigNode = FsNode(configRoot);
+		return r;
+	}
+
+	// Determine basePath: caller-supplied (tests) or SDL_GetBasePath().
+	std::string base = basePath;
+	if (base.empty())
+	{
+		if (const char* p = SDL_GetBasePath())
+			base = p;
+	}
+
+	// portable.txt next to the binary selects single-directory mode.
+	if (!base.empty() && (FsNode(base) / "portable.txt").exists())
+	{
+		r.configNode     = FsNode(base);
+		r.userConfigNode = FsNode(base);
+		return r;
+	}
+
+	// XDG split: user dir for writes; merged (user + system) for reads.
+	FsNode user   = userDataRoot();
+	FsNode system = systemDataRoot();
+
+	r.userConfigNode = user;
+	if (system.imp)
+		r.configNode = FsNode(join(user.imp, system.imp));
+	else
+		r.configNode = user;
+
+	return r;
 }
 
 }

@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdio>
 #include <memory>
+#include <vector>
 #include <map>
 #include <miniz.h>
 
@@ -159,4 +160,25 @@ namespace paths
 	//   2. SDL_GetBasePath() (binary-adjacent), if it has stock content.
 	// Returns an empty FsNode (!exists()) if neither resolves.
 	FsNode systemDataRoot();
+}
+
+struct ResolvedPaths
+{
+	FsNode configNode;      // merged (user + system) for reads
+	FsNode userConfigNode;  // user dir only, for writes
+	uint16_t port;          // from --port, 0 if not given
+	std::vector<std::string> positionalArgs; // non-flag argv entries
+};
+
+namespace paths
+{
+	// Parse argc/argv for --config-root, --port, and positional args,
+	// then build configNode and userConfigNode according to the algorithm:
+	//   --config-root <p>  -> both nodes point at p (portable/Emscripten mode)
+	//   portable.txt in basePath -> both nodes point at basePath
+	//   otherwise          -> configNode = join(user, system); userConfigNode = user
+	//
+	// basePath overrides SDL_GetBasePath() and is used by tests.
+	ResolvedPaths resolve(int argc, char* argv[],
+	                      std::string const& basePath = std::string());
 }
