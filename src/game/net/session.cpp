@@ -274,25 +274,14 @@ void NetSession::onHandshake(uint32_t seed, uint32_t settingsHash) {
 void NetSession::onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
                                     uint8_t count, uint8_t const* inputs,
                                     uint32_t remoteLocalFrame) {
-  // The controller owns the generation filter; we just forward.
   if (rollbackPtr_) {
     rollbackPtr_->injectRemoteBatch(generation, baseFrame, count, inputs,
                                     remoteLocalFrame);
     return;
   }
 
-  // Pre-Playing arrivals must be buffered, not dropped. On a real
-  // network the host transitions to Playing before the client
-  // (handshake/MatchSettings/MapData round-trips don't all complete
-  // simultaneously) and starts emitting input batches while the
-  // client is still mid-handshake. The K-wide redundancy in each
-  // batch only re-delivers frames whose newestFrame is < K; once the
-  // window slides past frame 0 (~7 ticks ≈ 100 ms at 70 Hz) those
-  // early frames are gone forever from the wire, so the only
-  // surviving copy is whatever arrived during this window. Dropping
-  // here is what stalls the client's confirm chain in production.
   if (prePlayingInputBatches_.size() >= MAX_PRE_PLAYING_BATCHES) return;
-  if (count > rollback::kMaxRollback + 1) return;  // malformed; drop
+  if (count > rollback::kMaxRollback + 1) return;
   PendingInputBatch b{};
   b.generation = generation;
   b.baseFrame = baseFrame;
@@ -550,11 +539,6 @@ void NetSession::beginPlaying(int localIdx, bool isRematch) {
   prefillRemoteInput();
   rollbackPtr_ = rollback_.get();
 
-  // Flush any input batches that arrived during the asymmetric
-  // handshake window (host transitions to Playing before client; its
-  // first sends land before client.rollbackPtr_ is set). The
-  // controller dedups against confirmedSimFrame_ so out-of-order or
-  // redundant replays are cheap no-ops.
   for (auto const& b : prePlayingInputBatches_) {
     rollbackPtr_->injectRemoteBatch(b.generation, b.baseFrame, b.count,
                                     b.inputs.data(), b.remoteLocalFrame);

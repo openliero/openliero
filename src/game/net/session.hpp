@@ -186,12 +186,10 @@ struct NetSession {
   PendingRemote pendingRemoteChecksums_[CHECKSUM_BUFFER_SIZE] = {};
   size_t pendingRemoteCount_ = 0;
 
-  // Input batches received before beginPlaying creates the controller.
-  // Without this, the host's first sends arrive at the client during
-  // the asymmetric handshake window (host transitions to Playing first)
-  // and are silently dropped, leaving a permanent hole in the client's
-  // confirm chain once the K-wide sliding window moves past frame 0.
-  // Bounded so a hostile or stuck peer can't push us OOM.
+  // Held until beginPlaying wires up rollbackPtr_; otherwise the
+  // host's first sends arrive during the asymmetric handshake window
+  // and get dropped, and the K-wide window slides past those frames
+  // before they can be re-sent.
   struct PendingInputBatch {
     uint8_t generation;
     uint32_t baseFrame;

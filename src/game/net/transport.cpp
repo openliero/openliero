@@ -31,10 +31,6 @@ static int32_t readI32(const uint8_t* p) {
 static constexpr int NUM_CHANNELS = 3;
 static constexpr int CHANNEL_RELIABLE = 0;
 static constexpr int CHANNEL_UNRELIABLE = 1;
-// Rollback PacketInputBatch goes on its own channel with
-// ENET_PACKET_FLAG_UNSEQUENCED. Each batch is self-describing
-// (baseFrame + window) so out-of-order arrival is fine, and the
-// receiver de-dups against confirmedSimFrame_.
 static constexpr int CHANNEL_INPUT_BATCH = 2;
 
 // Single active transport pointer. Only one ENet host exists per process.
@@ -491,20 +487,8 @@ void NetTransport::sendInputBatch(uint8_t generation, uint32_t baseFrame,
   std::memcpy(buf + 8, inputs, count);
 
   size_t len = size_t{8} + count;
-  // ENET_PACKET_FLAG_UNSEQUENCED: unreliable AND not compared against
-  // the channel's sequence number, so an older batch arriving after a
-  // newer one isn't dropped at the channel layer. Sequenced delivery
-  // (flag 0) was an optimization — once the link is steady-state the
-  // redundancy in each batch makes the older one strictly redundant —
-  // but during ICE/ENet warm-up the host's first few batches get
-  // delivered out-of-order and the sequenced channel silently discarded
-  // the early ones, leaving a permanent hole in the client's confirm
-  // chain (frame 1's remote input never landed → simFrame stalled at
-  // kMaxRollback frames of predicted, never recovered).
-  //
-  // Within a batch we still de-dup at injectRemoteInput against
-  // confirmedSimFrame_, so an unsequenced redundant batch is a cheap
-  // no-op on the receive side.
+  // UNSEQUENCED, not 0: sequenced-discard would drop an older batch
+  // delivered after a newer one. injectRemoteInput already dedups.
   ENetPacket* packet =
       enet_packet_create(buf, len, ENET_PACKET_FLAG_UNSEQUENCED);
   if (!packet) return;
