@@ -2,12 +2,15 @@
 
 #include "../gfx.hpp"
 #include "../mixer/player.hpp"
+#include "../replay.hpp"
 #include "../viewport.hpp"
 #include "../spectatorviewport.hpp"
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <miniz.h>
 
 RollbackController::RollbackController(
@@ -613,6 +616,58 @@ void RollbackController::setupShadowGame() {
   shadowLocalPrevInput_ = 0;
   shadowRemotePrevInput_ = 0;
   shadowMismatchLogged_ = false;
+
+  startReplayRecording();
+}
+
+void RollbackController::startReplayRecording() {
+  if (!shadowGame_) return;
+  if (!Settings::extensions || !game.settings->recordReplays) return;
+
+  // Tests construct RollbackControllers without first wiring up gfx,
+  // so gfx.getConfigNode() returns a default-constructed FsNode with
+  // a null impl pointer. Operator/ would dereference that and segv.
+  FsNode configRoot = gfx.getConfigNode();
+  if (!configRoot.imp) return;
+
+  try {
+    std::time_t ticks = std::time(nullptr);
+    std::tm* now = std::localtime(&ticks);
+    char timeBuf[64];
+    std::strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %H.%M.%S", now);
+
+    std::string playerNames = " ";
+    for (std::size_t i = 0; i < shadowGame_->worms.size() && i < 2; ++i) {
+      Worm& worm = *shadowGame_->worms[i];
+      std::string const& name = worm.settings->name;
+      if (i > 0) playerNames.push_back('-');
+      int chars = 0;
+      for (std::size_t c = 0; c < name.size() && chars < 4; ++c, ++chars) {
+        unsigned char ch = static_cast<unsigned char>(name[c]);
+        if (std::isalnum(ch)) playerNames.push_back(static_cast<char>(ch));
+      }
+    }
+
+    // The " mp{idx}" suffix distinguishes the two peers' recordings if
+    // they share a config directory and prevents the host's and
+    // client's files from colliding.
+    char suffix[8];
+    std::snprintf(suffix, sizeof(suffix), " mp%d", localIdx);
+
+    auto node = configRoot / "Replays"
+                  / (std::string(timeBuf) + playerNames + suffix + ".lrp");
+
+    shadowReplay_ = std::make_unique<ReplayWriter>(node.toWriter());
+    shadowReplay_->beginRecord(*shadowGame_);
+  } catch (std::runtime_error& e) {
+    std::fprintf(stderr, "[replay] failed to start recording: %s\n", e.what());
+    shadowReplay_.reset();
+  }
+}
+
+void RollbackController::stopReplayRecording() {
+  // ReplayWriter destructor writes the 0x83 terminator.
+  shadowReplay_.reset();
 }
 
 void RollbackController::driveShadow() {
@@ -642,6 +697,19 @@ void RollbackController::driveShadow() {
     shadowGame_->worms[remoteIdx]->controlStates.istate &= ~releasedRemote;
     shadowLocalPrevInput_  = curLocal;
     shadowRemotePrevInput_ = curRemote;
+
+    // recordFrame() reads worm.controlStates ^ prevControlStates, so it
+    // must run after edge detection but before processFrame() (which
+    // sets prev = current at end of tick, wiping the delta).
+    if (shadowReplay_) {
+      try {
+        shadowReplay_->recordFrame();
+      } catch (std::runtime_error& e) {
+        std::fprintf(stderr, "[replay] aborting recording at frame %d: %s\n",
+                     F, e.what());
+        shadowReplay_.reset();
+      }
+    }
 
     shadowGame_->processFrame();
     shadowFrame_ = F;
@@ -1125,6 +1193,7 @@ void RollbackController::endMatch() {
     // peer still being in their own pause menu when EndMatch arrives.
     localPaused_ = false;
     remotePaused_ = false;
+    stopReplayRecording();
   }
 }
 
@@ -1138,4 +1207,5 @@ void RollbackController::peerLeft() {
   fadeValue = 0;
   goingToMenu = true;
   resumable_ = false;
+  stopReplayRecording();
 }

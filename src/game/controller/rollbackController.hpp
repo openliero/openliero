@@ -14,6 +14,8 @@
 #include "../menu/menu.hpp"
 #include "../rollback/buffer.hpp"
 
+struct ReplayWriter;
+
 // Batched input send: emits the last K = kMaxRollback + 1 local inputs
 // per tick so a dropped packet is covered by the next K-1.
 // `localFrame` = sender's simFrame at send time (frame-advantage
@@ -212,12 +214,15 @@ struct RollbackController : CommonController {
   // advance it as confirmations land, so steady-state cost is one
   // extra processFrame per real tick (no rollback amplification).
   std::unique_ptr<Game> shadowGame_;
+  std::unique_ptr<ReplayWriter> shadowReplay_;
   int32_t shadowFrame_ = -1;
   uint8_t shadowLocalPrevInput_ = 0;
   uint8_t shadowRemotePrevInput_ = 0;
   bool shadowMismatchLogged_ = false;
 
   void setupShadowGame();
+  void startReplayRecording();
+  void stopReplayRecording();
   void driveShadow();
 
   InputBatchSendCallback sendInputBatch;
