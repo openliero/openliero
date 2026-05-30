@@ -46,7 +46,8 @@ RollbackController::RollbackController(
     , goingToMenu(false)
     , simFrame(0)
     , inputDelay(3)
-    , lastSentFrame(UINT32_MAX)
+    , lastSentFrame(0)
+    , lastSentFrameValid(false)
     , rollbackBufferPrepared_(false)
     , confirmedSimFrame_(-1)
     , lastRemoteInput_(0)
@@ -509,7 +510,8 @@ void RollbackController::resetForGamePhase() {
 
   simFrame = 0;
   confirmedSimFrame_ = -1;
-  lastSentFrame = UINT32_MAX;
+  lastSentFrame = 0;
+  lastSentFrameValid = false;
   lastRemoteInput_ = 0;
   lastKnownRemoteFrame_ = -1;
 
@@ -780,12 +782,13 @@ void RollbackController::driveShadow() {
 // in sync — a fix here likely needs to land in the sibling too.
 void RollbackController::advanceWeaponSelection() {
   uint32_t inputFrame = simFrame + inputDelay;
-  if (inputFrame != lastSentFrame) {
+  if (!lastSentFrameValid || inputFrame != lastSentFrame) {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
     // Mask to the 7 ControlState bits (Up/Down/Left/Right/Fire/Change/
     // Jump); bit 7 is reserved and must not leak onto the wire.
     localInputs[slot] = localControlState.pack() & 0x7f;
     lastSentFrame = inputFrame;
+    lastSentFrameValid = true;
   }
   sendInputWindow(inputFrame, simFrame);
 
@@ -948,12 +951,13 @@ void RollbackController::advanceWeaponSelection() {
 // in sync — a fix here likely needs to land in the sibling too.
 void RollbackController::advanceSimulation() {
   uint32_t inputFrame = simFrame + inputDelay;
-  if (inputFrame != lastSentFrame) {
+  if (!lastSentFrameValid || inputFrame != lastSentFrame) {
     uint32_t slot = inputFrame % INPUT_BUFFER_SIZE;
     // Mask to the 7 ControlState bits (Up/Down/Left/Right/Fire/Change/
     // Jump); bit 7 is reserved and must not leak onto the wire.
     localInputs[slot] = localControlState.pack() & 0x7f;
     lastSentFrame = inputFrame;
+    lastSentFrameValid = true;
   }
 
   // Emit the last K = kMaxRollback + 1 local inputs as a redundant

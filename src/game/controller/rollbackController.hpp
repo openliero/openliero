@@ -192,7 +192,10 @@ struct RollbackController : CommonController {
 
   uint32_t simFrame;
   uint32_t inputDelay;
+  // simFrame + inputDelay of the most recent local input we packed into
+  // localInputs[]. Empty (no input packed yet this phase) when false.
   uint32_t lastSentFrame;
+  bool lastSentFrameValid;
 
   static constexpr uint32_t INPUT_BUFFER_SIZE = 256;
   std::array<uint8_t, INPUT_BUFFER_SIZE> localInputs;
