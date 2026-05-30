@@ -13,6 +13,16 @@
 
 //#define DEBUG_REPLAYS 1
 
+// Replay stream framing. Bytes < 0x80 are per-frame worm-state deltas
+// (a single byte per worm, sequencing implicit in the frame loop).
+// Bytes with bit 7 set are tagged records:
+namespace {
+constexpr uint8_t kReplayTagEmptyFrame    = 0x80;  // frame with no input change
+constexpr uint8_t kReplayTagSettings      = 0x81;  // cereal'd Settings follows
+constexpr uint8_t kReplayTagWormSettings  = 0x82;  // worm index + cereal'd WormSettings
+constexpr uint8_t kReplayTagEnd           = 0x83;  // end of stream
+}
+
 // Helper: serialize an object to a binary blob via cereal and write
 // [uint32 length][blob] into the replay stream.
 template <typename T>
@@ -105,7 +115,7 @@ void ReplayWriter::beginRecord(Game& game)
 
 void ReplayWriter::endRecord()
 {
-	writer.put(0x83);
+	writer.put(kReplayTagEnd);
 }
 
 namespace {
@@ -213,14 +223,14 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 	{
 		uint8_t first = reader.get();
 
-		if(first == 0x80)
+		if(first == kReplayTagEmptyFrame)
 			break;
-		else if(first == 0x81)
+		else if(first == kReplayTagSettings)
 		{
 			cerealRead(reader, *game.settings);
 			settingsChanged = true;
 		}
-		else if(first == 0x82)
+		else if(first == kReplayTagWormSettings)
 		{
 			uint32_t wormId = io::read_uint32(reader);
 			Worm* w = game.wormByIdx(wormId);
@@ -230,12 +240,12 @@ bool ReplayReader::playbackFrame(Renderer& renderer)
 				settingsChanged = true;
 			}
 		}
-		else if(first == 0x83)
+		else if(first == kReplayTagEnd)
 		{
 			// End of replay
 			return false;
 		}
-		else if(first < 0x80)
+		else if(first < kReplayTagEmptyFrame)
 		{
 			uint8_t state = first;
 			bool hasState = true;
@@ -279,7 +289,7 @@ void ReplayWriter::recordFrame()
 
 	if(settingsExpired)
 	{
-		writer.put(0x81);
+		writer.put(kReplayTagSettings);
 		cerealWrite(writer, *game.settings);
 		settingsExpired = false;
 	}
@@ -300,7 +310,7 @@ void ReplayWriter::recordFrame()
 
 			if(data.settingsExpired)
 			{
-				writer.put(0x82);
+				writer.put(kReplayTagWormSettings);
 				io::write_uint32(writer, worm->index);
 				cerealWrite(writer, *worm->settings);
 				data.settingsExpired = false;
@@ -314,14 +324,14 @@ void ReplayWriter::recordFrame()
 		{
 			uint8_t state = worm->controlStates.pack() ^ worm->prevControlStates.pack();
 
-			assert(state < 0x80);
+			assert(state < kReplayTagEmptyFrame);
 
 			writer.put(state);
 		}
 	}
 	else
 	{
-		writer.put(0x80); // Bit 7 means empty frame
+		writer.put(kReplayTagEmptyFrame);
 	}
 
 	if((game.cycles % (70 * 15)) == 0)
