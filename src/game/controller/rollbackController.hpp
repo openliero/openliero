@@ -90,6 +90,9 @@ struct RollbackController : CommonController {
   // the replay round-trip test to compare the shadow's final state
   // against the replayed file's playback state.
   Game* shadowGameForTest() { return shadowGame_.get(); }
+  // Single entry into the goingToMenu fade. Clears pause flags so
+  // process()'s paused-branch early-return can't strand fadeValue.
+  void enterGoingToMenu(int fade);
   void endMatch();
   // Used by both the local "Disconnect" pause menu option and the wire
   // PeerLeft handler: drop to the menu without finalizing stats.

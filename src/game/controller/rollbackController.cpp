@@ -1156,10 +1156,8 @@ void RollbackController::advanceSimulation() {
 
   if (game.isGameOver()) {
     state = StateGameEnded;
-    if (!goingToMenu) {
-      fadeValue = 180;
-      goingToMenu = true;
-    }
+    if (!goingToMenu)
+      enterGoingToMenu(180);
   }
 
   driveShadow();
@@ -1228,15 +1226,19 @@ bool RollbackController::running() {
   return state != StateGameEnded && state != StateInitial && resumable_;
 }
 
+void RollbackController::enterGoingToMenu(int fade) {
+  goingToMenu = true;
+  fadeValue = fade;
+  // Without this, process()'s isPaused() early return would skip the
+  // fade decrement and the menu transition would stall.
+  localPaused_ = false;
+  remotePaused_ = false;
+}
+
 void RollbackController::endMatch() {
   if (state == StateGame || state == StateWeaponSelection) {
     state = StateGameEnded;
-    goingToMenu = true;
-    fadeValue = 33;
-    // Clear pause flags so the goingToMenu fade isn't gated by either
-    // peer still being in their own pause menu when EndMatch arrives.
-    localPaused_ = false;
-    remotePaused_ = false;
+    enterGoingToMenu(33);
     stopReplayRecording();
   }
 }
@@ -1246,10 +1248,7 @@ void RollbackController::peerLeft() {
   // do NOT transition to StateGameEnded — that keeps statsRecorder
   // unfinalized so the host loop routes us back to the menu rather
   // than to the stats screen.
-  localPaused_ = false;
-  remotePaused_ = false;
-  fadeValue = 0;
-  goingToMenu = true;
+  enterGoingToMenu(0);
   resumable_ = false;
   stopReplayRecording();
 }
