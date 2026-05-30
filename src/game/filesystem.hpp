@@ -147,3 +147,16 @@ struct FsNode
 		return w;
 	}
 };
+
+namespace paths
+{
+	// Writable user data root. Always returns a non-empty node whose
+	// directory has been created on disk. Backed by SDL_GetPrefPath.
+	FsNode userDataRoot();
+
+	// Read-only stock data root. Resolution order:
+	//   1. OPENLIERO_DATADIR compile-time macro, if defined and existing.
+	//   2. SDL_GetBasePath() (binary-adjacent), if it has stock content.
+	// Returns an empty FsNode (!exists()) if neither resolves.
+	FsNode systemDataRoot();
+}

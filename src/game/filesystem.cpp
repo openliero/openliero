@@ -1,9 +1,11 @@
 #include "filesystem.hpp"
 #include "text.hpp"
 #include "io/stream.hpp"
+#include <SDL3/SDL.h>
 #include <stdexcept>
 #include <cassert>
 #include <cctype>
+#include <cstdlib>
 #include <sys/stat.h>
 #if _WIN32
 #include <io.h>
@@ -754,4 +756,58 @@ FsNode::FsNode(std::string const& path)
 			imp = imp->go(part);
 		}
 	}
+}
+
+
+namespace paths
+{
+
+FsNode userDataRoot()
+{
+	char* p = SDL_GetPrefPath("openliero", "openliero");
+	if (!p)
+		return FsNode();
+	std::string path(p);
+	SDL_free(p);
+
+	// SDL_GetPrefPath already creates the directory, but defend against
+	// edge cases (e.g. mocked-out test environments) by ensuring it.
+	create_directories(path);
+
+	return FsNode(path);
+}
+
+FsNode systemDataRoot()
+{
+	// Runtime override: respected by Flatpak builds, packagers who can't
+	// recompile, and the test suite.
+	if (const char* env = std::getenv("OPENLIERO_DATADIR"))
+	{
+		if (env[0] != '\0')
+		{
+			FsNode candidate{std::string(env)};
+			if (candidate.exists())
+				return candidate;
+		}
+	}
+
+#ifdef OPENLIERO_DATADIR
+	{
+		FsNode candidate{std::string(OPENLIERO_DATADIR)};
+		if (candidate.exists())
+			return candidate;
+	}
+#endif
+
+	// SDL3: SDL_GetBasePath returns a const char* owned by SDL; do NOT free.
+	if (const char* base = SDL_GetBasePath())
+	{
+		FsNode candidate{std::string(base)};
+		if (candidate.exists())
+			return candidate;
+	}
+
+	return FsNode();
+}
+
 }
