@@ -98,13 +98,11 @@ TEST_CASE("Rollback desync detection — clean run produces no alarms",
   a->setInputCallbacks(
       [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         transport.sendAToB(gen_, bf, c, in, lf);
-      },
-      nullptr);
+      });
   b->setInputCallbacks(
       [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         transport.sendBToA(gen_, bf, c, in, lf);
-      },
-      nullptr);
+      });
 
   // Capture every emitted checksum. The last value wins on duplicates
   // (e.g. a resim that overwrites a prior promote's value for the same
@@ -201,13 +199,11 @@ TEST_CASE("Rollback desync detection — 1-bit injection fires within 200 frames
   a->setInputCallbacks(
       [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         transport.sendAToB(gen_, bf, c, in, lf);
-      },
-      nullptr);
+      });
   b->setInputCallbacks(
       [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         transport.sendBToA(gen_, bf, c, in, lf);
-      },
-      nullptr);
+      });
 
   std::unordered_map<uint32_t, uint32_t> aChecks, bChecks;
   a->setChecksumCallback(

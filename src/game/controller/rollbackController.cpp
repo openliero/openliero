@@ -156,10 +156,8 @@ void RollbackController::loadLevelFromData(const std::vector<uint8_t>& data) {
   levelPreloaded = true;
 }
 
-void RollbackController::setInputCallbacks(InputBatchSendCallback send,
-                                           InputRecvCallback recv) {
+void RollbackController::setInputCallbacks(InputBatchSendCallback send) {
   sendInputBatch = std::move(send);
-  recvInput = std::move(recv);
 }
 
 void RollbackController::sendInputWindow(uint32_t newestFrame,
@@ -791,13 +789,6 @@ void RollbackController::advanceWeaponSelection() {
   }
   sendInputWindow(inputFrame, simFrame);
 
-  if (recvInput) {
-    int result = recvInput(simFrame);
-    if (result >= 0) {
-      injectRemoteInput(simFrame, static_cast<uint8_t>(result));
-    }
-  }
-
   // Promote previously-predicted WS frames whose real remote input has
   // now arrived and matches the prediction.
   int32_t rollbackTo = -1;
@@ -970,13 +961,6 @@ void RollbackController::advanceSimulation() {
   // without a retransmit RTT. Send continues even when stalled below so
   // the remote peer can promote out of its own stall.
   sendInputWindow(inputFrame, simFrame);
-
-  if (recvInput) {
-    int result = recvInput(simFrame);
-    if (result >= 0) {
-      injectRemoteInput(simFrame, static_cast<uint8_t>(result));
-    }
-  }
 
   // Walk confirmedSimFrame_+1 .. simFrame-1 in order: promote slots whose
   // prediction matched, stop at the first mismatch and let the resim

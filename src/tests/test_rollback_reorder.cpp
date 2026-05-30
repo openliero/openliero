@@ -72,13 +72,11 @@ TEST_CASE("Rollback survives reorder + duplication", "[rollback][reorder]") {
   a->setInputCallbacks(
       [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         transport.sendAToB(gen_, bf, c, in, lf);
-      },
-      nullptr);
+      });
   b->setInputCallbacks(
       [&](uint8_t gen_, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         transport.sendBToA(gen_, bf, c, in, lf);
-      },
-      nullptr);
+      });
   a->focus();
   b->focus();
 

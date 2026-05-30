@@ -74,8 +74,7 @@ void NetSession::wireActiveController() {
         uint8_t localDelta = static_cast<uint8_t>(localFrame - baseFrame);
         transport_.sendInputBatch(generation, baseFrame, count, localDelta,
                                   inputs);
-      },
-      nullptr);
+      });
   rollback_->setChecksumCallback(checksumCb);
   rollback_->setPauseCallbacks(pauseCb, resumeCb);
   rollback_->setEndMatchCallback(endMatchCb);

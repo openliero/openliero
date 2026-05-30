@@ -26,10 +26,6 @@ using InputBatchSendCallback = std::function<
     void(uint8_t generation, uint32_t baseFrame, uint8_t count,
          uint8_t const* inputs, uint32_t localFrame)>;
 
-// Pull-based remote input hook. Returns -1 when no input is yet
-// available for that frame.
-using InputRecvCallback = std::function<int(uint32_t frame)>;
-
 // Checksum emission for desync detection. `generation` = sender's
 // phase generation.
 using ChecksumSendCallback =
@@ -52,7 +48,7 @@ struct RollbackController : CommonController {
   Game* statsGame() override;
   bool running() override;
 
-  void setInputCallbacks(InputBatchSendCallback send, InputRecvCallback recv);
+  void setInputCallbacks(InputBatchSendCallback send);
   void setChecksumCallback(ChecksumSendCallback cb) { sendChecksum = std::move(cb); }
 
   void injectRemoteInput(uint32_t frame, uint8_t input);
@@ -249,7 +245,6 @@ struct RollbackController : CommonController {
   void seedRollbackAndShadow();
 
   InputBatchSendCallback sendInputBatch;
-  InputRecvCallback recvInput;
   ChecksumSendCallback sendChecksum;
 
   std::function<void()> onLocalPause;

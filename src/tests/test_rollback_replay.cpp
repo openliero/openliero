@@ -93,13 +93,11 @@ static void runRoundTrip(int recorderIdx) {
   a->setInputCallbacks(
       [&](uint8_t, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         enqueue(aToB, bf, c, in, lf);
-      },
-      nullptr);
+      });
   b->setInputCallbacks(
       [&](uint8_t, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         enqueue(bToA, bf, c, in, lf);
-      },
-      nullptr);
+      });
 
   a->focus();
   b->focus();

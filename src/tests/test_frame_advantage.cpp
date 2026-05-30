@@ -65,13 +65,11 @@ AsymmetricRun runAsymmetric(int dAB, int dBA, int ticks) {
   a->setInputCallbacks(
       [&](uint8_t gen, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         tAB.sendAToB(gen, bf, c, in, lf);
-      },
-      nullptr);
+      });
   b->setInputCallbacks(
       [&](uint8_t gen, uint32_t bf, uint8_t c, uint8_t const* in, uint32_t lf) {
         tBA.sendAToB(gen, bf, c, in, lf);  // B's outbound rides the B→A pipe
-      },
-      nullptr);
+      });
   a->focus();
   b->focus();
 

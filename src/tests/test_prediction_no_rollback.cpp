@@ -45,14 +45,12 @@ struct Loopback {
         [this](uint8_t /*gen*/, uint32_t bf, uint8_t c,
                uint8_t const* inputs, uint32_t lf) {
           b->injectRemoteBatch(bf, c, inputs, lf);
-        },
-        nullptr);
+        });
     b->setInputCallbacks(
         [this](uint8_t /*gen*/, uint32_t bf, uint8_t c,
                uint8_t const* inputs, uint32_t lf) {
           a->injectRemoteBatch(bf, c, inputs, lf);
-        },
-        nullptr);
+        });
     a->focus();
     b->focus();
   }
