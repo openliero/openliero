@@ -11,6 +11,7 @@ option(OPENLIERO_ENABLE_CLANG_TIDY "Run clang-tidy during every C++ compile" OFF
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 
 include(GenerateVersion) # generate version metadata from git
+include(GNUInstallDirs)
 
 # configure vcpkg
 if(OPENLIERO_USE_VCPKG)
@@ -302,6 +303,11 @@ endif()
 
 target_link_libraries(openliero PRIVATE game)
 
+if(NOT EMSCRIPTEN)
+  target_compile_definitions(openliero PRIVATE
+    OPENLIERO_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/openliero")
+endif()
+
 if(OPENLIERO_BUILD_TCTOOL)
   set(TC_LIB_SOURCES ${SOURCES}
     src/tc_tool/common_exereader.cpp
@@ -319,6 +325,10 @@ if(OPENLIERO_BUILD_TCTOOL)
 
   add_executable(tctool src/tc_tool/tc_tool_main.cpp)
   target_link_libraries(tctool PRIVATE tc)
+  if(NOT EMSCRIPTEN)
+    target_compile_definitions(tctool PRIVATE
+      OPENLIERO_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/openliero")
+  endif()
 endif()
 
 if(OPENLIERO_BUILD_VIDEOTOOL)
