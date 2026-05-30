@@ -65,14 +65,12 @@ try
 
 	precomputeTables();
 
-	// videotool reads the TC from the current directory (the same behaviour
-	// as before the XDG split). It writes nothing to the config paths — output
-	// videos land next to the replay file via the caller-specified replayPath.
-	// TODO: Fix loading
+	// Use the same path-resolution logic as the main binary.
+	// paths::resolve ignores single-dash flags, so -d/-s/-r pass through harmlessly.
+	// Output videos land next to the replay file; no writes go to any config path.
+	auto r = paths::resolve(argc, argv);
 	std::shared_ptr<Common> common(new Common());
-	FsNode currentDirNode("");
-	FsNode lieroRoot(currentDirNode / "TC" / tcName);
-	common->load(std::move(lieroRoot));
+	common->load(r.configNode / "TC" / tcName);
 
 	std::string suffix = "_n";
 	if (spectator)

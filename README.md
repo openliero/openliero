@@ -162,29 +162,18 @@ rm liero-1.36-bundle.zip
 rm -rf liero-1.36-bundle
 ```
 
-## Upgrading from an older version
+## Portable installs
 
-Previous releases stored saves, replays, and settings in the same directory as
-the game binary. OpenLiero now stores user data in the platform's standard
-location:
+By default OpenLiero stores saves, replays, profiles, and settings in the
+platform's standard user-data location (`~/.local/share/openliero/openliero/`
+on Linux, `~/Library/Application Support/openliero/openliero/` on macOS,
+`%APPDATA%\openliero\openliero\` on Windows). Stock data ships with the binary
+and is never modified.
 
-| Platform | Save location |
-|---|---|
-| Linux | `~/.local/share/openliero/openliero/` |
-| macOS | `~/Library/Application Support/openliero/openliero/` |
-| Windows | `%APPDATA%\openliero\openliero\` |
-
-To carry over your data from an old single-directory install, copy these
-folders to the save location above:
-
-- `Setups/` — game settings and custom configs
-- `Profiles/` — player profiles
-- `Replays/` — recorded replays
-- `TC/` — custom Torture Chambers (stock TC is supplied by the new install)
-
-**Portable installs** (USB drives, manual zip extracts) are unaffected — if a
-`portable.txt` file is present next to the binary, OpenLiero keeps everything
-in the same directory as before.
+To keep everything self-contained in one folder — useful for USB sticks,
+network shares, or just preferring a single directory — place an empty file
+named `portable.txt` next to the `openliero` binary. When present, all reads
+and writes use that directory instead of the platform paths.
 
 ## License
 

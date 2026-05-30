@@ -60,20 +60,9 @@ MSIX package, where the install directory is read-only.
 
 | Install type | Save location |
 |---|---|
-| MSIX | `%LOCALAPPDATA%\Packages\OpenLiero.OpenLiero_*\LocalCache\Roaming\openliero\openliero\` |
-| Zip (portable) | Same folder as `openliero.exe` (single-directory mode) |
+| MSIX | `%APPDATA%\openliero\openliero\` |
+| Zip | Same folder as `openliero.exe` (the zip ships with `portable.txt`) |
 
-The portable zip uses a `portable.txt` sentinel file to keep everything
-self-contained. If you delete `portable.txt`, the game switches to the
-roaming profile path above.
-
-### Upgrading from an older version
-
-If you previously ran OpenLiero from a zip and want to carry your data over
-to the MSIX build, copy these folders from the old zip directory into the
-MSIX save location above:
-
-- `Setups/` — game settings and custom configs
-- `Profiles/` — player profiles
-- `Replays/` — recorded replays
-- `TC/` — custom Torture Chambers
+The zip ships with a `portable.txt` file next to the binary to keep everything
+self-contained. Delete `portable.txt` to switch to the roaming profile path
+above (useful if you want MSIX and zip installs to share the same saves).
