@@ -13,6 +13,7 @@
 #include "../weapsel.hpp"
 #include "../menu/menu.hpp"
 #include "../rollback/buffer.hpp"
+#include "../io/stream.hpp"
 
 struct ReplayWriter;
 
@@ -79,6 +80,19 @@ struct RollbackController : CommonController {
 
   void setEndMatchCallback(std::function<void()> cb) { onEndMatch = std::move(cb); }
   void setPeerLeftCallback(std::function<void()> cb) { onPeerLeft = std::move(cb); }
+
+  // Test/embedding hook: redirect the multiplayer replay writer to a
+  // user-supplied io::Writer instead of the gfx-configured Replays/
+  // directory. Must be called before focus() so it's in place when
+  // setupShadowGame runs. Overrides the recordReplays/gfx gates.
+  void setReplayWriterOverride(std::unique_ptr<io::Writer> sink) {
+    replayWriterOverride_ = std::move(sink);
+  }
+
+  // Test accessor: the shadow Game tracking confirmed frames. Used by
+  // the replay round-trip test to compare the shadow's final state
+  // against the replayed file's playback state.
+  Game* shadowGameForTest() { return shadowGame_.get(); }
   void endMatch();
   // Used by both the local "Disconnect" pause menu option and the wire
   // PeerLeft handler: drop to the menu without finalizing stats.
@@ -215,6 +229,7 @@ struct RollbackController : CommonController {
   // extra processFrame per real tick (no rollback amplification).
   std::unique_ptr<Game> shadowGame_;
   std::unique_ptr<ReplayWriter> shadowReplay_;
+  std::unique_ptr<io::Writer> replayWriterOverride_;
   int32_t shadowFrame_ = -1;
   uint8_t shadowLocalPrevInput_ = 0;
   uint8_t shadowRemotePrevInput_ = 0;

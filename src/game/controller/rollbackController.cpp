@@ -622,6 +622,21 @@ void RollbackController::setupShadowGame() {
 
 void RollbackController::startReplayRecording() {
   if (!shadowGame_) return;
+
+  // Test path: caller provided a writer directly; skip the gfx-driven
+  // file-naming logic and just hand it to ReplayWriter.
+  if (replayWriterOverride_) {
+    try {
+      shadowReplay_ = std::make_unique<ReplayWriter>(
+          std::move(replayWriterOverride_));
+      shadowReplay_->beginRecord(*shadowGame_);
+    } catch (std::runtime_error& e) {
+      std::fprintf(stderr, "[replay] failed to start recording: %s\n", e.what());
+      shadowReplay_.reset();
+    }
+    return;
+  }
+
   if (!Settings::extensions || !game.settings->recordReplays) return;
 
   // Tests construct RollbackControllers without first wiring up gfx,
