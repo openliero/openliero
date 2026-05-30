@@ -111,6 +111,14 @@ struct NetSession {
   void wireCallbacks();
   void tryStartGame();
   void startRematchClient();
+  // Shared body of tryStartGame / startRematch / startRematchClient:
+  // create controller, apply remote player info, seed RNG, prepare or
+  // load the level, wire callbacks, pre-fill remote input, and enter
+  // Playing. The host-rematch handshake send is not included here; the
+  // caller does that before invoking.
+  void beginPlaying(int localIdx, bool isRematch);
+  void applyRemotePlayerInfo(int remoteIdx);
+  void prefillRemoteInput();
   void generateAndSendMap();
   uint32_t computeSettingsHash() const;
 

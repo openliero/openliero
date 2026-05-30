@@ -483,15 +483,7 @@ void NetSession::onTcData(const void* data, size_t len) {
     tryStartGame();
 }
 
-void NetSession::tryStartGame() {
-  if (sessionState_ == Playing)
-    return;
-
-  int localIdx = (role_ == Host) ? 0 : 1;
-  createController(localIdx);
-
-  // Apply remote player's info to the remote worm directly (not the persistent settings)
-  int remoteIdx = (role_ == Host) ? 1 : 0;
+void NetSession::applyRemotePlayerInfo(int remoteIdx) {
   Worm* remoteWorm = activeGame().wormByIdx(remoteIdx);
   // Create a distinct copy so we don't mutate the saved player profile
   auto remoteWs = std::make_shared<WormSettings>(*remoteWorm->settings);
@@ -504,8 +496,24 @@ void NetSession::tryStartGame() {
       remotePlayerInfo_.name,
       strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
   remoteWorm->settings = remoteWs;
+}
 
-  // Seed the game's RNG so both peers have identical state
+void NetSession::prefillRemoteInput() {
+  // Pre-fill exactly inputDelay frames of empty remote input. These are
+  // the frames whose remote input the remote peer literally cannot have
+  // recorded yet (with inputDelay=D, the remote first records its
+  // localInputs[D] at simFrame=0). Pre-filling further would overwrite
+  // frames the remote *will* fill in — injectRemoteInput drops frames
+  // <= confirmedSimFrame_, so the rollback path couldn't correct later.
+  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
+  for (uint32_t i = 0; i < preFillCount; ++i)
+    rollback_->injectRemoteInput(i, 0);
+}
+
+void NetSession::beginPlaying(int localIdx, bool isRematch) {
+  int remoteIdx = 1 - localIdx;
+  createController(localIdx);
+  applyRemotePlayerInfo(remoteIdx);
   activeGame().rand.seed(gameSeed_);
 
   if (role_ == Host) {
@@ -517,21 +525,24 @@ void NetSession::tryStartGame() {
   }
 
   wireActiveController();
-
-  // Pre-fill exactly inputDelay frames of empty remote input. These are
-  // the frames whose remote input the remote peer literally cannot have
-  // recorded yet (with inputDelay=D, the remote first records its
-  // localInputs[D] at simFrame=0). Pre-filling further would overwrite
-  // frames the remote *will* fill in — injectRemoteInput drops frames
-  // <= confirmedSimFrame_, so the rollback path couldn't correct later.
-  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
-  for (uint32_t i = 0; i < preFillCount; ++i) {
-    rollback_->injectRemoteInput(i, 0);
-  }
-
+  prefillRemoteInput();
   rollbackPtr_ = rollback_.get();
 
+  if (isRematch) {
+    localReady_ = false;
+    remoteReady_ = false;
+    // Client clears handshakeReceived_ so the next rematch's seed can land.
+    if (role_ == Client)
+      handshakeReceived_ = false;
+  }
+
   sessionState_ = Playing;
+}
+
+void NetSession::tryStartGame() {
+  if (sessionState_ == Playing)
+    return;
+  beginPlaying((role_ == Host) ? 0 : 1, /*isRematch=*/false);
 }
 
 void NetSession::enterRematch() {
@@ -627,42 +638,11 @@ void NetSession::startRematch() {
   if (sessionState_ != Rematch || role_ != Host)
     return;
 
-  // Generate a new seed
+  // Generate a new seed and send it before beginPlaying generates the map
   gameSeed_ = static_cast<uint32_t>(std::time(nullptr));
-
-  // Create a fresh controller (host = player 0)
-  createController(0);
-
-  // Apply remote player info
-  Worm* remoteWorm = activeGame().wormByIdx(1);
-  auto remoteWs = std::make_shared<WormSettings>(*remoteWorm->settings);
-  for (int i = 0; i < 5; ++i)
-    remoteWs->weapons[i] = remotePlayerInfo_.weapons[i];
-  remoteWs->color = remotePlayerInfo_.color;
-  for (int i = 0; i < 3; ++i)
-    remoteWs->rgb[i] = remotePlayerInfo_.rgb[i];
-  remoteWs->name.assign(
-      remotePlayerInfo_.name,
-      strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
-  remoteWorm->settings = remoteWs;
-
-  activeGame().rand.seed(gameSeed_);
-
-  // Send seed to client, then generate and send map
   transport_.sendHandshake(gameSeed_, 0);
-  generateAndSendMap();
-  rollback_->setLevelPreloaded();
 
-  wireActiveController();
-  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
-  for (uint32_t i = 0; i < preFillCount; ++i)
-    rollback_->injectRemoteInput(i, 0);
-
-  rollbackPtr_ = rollback_.get();
-
-  localReady_ = false;
-  remoteReady_ = false;
-  sessionState_ = Playing;
+  beginPlaying(/*localIdx=*/0, /*isRematch=*/true);
 }
 
 void NetSession::startRematchClient() {
@@ -670,37 +650,7 @@ void NetSession::startRematchClient() {
   if (sessionState_ != Rematch || role_ != Client)
     return;
 
-  // Create a fresh controller (client = player 1)
-  createController(1);
-
-  // Apply remote player info (host = player 0)
-  Worm* remoteWorm = activeGame().wormByIdx(0);
-  auto remoteWs = std::make_shared<WormSettings>(*remoteWorm->settings);
-  for (int i = 0; i < 5; ++i)
-    remoteWs->weapons[i] = remotePlayerInfo_.weapons[i];
-  remoteWs->color = remotePlayerInfo_.color;
-  for (int i = 0; i < 3; ++i)
-    remoteWs->rgb[i] = remotePlayerInfo_.rgb[i];
-  remoteWs->name.assign(
-      remotePlayerInfo_.name,
-      strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
-  remoteWorm->settings = remoteWs;
-
-  activeGame().rand.seed(gameSeed_);
-  rollback_->loadLevelFromData(receivedMapData_);
-  receivedMapData_.clear();
-
-  wireActiveController();
-  uint32_t preFillCount = static_cast<uint32_t>(settings_->inputDelay);
-  for (uint32_t i = 0; i < preFillCount; ++i)
-    rollback_->injectRemoteInput(i, 0);
-
-  rollbackPtr_ = rollback_.get();
-
-  localReady_ = false;
-  remoteReady_ = false;
-  handshakeReceived_ = false;
-  sessionState_ = Playing;
+  beginPlaying(/*localIdx=*/1, /*isRematch=*/true);
 }
 
 void NetSession::generateAndSendMap() {
