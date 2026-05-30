@@ -222,12 +222,13 @@ struct RollbackController : CommonController {
   Menu pauseMenu_;
 
   // Shadow Game driven only by confirmed frames (never predicted,
-  // never resimmed). Phase 1 just verifies it stays lockstep with the
-  // live game via wideRollbackChecksum; Phase 2 will hook a
-  // ReplayWriter onto it to record multiplayer matches. Owning a
-  // second Game would double sim cost in the worst case; we only
-  // advance it as confirmations land, so steady-state cost is one
-  // extra processFrame per real tick (no rollback amplification).
+  // never resimmed). Hosts the player-facing NormalStatsRecorder (the
+  // live game's is replaced with a no-op since its processFrame fires
+  // speculatively) and feeds a ReplayWriter so multiplayer matches
+  // produce .lrp recordings. Owning a second Game would double sim
+  // cost in the worst case; we only advance it as confirmations land,
+  // so steady-state cost is one extra processFrame per real tick (no
+  // rollback amplification).
   std::unique_ptr<Game> shadowGame_;
   std::unique_ptr<ReplayWriter> shadowReplay_;
   std::unique_ptr<io::Writer> replayWriterOverride_;
@@ -240,6 +241,12 @@ struct RollbackController : CommonController {
   void startReplayRecording();
   void stopReplayRecording();
   void driveShadow();
+
+  // Prepare the rollback ring (idempotent), seed slot 0 with the
+  // post-startGame state, then construct the shadow Game. Shared by
+  // the WS->Game transition (finishWeaponSelect) and the skip-WS path
+  // (focus's StateInitial branch).
+  void seedRollbackAndShadow();
 
   InputBatchSendCallback sendInputBatch;
   InputRecvCallback recvInput;

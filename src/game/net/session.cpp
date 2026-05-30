@@ -212,17 +212,7 @@ void NetSession::onConnected() {
   transport_.sendHandshake(seedToSend, localSettingsHash_);
   handshakeSent_ = true;
 
-  // Send local player's info from the network player profile
-  auto& netWs = settings_->wormSettings[Settings::NetworkPlayerIdx];
-  NetTransport::PlayerInfo info{};
-  for (int i = 0; i < 5; ++i)
-    info.weapons[i] = netWs->weapons[i];
-  info.color = netWs->color;
-  for (int i = 0; i < 3; ++i)
-    info.rgb[i] = netWs->rgb[i];
-  std::strncpy(info.name, netWs->name.c_str(), sizeof(info.name) - 1);
-  info.name[sizeof(info.name) - 1] = '\0';
-  transport_.sendPlayerInfo(info);
+  sendLocalPlayerInfo();
 
   // Host sends authoritative match settings
   if (role_ == Host) {
@@ -558,12 +548,13 @@ void NetSession::enterRematch() {
   mapDataReceived_ = (role_ == Host);  // host generates locally
   receivedMapData_.clear();
 
-  // Re-send PlayerInfo. wormSettings[NetworkPlayerIdx] is the shared_ptr
-  // the prior round's WeaponSelection mutated in place, so weapons[] now
-  // reflects what the local player actually picked. Without this refresh,
-  // startRematch{,Client}() would reapply the connect-time profile and
-  // each peer would see the other's pre-match weapons on the rematch
-  // weapon-select screen.
+  // Refresh the peer's view of our weapons. Without this, startRematch
+  // {,Client}() would reapply the connect-time profile and each peer
+  // would see the other's pre-match weapons in round 2's weapon select.
+  sendLocalPlayerInfo();
+}
+
+void NetSession::sendLocalPlayerInfo() {
   auto& netWs = settings_->wormSettings[Settings::NetworkPlayerIdx];
   NetTransport::PlayerInfo info{};
   for (int i = 0; i < 5; ++i)

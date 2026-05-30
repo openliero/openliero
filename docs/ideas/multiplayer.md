@@ -440,7 +440,7 @@ Each peer in a multiplayer match writes its own `.lrp` replay file alongside the
 
 **Why a shadow:** the rollback ring re-processes the same `simFrame` multiple times under different inputs as predictions get corrected. Calling `ReplayWriter::recordFrame()` directly inside the rollback loops would either over-record (one entry per resim pass) or under-record (skip the promote path, which doesn't `processFrame()` at all). The shadow sidesteps both by following confirmed frames only — once a frame's input is locked, the shadow advances exactly one `processFrame()` and writes exactly one delta.
 
-**Setup** (`RollbackController::setupShadowGame`, called from `finishWeaponSelect`):
+**Setup** (`RollbackController::setupShadowGame`, called from `seedRollbackAndShadow` which is invoked by both `finishWeaponSelect` and the skip-weapon-select path in `focus`):
 - Construct a sibling `Game` sharing `Common`+`Settings`, with a `NullSoundPlayer`.
 - Mirror the live controller's worm/viewport init.
 - Resize `level.data`/`level.materials` to the live game's dimensions (the snapshot carries pixel data but not dimensions).

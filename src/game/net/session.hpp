@@ -119,6 +119,12 @@ struct NetSession {
   void createController(int localIdx);
   void wireActiveController();
 
+  // Send a PlayerInfo packet derived from wormSettings[NetworkPlayerIdx].
+  // Called on initial connect and again on rematch (where the prior
+  // round's WeaponSelection has mutated weapons[] in place via the
+  // shared shared_ptr).
+  void sendLocalPlayerInfo();
+
   Game& activeGame();
 
   Role role_;

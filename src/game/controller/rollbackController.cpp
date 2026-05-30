@@ -296,22 +296,7 @@ void RollbackController::focus() {
       game.resetWorms();
       state = StateGame;
 
-      // Size the rollback ring before the frame-0 snapshot used by
-      // setupShadowGame.
-      if (!rollbackBufferPrepared_) {
-        rollbackBuffer_.prepare(game);
-        rollbackBufferPrepared_ = true;
-      }
-      // Seed slot 0 with the live frame-0 state so the shadow can clone it.
-      rollback::Slot& seed = rollbackBuffer_.write(0);
-      seed.localInput = 0;
-      seed.remoteInput = 0;
-      seed.remoteState = rollback::RemoteState::Confirmed;
-      seed.wsSnap.valid = false;
-      game.saveSnapshotFast(seed.snapshot);
-      seed.checksum = wideRollbackChecksum(game);
-
-      setupShadowGame();
+      seedRollbackAndShadow();
     } else {
       state = StateWeaponSelection;
 
@@ -562,10 +547,6 @@ void RollbackController::finishWeaponSelect() {
   game.resetWorms();
   state = StateGame;
 
-  // Game state vectors are now fully sized.
-  rollbackBuffer_.prepare(game);
-  rollbackBufferPrepared_ = true;
-
   // The WS phase can leave peers at different simFrame counters
   // (asymmetric stalls + WS-rollback resims). Carrying that skew into
   // game phase would silently diverge every simFrame-keyed comparison
@@ -573,9 +554,21 @@ void RollbackController::finishWeaponSelect() {
   // detector. Resetting here gives the game phase a symmetric baseline.
   resetForGamePhase();
 
+  seedRollbackAndShadow();
+}
+
+void RollbackController::seedRollbackAndShadow() {
+  // Game state vectors are fully sized only after startGame; prepare
+  // here so the slot-0 snapshot below captures the right widths.
+  if (!rollbackBufferPrepared_) {
+    rollbackBuffer_.prepare(game);
+    rollbackBufferPrepared_ = true;
+  }
+
   // Seed slot[0] = post-startGame state so a misprediction on the first
-  // game-phase frame has a valid rollback target. The first process()
-  // tick will overwrite this with the post-frame-0 snapshot.
+  // game-phase frame has a valid rollback target, and so setupShadowGame
+  // has a frame-0 snapshot to clone into the shadow. The first
+  // process() tick will overwrite this with the post-frame-0 snapshot.
   rollback::Slot& seed = rollbackBuffer_.write(0);
   seed.localInput = 0;
   seed.remoteInput = 0;
