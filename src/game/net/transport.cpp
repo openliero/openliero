@@ -308,14 +308,21 @@ bool NetTransport::poll() {
               }
               break;
             case PacketHandshake:
-              // Rollback bump: [type:1][version:1][seed:4][hash:4] = 10 B.
-              // Mismatched version → silently drop; the session times
-              // out waiting for handshake and surfaces as a normal
-              // connection failure to the user. Old (v1) peers send 9 B
-              // and will be dropped here too — protocol versions are
-              // mutually unintelligible by design.
+              // [type:1][version:1][seed:4][hash:4] = 10 B.
               if (len == 10 && onHandshake) {
-                if (data[1] != kProtocolVersion) break;
+                if (data[1] != kProtocolVersion) {
+                  // Loud on stderr: a silent drop here surfaces as the
+                  // session sitting in Handshaking forever, which is
+                  // hard to attribute to a version mismatch. Surface
+                  // the actual cause so mixed-version test setups are
+                  // diagnosable immediately.
+                  std::fprintf(stderr,
+                               "[transport] handshake protocol version "
+                               "mismatch: peer=%u local=%u — peers must "
+                               "be on the same build\n",
+                               (unsigned)data[1], (unsigned)kProtocolVersion);
+                  break;
+                }
                 uint32_t seed, hash;
                 std::memcpy(&seed, data + 2, 4);
                 std::memcpy(&hash, data + 6, 4);
