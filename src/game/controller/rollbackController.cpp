@@ -184,6 +184,17 @@ void RollbackController::injectRemoteBatch(uint8_t generation,
                                            uint32_t baseFrame, uint8_t count,
                                            uint8_t const* inputs,
                                            uint32_t remoteLocalFrame) {
+  static uint64_t dbgBatchCount = 0;
+  ++dbgBatchCount;
+  if (dbgBatchCount <= 5 || (dbgBatchCount % 70u == 0u)) {
+    uint8_t sample = (count > 0) ? inputs[count - 1] : 0;
+    std::fprintf(stderr,
+        "[netkey-dbg] rx batch #%llu gen=%u base=%u count=%u rlf=%u last=%02x "
+        "ourGen=%u\n",
+        (unsigned long long)dbgBatchCount, (unsigned)generation, baseFrame,
+        (unsigned)count, remoteLocalFrame, sample, (unsigned)generation_);
+  }
+
   // Same-generation packets feed the input ring; gen+1 packets are
   // buffered until our own phase transition fires (replayed in
   // resetForGamePhase). Older or further-future packets are unrecoverable.
@@ -258,6 +269,15 @@ void RollbackController::onKey(int key, bool keyState) {
       if (!worm->cleanControlStates[Worm::Right])
         localControlState.set(Worm::Right, false);
     }
+  }
+
+  if (key != DkEscape) {
+    std::fprintf(stderr,
+        "[netkey-dbg] onKey key=%d state=%d found=%d localIdx=%d "
+        "inputDev=%u localCS=%02x state=%d\n",
+        key, (int)keyState, (int)found, localIdx,
+        (unsigned)worm->settings->inputDevice,
+        (unsigned)localControlState.pack(), (int)state);
   }
 
   if (key == DkEscape && keyState) {
@@ -910,10 +930,26 @@ void RollbackController::advanceWeaponSelection() {
     predicted = true;
   }
 
+  uint8_t preLocalIstate =
+      static_cast<uint8_t>(game.worms[localIdx]->controlStates.istate);
   game.setSpeculative(predicted);
   bool wsDone = weaponSelectStep(curLocal, curRemote);
   game.setSpeculative(false);
+  uint8_t postLocalIstate =
+      static_cast<uint8_t>(game.worms[localIdx]->controlStates.istate);
   ++simFrame;
+
+  // Throttled: one line ~every half second at 70Hz, plus any tick where the
+  // local input byte is non-zero or the worm's istate changed.
+  bool interesting = (curLocal != 0) || (preLocalIstate != postLocalIstate);
+  if (interesting || (simFrame % 35u == 0u)) {
+    std::fprintf(stderr,
+        "[netkey-dbg] WS tick sim=%u conf=%d lkrf=%d localCS=%02x "
+        "curL=%02x curR=%02x pred=%d istate %02x->%02x lastSent=%u\n",
+        simFrame, confirmedSimFrame_, lastKnownRemoteFrame_,
+        (unsigned)localControlState.pack(), curLocal, curRemote, (int)predicted,
+        preLocalIstate, postLocalIstate, lastSentFrame);
+  }
 
   if (!predicted) {
     confirmedSimFrame_ = static_cast<int32_t>(simFrame) - 1;
