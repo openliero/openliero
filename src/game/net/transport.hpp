@@ -17,7 +17,12 @@ struct IceAgent;
 struct NetTransport {
   // Peers running a different version handshake-mismatch and disconnect
   // rather than play with mismatched packet semantics.
-  static constexpr uint8_t kProtocolVersion = 4;
+  static constexpr uint8_t kProtocolVersion = 5;
+
+  // Wire sizes for hand-serialized structs (no compiler padding).
+  static constexpr size_t kPlayerInfoWireSize = 5 * 4 + 4 + 3 * 4 + 24;
+  static constexpr size_t kMatchSettingsWireSize =
+      4 * 7 + 1 + 40 * 4 + 3 + 4 * 3;
 
   // Packet types
   enum PacketType : uint8_t {

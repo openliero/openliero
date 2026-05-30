@@ -15,6 +15,19 @@
 #include <arpa/inet.h>
 #endif
 
+static void writeU32(uint8_t* p, uint32_t v) { std::memcpy(p, &v, 4); }
+static void writeI32(uint8_t* p, int32_t v) { std::memcpy(p, &v, 4); }
+static uint32_t readU32(const uint8_t* p) {
+  uint32_t v;
+  std::memcpy(&v, p, 4);
+  return v;
+}
+static int32_t readI32(const uint8_t* p) {
+  int32_t v;
+  std::memcpy(&v, p, 4);
+  return v;
+}
+
 static constexpr int NUM_CHANNELS = 3;
 static constexpr int CHANNEL_RELIABLE = 0;
 static constexpr int CHANNEL_UNRELIABLE = 1;
@@ -321,16 +334,47 @@ bool NetTransport::poll() {
               }
               break;
             case PacketPlayerInfo:
-              if (len == 1 + sizeof(PlayerInfo) && onPlayerInfo) {
-                PlayerInfo info;
-                std::memcpy(&info, data + 1, sizeof(PlayerInfo));
+              if (len == 1 + kPlayerInfoWireSize && onPlayerInfo) {
+                PlayerInfo info{};
+                const uint8_t* p = data + 1;
+                for (int i = 0; i < 5; ++i, p += 4)
+                  info.weapons[i] = readU32(p);
+                info.color = readI32(p);
+                p += 4;
+                for (int i = 0; i < 3; ++i, p += 4) info.rgb[i] = readI32(p);
+                std::memcpy(info.name, p, 24);
                 onPlayerInfo(info);
               }
               break;
             case PacketMatchSettings:
-              if (len == 1 + sizeof(MatchSettingsData) && onMatchSettings) {
-                MatchSettingsData msd;
-                std::memcpy(&msd, data + 1, sizeof(MatchSettingsData));
+              if (len == 1 + kMatchSettingsWireSize && onMatchSettings) {
+                MatchSettingsData msd{};
+                const uint8_t* p = data + 1;
+                msd.lives = readI32(p);
+                p += 4;
+                msd.loadingTime = readI32(p);
+                p += 4;
+                msd.gameMode = readU32(p);
+                p += 4;
+                msd.blood = readI32(p);
+                p += 4;
+                msd.maxBonuses = readI32(p);
+                p += 4;
+                msd.timeToLose = readI32(p);
+                p += 4;
+                msd.flagsToWin = readI32(p);
+                p += 4;
+                msd.loadChange = *p++;
+                for (int i = 0; i < 40; ++i, p += 4)
+                  msd.weapTable[i] = readU32(p);
+                msd.regenerateLevel = *p++;
+                msd.shadow = *p++;
+                msd.namesOnBonuses = *p++;
+                msd.bloodParticleMax = readI32(p);
+                p += 4;
+                msd.zoneTimeout = readI32(p);
+                p += 4;
+                msd.inputDelay = readI32(p);
                 onMatchSettings(msd);
               }
               break;
@@ -475,16 +519,45 @@ void NetTransport::sendHandshake(uint32_t seed, uint32_t settingsHash) {
 }
 
 void NetTransport::sendPlayerInfo(const PlayerInfo& info) {
-  uint8_t buf[1 + sizeof(PlayerInfo)];
+  uint8_t buf[1 + kPlayerInfoWireSize];
   buf[0] = PacketPlayerInfo;
-  std::memcpy(buf + 1, &info, sizeof(PlayerInfo));
+  uint8_t* p = buf + 1;
+  for (int i = 0; i < 5; ++i, p += 4) writeU32(p, info.weapons[i]);
+  writeI32(p, info.color);
+  p += 4;
+  for (int i = 0; i < 3; ++i, p += 4) writeI32(p, info.rgb[i]);
+  std::memcpy(p, info.name, 24);
   sendPacket(buf, sizeof(buf));
 }
 
 void NetTransport::sendMatchSettings(const MatchSettingsData& data) {
-  uint8_t buf[1 + sizeof(MatchSettingsData)];
+  uint8_t buf[1 + kMatchSettingsWireSize];
   buf[0] = PacketMatchSettings;
-  std::memcpy(buf + 1, &data, sizeof(MatchSettingsData));
+  uint8_t* p = buf + 1;
+  writeI32(p, data.lives);
+  p += 4;
+  writeI32(p, data.loadingTime);
+  p += 4;
+  writeU32(p, data.gameMode);
+  p += 4;
+  writeI32(p, data.blood);
+  p += 4;
+  writeI32(p, data.maxBonuses);
+  p += 4;
+  writeI32(p, data.timeToLose);
+  p += 4;
+  writeI32(p, data.flagsToWin);
+  p += 4;
+  *p++ = data.loadChange;
+  for (int i = 0; i < 40; ++i, p += 4) writeU32(p, data.weapTable[i]);
+  *p++ = data.regenerateLevel;
+  *p++ = data.shadow;
+  *p++ = data.namesOnBonuses;
+  writeI32(p, data.bloodParticleMax);
+  p += 4;
+  writeI32(p, data.zoneTimeout);
+  p += 4;
+  writeI32(p, data.inputDelay);
   sendPacket(buf, sizeof(buf));
 }
 
