@@ -294,7 +294,7 @@ bool MainMenuState::update()
 							[this](bool accepted, std::string const& result) {
 								if (accepted && !result.empty())
 								{
-									gfx->saveSettings(gfx->getConfigNode() / "Setups" / (result + ".cfg"));
+									gfx->saveSettings(gfx->getUserConfigNode() / "Setups" / (result + ".cfg"));
 								}
 								g_soundPlayer->play(gfx->common->soundHook[SoundMenuSelect]);
 								gfx->settingsMenu.updateItems(*gfx->common);
@@ -355,7 +355,7 @@ bool MainMenuState::update()
 							if (accepted && !result.empty())
 							{
 								gfx->playerMenu.ws->saveProfile(
-									gfx->getConfigNode() / "Profiles" / (result + ".toml"));
+									gfx->getUserConfigNode() / "Profiles" / (result + ".toml"));
 							}
 							g_soundPlayer->play(gfx->common->soundHook[SoundMenuSelect]);
 							gfx->playerMenu.updateItems(*gfx->common);
