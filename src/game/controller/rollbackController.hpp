@@ -287,6 +287,12 @@ struct RollbackController : CommonController {
   // Bounded queue for batches arriving from a peer that has already
   // crossed the next phase boundary while we haven't yet. Capacity
   // matches the K-wide redundancy so one full peer-side resend fits.
+  //
+  // Stall budget: at 70 Hz the peer emits one batch per tick, so 8 slots
+  // buffers ~115 ms of "peer ahead" before we start dropping. The local
+  // phase transition is driven by the same confirmed-frame stream and
+  // typically fires within 1–2 ticks of the peer's, so this is well
+  // above the observed worst case.
   static constexpr uint8_t kMaxPendingFutureBatches =
       static_cast<uint8_t>(rollback::kMaxRollback + 1);
   struct PendingFutureBatch {
