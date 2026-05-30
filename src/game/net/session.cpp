@@ -500,7 +500,9 @@ void NetSession::tryStartGame() {
   remoteWs->color = remotePlayerInfo_.color;
   for (int i = 0; i < 3; ++i)
     remoteWs->rgb[i] = remotePlayerInfo_.rgb[i];
-  remoteWs->name = remotePlayerInfo_.name;
+  remoteWs->name.assign(
+      remotePlayerInfo_.name,
+      strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
   remoteWorm->settings = remoteWs;
 
   // Seed the game's RNG so both peers have identical state
@@ -639,7 +641,9 @@ void NetSession::startRematch() {
   remoteWs->color = remotePlayerInfo_.color;
   for (int i = 0; i < 3; ++i)
     remoteWs->rgb[i] = remotePlayerInfo_.rgb[i];
-  remoteWs->name = remotePlayerInfo_.name;
+  remoteWs->name.assign(
+      remotePlayerInfo_.name,
+      strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
   remoteWorm->settings = remoteWs;
 
   activeGame().rand.seed(gameSeed_);
@@ -677,7 +681,9 @@ void NetSession::startRematchClient() {
   remoteWs->color = remotePlayerInfo_.color;
   for (int i = 0; i < 3; ++i)
     remoteWs->rgb[i] = remotePlayerInfo_.rgb[i];
-  remoteWs->name = remotePlayerInfo_.name;
+  remoteWs->name.assign(
+      remotePlayerInfo_.name,
+      strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
   remoteWorm->settings = remoteWs;
 
   activeGame().rand.seed(gameSeed_);
