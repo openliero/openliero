@@ -263,7 +263,7 @@ Two issues had to be resolved:
 ## Future Work
 
 - ~~**Desync detection:** Periodic checksum comparison using the existing `PacketChecksum` packet type (already in the wire protocol, not yet wired up)~~ ✅ Wired up — `wideRollbackChecksum()` (covers projectile pools, level damage, per-worm health/lives/ammo, control state) sent every advanced frame, compared on receipt. Replay format uses the same function, so the live and recorded desync gates can't drift apart.
-- **Replay recording of network games** — the data is already available (frame inputs)
+- ~~**Replay recording of network games**~~ ✅ Shipped 2026-05-30: a shadow Game inside RollbackController follows confirmed frames only and writes the standard `.lrp` format to `Replays/<timestamp> <names> mpN.lrp` (N = local worm index). See "Multiplayer replay recording (2026-05-30)" below.
 - ~~**Rollback netcode (Phase 2)** — GGPO-style prediction/rollback for internet play~~ ✅ Shipped 2026-05-28.
 - ~~**NAT traversal** — STUN/TURN or relay server for connections through firewalls~~ ✅ Implemented: STUN + signaling + hole-punch + relay fallback (see Online Connect Flow below)
 - ~~**Synchronized end-of-match / disconnect** — both peers should leave at the same instant, not via socket-timeout~~ ✅ Shipped 2026-05-30 (`PacketPeerLeft` + clean-pause-on-EndMatch).
@@ -413,6 +413,34 @@ Pause and end-of-match are mirrored across peers over the reliable channel so ne
 
 Wire format for `PacketPeerLeft` is one byte (type=16). Sent on the reliable channel. Protocol bumped to v4; older peers fail the version check at handshake.
 
+### Multiplayer replay recording (2026-05-30)
+
+Each peer in a multiplayer match writes its own `.lrp` replay file alongside the single-player ones, using the existing `ReplayWriter`/`ReplayReader` binary format. Recording is driven by a **shadow Game** living inside `RollbackController`, not by the live game itself.
+
+**Why a shadow:** the rollback ring re-processes the same `simFrame` multiple times under different inputs as predictions get corrected. Calling `ReplayWriter::recordFrame()` directly inside the rollback loops would either over-record (one entry per resim pass) or under-record (skip the promote path, which doesn't `processFrame()` at all). The shadow sidesteps both by following confirmed frames only — once a frame's input is locked, the shadow advances exactly one `processFrame()` and writes exactly one delta.
+
+**Setup** (`RollbackController::setupShadowGame`, called from `finishWeaponSelect`):
+- Construct a sibling `Game` sharing `Common`+`Settings`, with a `NullSoundPlayer`.
+- Mirror the live controller's worm/viewport init.
+- Resize `level.data`/`level.materials` to the live game's dimensions (the snapshot carries pixel data but not dimensions).
+- Call `initWeapons` → `startGame` → `resetWorms` to set up state — most importantly `bobjects.resize(bloodParticleMax)`, which the fast snapshot's `loadSnapshotFast` assumes is already done. **This was the subtle bug**: without `startGame()` the shadow's bobjects pool stayed at capacity 1, and the first blood-particle spawn went off the end. Live and shadow then diverged silently.
+- `loadSnapshotFast` from `rollbackBuffer_.find(0)` to clone the live frame-0 state.
+
+**Drive loop** (`RollbackController::driveShadow`, called at the end of `advanceSimulation`):
+- Walk slots `[shadowFrame_+1, confirmedSimFrame_]` in order.
+- Apply edge detection on shadow worms from the slot's stored input bytes (same `rising|=`/`released&=~` pattern the live forward path uses).
+- `shadowReplay_->recordFrame()` (reads `worm.controlStates ^ worm.prevControlStates` — must run BEFORE `processFrame` resets prev to current).
+- `shadowGame_->processFrame()`.
+- Assert `wideRollbackChecksum(shadow)` matches the slot's recorded checksum; log once on divergence so any future regression surfaces immediately.
+
+**File naming**: `Replays/<timestamp> <playerNames> mpN.lrp` where N is the local worm index. The `mpN` suffix prevents host and client from colliding when they share a config dir, and makes the two recordings easy to tell apart.
+
+**Lifecycle**: `stopReplayRecording()` is called from `endMatch()` and `peerLeft()` so the `0x83` terminator gets flushed early. Natural game-over and controller destruction rely on `~ReplayWriter` to flush.
+
+**Test embedding**: `setReplayWriterOverride(std::unique_ptr<io::Writer>)` lets a caller redirect the writer to anything (e.g., an in-memory `VectorWriter`) so the round-trip test in `test_rollback_replay.cpp` doesn't need a configured `Gfx`. The override also bypasses the `recordReplays`/`extensions` gates so tests can record unconditionally.
+
+**Limitation**: recording starts at frame 0 of the game phase, not during weapon select. Playing back a multiplayer replay starts you straight in the match — same as single-player replays do.
+
 ### STUN external IP discovery (2026-05-19)
 
 When hosting a game, the "CONNECT USING:" screen now shows the host's external (public) IP
@@ -501,7 +529,7 @@ The Phase 2 rollback work and the 2026-05-30 pause/disconnect cleanup leave the 
 
 1. **Graceful handling of unexpected disconnects.** A clean DISCONNECT now mirrors across peers via `PacketPeerLeft`, but an actual link drop still kicks the surviving peer straight to an InfoBox. Add a short reconnect grace window (`NetSession::WaitingForPeer` re-entry?) before declaring the match dead. Files: `src/game/net/session.{cpp,hpp}`, `src/game/gamePlayState.cpp`.
 2. **Cross-platform determinism CI.** The "Platform-specific fixed-point behavior" risk is still Pending. Add a CI job that runs `test_determinism` (and ideally `test_rollback_lockstep_parity`) on Linux, macOS, and Windows runners and fails on any byte-level divergence. Files: `.github/workflows/*`, no source changes expected.
-3. **Replay recording of network games.** Per-frame inputs already flow through the rollback controller; capturing them to the existing replay format should be mostly plumbing. Files: `src/game/replay.cpp`, `src/game/controller/rollbackController.cpp`.
+3. ~~**Replay recording of network games.** Per-frame inputs already flow through the rollback controller; capturing them to the existing replay format should be mostly plumbing. Files: `src/game/replay.cpp`, `src/game/controller/rollbackController.cpp`.~~ ✅ Shipped 2026-05-30.
 4. **Adaptive `inputDelay`.** Today it's host-authoritative and fixed (default 3, clamped to `kMaxRollback=7`). Use the existing frame-advantage / RTT signal to nudge it within `[1, 7]` at match start. Avoid mid-match changes — they require re-running pre-fill. Files: `src/game/net/session.cpp`, `src/game/controller/rollbackController.cpp`.
 5. **Signaling server hardening.** Documented limitations (no auth, 30-bit room codes) are acceptable for now but worth revisiting if the server sees abuse: add per-IP rate limiting and HMAC-signed room codes. Files: `server/`.
 
