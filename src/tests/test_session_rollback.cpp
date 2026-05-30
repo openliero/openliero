@@ -602,3 +602,87 @@ TEST_CASE("Host's inputDelay syncs to the client over MatchSettings",
   REQUIRE(client.rollbackController() != nullptr);
 }
 
+// Reproduces the actual production bug: NetSession::onRemoteInputBatch
+// (session.cpp:280) silently drops batches when rollbackPtr_ is null,
+// i.e. between session construction and beginPlaying.
+//
+// On a real network, the host transitions to Playing earlier than the
+// client (it doesn't wait on the client's MatchSettings/MapData reply)
+// and starts emitting input batches while the client is still
+// mid-handshake. Those batches reach the client's transport, are
+// forwarded to NetSession::onRemoteInputBatch, see rollbackPtr_ == null
+// and are silently dropped. By the time the client reaches Playing the
+// host's K-wide sliding window (K = kMaxRollback + 1 = 8) has moved
+// past frame 0, so the dropped early frames are never re-delivered →
+// permanent hole in the client's confirm chain → rollback-window stall.
+//
+// The comment at session.cpp:277-279 mis-justifies this: "K-wide
+// redundancy re-delivers the same frames on the next batch (~14 ms
+// later)". True only while newestFrame < K. Beyond that the window
+// slides and the oldest frame is gone.
+//
+// This test simulates an early batch by directly invoking the
+// transport's onRemoteInputBatch callback before either session is
+// Playing — the same code path a real ENet packet would hit. After
+// driving both sessions to Playing without manually processing the
+// host's controller (so the host emits no real batches), the client's
+// confirm chain should still reflect the early batch.
+TEST_CASE("Input batches received pre-Playing reach controller post-Playing",
+          "[session][rollback][regression]") {
+  Env e;
+  e.settings->inputDelay = 1;
+
+  NetSession host(e.common, e.settings, e.tcRoot);
+  NetSession client(e.common, e.settings, e.tcRoot);
+
+  REQUIRE(host.hostGame(0));
+  uint16_t port = host.transport().listeningPort();
+  REQUIRE(client.joinGame("127.0.0.1", port));
+
+  REQUIRE(client.sessionState() != NetSession::Playing);
+  REQUIRE(client.rollbackController() == nullptr);
+
+  // Simulate the wire-level arrival of a host input batch while the
+  // client is still pre-Playing. Frames 0..7, all zeros. (Real host
+  // would have sent zeros too — no keys pressed at game start.)
+  uint8_t earlyInputs[8] = {0};
+  client.transport().onRemoteInputBatch(
+      /*generation=*/0, /*baseFrame=*/0, /*count=*/8, earlyInputs,
+      /*remoteLocalFrame=*/7);
+
+  // Drive both sessions to Playing. Neither test calls
+  // rollback.process() during this loop, so no real input batches are
+  // emitted by either side — anything in the client's confirm chain
+  // after Playing originated from the early injection above.
+  bool reached = pollUntil(host, client, [&]() {
+    return host.sessionState() == NetSession::Playing &&
+           client.sessionState() == NetSession::Playing;
+  });
+  REQUIRE(reached);
+  REQUIRE(client.rollbackController() != nullptr);
+
+  auto* rb = client.rollbackController();
+  rb->focus();
+
+  // Run enough WS ticks for the controller's promote loop to walk the
+  // remoteInputReady flags up to the highest available frame. Without
+  // remote input arriving, simFrame can only advance to confirmedFrame
+  // + 1 before the rollback-window stall fires.
+  for (int i = 0; i < 16; ++i) {
+    rb->setLocalControlState(0);
+    rb->process();
+  }
+
+  INFO("client simFrame=" << rb->currentFrame()
+       << " confirmedFrame=" << rb->confirmedFrame());
+
+  // With the fix (NetSession buffers pre-Playing batches and replays
+  // them in beginPlaying), confirmedFrame reaches at least 7 — the
+  // injected batch covered frames 0..7.
+  //
+  // Without the fix, the batch was dropped at session.cpp:280;
+  // remoteInputReady has only frame 0 (from prefillRemoteInput with
+  // inputDelay=1) and confirmedFrame stalls at 0.
+  REQUIRE(rb->confirmedFrame() >= 7);
+}
+

@@ -188,6 +188,7 @@ void NetSession::disconnect() {
   localReady_ = false;
   remoteReady_ = false;
   receivedMapData_.clear();
+  prePlayingInputBatches_.clear();
 
   // Restore client's original TC if it was changed during the session
   if (role_ == Client && tcMemFs_) {
@@ -274,12 +275,31 @@ void NetSession::onRemoteInputBatch(uint8_t generation, uint32_t baseFrame,
                                     uint8_t count, uint8_t const* inputs,
                                     uint32_t remoteLocalFrame) {
   // The controller owns the generation filter; we just forward.
-  // Pre-Playing batches are dropped on purpose — the controller isn't
-  // wired yet, and the K-wide redundancy re-delivers the same frames
-  // on the next batch (~14 ms later).
-  if (rollbackPtr_)
+  if (rollbackPtr_) {
     rollbackPtr_->injectRemoteBatch(generation, baseFrame, count, inputs,
                                     remoteLocalFrame);
+    return;
+  }
+
+  // Pre-Playing arrivals must be buffered, not dropped. On a real
+  // network the host transitions to Playing before the client
+  // (handshake/MatchSettings/MapData round-trips don't all complete
+  // simultaneously) and starts emitting input batches while the
+  // client is still mid-handshake. The K-wide redundancy in each
+  // batch only re-delivers frames whose newestFrame is < K; once the
+  // window slides past frame 0 (~7 ticks ≈ 100 ms at 70 Hz) those
+  // early frames are gone forever from the wire, so the only
+  // surviving copy is whatever arrived during this window. Dropping
+  // here is what stalls the client's confirm chain in production.
+  if (prePlayingInputBatches_.size() >= MAX_PRE_PLAYING_BATCHES) return;
+  if (count > rollback::kMaxRollback + 1) return;  // malformed; drop
+  PendingInputBatch b{};
+  b.generation = generation;
+  b.baseFrame = baseFrame;
+  b.count = count;
+  for (uint8_t i = 0; i < count; ++i) b.inputs[i] = inputs[i];
+  b.remoteLocalFrame = remoteLocalFrame;
+  prePlayingInputBatches_.push_back(b);
 }
 
 void NetSession::onPlayerInfo(const NetTransport::PlayerInfo& info) {
@@ -529,6 +549,17 @@ void NetSession::beginPlaying(int localIdx, bool isRematch) {
   wireActiveController();
   prefillRemoteInput();
   rollbackPtr_ = rollback_.get();
+
+  // Flush any input batches that arrived during the asymmetric
+  // handshake window (host transitions to Playing before client; its
+  // first sends land before client.rollbackPtr_ is set). The
+  // controller dedups against confirmedSimFrame_ so out-of-order or
+  // redundant replays are cheap no-ops.
+  for (auto const& b : prePlayingInputBatches_) {
+    rollbackPtr_->injectRemoteBatch(b.generation, b.baseFrame, b.count,
+                                    b.inputs.data(), b.remoteLocalFrame);
+  }
+  prePlayingInputBatches_.clear();
 
   if (isRematch) {
     localReady_ = false;
