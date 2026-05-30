@@ -772,6 +772,11 @@ void RollbackController::driveShadow() {
   }
 }
 
+// Mirror of advanceSimulation() for the weapon-select phase: same
+// promote-confirmed-prefix → rollback-to-mismatch → resim-speculative →
+// save-snapshot shape, but stepping weaponSelectStep instead of
+// processFrame and saving into wsSnap instead of snapshot. Keep the two
+// in sync — a fix here likely needs to land in the sibling too.
 void RollbackController::advanceWeaponSelection() {
   uint32_t inputFrame = simFrame + inputDelay;
   if (inputFrame != lastSentFrame) {
@@ -945,6 +950,8 @@ void RollbackController::advanceWeaponSelection() {
   }
 }
 
+// Mirror of advanceWeaponSelection() for the game phase. Keep the two
+// in sync — a fix here likely needs to land in the sibling too.
 void RollbackController::advanceSimulation() {
   uint32_t inputFrame = simFrame + inputDelay;
   if (inputFrame != lastSentFrame) {
