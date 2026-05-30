@@ -560,6 +560,106 @@ void RollbackController::finishWeaponSelect() {
   seed.wsSnap.valid = false;
   game.saveSnapshotFast(seed.snapshot);
   seed.checksum = wideRollbackChecksum(game);
+
+  setupShadowGame();
+}
+
+void RollbackController::setupShadowGame() {
+  // Mirror the live game's construction: same Common/Settings, silent
+  // sound player, identical worm+viewport configuration so the
+  // snapshot we load below produces an identical processFrame path.
+  shadowGame_ = std::make_unique<Game>(
+      game.common, game.settings, std::make_shared<NullSoundPlayer>());
+
+  for (int idx = 0; idx < 2; ++idx) {
+    auto worm = std::make_shared<Worm>();
+    worm->settings = game.worms[idx]->settings;
+    worm->health = worm->settings->health;
+    worm->index = idx;
+    worm->statsX = idx == 0 ? 0 : 218;
+    shadowGame_->addWorm(worm);
+  }
+  shadowGame_->addViewport(
+      new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+  shadowGame_->addViewport(
+      new Viewport(Rect(160, 0, 158 + 160, 158), 1, 504, 350));
+
+  // loadSnapshotFast assumes level buffers are already sized; the
+  // snapshot itself carries pixel data but not dimensions.
+  shadowGame_->level.width = game.level.width;
+  shadowGame_->level.height = game.level.height;
+  std::size_t cells = static_cast<std::size_t>(game.level.width)
+                    * static_cast<std::size_t>(game.level.height);
+  shadowGame_->level.data.resize(cells);
+  shadowGame_->level.materials.resize(cells);
+
+  // Match the post-WS setup the live controller did in
+  // finishWeaponSelect: initWeapons before startGame, then startGame
+  // and resetWorms. The snapshot load below overwrites the
+  // simulation-visible side effects (rand, holdazone, worm pos), but
+  // we still need startGame() to resize bobjects to bloodParticleMax
+  // since the snapshot only carries `count`, not capacity.
+  for (auto const& w : shadowGame_->worms) w->initWeapons(*shadowGame_);
+  shadowGame_->paused = false;
+  shadowGame_->startGame();
+  shadowGame_->resetWorms();
+
+  // Frame-0 seed: live game's post-startGame state.
+  if (auto* seedSlot = rollbackBuffer_.find(0)) {
+    shadowGame_->loadSnapshotFast(seedSlot->snapshot);
+  }
+
+  shadowFrame_ = -1;
+  shadowLocalPrevInput_ = 0;
+  shadowRemotePrevInput_ = 0;
+  shadowMismatchLogged_ = false;
+}
+
+void RollbackController::driveShadow() {
+  if (!shadowGame_) return;
+
+  while (shadowFrame_ < confirmedSimFrame_) {
+    int32_t F = shadowFrame_ + 1;
+    rollback::Slot const* slot = rollbackBuffer_.find(F);
+    if (!slot) {
+      // The ring only holds kMaxRollback+1 slots; if the shadow ever
+      // falls more than that behind, we can't reconstruct the missing
+      // frame's inputs and have to give up on this match's recording.
+      shadowGame_.reset();
+      return;
+    }
+
+    uint8_t curLocal  = (localIdx == 0) ? slot->localInput : slot->remoteInput;
+    uint8_t curRemote = (localIdx == 0) ? slot->remoteInput : slot->localInput;
+
+    uint8_t risingLocal  = curLocal  & ~shadowLocalPrevInput_;
+    uint8_t risingRemote = curRemote & ~shadowRemotePrevInput_;
+    uint8_t releasedLocal  = shadowLocalPrevInput_  & ~curLocal;
+    uint8_t releasedRemote = shadowRemotePrevInput_ & ~curRemote;
+    shadowGame_->worms[localIdx ]->controlStates.istate |= risingLocal;
+    shadowGame_->worms[remoteIdx]->controlStates.istate |= risingRemote;
+    shadowGame_->worms[localIdx ]->controlStates.istate &= ~releasedLocal;
+    shadowGame_->worms[remoteIdx]->controlStates.istate &= ~releasedRemote;
+    shadowLocalPrevInput_  = curLocal;
+    shadowRemotePrevInput_ = curRemote;
+
+    shadowGame_->processFrame();
+    shadowFrame_ = F;
+
+    // Sanity check: the shadow must match the live game's confirmed
+    // state for the same frame. Log once on divergence so the breakage
+    // surfaces without spamming stderr.
+    uint32_t shadowChk = wideRollbackChecksum(*shadowGame_);
+    if (shadowChk != slot->checksum && !shadowMismatchLogged_) {
+      std::fprintf(stderr,
+          "[replay shadow] mismatch at frame %d: shadow=%08x live=%08x"
+          " curLocal=%02x curRemote=%02x slot.localInput=%02x slot.remoteInput=%02x"
+          " shadowRand=%08x\n",
+          F, shadowChk, slot->checksum, curLocal, curRemote,
+          slot->localInput, slot->remoteInput, shadowGame_->rand.last);
+      shadowMismatchLogged_ = true;
+    }
+  }
 }
 
 void RollbackController::advanceWeaponSelection() {
@@ -953,6 +1053,8 @@ void RollbackController::advanceSimulation() {
       goingToMenu = true;
     }
   }
+
+  driveShadow();
 }
 
 void RollbackController::draw(Renderer& renderer, bool useSpectatorViewports) {

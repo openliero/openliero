@@ -204,6 +204,22 @@ struct RollbackController : CommonController {
   bool resumable_ = true;
   Menu pauseMenu_;
 
+  // Shadow Game driven only by confirmed frames (never predicted,
+  // never resimmed). Phase 1 just verifies it stays lockstep with the
+  // live game via wideRollbackChecksum; Phase 2 will hook a
+  // ReplayWriter onto it to record multiplayer matches. Owning a
+  // second Game would double sim cost in the worst case; we only
+  // advance it as confirmations land, so steady-state cost is one
+  // extra processFrame per real tick (no rollback amplification).
+  std::unique_ptr<Game> shadowGame_;
+  int32_t shadowFrame_ = -1;
+  uint8_t shadowLocalPrevInput_ = 0;
+  uint8_t shadowRemotePrevInput_ = 0;
+  bool shadowMismatchLogged_ = false;
+
+  void setupShadowGame();
+  void driveShadow();
+
   InputBatchSendCallback sendInputBatch;
   InputRecvCallback recvInput;
   ChecksumSendCallback sendChecksum;
