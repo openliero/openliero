@@ -253,11 +253,10 @@ bool NetTransport::poll() {
         // so we can tell whether checksum packets are reaching the wire
         // at all (vs being lost in the ICE bridge or never sent).
         if (len >= 1) {
-          static int logEnabled = -1;
-          if (logEnabled < 0) {
+          static const bool logEnabled = []() {
             char const* e = std::getenv("OPENLIERO_CHECKSUM_LOG");
-            logEnabled = (e && *e && *e != '0') ? 1 : 0;
-          }
+            return e && *e && *e != '0';
+          }();
           if (logEnabled) {
             static uint64_t cntInput = 0, cntBatch = 0, cntChecksum = 0,
                             cntOther = 0;
