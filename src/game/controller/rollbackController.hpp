@@ -49,6 +49,7 @@ struct RollbackController : CommonController {
   void swapLevel(Level& newLevel) override;
   Level* currentLevel() override;
   Game* currentGame() override;
+  Game* statsGame() override;
   bool running() override;
 
   void setInputCallbacks(InputBatchSendCallback send, InputRecvCallback recv);

@@ -413,6 +413,27 @@ Pause and end-of-match are mirrored across peers over the reliable channel so ne
 
 Wire format for `PacketPeerLeft` is one byte (type=16). Sent on the reliable channel. Protocol bumped to v4; older peers fail the version check at handshake.
 
+### Stats recorded on the shadow Game (2026-05-30)
+
+The live `Game` in rollback runs *every* `processFrame` speculatively (forward predictions + resims). `NormalStatsRecorder` was gated on `speculative` and therefore:
+
+- on the peer whose forward path always landed in the predicted branch (in practice, the side whose `simFrame` was one frame ahead of `confirmedSimFrame_+1`), **no** stats method ever ran — `frame` stayed 0, `kills`/`damageDealt`/`gameTime` stayed 0;
+- `gamePlayState::update` gated the stats screen on `gameTime > 0`, so on EndMatch that peer dropped to the main menu instead of the stats screen.
+
+Fix: route stats exclusively through the shadow Game. The shadow already runs once per confirmed frame for replay recording — it's the right place to count "real" frames.
+
+- `setupShadowGame` (`rollbackController.cpp`) now resets the **live** game's `statsRecorder` to the base `StatsRecorder` (a no-op). All the in-sim hooks (`damageDealt`, `hit`, `afterSpawn`, …) fired from the live game now do nothing. The shadow keeps its `NormalStatsRecorder` from `Game`'s default ctor.
+- New virtual `Controller::statsGame()` returns the game whose `statsRecorder` holds player-facing stats. Default = `currentGame()`. `RollbackController` returns `shadowGame_` when set, falling back to `&game`.
+- `RollbackController::process()`'s end-of-match `finish(*game.statsRecorder)` now targets `statsGame()`.
+- `gamePlayState::update` reads `gfx->controller->statsGame()` instead of `currentGame()` for the dynamic_cast and the `StatsState` constructor.
+- Skip-weapon-select path: `focus()` now also seeds the rollback ring + calls `setupShadowGame` so direct-into-game flows have a shadow too.
+
+Regression coverage in `test_session_rollback.cpp`:
+- `"Per-worm stats hooks fire on the shadow on both peers"` — both peers fire Fire; asserts `weapons[].potentialHits|actualHits` is non-zero on each side's shadow stats.
+- `"Stats accumulate on both peers across a rollback game"` — runs ~200 game-phase ticks + a Pause/EndMatch flow; asserts `shadow.frame > 100`, host/client frame counts within 10, `gameTime > 0` on both peers after EndMatch.
+
+**Side effect**: the live game's `Game::statsRecorder` is now base `StatsRecorder` after `setupShadowGame`. `dynamic_cast<NormalStatsRecorder*>(live->statsRecorder.get())` is intentionally null in rollback play. Anything wanting stats must go through `Controller::statsGame()`.
+
 ### Multiplayer replay recording (2026-05-30)
 
 Each peer in a multiplayer match writes its own `.lrp` replay file alongside the single-player ones, using the existing `ReplayWriter`/`ReplayReader` binary format. Recording is driven by a **shadow Game** living inside `RollbackController`, not by the live game itself.

@@ -59,8 +59,11 @@ bool GamePlayState::update()
 			return false;
 		}
 
-		// Game ended — show stats if available and game actually finished
-		Game* game = gfx->controller->currentGame();
+		// Game ended — show stats if available and game actually finished.
+		// statsGame() is the live game for single-player/replay and the
+		// shadow Game for rollback multiplayer (live's recorder is a
+		// no-op there — see RollbackController::setupShadowGame).
+		Game* game = gfx->controller->statsGame();
 		if (game && game->statsRecorder)
 		{
 			auto* stats = dynamic_cast<NormalStatsRecorder*>(game->statsRecorder.get());

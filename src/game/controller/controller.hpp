@@ -39,5 +39,12 @@ struct Controller
 
 	virtual Game* currentGame() = 0;
 
+	// Game whose statsRecorder holds the post-match player-facing stats.
+	// For single-player and replay this is the live game. For rollback
+	// multiplayer it's the shadow Game that follows confirmed frames,
+	// because the live game's processFrame fires speculatively and would
+	// over-count (the live recorder is intentionally a no-op).
+	virtual Game* statsGame() { return currentGame(); }
+
 	virtual void swapLevel(Level& newLevel) = 0;
 };

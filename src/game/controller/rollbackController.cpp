@@ -295,6 +295,23 @@ void RollbackController::focus() {
       game.startGame();
       game.resetWorms();
       state = StateGame;
+
+      // Size the rollback ring before the frame-0 snapshot used by
+      // setupShadowGame.
+      if (!rollbackBufferPrepared_) {
+        rollbackBuffer_.prepare(game);
+        rollbackBufferPrepared_ = true;
+      }
+      // Seed slot 0 with the live frame-0 state so the shadow can clone it.
+      rollback::Slot& seed = rollbackBuffer_.write(0);
+      seed.localInput = 0;
+      seed.remoteInput = 0;
+      seed.remoteState = rollback::RemoteState::Confirmed;
+      seed.wsSnap.valid = false;
+      game.saveSnapshotFast(seed.snapshot);
+      seed.checksum = wideRollbackChecksum(game);
+
+      setupShadowGame();
     } else {
       state = StateWeaponSelection;
 
@@ -375,7 +392,10 @@ bool RollbackController::process() {
       fadeValue -= 1;
     else {
       if (state == StateGameEnded) {
-        game.statsRecorder->finish(game);
+        // Stats live on the shadow (see setupShadowGame); finalize there
+        // so gameTime / lifeSpans reflect the confirmed timeline.
+        Game* sg = statsGame();
+        sg->statsRecorder->finish(*sg);
       }
       return false;
     }
@@ -621,6 +641,15 @@ void RollbackController::setupShadowGame() {
   shadowLocalPrevInput_ = 0;
   shadowRemotePrevInput_ = 0;
   shadowMismatchLogged_ = false;
+
+  // The live game runs each frame speculatively (forward predicted +
+  // resims), so its NormalStatsRecorder would over-count and — worse —
+  // never increment frame on the peer whose forward path always falls
+  // into the predicted branch. Stats accumulate exclusively on the
+  // shadow, which advances once per confirmed frame. Replace the live
+  // recorder with the base no-op so the in-sim hooks (damageDealt, hit,
+  // afterSpawn, …) become silent on the live side.
+  game.statsRecorder.reset(new StatsRecorder);
 
   startReplayRecording();
 }
@@ -1199,6 +1228,10 @@ void RollbackController::swapLevel(Level& newLevel) {
 Level* RollbackController::currentLevel() { return &game.level; }
 
 Game* RollbackController::currentGame() { return &game; }
+
+Game* RollbackController::statsGame() {
+  return shadowGame_ ? shadowGame_.get() : &game;
+}
 
 bool RollbackController::running() {
   return state != StateGameEnded && state != StateInitial && resumable_;

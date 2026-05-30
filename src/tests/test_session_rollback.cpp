@@ -343,6 +343,237 @@ TEST_CASE(
   REQUIRE(slotH->checksum == slotC->checksum);
 }
 
+TEST_CASE("Per-worm stats hooks fire on the shadow on both peers",
+          "[session][rollback][stats]") {
+  // Tighter regression: even if `frame` ticks, the per-worm hooks
+  // (shot, damageDealt, …) used to be gated by speculative too, so the
+  // client's NormalStatsRecorder stayed empty. The shadow's recorder is
+  // unconditionally non-speculative, so firing weapons through the
+  // pipeline should bump shot counts on both peers.
+  Env e;
+  e.settings->inputDelay = 1;
+
+  auto clientSettings = std::make_shared<Settings>(*e.settings);
+  for (auto& ws : clientSettings->wormSettings) {
+    if (ws) ws = std::make_shared<WormSettings>(*ws);
+  }
+
+  NetSession host(e.common, e.settings, e.tcRoot);
+  NetSession client(e.common, clientSettings, e.tcRoot);
+
+  REQUIRE(host.hostGame(0));
+  uint16_t port = host.transport().listeningPort();
+  REQUIRE(client.joinGame("127.0.0.1", port));
+
+  bool ready = pollUntil(host, client, [&]() {
+    return host.sessionState() == NetSession::Playing &&
+           client.sessionState() == NetSession::Playing;
+  });
+  REQUIRE(ready);
+
+  auto* hc = host.rollbackController();
+  auto* cc = client.rollbackController();
+  REQUIRE(hc); REQUIRE(cc);
+  hc->focus();
+  cc->focus();
+
+  constexpr uint8_t BIT_DOWN = uint8_t{1} << Worm::Down;
+  constexpr uint8_t BIT_FIRE = uint8_t{1} << Worm::Fire;
+
+  auto runTick = [&](uint8_t inA, uint8_t inB) {
+    hc->setLocalControlState(inA);
+    cc->setLocalControlState(inB);
+    host.update();
+    client.update();
+    hc->process();
+    cc->process();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
+
+  // Drive WS to completion.
+  for (int i = 0; i < 6; ++i) {
+    runTick(BIT_DOWN, BIT_DOWN);
+    runTick(0, 0);
+  }
+  runTick(0, 0);
+  runTick(BIT_FIRE, BIT_FIRE);
+  runTick(0, 0);
+  for (int i = 0; i < 200 &&
+       !(hc->gameState() == StateGame && cc->gameState() == StateGame); ++i) {
+    runTick(0, 0);
+  }
+  REQUIRE(hc->gameState() == StateGame);
+  REQUIRE(cc->gameState() == StateGame);
+
+  // First ready up both worms with a single Fire press (rising edge
+  // sets ready=true for doRespawning), then let them spawn.
+  runTick(BIT_FIRE, BIT_FIRE);
+  for (int i = 0; i < 5; ++i) runTick(0, 0);
+
+  // Pulse Fire so the rising edge fires every other tick. Held-Fire
+  // wouldn't work — edge detection only counts the press.
+  for (int i = 0; i < 400; ++i) {
+    runTick((i & 1) ? BIT_FIRE : 0, (i & 1) ? BIT_FIRE : 0);
+  }
+  // Idle drain.
+  for (int i = 0; i < 30; ++i) runTick(0, 0);
+
+  auto* hostStats =
+      dynamic_cast<NormalStatsRecorder*>(hc->statsGame()->statsRecorder.get());
+  auto* clientStats =
+      dynamic_cast<NormalStatsRecorder*>(cc->statsGame()->statsRecorder.get());
+  REQUIRE(hostStats);
+  REQUIRE(clientStats);
+
+  auto totalShots = [](NormalStatsRecorder* s) {
+    int total = 0;
+    for (int w = 0; w < 2; ++w)
+      for (int wp = 0; wp < 40; ++wp)
+        total += s->worms[w].weapons[wp].potentialHits +
+                 s->worms[w].weapons[wp].actualHits;
+    return total;
+  };
+
+  // Shadow recorded shots on both peers, not just the host.
+  REQUIRE(totalShots(hostStats) > 0);
+  REQUIRE(totalShots(clientStats) > 0);
+}
+
+TEST_CASE("Stats accumulate on both peers across a rollback game",
+          "[session][rollback][stats]") {
+  // Regression: the live game runs frames speculatively under rollback,
+  // so NormalStatsRecorder::tick was skipped every frame on the peer
+  // whose forward path always fell into the predicted branch. The fix
+  // routes stats through the shadow Game (one tick per confirmed frame).
+  // Verify that statsGame()'s NormalStatsRecorder accumulates `frame`,
+  // sets `gameTime` after finish(), and works symmetrically on host AND
+  // client.
+  Env e;
+  e.settings->inputDelay = 1;
+
+  auto clientSettings = std::make_shared<Settings>(*e.settings);
+  for (auto& ws : clientSettings->wormSettings) {
+    if (ws) ws = std::make_shared<WormSettings>(*ws);
+  }
+
+  NetSession host(e.common, e.settings, e.tcRoot);
+  NetSession client(e.common, clientSettings, e.tcRoot);
+
+  REQUIRE(host.hostGame(0));
+  uint16_t port = host.transport().listeningPort();
+  REQUIRE(client.joinGame("127.0.0.1", port));
+
+  bool ready = pollUntil(host, client, [&]() {
+    return host.sessionState() == NetSession::Playing &&
+           client.sessionState() == NetSession::Playing;
+  });
+  REQUIRE(ready);
+
+  auto* hc = host.rollbackController();
+  auto* cc = client.rollbackController();
+  REQUIRE(hc != nullptr);
+  REQUIRE(cc != nullptr);
+
+  hc->focus();
+  cc->focus();
+
+  constexpr uint8_t BIT_DOWN = uint8_t{1} << Worm::Down;
+  constexpr uint8_t BIT_FIRE = uint8_t{1} << Worm::Fire;
+
+  auto runTick = [&](uint8_t inByte) {
+    hc->setLocalControlState(inByte);
+    cc->setLocalControlState(inByte);
+    host.update();
+    client.update();
+    hc->process();
+    cc->process();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  };
+
+  // Drive both peers through WS into the game phase.
+  std::vector<uint8_t> wsScript;
+  for (int i = 0; i < 6; ++i) {
+    wsScript.push_back(BIT_DOWN);
+    wsScript.push_back(0);
+  }
+  wsScript.push_back(0);
+  wsScript.push_back(BIT_FIRE);
+  wsScript.push_back(0);
+  for (uint8_t b : wsScript) runTick(b);
+  for (int i = 0; i < 200 &&
+       !(hc->gameState() == StateGame && cc->gameState() == StateGame); ++i) {
+    runTick(0);
+  }
+  REQUIRE(hc->gameState() == StateGame);
+  REQUIRE(cc->gameState() == StateGame);
+
+  // Play out a bit of game phase.
+  for (int i = 0; i < 200; ++i) runTick(0);
+
+  // The shadow Game (statsGame()) is where stats live now. The live
+  // game's recorder is the base no-op class — the dynamic_cast below
+  // would fail on it, which is the *intended* contract.
+  auto* hostStats =
+      dynamic_cast<NormalStatsRecorder*>(hc->statsGame()->statsRecorder.get());
+  auto* clientStats =
+      dynamic_cast<NormalStatsRecorder*>(cc->statsGame()->statsRecorder.get());
+  REQUIRE(hostStats != nullptr);
+  REQUIRE(clientStats != nullptr);
+  REQUIRE(hc->statsGame() != hc->currentGame());  // shadow, not live
+  REQUIRE(cc->statsGame() != cc->currentGame());
+
+  // Live recorders are the no-op base class — dynamic_cast fails.
+  REQUIRE(dynamic_cast<NormalStatsRecorder*>(
+              hc->currentGame()->statsRecorder.get()) == nullptr);
+  REQUIRE(dynamic_cast<NormalStatsRecorder*>(
+              cc->currentGame()->statsRecorder.get()) == nullptr);
+
+  // Both shadows should have ticked far past 0 — the shadow runs once
+  // per confirmed frame and confirmation tracks within a few frames of
+  // simFrame under loopback.
+  REQUIRE(hostStats->frame > 100);
+  REQUIRE(clientStats->frame > 100);
+
+  // Host and client should agree closely on frame count — the shadow's
+  // counter is keyed to confirmedSimFrame_ which is the same on both
+  // peers within a few-frame window.
+  int frameGap = std::abs(hostStats->frame - clientStats->frame);
+  REQUIRE(frameGap <= 10);
+
+  // Pause + EndMatch flow: host pauses, picks END MATCH.
+  host.sendPause();
+  for (int i = 0; i < 10; ++i) runTick(0);
+  REQUIRE(cc->isPaused());
+
+  host.sendResume();
+  host.transport().sendEndMatch();
+  hc->endMatch();
+
+  bool hostDone = false, clientDone = false;
+  for (int i = 0; i < 200 && !(hostDone && clientDone); ++i) {
+    hc->setLocalControlState(0);
+    cc->setLocalControlState(0);
+    if (!hostDone && !hc->process()) hostDone = true;
+    if (!clientDone && !cc->process()) clientDone = true;
+    host.update();
+    client.update();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  REQUIRE(hostDone);
+  REQUIRE(clientDone);
+
+  // Both peers landed in StateGameEnded → finish() called on shadow →
+  // gameTime now reflects the confirmed frame count.
+  REQUIRE(hc->gameState() == StateGameEnded);
+  REQUIRE(cc->gameState() == StateGameEnded);
+  REQUIRE(hostStats->gameTime > 0);
+  REQUIRE(clientStats->gameTime > 0);
+  // gameTime is what gamePlayState checks to decide stats-vs-menu —
+  // gating the symptom the user reported.
+  int gtGap = std::abs(hostStats->gameTime - clientStats->gameTime);
+  REQUIRE(gtGap <= 10);
+}
+
 TEST_CASE("Host's inputDelay syncs to the client over MatchSettings",
           "[session][rollback]") {
   Env e;
