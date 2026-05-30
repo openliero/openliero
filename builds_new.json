@@ -2,6 +2,11 @@
   "releases": [],
   "dev": [
     {
+      "name": "build-4e5e303",
+      "dir": "dev/build-4e5e303",
+      "timestamp": "2026-05-30T20:53:55Z"
+    },
+    {
       "name": "build-df575e4",
       "dir": "dev/build-df575e4",
       "timestamp": "2026-05-30T20:07:41Z"
@@ -15,11 +20,6 @@
       "name": "build-09aa8b1",
       "dir": "dev/build-09aa8b1",
       "timestamp": "2026-05-30T15:47:56Z"
-    },
-    {
-      "name": "build-f5f2013",
-      "dir": "dev/build-f5f2013",
-      "timestamp": "2026-05-30T15:01:15Z"
     },
     {
       "name": "build-373654c",
