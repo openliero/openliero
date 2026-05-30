@@ -6,12 +6,32 @@
 #include "../viewport.hpp"
 #include "../spectatorviewport.hpp"
 
+#include <array>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <miniz.h>
+
+// Shared two-player setup for the live and shadow games. Both must
+// produce identical processFrame paths, so the worm slots and main
+// viewports are configured here from a single source of truth. The
+// live ctor also adds a SpectatorViewport; the shadow does not need
+// one.
+static void configureGameSlots(
+    Game& g, std::array<std::shared_ptr<WormSettings>, 2> ws) {
+  for (int idx = 0; idx < 2; ++idx) {
+    auto worm = std::make_shared<Worm>();
+    worm->settings = ws[idx];
+    worm->health = worm->settings->health;
+    worm->index = idx;
+    worm->statsX = idx == 0 ? 0 : 218;
+    g.addWorm(worm);
+  }
+  g.addViewport(new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
+  g.addViewport(new Viewport(Rect(160, 0, 158 + 160, 158), 1, 504, 350));
+}
 
 RollbackController::RollbackController(
     std::shared_ptr<Common> common,
@@ -49,21 +69,13 @@ RollbackController::RollbackController(
   remoteInputs.fill(0);
   remoteInputReady.fill(false);
 
+  std::array<std::shared_ptr<WormSettings>, 2> ws;
   for (int idx = 0; idx < 2; ++idx) {
-    auto worm = std::make_shared<Worm>();
-    worm->settings = (idx == localIdx)
+    ws[idx] = (idx == localIdx)
         ? settings->wormSettings[Settings::NetworkPlayerIdx]
         : settings->wormSettings[idx];
-    worm->health = worm->settings->health;
-    worm->index = idx;
-    worm->statsX = idx == 0 ? 0 : 218;
-    game.addWorm(worm);
   }
-
-  game.addViewport(
-      new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
-  game.addViewport(
-      new Viewport(Rect(160, 0, 158 + 160, 158), 1, 504, 350));
+  configureGameSlots(game, ws);
   game.addSpectatorViewport(
       new SpectatorViewport(Rect(0, 0, 504 + 68, 350), 504, 350));
 }
@@ -587,18 +599,9 @@ void RollbackController::setupShadowGame() {
   shadowGame_ = std::make_unique<Game>(
       game.common, game.settings, std::make_shared<NullSoundPlayer>());
 
-  for (int idx = 0; idx < 2; ++idx) {
-    auto worm = std::make_shared<Worm>();
-    worm->settings = game.worms[idx]->settings;
-    worm->health = worm->settings->health;
-    worm->index = idx;
-    worm->statsX = idx == 0 ? 0 : 218;
-    shadowGame_->addWorm(worm);
-  }
-  shadowGame_->addViewport(
-      new Viewport(Rect(0, 0, 158, 158), 0, 504, 350));
-  shadowGame_->addViewport(
-      new Viewport(Rect(160, 0, 158 + 160, 158), 1, 504, 350));
+  configureGameSlots(
+      *shadowGame_,
+      {game.worms[0]->settings, game.worms[1]->settings});
 
   // loadSnapshotFast assumes level buffers are already sized; the
   // snapshot itself carries pixel data but not dimensions.
