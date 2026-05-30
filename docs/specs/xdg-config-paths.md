@@ -76,9 +76,11 @@ No new top-level directories. Touched files:
 src/game/filesystem.hpp        → declare path-resolution helpers
 src/game/filesystem.cpp        → implement path-resolution helpers (SDL3-based)
 src/game/gfx.hpp               → swap configNode for joined (user + system) node;
-                                 add a separate userConfigNode for write sites
-src/game/gfx.cpp               → wire path resolution into init
-src/game/gameEntry.cpp         → simplify CLI handling (still supports --config-root)
+                                 add a separate userConfigNode for write sites;
+                                 replace setConfigPath with setConfigNodes
+src/game/gameEntry.cpp         → call paths::resolve(); wire configNode +
+                                 userConfigNode into gfx; Emscripten synthesises
+                                 --config-root /openliero argv
 src/game/fileSelectorState.cpp → no semantic change (rely on FsNodeJoin)
 src/game/controller/localController.cpp,
 src/game/controller/rollbackController.cpp,
@@ -209,17 +211,32 @@ Manual verification matrix (Success Criteria #7, Task 9):
 - Silently swallow a missing system path; if neither system nor user has
   the requested TC, fail with a clear error as today.
 
-## Open Questions
+## Resolved Questions
 
-1. **`videotool` output path.** Confirm whether it writes anywhere besides
-   the user-specified `--output` flag and apply the same default if so.
-2. **Flatpak / AppImage.** Flatpak has its own sandboxed `XDG_DATA_HOME`
-   (`~/.var/app/<id>/data`) which `SDL_GetPrefPath` handles correctly — no
-   extra code needed, but the manifest should still be reviewed.
-3. **macOS bundle layout.** Confirm whether stock data should live under
-   `Contents/Resources/` (Apple-standard) or whether `SDL_GetBasePath()`
-   resolves to a sibling location. May require a small CMake adjustment.
-4. **Legacy data migration.** Out of scope, but worth a short release-notes
-   entry: "If you have an existing install, copy `Setups/`, `Profiles/`,
-   `Replays/`, and any custom `TC/` subfolders to
-   `~/.local/share/openliero/`."
+1. **`videotool` output path.** ✅ Resolved. videotool takes a
+   caller-specified `-r <replay>` path and writes output files
+   (`<replay>_n.mp4` / `_s.mp4`) next to the replay. It reads the TC from
+   the current directory. It makes no writes to any config path. Documented
+   in a code comment in `src/video_tool/tools_main.cpp`.
+
+2. **Flatpak / AppImage.** ✅ No extra code needed. `SDL_GetPrefPath`
+   returns the sandboxed `~/.var/app/<id>/data/openliero/openliero/` path
+   automatically inside a Flatpak sandbox. The AppStream metainfo file
+   (`packaging/openliero.metainfo.xml`) is now included and installed, which
+   is a prerequisite for Flathub submission.
+
+3. **macOS bundle layout.** ✅ Resolved. The macOS `.app` bundle code is
+   commented out ("app does not run for unknown reasons") — macOS currently
+   uses the same Linux-style FHS install: binary in `bin/`, stock data in
+   `share/openliero/`. The `OPENLIERO_DATADIR` compile-time macro baked by
+   CMake covers installed builds. `SDL_GetBasePath()` (which returns the
+   directory containing the binary) serves as fallback for zip/tarball
+   installs where data is adjacent to the binary. No extra adjustment needed
+   for the non-bundle case. If the bundle is ever revived, `SDL_GetBasePath()`
+   inside a `.app` returns `Contents/MacOS/`, so stock data would need to be
+   placed there or the lookup extended to check `../Resources/`.
+
+4. **Legacy data migration.** ✅ Resolved. "Upgrading from an older version"
+   section added to `README.md` and `dist/windows/INSTALL.md`, explaining
+   per-platform save locations and how to copy `Setups/`, `Profiles/`,
+   `Replays/`, and custom `TC/` from an old single-directory install.
