@@ -149,13 +149,13 @@ jobs:
           cmake --install build/macos-x64-ci --config Release
           lipo -create \
             -output install/openliero \
-            install/macos-arm64-ci/openliero \
-            install/macos-x64-ci/openliero
+            install/macos-arm64-ci/bin/openliero \
+            install/macos-x64-ci/bin/openliero
           lipo -create \
             -output install/tctool \
-            install/macos-arm64-ci/tctool \
-            install/macos-x64-ci/tctool
-          mv -f install/{openliero,tctool} install/macos-arm64-ci
+            install/macos-arm64-ci/bin/tctool \
+            install/macos-x64-ci/bin/tctool
+          mv -f install/{openliero,tctool} install/macos-arm64-ci/bin
           cd install/macos-arm64-ci
           tar cvf ../openliero-macos.tar.gz .
 

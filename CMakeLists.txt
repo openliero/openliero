@@ -304,7 +304,7 @@ endif()
 target_link_libraries(openliero PRIVATE game)
 
 if(NOT EMSCRIPTEN)
-  target_compile_definitions(openliero PRIVATE
+  target_compile_definitions(game PRIVATE
     OPENLIERO_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/openliero")
 endif()
 
@@ -326,7 +326,7 @@ if(OPENLIERO_BUILD_TCTOOL)
   add_executable(tctool src/tc_tool/tc_tool_main.cpp)
   target_link_libraries(tctool PRIVATE tc)
   if(NOT EMSCRIPTEN)
-    target_compile_definitions(tctool PRIVATE
+    target_compile_definitions(tc PRIVATE
       OPENLIERO_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/openliero")
   endif()
 endif()
@@ -362,12 +362,22 @@ if(OPENLIERO_BUILD_VIDEOTOOL)
 endif()
 
 # binaries
-install(TARGETS openliero DESTINATION .)
+# Windows (zip + MSIX) and Emscripten expect a flat install; on Linux/macOS
+# we follow the FHS: binaries in bin/, stock data in share/openliero/.
+if(WIN32 OR EMSCRIPTEN)
+  set(OPENLIERO_INSTALL_BINDIR .)
+  set(OPENLIERO_INSTALL_DATADIR .)
+else()
+  set(OPENLIERO_INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR})
+  set(OPENLIERO_INSTALL_DATADIR ${CMAKE_INSTALL_DATADIR}/openliero)
+endif()
+
+install(TARGETS openliero DESTINATION ${OPENLIERO_INSTALL_BINDIR})
 if(OPENLIERO_BUILD_TCTOOL)
-  install(TARGETS tctool DESTINATION .)
+  install(TARGETS tctool DESTINATION ${OPENLIERO_INSTALL_BINDIR})
 endif()
 if(OPENLIERO_BUILD_VIDEOTOOL)
-  install(TARGETS videotool DESTINATION .)
+  install(TARGETS videotool DESTINATION ${OPENLIERO_INSTALL_BINDIR})
 endif()
 
 if(EMSCRIPTEN)
@@ -380,10 +390,10 @@ if(EMSCRIPTEN)
   )
 else()
   # assets
-  install(DIRECTORY data/Profiles DESTINATION .)
-  install(DIRECTORY data/Resources DESTINATION .)
-  install(DIRECTORY data/Setups DESTINATION .)
-  install(DIRECTORY data/TC DESTINATION .)
+  install(DIRECTORY data/Profiles  DESTINATION ${OPENLIERO_INSTALL_DATADIR})
+  install(DIRECTORY data/Resources DESTINATION ${OPENLIERO_INSTALL_DATADIR})
+  install(DIRECTORY data/Setups    DESTINATION ${OPENLIERO_INSTALL_DATADIR})
+  install(DIRECTORY data/TC        DESTINATION ${OPENLIERO_INSTALL_DATADIR})
 endif()
 
 # tests
@@ -603,7 +613,7 @@ if(OPENLIERO_BUILD_TESTS)
 endif()
 
 # documentation
-install(FILES README.md DESTINATION .)
+install(FILES README.md DESTINATION ${OPENLIERO_INSTALL_DATADIR})
 
 # licenses
 install(FILES LICENSE DESTINATION LICENSES)
