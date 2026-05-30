@@ -173,7 +173,10 @@ void NetSession::update() {
 
 void NetSession::disconnect() {
   transport_.disconnect();
-  wireCallbacks();
+  // transport_.disconnect() tears down the ENet host but leaves the
+  // std::function callbacks bound to `this`. They stay valid until the
+  // next session replaces transport_ via host/connectWithTransport,
+  // which calls wireCallbacks() itself.
   sessionState_ = Idle;
   rollback_.reset();
   rollbackPtr_ = nullptr;
