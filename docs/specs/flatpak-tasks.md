@@ -39,14 +39,14 @@ Tasks are ordered by dependency. Each task should leave the build green.
 
 ## Task 3 — Flatpak manifest
 
-- [ ] Resolve exact git commit SHAs for all dependency modules:
-      SDL3 3.4.8, SDL3_image (latest release), enet 2.6.5, libjuice 1.7.1,
-      miniz, tomlplusplus, xxhash, cereal. Document resolved SHAs in the
-      manifest file itself as `commit:` fields.
+- [ ] Resolve exact git commit SHAs for bundled dependency modules:
+      enet 2.6.5, libjuice 1.7.1, miniz, tomlplusplus, xxhash, cereal.
+      SDL3 and SDL3_image are provided by the 25.08 runtime — do NOT bundle
+      them. Document resolved SHAs as `commit:` fields in the manifest.
 - [ ] Write `packaging/io.github.openliero.openliero.yml` with:
       - `app-id: io.github.openliero.openliero`
-      - `runtime: org.freedesktop.Platform//24.08`
-      - `sdk: org.freedesktop.Sdk//24.08`
+      - `runtime: org.freedesktop.Platform//25.08`
+      - `sdk: org.freedesktop.Sdk//25.08`
       - `command: openliero`
       - `finish-args` as listed in the spec
       - One module per dependency, each with `buildsystem: cmake-ninja` (or
@@ -71,7 +71,11 @@ Tasks are ordered by dependency. Each task should leave the build green.
       prints usage without crashing.
 - [ ] Verify save path: `~/.var/app/io.github.openliero.openliero/data/openliero/openliero/`
       is created after first run.
-- [ ] Fix any build or runtime errors encountered.
+- [ ] Verify the game links correctly against the runtime's SDL3 3.2.22
+      (the vcpkg baseline pins 3.4.8 — check for API differences). If the
+      build fails, add an `sdl3` module pinned to 3.4.8 per spec open
+      question 5.
+- [ ] Fix any other build or runtime errors encountered.
 - **Acceptance**: all four checks above pass.
 - **Files**: manifest (fix-ups only), possibly CMakeLists.txt if install
   paths need adjustment.

@@ -29,10 +29,11 @@ and installed locally.
 ## Tech Stack
 
 - Flatpak / flatpak-builder
-- Runtime: `org.freedesktop.Platform//24.08`
-- SDK: `org.freedesktop.Sdk//24.08`
+- Runtime: `org.freedesktop.Platform//25.08`
+- SDK: `org.freedesktop.Sdk//25.08`
 - Build system for game: CMake (existing), with `-DOPENLIERO_USE_VCPKG=OFF`
-- All C/C++ deps compiled as Flatpak modules (no vcpkg in sandbox)
+- SDL3 and SDL3_image come from the runtime (no bundling needed)
+- Remaining C/C++ deps compiled as Flatpak modules (no vcpkg in sandbox)
 
 ## Commands
 
@@ -98,13 +99,19 @@ finish-args:
 
 ### Module dependency order
 
-SDL3 and SDL3_image are **not** in the freedesktop SDK 24.08 and must be
-compiled as modules. All other deps are bundled for version-pin consistency.
+**SDL3 (3.2.22) and SDL3_image (3.2.6) are included in freedesktop SDK 25.08**
+and do not need to be compiled as modules. All remaining deps are bundled for
+version-pin consistency.
+
+Note: the runtime ships SDL3 3.2.22, whereas the vcpkg baseline pins 3.4.8.
+The game must build and run correctly against the runtime's SDL3 version.
+If API incompatibilities appear, either pin the vcpkg build to 3.2.22 too
+or request the specific version as a bundled module (see Open Questions).
 
 | Module | Version | Source | Notes |
 |---|---|---|---|
-| `sdl3` | 3.4.8 | github.com/libsdl-org/SDL | cmake-ninja |
-| `sdl3-image` | pinned tag | github.com/libsdl-org/SDL_image | depends on sdl3 |
+| ~~`sdl3`~~ | ~~3.4.8~~ | ~~github.com/libsdl-org/SDL~~ | **from runtime 25.08** |
+| ~~`sdl3-image`~~ | ~~3.2.6~~ | ~~github.com/libsdl-org/SDL_image~~ | **from runtime 25.08** |
 | `enet` | 2.6.5 | github.com/zpl-c/enet | cmake-ninja; custom port in repo |
 | `libjuice` | 1.7.1 | github.com/paullouisageneau/libjuice | cmake-ninja; `-DNO_TESTS=ON -DUSE_NETTLE=OFF` |
 | `miniz` | pinned tag | github.com/richgel999/miniz | cmake-ninja |
@@ -134,7 +141,8 @@ Each module pins an exact git commit SHA (not a tag) to guarantee reproducible
 builds. Obtain SHAs during implementation:
 
 ```bash
-git ls-remote https://github.com/libsdl-org/SDL refs/tags/release-3.4.8
+git ls-remote https://github.com/zpl-c/enet refs/tags/v2.6.5
+git ls-remote https://github.com/paullouisageneau/libjuice refs/tags/v1.7.1
 ```
 
 ## Testing Strategy
@@ -166,9 +174,8 @@ Manual verification only (no automated CI for Flatpak in this iteration):
 
 ## Open Questions
 
-1. **SDL3_image version**: Determine the pinned version from the vcpkg
-   baseline (run `git show HEAD:versions/s-/sdl3-image.json` in the vcpkg
-   submodule).
+1. ~~**SDL3_image version**~~ ✅ Resolved: SDL3_image 3.2.6 is in the 25.08
+   runtime. No bundling needed.
 2. **libjuice patch**: The overlay port has a `dependencies.diff` that
    replaces `find_package(Nettle)` with raw paths. Since we're passing
    `-DUSE_NETTLE=OFF`, the patch should be unnecessary — confirm during
@@ -179,3 +186,7 @@ Manual verification only (no automated CI for Flatpak in this iteration):
 4. **Icon quality**: Verify the extracted PNG at 256×256 looks correct.
    The `.icns` may also contain a 512×512 or 1024×1024 size — use the
    largest available and install all common sizes if present.
+5. **SDL3 version mismatch**: The runtime ships SDL3 3.2.22; vcpkg pins
+   3.4.8. Verify the game compiles and runs correctly against 3.2.22 during
+   Task 4. If not, add an `sdl3` module pinned to 3.4.8 (bundled modules
+   shadow the runtime's version).
