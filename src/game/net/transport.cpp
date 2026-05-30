@@ -508,7 +508,21 @@ void NetTransport::sendInputBatch(uint8_t generation, uint32_t baseFrame,
   ENetPacket* packet =
       enet_packet_create(buf, len, ENET_PACKET_FLAG_UNSEQUENCED);
   if (!packet) return;
-  if (enet_peer_send(peer_, CHANNEL_INPUT_BATCH, packet) < 0)
+  int sendRc = enet_peer_send(peer_, CHANNEL_INPUT_BATCH, packet);
+  static uint64_t dbgSendCount = 0;
+  static uint64_t dbgSendFails = 0;
+  ++dbgSendCount;
+  if (sendRc < 0) ++dbgSendFails;
+  if (dbgSendCount <= 10 || (dbgSendCount % 70u == 0u) || sendRc < 0) {
+    std::fprintf(stderr,
+        "[netkey-dbg] tx batch #%llu gen=%u base=%u count=%u "
+        "localDelta=%u rc=%d fails=%llu peerState=%d\n",
+        (unsigned long long)dbgSendCount, (unsigned)generation, baseFrame,
+        (unsigned)count, (unsigned)localDelta, sendRc,
+        (unsigned long long)dbgSendFails,
+        peer_ ? (int)peer_->state : -1);
+  }
+  if (sendRc < 0)
     enet_packet_destroy(packet);
 }
 
