@@ -65,6 +65,9 @@ try
 
 	precomputeTables();
 
+	// videotool reads the TC from the current directory (the same behaviour
+	// as before the XDG split). It writes nothing to the config paths — output
+	// videos land next to the replay file via the caller-specified replayPath.
 	// TODO: Fix loading
 	std::shared_ptr<Common> common(new Common());
 	FsNode currentDirNode("");
