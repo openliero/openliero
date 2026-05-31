@@ -400,6 +400,9 @@ else()
       DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     install(FILES packaging/openliero.metainfo.xml
       DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+    install(FILES packaging/icons/openliero-1024.png
+      RENAME io.github.openliero.openliero.png
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/1024x1024/apps)
   endif()
 endif()
 
