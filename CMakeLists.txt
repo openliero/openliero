@@ -73,6 +73,25 @@ if(CLANG_TIDY_EXE)
     VERBATIM
     COMMENT "Running clang-tidy on diff vs origin/master"
   )
+
+  include(ProcessorCount)
+  ProcessorCount(CLANG_TIDY_JOBS)
+  if(CLANG_TIDY_JOBS EQUAL 0)
+    set(CLANG_TIDY_JOBS 4)
+  endif()
+
+  # Full-tree scan via run-clang-tidy (ships with the clang-tidy package).
+  # Useful for triaging existing findings; does not gate anything.
+  add_custom_target(clang-tidy-all
+    COMMAND run-clang-tidy
+            -p "${CMAKE_BINARY_DIR}"
+            -j${CLANG_TIDY_JOBS}
+            "src/.*"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    USES_TERMINAL
+    VERBATIM
+    COMMENT "Running clang-tidy on all sources under src/"
+  )
 endif()
 
 if(OPENLIERO_ENABLE_CLANG_TIDY)
