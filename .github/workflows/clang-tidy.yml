@@ -69,10 +69,7 @@ jobs:
           appendedCacheKey: 'sdl3-v2'
 
       - name: Configure
-        run: >
-          cmake --preset linux-x64-ci
-          -DOPENLIERO_BUILD_TESTS=ON
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake --preset linux-x64-ci -DOPENLIERO_BUILD_TESTS=ON
 
       # Build the game target so any source files generated mid-build
       # (e.g. via add_custom_command) exist before clang-tidy parses TUs.
@@ -82,21 +79,4 @@ jobs:
       - name: Run clang-tidy on PR diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -e
-          # clang-tidy-diff prints findings but exits 0; capture output
-          # and fail the step if any warning/error lines were emitted on
-          # touched lines of C/C++ sources under src/.
-          output=$(git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- 'src/*' \
-            | python3 /usr/share/clang/clang-tidy-diff-*.py \
-                -p1 \
-                -path build/linux-x64-ci \
-                -j"$(nproc)" \
-                -regex '.*\.(cpp|hpp|h|cc|cxx)$' \
-                -quiet)
-          echo "$output"
-          if echo "$output" | grep -E "^[^[:space:]]+:[0-9]+:[0-9]+: (warning|error):" >/dev/null; then
-            echo "::error::clang-tidy reported issues on changed lines"
-            exit 1
-          fi
+        run: ./scripts/clang-tidy-diff.sh build/linux-x64-ci "$BASE_SHA"

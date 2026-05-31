@@ -5,6 +5,7 @@ option(OPENLIERO_BUILD_TCTOOL "Build tctool" OFF)
 option(OPENLIERO_BUILD_VIDEOTOOL "Build videotool" OFF)
 option(OPENLIERO_BUILD_FUZZER "Build desync fuzzer" OFF)
 option(OPENLIERO_USE_VCPKG "Use vcpkg to manage dependencies" ON)
+option(OPENLIERO_ENABLE_CLANG_TIDY "Run clang-tidy during every C++ compile" OFF)
 
 # tell cmake we have goodies in the cmake/ directory
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
@@ -55,6 +56,32 @@ project(openliero
   HOMEPAGE_URL https://github.com/openliero/openliero
   LANGUAGES C CXX
 )
+
+# clang-tidy integration
+#   `clang-tidy` target: runs scripts/clang-tidy-diff.sh, which is the
+#       same check CI runs on PRs (changed lines vs origin/master).
+#   OPENLIERO_ENABLE_CLANG_TIDY=ON: wire CMAKE_*_CLANG_TIDY so every
+#       compiled TU is linted inline. Slow; off by default.
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+
+if(CLANG_TIDY_EXE)
+  add_custom_target(clang-tidy
+    COMMAND "${CMAKE_SOURCE_DIR}/scripts/clang-tidy-diff.sh"
+            "${CMAKE_BINARY_DIR}"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    USES_TERMINAL
+    VERBATIM
+    COMMENT "Running clang-tidy on diff vs origin/master"
+  )
+endif()
+
+if(OPENLIERO_ENABLE_CLANG_TIDY)
+  if(NOT CLANG_TIDY_EXE)
+    message(FATAL_ERROR "OPENLIERO_ENABLE_CLANG_TIDY=ON but clang-tidy was not found")
+  endif()
+  set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXE}")
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+endif()
 
 # find dependencies
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
