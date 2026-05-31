@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            clang-tidy-18 \
+            clang-tidy \
             autoconf \
             autoconf-archive \
             automake \
@@ -89,8 +89,7 @@ jobs:
           # and fail the step if any warning/error lines were emitted on
           # touched lines of C/C++ sources under src/.
           output=$(git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- 'src/*' \
-            | python3 /usr/share/clang/clang-tidy-diff-18.py \
-                -clang-tidy-binary clang-tidy-18 \
+            | python3 /usr/share/clang/clang-tidy-diff-*.py \
                 -p1 \
                 -path build/linux-x64-ci \
                 -j"$(nproc)" \
