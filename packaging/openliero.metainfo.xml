@@ -4,6 +4,7 @@
 
   <name>OpenLiero</name>
   <summary>A brutal subterranean shooter game</summary>
+  <icon type="stock">io.github.openliero.openliero</icon>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>LGPL-2.1-or-later</project_license>
