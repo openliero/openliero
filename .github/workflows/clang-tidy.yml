@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            clang-tidy \
+            clang-tidy-18 \
             autoconf \
             autoconf-archive \
             automake \
@@ -79,30 +79,18 @@ jobs:
       - name: Build (prime generated sources)
         run: cmake --build build/linux-x64-ci --config Release --target game
 
-      - name: Locate clang-tidy-diff
-        id: locate
-        run: |
-          set -e
-          script=$(find /usr -name 'clang-tidy-diff*.py' 2>/dev/null | head -n1)
-          if [ -z "$script" ]; then
-            echo "clang-tidy-diff.py not found" >&2
-            exit 1
-          fi
-          echo "Using $script"
-          echo "script=$script" >> "$GITHUB_OUTPUT"
-
       - name: Run clang-tidy on PR diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          SCRIPT: ${{ steps.locate.outputs.script }}
         run: |
           set -e
           # clang-tidy-diff prints findings but exits 0; capture output
           # and fail the step if any warning/error lines were emitted on
           # touched lines of C/C++ sources under src/.
           output=$(git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- 'src/*' \
-            | python3 "$SCRIPT" \
+            | python3 /usr/share/clang/clang-tidy-diff-18.py \
+                -clang-tidy-binary clang-tidy-18 \
                 -p1 \
                 -path build/linux-x64-ci \
                 -j"$(nproc)" \
