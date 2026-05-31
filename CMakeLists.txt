@@ -397,12 +397,14 @@ else()
 
   if(NOT WIN32)
     install(FILES packaging/openliero.desktop
+      RENAME io.github.openliero.openliero.desktop
       DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     install(FILES packaging/openliero.metainfo.xml
+      RENAME io.github.openliero.openliero.metainfo.xml
       DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
-    install(FILES packaging/icons/openliero-1024.png
+    install(FILES packaging/icons/openliero-512.png
       RENAME io.github.openliero.openliero.png
-      DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/1024x1024/apps)
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
   endif()
 endif()
 
