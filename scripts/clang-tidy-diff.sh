@@ -33,10 +33,10 @@ fi
 
 script="${CLANG_TIDY_DIFF:-}"
 if [ -z "$script" ]; then
-	# Linux apt packages ship the script version-suffixed under
-	# /usr/share/clang; Homebrew installs an unsuffixed copy under llvm's
-	# share directory.
+	# Ubuntu 24.04+ ships the script unsuffixed; older releases use a
+	# version suffix. Homebrew installs it under llvm's share directory.
 	for candidate in \
+		/usr/share/clang/clang-tidy-diff.py \
 		/usr/share/clang/clang-tidy-diff-*.py \
 		/opt/homebrew/opt/llvm/share/clang/clang-tidy-diff.py \
 		/usr/local/opt/llvm/share/clang/clang-tidy-diff.py
