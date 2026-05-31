@@ -1,0 +1,115 @@
+---
+
+name: Clang-Tidy
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches:
+      - master
+
+env:
+  SCCACHE_GHA_ENABLED: true
+
+jobs:
+  clang-tidy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.10
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang-tidy \
+            autoconf \
+            autoconf-archive \
+            automake \
+            libtool \
+            pkg-config \
+            libasound2-dev \
+            libpulse-dev \
+            libaudio-dev \
+            libjack-dev \
+            libsndio-dev \
+            libx11-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxkbcommon-dev \
+            libdrm-dev \
+            libgbm-dev \
+            libgl1-mesa-dev \
+            libgles2-mesa-dev \
+            libegl1-mesa-dev \
+            libdbus-1-dev \
+            libudev-dev \
+            libwayland-dev \
+            libdecor-0-dev
+
+      - name: Get cmake/ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg/vcpkg'
+          vcpkgConfigurationJsonGlob: 'vcpkg-configuration.json'
+          appendedCacheKey: 'sdl3-v2'
+
+      - name: Configure
+        run: >
+          cmake --preset linux-x64-ci
+          -DOPENLIERO_BUILD_TESTS=ON
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      # Build the game target so any source files generated mid-build
+      # (e.g. via add_custom_command) exist before clang-tidy parses TUs.
+      - name: Build (prime generated sources)
+        run: cmake --build build/linux-x64-ci --config Release --target game
+
+      - name: Locate clang-tidy-diff
+        id: locate
+        run: |
+          set -e
+          script=$(find /usr -name 'clang-tidy-diff*.py' 2>/dev/null | head -n1)
+          if [ -z "$script" ]; then
+            echo "clang-tidy-diff.py not found" >&2
+            exit 1
+          fi
+          echo "Using $script"
+          echo "script=$script" >> "$GITHUB_OUTPUT"
+
+      - name: Run clang-tidy on PR diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SCRIPT: ${{ steps.locate.outputs.script }}
+        run: |
+          set -e
+          # clang-tidy-diff prints findings but exits 0; capture output
+          # and fail the step if any warning/error lines were emitted on
+          # touched lines of C/C++ sources under src/.
+          output=$(git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- 'src/*' \
+            | python3 "$SCRIPT" \
+                -p1 \
+                -path build/linux-x64-ci \
+                -j"$(nproc)" \
+                -regex '.*\.(cpp|hpp|h|cc|cxx)$' \
+                -quiet)
+          echo "$output"
+          if echo "$output" | grep -E "^[^[:space:]]+:[0-9]+:[0-9]+: (warning|error):" >/dev/null; then
+            echo "::error::clang-tidy reported issues on changed lines"
+            exit 1
+          fi
