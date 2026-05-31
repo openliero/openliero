@@ -172,21 +172,17 @@ Manual verification only (no automated CI for Flatpak in this iteration):
 - Pass `--allow-emulated-io` or `--filesystem=host` — keep the sandbox.
 - Use `type: archive` with an unversioned URL — always pin the SHA.
 
-## Open Questions
+## Resolved Questions
 
-1. ~~**SDL3_image version**~~ ✅ Resolved: SDL3_image 3.2.6 is in the 25.08
-   runtime. No bundling needed.
-2. **libjuice patch**: The overlay port has a `dependencies.diff` that
-   replaces `find_package(Nettle)` with raw paths. Since we're passing
-   `-DUSE_NETTLE=OFF`, the patch should be unnecessary — confirm during
-   implementation that libjuice builds without it.
-3. **Commit SHAs**: All module sources use `type: git` with a `tag:` field
-   as a human-readable hint, but implementations should also include the
-   `commit:` field once resolved. Resolve all SHAs during Task 3.
-4. **Icon quality**: Verify the extracted PNG at 256×256 looks correct.
-   The `.icns` may also contain a 512×512 or 1024×1024 size — use the
-   largest available and install all common sizes if present.
-5. **SDL3 version mismatch**: The runtime ships SDL3 3.2.22; vcpkg pins
-   3.4.8. Verify the game compiles and runs correctly against 3.2.22 during
-   Task 4. If not, add an `sdl3` module pinned to 3.4.8 (bundled modules
-   shadow the runtime's version).
+1. ~~**SDL3_image version**~~ ✅ SDL3_image 3.2.6 is in the 25.08 runtime.
+   No bundling needed.
+2. ~~**libjuice patch**~~ ✅ The `dependencies.diff` patch is needed even
+   with `-DUSE_NETTLE=OFF`. It adds `find_dependency(Threads)` to
+   `LibJuiceConfig.cmake.in`; without it downstream consumers (openliero)
+   fail to link. Patch kept in `packaging/patches/libjuice-dependencies.diff`.
+3. ~~**Commit SHAs**~~ ✅ All SHAs resolved and documented in the manifest.
+   enet uses `zpl-c/enet` (overlay port) not `lsalzman/enet` (main registry).
+4. ~~**Icon quality**~~ ✅ Used 512×512 (ic09 chunk from the icns).
+   Flatpak icon validation caps at 512×512 — 1024×1024 is rejected.
+5. ~~**SDL3 version mismatch**~~ ✅ SDL3 3.2.22 from the runtime builds and
+   runs the game without API issues. No bundled SDL3 needed.
