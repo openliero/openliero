@@ -102,6 +102,32 @@ if(OPENLIERO_ENABLE_CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
 endif()
 
+# clang-format integration
+#   `clang-format` target: runs scripts/clang-format-diff.sh, the same
+#       check CI runs on PRs (changed lines vs origin/master).
+#   `clang-format-all` target: runs scripts/clang-format-all.sh, a
+#       check-only dry run across every source under src/. Useful for
+#       triaging existing formatting drift; does not modify files.
+find_program(CLANG_FORMAT_EXE NAMES clang-format)
+
+if(CLANG_FORMAT_EXE)
+  add_custom_target(clang-format
+    COMMAND "${CMAKE_SOURCE_DIR}/scripts/clang-format-diff.sh"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    USES_TERMINAL
+    VERBATIM
+    COMMENT "Running clang-format on diff vs origin/master"
+  )
+
+  add_custom_target(clang-format-all
+    COMMAND "${CMAKE_SOURCE_DIR}/scripts/clang-format-all.sh"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    USES_TERMINAL
+    VERBATIM
+    COMMENT "Running clang-format on all sources under src/"
+  )
+endif()
+
 # find dependencies
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3)
 find_package(SDL3_image REQUIRED CONFIG)
