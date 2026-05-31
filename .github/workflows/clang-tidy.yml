@@ -76,13 +76,6 @@ jobs:
       - name: Build (prime generated sources)
         run: cmake --build build/linux-x64-ci --config Release --target game
 
-      - name: Debug clang-tidy install
-        run: |
-          set -x
-          dpkg -L clang-tidy | grep -i diff || true
-          find /usr -name 'clang-tidy-diff*' 2>/dev/null || true
-          which clang-tidy
-
       - name: Run clang-tidy on PR diff
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}

@@ -9,9 +9,6 @@
 #   build-dir  Directory containing compile_commands.json
 #              (e.g. build/linux-x64).
 #   base-ref   Git ref to diff against (default: origin/master).
-#
-# Environment:
-#   CLANG_TIDY_DIFF  Override the path to clang-tidy-diff.py.
 
 set -euo pipefail
 
@@ -31,26 +28,19 @@ if [ ! -f "${build_dir}/compile_commands.json" ]; then
 	exit 1
 fi
 
-script="${CLANG_TIDY_DIFF:-}"
-if [ -z "$script" ]; then
-	# Ubuntu 24.04+ ships the script unsuffixed; older releases use a
-	# version suffix. Homebrew installs it under llvm's share directory.
-	for candidate in \
-		/usr/share/clang/clang-tidy-diff.py \
-		/usr/share/clang/clang-tidy-diff-*.py \
-		/opt/homebrew/opt/llvm/share/clang/clang-tidy-diff.py \
-		/usr/local/opt/llvm/share/clang/clang-tidy-diff.py
-	do
-		if [ -f "$candidate" ]; then
-			script="$candidate"
-			break
-		fi
-	done
-fi
+# Both Ubuntu and Homebrew (after `brew link llvm`) put a clang-tidy-diff
+# wrapper on PATH alongside clang-tidy itself.
+diff_cmd=""
+for cmd in clang-tidy-diff clang-tidy-diff.py; do
+	if command -v "$cmd" >/dev/null 2>&1; then
+		diff_cmd="$cmd"
+		break
+	fi
+done
 
-if [ -z "$script" ] || [ ! -f "$script" ]; then
-	echo "error: clang-tidy-diff.py not found" >&2
-	echo "       install clang-tidy (apt/brew) or set CLANG_TIDY_DIFF" >&2
+if [ -z "$diff_cmd" ]; then
+	echo "error: clang-tidy-diff not on PATH" >&2
+	echo "       install clang-tidy (apt/brew) or add llvm's bin/ to PATH" >&2
 	exit 1
 fi
 
@@ -59,7 +49,7 @@ if ! jobs=$(nproc 2>/dev/null); then
 fi
 
 output=$(git diff -U0 "${base_ref}"...HEAD -- 'src/*' \
-	| python3 "$script" \
+	| "$diff_cmd" \
 		-p1 \
 		-path "$build_dir" \
 		-j"$jobs" \
