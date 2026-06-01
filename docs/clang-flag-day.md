@@ -122,9 +122,14 @@ in-flight feature branch becomes to rebase.
 
 Each PR modifies only the config for the tool it runs: PR1 touches
 `.clang-format`, PR2 touches `.clang-tidy` (to enable naming), PR3
-touches the `.clang-tidy` workflow (to flip CI to tree-wide gating).
-The other tool stays on diff-only gating until its own PR — otherwise
-CI would fail on hundreds of legacy violations the moment a PR lands.
+touches the `.clang-tidy` workflow (to re-enable CI tree-wide).
+
+Note: PR1 also has to **temporarily disable** the existing diff-only
+clang-tidy CI. Because the reformat touches every line in `src/`,
+diff-only gating becomes equivalent to a tree-wide run, exposing the
+backlog of pre-existing tidy violations that diff-only had been
+hiding. PR3 fixes those violations and re-enables the workflow as
+tree-wide blocking.
 
 ### Pre-flag-day
 
@@ -258,7 +263,10 @@ naming check already in PR2).
    either fix by hand or apply `// NOLINT(check-name): rationale` at
    the call site. Avoid file-wide `NOLINTBEGIN/END` unless an entire
    file is genuinely incompatible.
-3. Flip CI from diff-only to tree-wide for tidy:
+3. Re-enable clang-tidy CI (PR1 paused it to `workflow_dispatch`)
+   and flip it to tree-wide:
+   - Restore the `pull_request` trigger in
+     `.github/workflows/clang-tidy.yml`.
    - Add `scripts/clang-tidy-all.sh` that runs tidy across all `src/`
      files via the existing `compile_commands.json`.
    - Update `.github/workflows/clang-tidy.yml` to call the new
