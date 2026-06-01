@@ -1,16 +1,16 @@
 #include "localaddr.hpp"
 
 #ifdef _WIN32
+#include <iphlpapi.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <iphlpapi.h>
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "ws2_32.lib")
 #else
-#include <ifaddrs.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ifaddrs.h>
 #include <net/if.h>
+#include <netinet/in.h>
 #endif
 
 #include <cstring>
@@ -23,15 +23,15 @@ std::vector<LocalAddress> getLocalAddresses() {
   PIP_ADAPTER_ADDRESSES addrs = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
   if (!addrs) return result;
 
-  DWORD ret = GetAdaptersAddresses(AF_UNSPEC,
-      GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
+  DWORD ret = GetAdaptersAddresses(
+      AF_UNSPEC, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
       nullptr, addrs, &bufLen);
   if (ret == ERROR_BUFFER_OVERFLOW) {
     free(addrs);
     addrs = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
     if (!addrs) return result;
-    ret = GetAdaptersAddresses(AF_UNSPEC,
-        GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
+    ret = GetAdaptersAddresses(
+        AF_UNSPEC, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER,
         nullptr, addrs, &bufLen);
   }
 
