@@ -106,8 +106,8 @@ cmake --workflow --preset $PRESET
 cmake --install build/$PRESET --config Release
 
 # play
-cd install/$PRESET
-./openliero
+./install/$PRESET/bin/openliero        # Linux / macOS
+./install/$PRESET/openliero.exe        # Windows (flat layout)
 ```
 
 For a debug build:
