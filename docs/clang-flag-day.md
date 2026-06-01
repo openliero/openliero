@@ -120,6 +120,12 @@ Each PR is self-contained. Land them back-to-back within a few days —
 the longer the window between PR1 and PR3, the more painful every
 in-flight feature branch becomes to rebase.
 
+Each PR modifies only the config for the tool it runs: PR1 touches
+`.clang-format`, PR2 touches `.clang-tidy` (to enable naming), PR3
+touches the `.clang-tidy` workflow (to flip CI to tree-wide gating).
+The other tool stays on diff-only gating until its own PR — otherwise
+CI would fail on hundreds of legacy violations the moment a PR lands.
+
 ### Pre-flag-day
 
 1. Merge or close all open feature PRs that you can.
