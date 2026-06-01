@@ -1,21 +1,7 @@
 ---
-Language: Cpp
 BasedOnStyle: Google
 ColumnLimit: 100
 DerivePointerAlignment: false
-PointerAlignment: Left
 IncludeBlocks: Preserve
-SortIncludes: CaseSensitive
 LineEnding: LF
-ForEachMacros:
-  - foreach
-  - Q_FOREACH
-  - BOOST_FOREACH
-StatementMacros:
-  - Q_UNUSED
-  - QT_REQUIRE_VERSION
-WhitespaceSensitiveMacros:
-  - STRINGIZE
-  - PP_STRINGIZE
-  - BOOST_PP_STRINGIZE
 ...
