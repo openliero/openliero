@@ -166,9 +166,9 @@ semantic changes, no identifier renames.
      `linux-x64-debug`, `linux-x64-ci`, and at least one cross
      target you actively use).
    - `ctest --test-dir build/linux-x64-ci --output-on-failure` clean.
-   - `./build/linux-x64/desync_fuzzer --iterations 100 --frames 30000`
-     clean. (Format-only changes shouldn't affect determinism, but the
-     fuzzer is cheap insurance.)
+     Includes `test_determinism` / `test_rollback_*` — format-only
+     changes shouldn't affect determinism, but these are cheap
+     insurance.
    - `scripts/clang-format-diff.sh origin/master` reports clean on
      a freshly-formatted tree.
 
@@ -210,7 +210,8 @@ clang-format produce sane output," not line-by-line.
    and code referenced through macros are the usual suspects.
 5. **Critical: rebuild from clean and run the full verification
    protocol below.** Determinism is load-bearing in this codebase
-   (CLAUDE.md), so the rollback and fuzzer tests are non-negotiable.
+   (CLAUDE.md), so the rollback and determinism tests are
+   non-negotiable.
 6. After verification, grep to confirm cereal hooks survived:
    ```bash
    grep -rn -E "void (Serialize|Save|Load)\s*\(" src/game/
@@ -283,9 +284,12 @@ cmake --build build/linux-x64-ci --config Release
 # 2. Full test suite
 ctest --test-dir build/linux-x64-ci --build-config Release --output-on-failure
 
-# 3. Determinism stress test (long-running; run in background)
-./build/linux-x64/desync_fuzzer --iterations 500 --frames 30000
-./build/linux-x64/desync_fuzzer --iterations 100 --frames 30000 --jitter 5
+# 3. Determinism-focused suites (subset of step 2, but explicitly
+#    named because rollback/desync coverage is the load-bearing
+#    safety net for these PRs):
+./build/linux-x64-ci/test_determinism
+./build/linux-x64-ci/test_rollback_correctness
+./build/linux-x64-ci/test_rollback_desync
 
 # 4. Replay/snapshot compatibility — replays recorded BEFORE the flag
 #    day must still play back correctly. Keep a small corpus of .lrp
@@ -305,7 +309,7 @@ out of a real regression.
 | Risk | Likelihood | Mitigation |
 |------|-----------|------------|
 | Cereal `serialize`/`save`/`load` accidentally renamed | Medium | Carve-out regex in `.clang-tidy`; post-PR2 grep to confirm. |
-| Modernize loops change iteration order → determinism break | Medium | Fuzzer + rollback tests in verification. Revert offending check or NOLINT the call site. |
+| Modernize loops change iteration order → determinism break | Medium | `test_determinism` + `test_rollback_*` in verification. Revert offending check or NOLINT the call site. |
 | Tidy `--fix` corrupts a TU via cross-TU rename race | Low | Run tidy passes iteratively, rebuild between passes, commit between passes so any corruption is bisectable. |
 | Macros with stringified identifiers break | Low | None visible in current grep, but check after PR2. |
 | Long format-day window blocks contributors | High | Land all three PRs within ~3 days. Pre-merge sweep of open PRs. |
@@ -347,7 +351,8 @@ You're going to:
 3. Run the rest of `clang-tidy --fix` for modernize/bugprone/perf
    fixes, flip CI to tree-wide gating, ship.
 
-After each: full build, full tests, fuzzer, replay check. Add each
+After each: full build, full test suite (including
+`test_determinism` and `test_rollback_*`), replay check. Add each
 merge commit to `.git-blame-ignore-revs`.
 
 When done: one style across the entire C++ tree, CI blocks merge on

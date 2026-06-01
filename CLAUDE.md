@@ -26,7 +26,6 @@ Optional build targets are gated by CMake options (off by default):
 
 - `-DOPENLIERO_BUILD_TCTOOL=ON` — extracts assets from original Liero `.exe` for total conversions
 - `-DOPENLIERO_BUILD_VIDEOTOOL=ON` — renders `.lrp` replays to video (requires system ffmpeg)
-- `-DOPENLIERO_BUILD_FUZZER=ON` — `desync_fuzzer` binary that stress-tests netplay determinism
 - `-DOPENLIERO_BUILD_TESTS=ON` — Catch2 test suite (requires `Catch2 3` from vcpkg)
 
 ### Tests
@@ -47,15 +46,17 @@ ctest --test-dir build/linux-x64-ci --build-config Release --output-on-failure
 
 Each `src/tests/test_*.cpp` is wired as its own `add_executable` in `CMakeLists.txt`; if you add a test file you must add a matching block there. Several tests use `WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"` because they load assets from `data/`.
 
-### Desync fuzzer
+### Determinism checks
 
-When touching anything that affects simulation determinism, run the fuzzer (long jobs are best in the background):
+When touching anything that affects simulation determinism, run the in-tree determinism and rollback suites (each is its own Catch2 binary):
 
 ```bash
-./build/linux-x64/desync_fuzzer --iterations 100 --frames 30000      # default
-./build/linux-x64/desync_fuzzer --seed 12345 --iterations 1          # reproduce a hit
-./build/linux-x64/desync_fuzzer --jitter 5                           # simulated packet delay
+./build/linux-x64-ci/test_determinism
+./build/linux-x64-ci/test_rollback_correctness
+./build/linux-x64-ci/test_rollback_desync
 ```
+
+These cover lockstep determinism, rollback resimulation correctness, and desync detection. (A standalone `desync_fuzzer` binary existed before PR #78 but was retired in favor of the in-tree suite.)
 
 ### Relay server (Go)
 
@@ -127,5 +128,5 @@ Polymorphism over how the simulation is driven, all under `Controller` (`control
 - `clang-format` runs tree-wide in CI and blocks merge on any drift (`scripts/clang-format-all.sh`). `clang-tidy` still runs diff-only against `master` and blocks merge on changed lines. Matching local CMake targets: `clang-format` / `clang-tidy` for diff-only iteration, `clang-format-all` / `clang-tidy-all` for tree-wide triage. `.clang-tidy` enables `*` minus a list of subtractions documented at the top of the file.
 - **clang-format version is pinned to 22.** CI installs `clang-format-22` from apt.llvm.org. Locally, install a v22 binary (Homebrew's `llvm` formula or apt.llvm.org) and either symlink it as `clang-format` or set `CLANG_FORMAT=clang-format-22` when running the scripts. Other versions produce subtly different output and will fail CI.
 - Don't edit generated files: `src/game/metadata.cpp`, anything in `build/`, `install/`, or `tools/vcpkg/vcpkg/`.
-- Determinism is load-bearing. Anything called from `Game::processFrame` (or via a controller's `process()`) must be fully deterministic across platforms — no `rand()`, no time, no floats with platform-dependent behavior, no hash-iteration order. The simulation uses the fixed-point math in `src/game/math.hpp`. If you change sim code, run `desync_fuzzer` and the `test_rollback_*` / `test_determinism` suites.
+- Determinism is load-bearing. Anything called from `Game::processFrame` (or via a controller's `process()`) must be fully deterministic across platforms — no `rand()`, no time, no floats with platform-dependent behavior, no hash-iteration order. The simulation uses the fixed-point math in `src/game/math.hpp`. If you change sim code, run the `test_rollback_*` and `test_determinism` suites.
 - New tests need a matching `add_executable` + `catch_discover_tests` block in `CMakeLists.txt`; tests that read `data/` must set `WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"`.
