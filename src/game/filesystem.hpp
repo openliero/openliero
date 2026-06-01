@@ -160,6 +160,17 @@ namespace paths
 	//   2. SDL_GetBasePath() (binary-adjacent), if it has stock content.
 	// Returns an empty FsNode (!exists()) if neither resolves.
 	FsNode systemDataRoot();
+
+	// True if Save As of `leaf` into `subdir` of the user dir would
+	// shadow either a shipped file or one of the auto-managed names
+	// the game writes itself (e.g. `Setups/liero.cfg`). Used by the
+	// Save As dialogs to refuse reserved names. `userRoot` is the
+	// user's writable root; when it equals systemDataRoot() (portable
+	// mode, `--config-root` aimed at the install dir) there is no
+	// separate read-only layer to shadow and the user can freely
+	// overwrite their own files, so the on-disk check is skipped.
+	bool shadowsSystem(FsNode const& userRoot,
+		std::string const& subdir, std::string const& leaf);
 }
 
 struct ResolvedPaths

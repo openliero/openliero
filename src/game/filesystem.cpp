@@ -819,6 +819,35 @@ FsNode systemDataRoot()
 	return FsNode();
 }
 
+bool shadowsSystem(FsNode const& userRoot,
+	std::string const& subdir, std::string const& leaf)
+{
+	// Auto-managed filenames the game writes itself. Picking these in a
+	// Save As dialog would clobber the game's own auto-write target or
+	// shadow the shipped default unreachably.
+	static char const* const kReserved[][2] = {
+		{"Setups", "liero.cfg"},
+	};
+	for (auto const& r : kReserved)
+	{
+		if (subdir == r[0] && ciCompare(leaf, r[1]))
+			return true;
+	}
+
+	FsNode sys = systemDataRoot();
+	if (!sys.imp)
+		return false;
+
+	// Single-dir layouts (portable.txt / --config-root pointing at the
+	// install dir): user writes go to the same directory the system
+	// data is read from. There's no separate layer to shadow, and the
+	// user must be able to overwrite their own files.
+	if (userRoot.imp && userRoot.imp->fullPath() == sys.imp->fullPath())
+		return false;
+
+	return (sys / subdir / leaf).exists();
+}
+
 ResolvedPaths resolve(int argc, char* argv[], std::string const& basePath)
 {
 	ResolvedPaths r;

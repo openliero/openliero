@@ -55,6 +55,43 @@ static void resetLeftRight()
 	gfx.releaseControl(WormSettingsExtensions::Right);
 }
 
+// Builds an InputStringState for a Save As dialog with name-collision
+// handling: if the typed name would shadow a shipped file or an
+// auto-managed file, an info box is shown and the input is re-opened
+// preserving what the user typed. `onComplete` is called once at the
+// end of the dialog flow — with the validated name on success, or an
+// empty string on cancel.
+static std::unique_ptr<AppState> makeSaveAsState(
+	std::string subdir, std::string ext, std::string initial, int x, int y,
+	std::function<void(std::string const& result)> onComplete)
+{
+	auto cb = [subdir, ext, x, y, onComplete]
+		(bool accepted, std::string const& result)
+		{
+			if (!accepted || result.empty())
+			{
+				onComplete(std::string());
+				return;
+			}
+			std::string leaf = result + ext;
+			if (paths::shadowsSystem(gfx.getUserConfigNode(), subdir, leaf))
+			{
+				std::string msg = "NAME '" + leaf + "' IS RESERVED";
+				gfx.stateStack.scheduleReplaceTop(
+					std::make_unique<InfoBoxState>(msg, 160, 100, true,
+						[subdir, ext, result, x, y, onComplete]() {
+							gfx.stateStack.scheduleReplaceTop(
+								makeSaveAsState(subdir, ext, result,
+									x, y, onComplete));
+						}));
+				return;
+			}
+			onComplete(result);
+		};
+	return std::make_unique<InputStringState>(
+		std::move(initial), 30, x, y, nullptr, "", false, std::move(cb));
+}
+
 MainMenuState::MainMenuState()
 {
 }
@@ -289,10 +326,10 @@ bool MainMenuState::update()
 					{
 						x += gfx->settingsMenu.valueOffsetX + 2;
 						std::string name = getBasename(getLeaf(gfx->settingsNode.fullPath()));
-						gfx->stateStack.push(std::make_unique<InputStringState>(
-							name, 30, x, y, nullptr, "", false,
-							[this](bool accepted, std::string const& result) {
-								if (accepted && !result.empty())
+						gfx->stateStack.push(makeSaveAsState(
+							"Setups", ".cfg", name, x, y,
+							[this](std::string const& result) {
+								if (!result.empty())
 								{
 									gfx->saveSettings(gfx->getUserConfigNode() / "Setups" / (result + ".cfg"));
 								}
@@ -349,10 +386,10 @@ bool MainMenuState::update()
 				if (item && gfx->playerMenu.itemPosition(*item, x, y))
 				{
 					x += gfx->playerMenu.valueOffsetX + 2;
-					gfx->stateStack.push(std::make_unique<InputStringState>(
-						"", 30, x, y, nullptr, "", false,
-						[this](bool accepted, std::string const& result) {
-							if (accepted && !result.empty())
+					gfx->stateStack.push(makeSaveAsState(
+						"Profiles", ".toml", "", x, y,
+						[this](std::string const& result) {
+							if (!result.empty())
 							{
 								gfx->playerMenu.ws->saveProfile(
 									gfx->getUserConfigNode() / "Profiles" / (result + ".toml"));

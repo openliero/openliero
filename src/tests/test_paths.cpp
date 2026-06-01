@@ -178,3 +178,45 @@ TEST_CASE("paths::resolve: positional args are collected") {
     REQUIRE(r.positionalArgs.size() == 1);
     REQUIRE(r.positionalArgs[0] == "myTC");
 }
+
+// ---------------------------------------------------------------------------
+// shadowsSystem tests
+// ---------------------------------------------------------------------------
+
+TEST_CASE("paths::shadowsSystem flags shipped files in XDG mode") {
+    TempDir userDir("shadow_user");
+    TempDir sysDir("shadow_sys");
+    touch(sysDir.path / "Profiles" / "Default.toml");
+    ScopedEnv envS("OPENLIERO_DATADIR", sysDir.str().c_str());
+
+    FsNode userRoot(userDir.str());
+    REQUIRE(paths::shadowsSystem(userRoot, "Profiles", "Default.toml"));
+    REQUIRE(!paths::shadowsSystem(userRoot, "Profiles", "MyOwnName.toml"));
+}
+
+TEST_CASE("paths::shadowsSystem flags auto-managed names regardless of system layer") {
+    TempDir userDir("shadow_auto_user");
+    TempDir sysDir("shadow_auto_sys");
+    ScopedEnv envS("OPENLIERO_DATADIR", sysDir.str().c_str());
+
+    // liero.cfg is the auto-write target; even with no shipped copy it
+    // must remain reserved so user Save As can't clobber it.
+    FsNode userRoot(userDir.str());
+    REQUIRE(paths::shadowsSystem(userRoot, "Setups", "liero.cfg"));
+    REQUIRE(paths::shadowsSystem(userRoot, "Setups", "LIERO.CFG"));
+    REQUIRE(!paths::shadowsSystem(userRoot, "Setups", "myoptions.cfg"));
+}
+
+TEST_CASE("paths::shadowsSystem skips on-disk check in portable mode") {
+    // Portable / --config-root pointing at the install dir: userRoot
+    // and the system root are the same directory, so the user's own
+    // previously-saved file mustn't be treated as a shipped collision.
+    TempDir sharedDir("shadow_portable");
+    touch(sharedDir.path / "Setups" / "myoptions.cfg");
+    ScopedEnv envS("OPENLIERO_DATADIR", sharedDir.str().c_str());
+
+    FsNode userRoot(sharedDir.str());
+    REQUIRE(!paths::shadowsSystem(userRoot, "Setups", "myoptions.cfg"));
+    // Auto-managed names are still reserved.
+    REQUIRE(paths::shadowsSystem(userRoot, "Setups", "liero.cfg"));
+}
