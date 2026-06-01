@@ -2,6 +2,11 @@
   "releases": [],
   "dev": [
     {
+      "name": "build-12b02ca",
+      "dir": "dev/build-12b02ca",
+      "timestamp": "2026-06-01T19:05:19Z"
+    },
+    {
       "name": "build-cc29caf",
       "dir": "dev/build-cc29caf",
       "timestamp": "2026-05-31T16:28:11Z"
@@ -45,11 +50,6 @@
       "name": "build-fb2d2d4",
       "dir": "dev/build-fb2d2d4",
       "timestamp": "2026-05-25T18:54:22Z"
-    },
-    {
-      "name": "build-18c9fe8",
-      "dir": "dev/build-18c9fe8",
-      "timestamp": "2026-05-24T18:22:15Z"
     }
   ]
 }
