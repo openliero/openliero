@@ -126,7 +126,7 @@ TEST_CASE("paths::resolve XDG: user shadows system file of same name") {
     touch(userDir.path / "Setups" / "liero.cfg");
     std::ofstream{userDir.path / "Setups" / "liero.cfg"} << "user";
 
-    ScopedEnv envU("OPENLIERO_USER_DIR", userDir.str().c_str());
+    ScopedEnv envU("OPENLIERO_TEST_USER_DIR", userDir.str().c_str());
     ScopedEnv envS("OPENLIERO_DATADIR",  sysDir.str().c_str());
 
     // No portable.txt, no --config-root => XDG split.
@@ -148,7 +148,7 @@ TEST_CASE("paths::resolve XDG: writer routes to user dir") {
     TempDir userDir("xdg_write_user");
     TempDir sysDir("xdg_write_system");
 
-    ScopedEnv envU("OPENLIERO_USER_DIR", userDir.str().c_str());
+    ScopedEnv envU("OPENLIERO_TEST_USER_DIR", userDir.str().c_str());
     ScopedEnv envS("OPENLIERO_DATADIR",  sysDir.str().c_str());
 
     TempDir base("xdg_write_base");
@@ -177,6 +177,28 @@ TEST_CASE("paths::resolve: positional args are collected") {
     auto r = paths::resolve(a.argc(), a.argv(), base.str());
     REQUIRE(r.positionalArgs.size() == 1);
     REQUIRE(r.positionalArgs[0] == "myTC");
+}
+
+TEST_CASE("paths::resolve: --flag=value form is accepted") {
+    TempDir root("eqform");
+    Argv a{("--config-root=" + root.str()).c_str(), "--port=9000"};
+    auto r = paths::resolve(a.argc(), a.argv(), root.str());
+    REQUIRE(r.configNode.fullPath() == root.str());
+    REQUIRE(r.userConfigNode.fullPath() == root.str());
+    REQUIRE(r.port == 9000);
+}
+
+TEST_CASE("paths::resolve: --config-root refuses to swallow a following flag") {
+    // Typo case: user writes `--config-root --port 1234`. Without the guard,
+    // configRoot would be set to "--port" and the game would create a
+    // directory literally named "--port" under cwd.
+    TempDir base("noswallow");
+    Argv a{"--config-root", "--port", "1234"};
+    auto r = paths::resolve(a.argc(), a.argv(), base.str());
+    // --config-root rejected (no usable value), so we fall through to the
+    // XDG branch — userConfigNode is the user dir, not "--port".
+    REQUIRE(r.userConfigNode.fullPath() != std::string("--port"));
+    REQUIRE(r.port == 1234);
 }
 
 // ---------------------------------------------------------------------------

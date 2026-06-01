@@ -7,7 +7,7 @@
   <icon type="stock">io.github.openliero.openliero</icon>
 
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>LGPL-2.1-or-later</project_license>
+  <project_license>BSD-2-Clause</project_license>
 
   <description>
     <p>
@@ -21,7 +21,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">openliero.desktop</launchable>
+  <launchable type="desktop-id">io.github.openliero.openliero.desktop</launchable>
 
   <url type="homepage">https://github.com/openliero/openliero</url>
   <url type="bugtracker">https://github.com/openliero/openliero/issues</url>

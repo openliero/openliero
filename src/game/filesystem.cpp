@@ -765,8 +765,9 @@ namespace paths
 
 FsNode userDataRoot()
 {
-	// Runtime override for tests and advanced portable usage.
-	if (const char* env = std::getenv("OPENLIERO_USER_DIR"))
+	// Test-only override. Not documented for end users — production paths
+	// should go through --config-root or portable.txt instead.
+	if (const char* env = std::getenv("OPENLIERO_TEST_USER_DIR"))
 	{
 		if (env[0] != '\0')
 		{
@@ -873,6 +874,8 @@ bool shadowsSystem(FsNode const& userRoot,
 	return (sys / subdir / leaf).exists();
 }
 
+// Safe to call before SDL_Init: SDL3's SDL_GetPrefPath/SDL_GetBasePath
+// do not require subsystem initialization.
 ResolvedPaths resolve(int argc, char* argv[], std::string const& basePath)
 {
 	ResolvedPaths r;
@@ -880,20 +883,39 @@ ResolvedPaths resolve(int argc, char* argv[], std::string const& basePath)
 
 	std::string configRoot;
 
+	// Matches "--<name>" or "--<name>=value". Returns the value (after '=' or
+	// the next argv) and advances `i` past it. Refuses to consume the next
+	// argv as a value if it looks like another flag, so a typo like
+	// "--config-root --port 1234" doesn't silently set configRoot="--port".
+	auto matchOpt = [&](int& i, char const* name, std::string* out) -> bool
+	{
+		char const* arg = argv[i] + 2;
+		std::size_t nlen = std::strlen(name);
+		if (std::strncmp(arg, name, nlen) != 0)
+			return false;
+		if (arg[nlen] == '=')
+		{
+			*out = arg + nlen + 1;
+			return true;
+		}
+		if (arg[nlen] != '\0')
+			return false;
+		if (i + 1 >= argc || argv[i + 1][0] == '-')
+			return false;
+		++i;
+		*out = argv[i];
+		return true;
+	};
+
 	for (int i = 1; i < argc; ++i)
 	{
 		if (argv[i][0] == '-' && argv[i][1] == '-')
 		{
-			if (std::strcmp(argv[i] + 2, "config-root") == 0 && i + 1 < argc)
-			{
-				++i;
-				configRoot = argv[i];
-			}
-			else if (std::strcmp(argv[i] + 2, "port") == 0 && i + 1 < argc)
-			{
-				++i;
-				r.port = static_cast<uint16_t>(std::atoi(argv[i]));
-			}
+			std::string value;
+			if (matchOpt(i, "config-root", &value))
+				configRoot = std::move(value);
+			else if (matchOpt(i, "port", &value))
+				r.port = static_cast<uint16_t>(std::atoi(value.c_str()));
 		}
 		else if (argv[i][0] != '-')
 		{
