@@ -819,6 +819,31 @@ FsNode systemDataRoot()
 	return FsNode();
 }
 
+// True if a real, usable portable.txt sits at `path`. We can't use the
+// generic FsNode::exists() (which calls _access) because on Windows it
+// reports cloud-sync placeholders as present even after the user has
+// deleted the file in Explorer — leaving anyone with a sync-backed
+// extraction folder permanently stuck in portable mode.
+static bool portableMarkerPresent(std::string const& path)
+{
+#if _WIN32
+	DWORD attr = GetFileAttributesA(path.c_str());
+	if (attr == INVALID_FILE_ATTRIBUTES)
+		return false;
+	if (attr & FILE_ATTRIBUTE_DIRECTORY)
+		return false;
+	constexpr DWORD kCloudPlaceholder = FILE_ATTRIBUTE_OFFLINE
+		| 0x00400000u   // FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+		| 0x00040000u;  // FILE_ATTRIBUTE_RECALL_ON_OPEN
+	return !(attr & kCloudPlaceholder);
+#else
+	struct stat st;
+	if (stat(path.c_str(), &st) != 0)
+		return false;
+	return S_ISREG(st.st_mode);
+#endif
+}
+
 bool shadowsSystem(FsNode const& userRoot,
 	std::string const& subdir, std::string const& leaf)
 {
@@ -893,7 +918,8 @@ ResolvedPaths resolve(int argc, char* argv[], std::string const& basePath)
 	}
 
 	// portable.txt next to the binary selects single-directory mode.
-	if (!base.empty() && (FsNode(base) / "portable.txt").exists())
+	if (!base.empty()
+		&& portableMarkerPresent((FsNode(base) / "portable.txt").fullPath()))
 	{
 		r.configNode     = FsNode(base);
 		r.userConfigNode = FsNode(base);
