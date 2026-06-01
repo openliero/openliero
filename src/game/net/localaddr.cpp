@@ -1,9 +1,15 @@
 #include "localaddr.hpp"
 
 #ifdef _WIN32
-#include <iphlpapi.h>
+// clang-format off
+// <winsock2.h> must precede <iphlpapi.h>; iphlpapi.h transitively pulls in
+// <windows.h>, which would otherwise drag in the legacy <winsock.h> and
+// conflict with winsock2. Alphabetic sort would reorder these and break
+// the Windows build (see <iphlpapi.h> failing on undefined IFTYPE etc.).
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
+// clang-format on
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "ws2_32.lib")
 #else
