@@ -156,7 +156,7 @@ CheckOptions:
   - key: 'readability-identifier-naming.NamespaceCase'
     value: 'lower_case'
   - key: 'readability-identifier-naming.MethodIgnoredRegexp'
-    value: '^(serialize|save|load|save_minimal|load_minimal)$'
+    value: '^(serialize|save|load|save_minimal|load_minimal|setNextName|startNode|finishNode|saveValue|loadValue|saveBinaryValue|loadBinaryValue|sizeTag)$'
   - key: 'readability-identifier-naming.FunctionIgnoredRegexp'
-    value: '^(serialize|save|load|save_minimal|load_minimal)$'
+    value: '^(serialize|save|load|save_minimal|load_minimal|prologue|epilogue)$'
 ...
