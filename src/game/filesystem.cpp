@@ -129,8 +129,13 @@ struct FilenameResult {
 #define BOOST_INVALID_HANDLE_VALUE 0
 #define BOOST_SYSTEM_DIRECTORY_TYPE struct dirent*
 
-inline FilenameResult FindFirstFile(const char* dir, BOOST_HANDLE& handle,
-                                    BOOST_SYSTEM_DIRECTORY_TYPE&)
+// DirIter{Open,Close,Next} wrap the POSIX/Win32 directory iteration APIs
+// behind a uniform interface. Local names are deliberately distinct from
+// the Windows FindFirstFile/FindNextFile/FindClose macros (which the
+// Windows headers #define to the A/W variants) to avoid preprocessor
+// substitution inside our own definitions.
+inline FilenameResult DirIterOpen(const char* dir, BOOST_HANDLE& handle,
+                                  BOOST_SYSTEM_DIRECTORY_TYPE&)
 // Returns: 0 if error, otherwise name
 {
   const char* dummy_first_name = ".";
@@ -139,12 +144,12 @@ inline FilenameResult FindFirstFile(const char* dir, BOOST_HANDLE& handle,
              : FilenameResult(dummy_first_name);
 }
 
-inline void FindClose(BOOST_HANDLE handle) {
+inline void DirIterClose(BOOST_HANDLE handle) {
   assert(handle != BOOST_INVALID_HANDLE_VALUE);
   ::closedir(handle);
 }
 
-inline FilenameResult FindNextFile(BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_TYPE&)
+inline FilenameResult DirIterNext(BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_TYPE&)
 // Returns: if EOF 0, otherwise name
 // Throws: if system reports error
 {
@@ -168,38 +173,31 @@ inline FilenameResult FindNextFile(BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_T
 #define BOOST_INVALID_HANDLE_VALUE INVALID_HANDLE_VALUE
 #define BOOST_SYSTEM_DIRECTORY_TYPE WIN32_FIND_DATAA
 
-inline filename_result find_first_file(const char* dir, BOOST_HANDLE& handle,
-                                       BOOST_SYSTEM_DIRECTORY_TYPE& data)
-// Returns: 0 if error, otherwise name
-{
-  //    std::cout << "find_first_file " << dir << std::endl;
+inline FilenameResult DirIterOpen(const char* dir, BOOST_HANDLE& handle,
+                                  BOOST_SYSTEM_DIRECTORY_TYPE& data) {
   std::string dirpath(std::string(dir) + "/*");
   bool fail = ((handle = ::FindFirstFileA(dirpath.c_str(), &data)) == BOOST_INVALID_HANDLE_VALUE);
 
-  if (fail) return filename_result();
+  if (fail) return FilenameResult();
 
-  return filename_result(data.cFileName);
+  return FilenameResult(data.cFileName);
 }
 
-inline void find_close(BOOST_HANDLE handle) {
-  //    std::cout << "find_close" << std::endl;
+inline void DirIterClose(BOOST_HANDLE handle) {
   assert(handle != BOOST_INVALID_HANDLE_VALUE);
   ::FindClose(handle);
 }
 
-inline filename_result find_next_file(BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_TYPE& data)
-// Returns: 0 if EOF, otherwise name
-// Throws: if system reports error
-{
+inline FilenameResult DirIterNext(BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTORY_TYPE& data) {
   if (::FindNextFileA(handle, &data) == 0) {
     if (::GetLastError() != ERROR_NO_MORE_FILES) {
       throw std::runtime_error("Error iterating directory");
     } else {
-      return filename_result();
-    }  // end reached
+      return FilenameResult();
+    }
   }
 
-  return filename_result(data.cFileName);
+  return FilenameResult(data.cFileName);
 }
 
 #else
@@ -211,13 +209,13 @@ inline filename_result find_next_file(BOOST_HANDLE handle, BOOST_SYSTEM_DIRECTOR
 
 #if _WIN32
 
-inline char isDirSep(char c) { return c == '\\' || c == '/'; }
+inline char IsDirSep(char c) { return c == '\\' || c == '/'; }
 
-static char const dirSep = '\\';
+static char const kDirSep = '\\';
 
-bool create_directories(std::string const& dir) {
+bool CreateDirectories(std::string const& dir) {
   for (std::size_t i = 0; i < dir.size(); ++i) {
-    if (isDirSep(dir[i])) {
+    if (IsDirSep(dir[i])) {
       std::string path = dir.substr(0, i);
       DWORD attr = GetFileAttributesA(path.c_str());
 
@@ -281,7 +279,7 @@ DirectoryListing::DirectoryListing(std::string const& dir) {
   if (!dir_path[0])
     handle = BOOST_INVALID_HANDLE_VALUE;
   else
-    name = FindFirstFile(dir_path, handle, scratch);  // sets handle
+    name = DirIterOpen(dir_path, handle, scratch);  // sets handle
 
   if (handle != BOOST_INVALID_HANDLE_VALUE) {
     do {
@@ -297,9 +295,9 @@ DirectoryListing::DirectoryListing(std::string const& dir) {
           }
         }
       }
-    } while ((name = FindNextFile(handle, scratch)));
+    } while ((name = DirIterNext(handle, scratch)));
 
-    FindClose(handle);
+    DirIterClose(handle);
   }
 
   Sort();
@@ -559,7 +557,7 @@ FsNode::FsNode(std::string const& path) {
           imp.reset(new FsNodeFilesystem(part));
         else {
           imp.reset(new FsNodeFilesystem("."));
-          imp = imp->go(part);
+          imp = imp->Go(part);
         }
 #else
         if (part.empty())
@@ -586,7 +584,7 @@ FsNode::FsNode(std::string const& path) {
         imp.reset(new FsNodeFilesystem(part));
       else {
         imp.reset(new FsNodeFilesystem("."));
-        imp = imp->go(part);
+        imp = imp->Go(part);
       }
 #else
       if (path.empty())
