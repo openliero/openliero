@@ -51,13 +51,13 @@ TEST_CASE("TC loads without errors", "[tc_load]") {
   REQUIRE(common->SoundIndex("does_not_exist") == -1);
 
   // [sounds] hooks resolve via the loaded sound table.
-  REQUIRE(common->soundHook[SoundMenuSelect] == common->SoundIndex("select"));
-  REQUIRE(common->soundHook[SoundMenuMoveUp] == common->SoundIndex("moveup"));
-  REQUIRE(common->soundHook[SoundMenuMoveDown] == common->SoundIndex("movedown"));
-  REQUIRE(common->soundHook[SoundBump] == common->SoundIndex("bump"));
-  REQUIRE(common->soundHook[SoundBegin] == common->SoundIndex("begin"));
-  REQUIRE(common->soundHook[SoundReloaded] == common->SoundIndex("reloaded"));
-  for (int i = 0; i < SoundDefT::kMaxSound; ++i) REQUIRE(common->soundHook[i] >= 0);
+  REQUIRE(common->sound_hook[SoundMenuSelect] == common->SoundIndex("select"));
+  REQUIRE(common->sound_hook[SoundMenuMoveUp] == common->SoundIndex("moveup"));
+  REQUIRE(common->sound_hook[SoundMenuMoveDown] == common->SoundIndex("movedown"));
+  REQUIRE(common->sound_hook[SoundBump] == common->SoundIndex("bump"));
+  REQUIRE(common->sound_hook[SoundBegin] == common->SoundIndex("begin"));
+  REQUIRE(common->sound_hook[SoundReloaded] == common->SoundIndex("reloaded"));
+  for (int i = 0; i < SoundDefT::kMaxSound; ++i) REQUIRE(common->sound_hook[i] >= 0);
 
   // Step 5: sound fields in weapon / sobject configs are now name-typed.
   // Anchor a couple of known values so regressions in soundRefFromStr
@@ -141,7 +141,7 @@ TEST_CASE("tc.cfg [sounds] round-trips through save/load", "[tc_load]") {
   // populated from [types].sounds, which loadTcConfig does first.
   LoadTcConfig(dst, ss);
 
-  for (int i = 0; i < SoundDefT::kMaxSound; ++i) REQUIRE(dst.soundHook[i] == src->soundHook[i]);
+  for (int i = 0; i < SoundDefT::kMaxSound; ++i) REQUIRE(dst.sound_hook[i] == src->sound_hook[i]);
 }
 
 TEST_CASE("[sounds] unknown name resolves to -1", "[tc_load]") {
@@ -162,10 +162,10 @@ TEST_CASE("[sounds] unknown name resolves to -1", "[tc_load]") {
   std::stringstream ss(cfg);
   Common c;
   LoadTcConfig(c, ss);
-  REQUIRE(c.soundHook[SoundMenuSelect] == -1);
-  REQUIRE(c.soundHook[SoundMenuMoveUp] == c.SoundIndex("alpha"));
+  REQUIRE(c.sound_hook[SoundMenuSelect] == -1);
+  REQUIRE(c.sound_hook[SoundMenuMoveUp] == c.SoundIndex("alpha"));
   // Unset entries default to -1.
-  REQUIRE(c.soundHook[SoundBump] == -1);
+  REQUIRE(c.sound_hook[SoundBump] == -1);
 }
 
 // Regression for issue #44: a TC whose [types].sounds lists a sound whose

@@ -144,12 +144,12 @@ void NetSession::Update() {
 
   transport_.Poll();
 
-  if (transport_.State() == NetTransport::kFailed) {
+  if (transport_.CurrentState() == NetTransport::kFailed) {
     sessionState_ = kFailed;
     return;
   }
 
-  if (transport_.State() == NetTransport::kDisconnected && sessionState_ != kIdle) {
+  if (transport_.CurrentState() == NetTransport::kDisconnected && sessionState_ != kIdle) {
     sessionState_ = kDisconnected;
     return;
   }

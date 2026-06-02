@@ -139,7 +139,7 @@ void CommonSave(Common& common, std::string const& path) {
 
     std::ostringstream ss;
     SaveNObjectConfig(common, w, ss);
-    io::FileWriter n_writer(JoinPath(dir, w.idStr + ".cfg").c_str(), "wb");
+    io::FileWriter n_writer(JoinPath(dir, w.id_str + ".cfg").c_str(), "wb");
     auto str = ss.str();
     for (char c : str) n_writer.Put(c);
   }
@@ -150,7 +150,7 @@ void CommonSave(Common& common, std::string const& path) {
 
     std::ostringstream ss;
     SaveSObjectConfig(common, w, ss);
-    io::FileWriter s_writer(JoinPath(dir, w.idStr + ".cfg").c_str(), "wb");
+    io::FileWriter s_writer(JoinPath(dir, w.id_str + ".cfg").c_str(), "wb");
     auto str = ss.str();
     for (char c : str) s_writer.Put(c);
   }

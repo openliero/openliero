@@ -20,7 +20,7 @@ namespace {
 
 struct RecordingPlayer : SoundPlayer {
   RecordingPlayer() : m_common_(nullptr) {}
-  explicit RecordingPlayer(struct Common& c) : m_common_(&c) {}
+  explicit RecordingPlayer(Common& c) : m_common_(&c) {}
 
   std::vector<int> played;
 
@@ -29,10 +29,10 @@ struct RecordingPlayer : SoundPlayer {
 
  protected:
   void PlayImpl(int sound, void* /*id*/, int /*loops*/) override { played.push_back(sound); }
-  struct Common* Common() { return m_common_; }
+  Common* GetCommonPtr() override { return m_common_; }
 
  private:
-  struct Common* m_common_;
+  Common* m_common_;
 };
 
 }  // namespace

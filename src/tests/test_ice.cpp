@@ -87,8 +87,8 @@ TEST_CASE("Two local IceAgents connect directly", "[ice]") {
 
   std::vector<std::string> candidates_a, candidates_b;
   bool gather_done_a = false, gather_done_b = false;
-  IceAgent::enum State state_a = IceAgent::State::kNew;
-  IceAgent::enum State state_b = IceAgent::State::kNew;
+  IceAgent::State state_a = IceAgent::State::kNew;
+  IceAgent::State state_b = IceAgent::State::kNew;
 
   agent_a.on_local_candidate = [&](const std::string& c) { candidates_a.push_back(c); };
   agent_a.on_gathering_done = [&]() { gather_done_a = true; };
@@ -128,11 +128,11 @@ TEST_CASE("IceAgent stop is clean", "[ice]") {
   agent.Start(cfg);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   agent.Stop();
-  REQUIRE(agent.State() == IceAgent::State::kDisconnected);
+  REQUIRE(agent.CurrentState() == IceAgent::State::kDisconnected);
 
   // Double stop is safe
   agent.Stop();
-  REQUIRE(agent.State() == IceAgent::State::kDisconnected);
+  REQUIRE(agent.CurrentState() == IceAgent::State::kDisconnected);
 }
 
 TEST_CASE("IceAgent data exchange via onRecv", "[ice]") {
@@ -142,8 +142,8 @@ TEST_CASE("IceAgent data exchange via onRecv", "[ice]") {
 
   std::vector<std::string> candidates_a, candidates_b;
   bool gather_done_a = false, gather_done_b = false;
-  IceAgent::enum State state_a = IceAgent::State::kNew;
-  IceAgent::enum State state_b = IceAgent::State::kNew;
+  IceAgent::State state_a = IceAgent::State::kNew;
+  IceAgent::State state_b = IceAgent::State::kNew;
 
   std::vector<uint8_t> received_by_a, received_by_b;
 
@@ -233,8 +233,8 @@ TEST_CASE("IceBridge proxies data bidirectionally", "[ice][bridge]") {
 
   std::vector<std::string> candidates_a, candidates_b;
   bool gather_done_a = false, gather_done_b = false;
-  IceAgent::enum State state_a = IceAgent::State::kNew;
-  IceAgent::enum State state_b = IceAgent::State::kNew;
+  IceAgent::State state_a = IceAgent::State::kNew;
+  IceAgent::State state_b = IceAgent::State::kNew;
 
   agent_a.on_local_candidate = [&](const std::string& c) { candidates_a.push_back(c); };
   agent_a.on_gathering_done = [&]() { gather_done_a = true; };

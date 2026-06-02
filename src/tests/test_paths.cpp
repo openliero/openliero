@@ -59,7 +59,7 @@ struct Argv {
     ptrs.push_back(nullptr);
   }
   int Argc() const { return (int)storage.size(); }
-  char** Argv() { return ptrs.data(); }
+  char** Data() { return ptrs.data(); }
 };
 
 }  // namespace
@@ -102,7 +102,7 @@ TEST_CASE("paths::resolve --config-root sets both nodes to the given path") {
   TempDir root("configroot");
 
   Argv a{"--config-root", root.Str().c_str()};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), root.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), root.Str());
 
   REQUIRE(r.config_node.FullPath() == root.Str());
   REQUIRE(r.user_config_node.FullPath() == root.Str());
@@ -115,7 +115,7 @@ TEST_CASE("paths::resolve portable.txt sets both nodes to basePath") {
   Touch(base.path / "portable.txt");
 
   Argv a{};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), base.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), base.Str());
 
   REQUIRE(r.config_node.FullPath() == base.Str());
   REQUIRE(r.user_config_node.FullPath() == base.Str());
@@ -138,7 +138,7 @@ TEST_CASE("paths::resolve XDG: user shadows system file of same name") {
   // No portable.txt, no --config-root => XDG split.
   TempDir base("xdg_base_nosplit");  // basePath with no portable.txt
   Argv a{};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), base.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), base.Str());
 
   REQUIRE(r.user_config_node.FullPath() == user_dir.Str());
 
@@ -159,7 +159,7 @@ TEST_CASE("paths::resolve XDG: writer routes to user dir") {
 
   TempDir base("xdg_write_base");
   Argv a{};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), base.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), base.Str());
 
   // Write a file through userConfigNode.
   auto writer = (r.user_config_node / "Setups" / "liero.cfg").ToWriter();
@@ -173,14 +173,14 @@ TEST_CASE("paths::resolve XDG: writer routes to user dir") {
 TEST_CASE("paths::resolve: --port is parsed") {
   TempDir base("port_base");
   Argv a{"--port", "12345"};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), base.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), base.Str());
   REQUIRE(r.port == 12345);
 }
 
 TEST_CASE("paths::resolve: positional args are collected") {
   TempDir base("pos_base");
   Argv a{"myTC"};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), base.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), base.Str());
   REQUIRE(r.positional_args.size() == 1);
   REQUIRE(r.positional_args[0] == "myTC");
 }
@@ -188,7 +188,7 @@ TEST_CASE("paths::resolve: positional args are collected") {
 TEST_CASE("paths::resolve: --flag=value form is accepted") {
   TempDir root("eqform");
   Argv a{("--config-root=" + root.Str()).c_str(), "--port=9000"};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), root.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), root.Str());
   REQUIRE(r.config_node.FullPath() == root.Str());
   REQUIRE(r.user_config_node.FullPath() == root.Str());
   REQUIRE(r.port == 9000);
@@ -200,7 +200,7 @@ TEST_CASE("paths::resolve: --config-root refuses to swallow a following flag") {
   // directory literally named "--port" under cwd.
   TempDir base("noswallow");
   Argv a{"--config-root", "--port", "1234"};
-  auto r = paths::Resolve(a.Argc(), a.Argv(), base.Str());
+  auto r = paths::Resolve(a.Argc(), a.Data(), base.Str());
   // --config-root rejected (no usable value), so we fall through to the
   // XDG branch — userConfigNode is the user dir, not "--port".
   REQUIRE(r.user_config_node.FullPath() != std::string("--port"));

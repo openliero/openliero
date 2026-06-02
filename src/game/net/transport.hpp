@@ -143,7 +143,7 @@ struct NetTransport {
   void SendTcResponse(bool need_data);
   void SendTcData(const void* data, size_t len);
 
-  State State() const { return state_; }
+  State CurrentState() const { return state_; }
   uint16_t ListeningPort() const;
 
   // Access the ENet host (for STUN-via-host integration)
