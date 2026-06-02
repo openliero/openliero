@@ -262,8 +262,8 @@ double EvaluateState(FollowAI& ai, Worm* me, Game& game, InputContext& context, 
       optimal_dist = 50.0;
     }
 
-    double d =
-        std::max(std::abs(worm_cell->g / 256.0 - optimal_dist) - 10.0, 0.0) * weights.distance_weight;
+    double d = std::max(std::abs(worm_cell->g / 256.0 - optimal_dist) - 10.0, 0.0) *
+               weights.distance_weight;
     len *= Psigmoid(d / 100.0);
   } else {
     len += WormDistance(me, target) / 10.0;
@@ -286,7 +286,8 @@ double EvaluateState(FollowAI& ai, Worm* me, Game& game, InputContext& context, 
   score += me_health * weights.health_weight * weights.defense_weight;
   score -= target_health * weights.health_weight;
 
-  if (game.settings->game_mode == Settings::kGmHoldazone && game.holdazone.holder_idx == me->index) {
+  if (game.settings->game_mode == Settings::kGmHoldazone &&
+      game.holdazone.holder_idx == me->index) {
     double aim_diff = AimingDiff(me, target);
     score -= aim_diff * 2.0 * weights.aim_weight;
   } else {
@@ -363,7 +364,8 @@ void SimpleAI::Process(Game& game, Worm& worm) {
 
     double aim_diff = RadianDiff(angle_to_target, current_aim);
 
-    bool fire = aim_diff >= -tolerance && aim_diff <= tolerance && Obstacles(game, &worm, target) < 4;
+    bool fire =
+        aim_diff >= -tolerance && aim_diff <= tolerance && Obstacles(game, &worm, target) < 4;
     {
       cs = initial;
       cs.Set(Worm::kDown, aim_diff < -tolerance);
@@ -732,7 +734,7 @@ void TransToM(Weights& weights, double& p, int pa, int pb, int pc, int facing_en
   // Jump
   double start_jump = ninjarope_out ? 0.015 : 0.1;
   p *= Select(((pc & 1) << 1) | (pc2 & 1), 1.0 - start_jump, start_jump,  // 0 -> 0, 0 -> 1
-              0.999, 0.001);                                            // 1 -> 0, 1 -> 1
+              0.999, 0.001);                                              // 1 -> 0, 1 -> 1
 }
 
 TransModel::TransModel(Weights& weights, bool testing) {

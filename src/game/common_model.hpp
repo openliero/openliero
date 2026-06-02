@@ -523,11 +523,11 @@ inline void SaveTcConfig(Common const& common, std::ostream& os) {
 #undef COPY_FIELD_H
 
   tc_cfg::Sounds sounds;
-#define COPY_FIELD_SO(n)                                                                          \
-  sounds.n =                                                                                      \
-      (common.sound_hook[Sound##n] >= 0 && common.sound_hook[Sound##n] < (int)common.sounds.size()) \
-          ? common.sounds[common.sound_hook[Sound##n]].name                                        \
-          : std::string();
+#define COPY_FIELD_SO(n)                                               \
+  sounds.n = (common.sound_hook[Sound##n] >= 0 &&                      \
+              common.sound_hook[Sound##n] < (int)common.sounds.size()) \
+                 ? common.sounds[common.sound_hook[Sound##n]].name     \
+                 : std::string();
   LIERO_SOUNDDEFS(COPY_FIELD_SO)
 #undef COPY_FIELD_SO
 
@@ -559,7 +559,8 @@ inline void LoadTcConfig(Common& common, std::istream& is) {
   for (std::size_t i = 0; i < types.sounds.size(); ++i) common.sounds[i].name = types.sounds[i];
 
   common.weapons.resize(types.weapons.size());
-  for (std::size_t i = 0; i < types.weapons.size(); ++i) common.weapons[i].id_str = types.weapons[i];
+  for (std::size_t i = 0; i < types.weapons.size(); ++i)
+    common.weapons[i].id_str = types.weapons[i];
 
   common.nobject_types.resize(types.nobjects.size());
   for (std::size_t i = 0; i < types.nobjects.size(); ++i)

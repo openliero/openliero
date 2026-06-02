@@ -65,7 +65,8 @@ struct StatsRenderer {
   void DrawWorms() {
     Hblock(20, [this] {
       for (int i = 0; i < 2; ++i) {
-        int x = renderer.render_res_x / 2 + (i == 0 ? -1 : 1) * (renderer.render_res_x / 4) + offs_x;
+        int x =
+            renderer.render_res_x / 2 + (i == 0 ? -1 : 1) * (renderer.render_res_x / 4) + offs_x;
         BlitImage(renderer.bmp, common.WormSpriteObj(2, i == 0 ? 1 : 0, i), x - 8, y);
 
         cell c(i == 0 ? TextCell::kRight : TextCell::kLeft);
@@ -208,9 +209,9 @@ void StatsState::Enter() {
   int graph_width = gfx->play_renderer.render_res_x - 20 - 20;
 
   for (int i = 0; i < 2; ++i) {
-    wormDamages_[i] =
-        Stretch(Convert<double>(Pluck(recorder_.worms[i].worm_frame_stats, &WormFrameStats::damage)),
-                graph_width);
+    wormDamages_[i] = Stretch(
+        Convert<double>(Pluck(recorder_.worms[i].worm_frame_stats, &WormFrameStats::damage)),
+        graph_width);
     Cumulative(wormDamages_[i]);
     Normalize(wormDamages_[i], 50);
   }
@@ -220,7 +221,8 @@ void StatsState::Enter() {
     worm_total_hp[i] =
         Convert<double>(Pluck(recorder_.worms[i].worm_frame_stats, &WormFrameStats::total_hp));
 
-  wormTotalHpDiff_ = Stretch(Zip(worm_total_hp[0], worm_total_hp[1], std::minus<double>()), graph_width);
+  wormTotalHpDiff_ =
+      Stretch(Zip(worm_total_hp[0], worm_total_hp[1], std::minus<double>()), graph_width);
   Normalize(wormTotalHpDiff_, 100);
 
   for (int i = 0; i < 40; ++i) {

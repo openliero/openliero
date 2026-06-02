@@ -132,8 +132,10 @@ void Level::GenerateRandom(Common& common, Settings const& settings, Rand& rand)
     int rock = rand(3);
 
     BlitStone(common, *this, false, common.large_sprites.SpritePtr(stone_tab[rock][0]), cx, cy);
-    BlitStone(common, *this, false, common.large_sprites.SpritePtr(stone_tab[rock][1]), cx + 16, cy);
-    BlitStone(common, *this, false, common.large_sprites.SpritePtr(stone_tab[rock][2]), cx, cy + 16);
+    BlitStone(common, *this, false, common.large_sprites.SpritePtr(stone_tab[rock][1]), cx + 16,
+              cy);
+    BlitStone(common, *this, false, common.large_sprites.SpritePtr(stone_tab[rock][2]), cx,
+              cy + 16);
     BlitStone(common, *this, false, common.large_sprites.SpritePtr(stone_tab[rock][3]), cx + 16,
               cy + 16);
   }

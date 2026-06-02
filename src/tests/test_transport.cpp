@@ -52,7 +52,8 @@ TEST_CASE("Transport delivers input packets", "[transport]") {
 
   // Wait for connection
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -92,7 +93,8 @@ TEST_CASE("Transport delivers handshake", "[transport]") {
 
   // Wait for connection
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -129,7 +131,8 @@ TEST_CASE("Transport delivers player info", "[transport]") {
 
   // Wait for connection
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -180,7 +183,8 @@ TEST_CASE("Transport delivers match settings", "[transport]") {
 
   // Wait for connection
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -237,7 +241,8 @@ TEST_CASE("Transport bidirectional input exchange", "[transport]") {
 
   // Wait for connection
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -277,7 +282,8 @@ TEST_CASE("Transport delivers large map data (100KB+)", "[transport]") {
 
   // Wait for connection
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -324,7 +330,8 @@ TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") 
   REQUIRE(client.Connect("127.0.0.1", port));
 
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();
@@ -338,7 +345,7 @@ TEST_CASE("Transport delivers rollback input batches", "[transport][rollback]") 
   std::vector<uint8_t> rx_inputs;
   uint8_t rx_gen = 0xFF;
   host.on_remote_input_batch = [&](uint8_t gen, uint32_t bf, uint8_t c, uint8_t const* in,
-                                uint32_t lf) {
+                                   uint32_t lf) {
     rx_gen = gen;
     rx_base_frame = bf;
     rx_count = c;
@@ -379,7 +386,8 @@ TEST_CASE("Transport rejects handshake with wrong protocol version", "[transport
   REQUIRE(client.Connect("127.0.0.1", port));
 
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while ((host.CurrentState() != NetTransport::kConnected || client.CurrentState() != NetTransport::kConnected) &&
+  while ((host.CurrentState() != NetTransport::kConnected ||
+          client.CurrentState() != NetTransport::kConnected) &&
          std::chrono::steady_clock::now() < deadline) {
     host.Poll();
     client.Poll();

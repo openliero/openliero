@@ -309,8 +309,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
 
         if (game.settings->shadow && w.shadow) {
           BlitShadowImage(common, renderer.bmp,
-                          common.small_sprites.SpritePtr(w.start_frame + cur_frame), pos_x - 3 + offs.x,
-                          pos_y + 3 + offs.y, 7, 7);
+                          common.small_sprites.SpritePtr(w.start_frame + cur_frame),
+                          pos_x - 3 + offs.x, pos_y + 3 + offs.y, 7, 7);
         }
 
         BlitImage(renderer.bmp, common.small_sprites[w.start_frame + cur_frame], pos_x + offs.x,
@@ -338,7 +338,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
       {
         if (i->cur_frame == 0) {
           int name_num = int(&*i - game.wobjects.arr) %
-                        (int)common.weapons.size();  // TODO: Something nicer maybe
+                         (int)common.weapons.size();  // TODO: Something nicer maybe
 
           std::string const& name = common.weapons[name_num].name;
           int width = int(name.size()) * 4;
@@ -402,7 +402,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
           }
 
           if (ww.type - &common.weapons[0] == LC(LaserWeapon) - 1 && w.Pressed(Worm::kFire)) {
-            DrawLine(renderer.bmp, hotspot_x, hotspot_y, temp_x + 7, temp_y + 4, weapon.color_bullets);
+            DrawLine(renderer.bmp, hotspot_x, hotspot_y, temp_x + 7, temp_y + 4,
+                     weapon.color_bullets);
           }
         }
 
@@ -417,8 +418,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
           if (game.settings->shadow) {
             DrawShadowLine(common, renderer.bmp, ninjarope_x - 3, ninjarope_y + 3, temp_x + 7 - 3,
                            temp_y + 4 + 3);
-            BlitShadowImage(common, renderer.bmp, common.large_sprites.SpritePtr(84), ninjarope_x - 4,
-                            ninjarope_y + 2, 16, 16);
+            BlitShadowImage(common, renderer.bmp, common.large_sprites.SpritePtr(84),
+                            ninjarope_x - 4, ninjarope_y + 2, 16, 16);
           }
         }
 
@@ -427,7 +428,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
           //NOTE! Check fctab so it's correct
           //NOTE! Check function 1071C and see what it actually does*/
 
-          BlitFireCone(renderer.bmp, w.fire_cone / 2, common.FireConeSprite(angle_frame, w.direction),
+          BlitFireCone(renderer.bmp, w.fire_cone / 2,
+                       common.FireConeSprite(angle_frame, w.direction),
                        common.fire_cone_offset[w.direction][angle_frame][0] + temp_x,
                        common.fire_cone_offset[w.direction][angle_frame][1] + temp_y);
         }
@@ -461,7 +463,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
       // int tempX = ftoi(worm.pos.x) - 1 + ftoi(cosTable[ftoi(worm.aimingAngle)] * 16) + offs.x;
       // int tempY = ftoi(worm.pos.y) - 2 + ftoi(sinTable[ftoi(worm.aimingAngle)] * 16) + offs.y;
 
-      BlitImage(renderer.bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x, temp.y);
+      BlitImage(renderer.bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x,
+                temp.y);
 
       if (worm.Pressed(Worm::kChange)) {
         std::string const& name = worm.weapons[worm.current_weapon].type->name;

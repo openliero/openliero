@@ -142,7 +142,8 @@ void ReplaySelectorState::Enter() {
                   [](string const& name, string const& ext) { return CiCompare(ext, "LRP"); });
 
   selector_->SetFolder(selector_->root_node);
-  if (gfx->prev_selected_replay_path.empty() || !selector_->Select(gfx->prev_selected_replay_path)) {
+  if (gfx->prev_selected_replay_path.empty() ||
+      !selector_->Select(gfx->prev_selected_replay_path)) {
     selector_->Select(JoinPath(gfx->GetConfigNode().FullPath(), "Replays"));
   }
 }

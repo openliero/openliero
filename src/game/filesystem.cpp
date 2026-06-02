@@ -130,7 +130,7 @@ struct FilenameResult {
 #define BOOST_SYSTEM_DIRECTORY_TYPE struct dirent*
 
 inline FilenameResult FindFirstFile(const char* dir, BOOST_HANDLE& handle,
-                                       BOOST_SYSTEM_DIRECTORY_TYPE&)
+                                    BOOST_SYSTEM_DIRECTORY_TYPE&)
 // Returns: 0 if error, otherwise name
 {
   const char* dummy_first_name = ".";

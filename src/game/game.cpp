@@ -42,7 +42,8 @@ Game::Game(std::shared_ptr<Common> common, std::shared_ptr<Settings> settings_in
 Game::~Game() {
   ClearViewports();
   ClearWorms();
-  if (sound_player_installed && g_sound_player == sound_player.get()) g_sound_player = prev_sound_player;
+  if (sound_player_installed && g_sound_player == sound_player.get())
+    g_sound_player = prev_sound_player;
 }
 
 void Game::OnKey(uint32_t key, bool state) {
@@ -581,7 +582,8 @@ void Game::PostClone(Game& original, bool complete) {
     sound_player.reset(new NullSoundPlayer);
     viewports.clear();
   } else {
-    stats_recorder.reset(new NormalStatsRecorder(static_cast<NormalStatsRecorder&>(*stats_recorder)));
+    stats_recorder.reset(
+        new NormalStatsRecorder(static_cast<NormalStatsRecorder&>(*stats_recorder)));
 
     for (auto& vp : viewports) {
       vp = new Viewport(*vp);
@@ -662,7 +664,8 @@ void Game::LoadSnapshotFast(GameSnapshot const& snap) {
 
   bobjects.count = snap.bobjects_count;
   if (snap.bobjects_count > 0)
-    std::memcpy(bobjects.arr.data(), snap.bobjects_arr.data(), snap.bobjects_count * sizeof(BObject));
+    std::memcpy(bobjects.arr.data(), snap.bobjects_arr.data(),
+                snap.bobjects_count * sizeof(BObject));
 
   std::size_t const kCells =
       static_cast<std::size_t>(level.width) * static_cast<std::size_t>(level.height);

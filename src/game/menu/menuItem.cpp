@@ -16,7 +16,8 @@ void MenuItem::Draw(Common& common, Renderer& renderer, int x, int y, bool selec
   } else {
     common.font.DrawText(renderer.bmp, string, x + 3, y + 2, 0);
     if (has_value)
-      common.font.DrawText(renderer.bmp, value, x + value_offset_x - (value_wid >> 1) + 3, y + 2, 0);
+      common.font.DrawText(renderer.bmp, value, x + value_offset_x - (value_wid >> 1) + 3, y + 2,
+                           0);
   }
 
   PalIdx c;

@@ -23,8 +23,8 @@ struct ReplayWriter;
 // tracking); `generation` = sender's phase generation (receivers drop
 // stale ones).
 using InputBatchSendCallback =
-    std::function<void(uint8_t generation, uint32_t base_frame, uint8_t count, uint8_t const* inputs,
-                       uint32_t local_frame)>;
+    std::function<void(uint8_t generation, uint32_t base_frame, uint8_t count,
+                       uint8_t const* inputs, uint32_t local_frame)>;
 
 // Checksum emission for desync detection. `generation` = sender's
 // phase generation.

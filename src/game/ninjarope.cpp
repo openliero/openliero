@@ -41,7 +41,7 @@ void Ninjarope::Process(Worm& owner, Game& game) {
             for (int i = 0; i < 11; ++i)  // TODO: Check 11 and read from exe
             {
               common.nobject_types[2].Create2(game, game.rand(128), fixedvec(), pos, pix,
-                                             owner.index, 0);
+                                              owner.index, 0);
             }
           }
         }

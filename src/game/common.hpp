@@ -38,15 +38,15 @@ materials on the map (especially with dirt).
 */
 struct Texture {
   bool n_draw_back;  // 1C208; causes Liero not to draw the anti-alias edges on the background.
-                   // Normally turned "false" for creating dirt and rock & turned "true" for
-                   // cleaning dirt.
-  int m_frame;      // 1C1EA; controls which sprite is used to cut a hole (= determines the size and
-                   // shape of the hole).
-  int s_frame;      // 1C1F4; the texture the map change will leave behind (= which sprite is used to
-                   // fill the hole).
-  int r_frame;  // 1C1FE; the amount of sprites to use to fill the hole (starting from sFrame). Note:
-               // if you set 0 or 1, then only 1 sprite will be used to fill the hole (the one
-               // indicated in sFrame).
+                     // Normally turned "false" for creating dirt and rock & turned "true" for
+                     // cleaning dirt.
+  int m_frame;  // 1C1EA; controls which sprite is used to cut a hole (= determines the size and
+                // shape of the hole).
+  int s_frame;  // 1C1F4; the texture the map change will leave behind (= which sprite is used to
+                // fill the hole).
+  int r_frame;  // 1C1FE; the amount of sprites to use to fill the hole (starting from sFrame).
+                // Note: if you set 0 or 1, then only 1 sprite will be used to fill the hole (the
+                // one indicated in sFrame).
 };
 
 struct Texts {
@@ -126,7 +126,7 @@ struct Common {
   ~Common() {}
 
   static int fire_cone_offset[FIRE_CONE_OFFSET_DIRECTION][FIRE_CONE_OFFSET_ANGLE_FRAME]
-                           [FIRE_CONE_OFFSET_XY];
+                             [FIRE_CONE_OFFSET_XY];
 
   void load(FsNode node);
   void DrawTextSmall(Bitmap& scr, char const* str, int x, int y);

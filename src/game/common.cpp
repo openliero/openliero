@@ -13,9 +13,9 @@
 #include "worm.hpp"
 
 int Common::fire_cone_offset[FIRE_CONE_OFFSET_DIRECTION][FIRE_CONE_OFFSET_ANGLE_FRAME]
-                          [FIRE_CONE_OFFSET_XY] = {
-                              {{-3, 1}, {-4, 0}, {-4, -2}, {-4, -4}, {-3, -5}, {-2, -6}, {0, -6}},
-                              {{3, 1}, {4, 0}, {4, -2}, {4, -4}, {3, -5}, {2, -6}, {0, -6}},
+                            [FIRE_CONE_OFFSET_XY] = {
+                                {{-3, 1}, {-4, 0}, {-4, -2}, {-4, -4}, {-3, -5}, {-2, -6}, {0, -6}},
+                                {{3, 1}, {4, 0}, {4, -2}, {4, -4}, {3, -5}, {2, -6}, {0, -6}},
 };
 
 int stone_tab[3][4] = {{98, 60, 61, 62}, {63, 75, 85, 86}, {89, 90, 97, 96}};
@@ -334,10 +334,9 @@ void Common::load(FsNode node) {
 
       if (io::ReadUint32Le(r) == Quad('W', 'A', 'V', 'E') &&
           io::ReadUint32Le(r) == Quad('f', 'm', 't', ' ') && io::ReadUint32Le(r) == 16 &&
-          io::ReadUint16Le(r) == 1 && io::ReadUint16Le(r) == 1 &&
-          io::ReadUint32Le(r) == 22050 && io::ReadUint32Le(r) == 22050 * 1 * 1 &&
-          io::ReadUint16Le(r) == 1 * 1 && io::ReadUint16Le(r) == 8 &&
-          io::ReadUint32Le(r) == Quad('d', 'a', 't', 'a')) {
+          io::ReadUint16Le(r) == 1 && io::ReadUint16Le(r) == 1 && io::ReadUint32Le(r) == 22050 &&
+          io::ReadUint32Le(r) == 22050 * 1 * 1 && io::ReadUint16Le(r) == 1 * 1 &&
+          io::ReadUint16Le(r) == 8 && io::ReadUint32Le(r) == Quad('d', 'a', 't', 'a')) {
         std::size_t data_size = io::ReadUint32Le(r);
 
         s.original_data.resize(data_size);

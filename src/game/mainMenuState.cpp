@@ -122,7 +122,8 @@ void MainMenuState::Enter() {
   gfx->single_screen_renderer.Clear();
   if (gfx->controller->CurrentLevel()) {
     gfx->controller->CurrentLevel()->DrawMiniature(gfx->single_screen_renderer.bmp, center_x - 126,
-                                                   gfx->single_screen_renderer.render_res_y - 208, 2);
+                                                   gfx->single_screen_renderer.render_res_y - 208,
+                                                   2);
   }
   gfx->frozen_spectator_screen.Copy(gfx->single_screen_renderer.bmp);
 
@@ -216,14 +217,14 @@ bool MainMenuState::Update() {
         case MainMenu::kMaJoinGame: {
           g_sound_player->Play(common.sound_hook[SoundMenuSelect]);
           gfx->state_stack.Push(std::make_unique<InputStringState>(
-                                   "", 40, 10, 80, nullptr, "ADDRESS: ", false,
-                                   [this](bool accepted, std::string const& result) {
-                                     if (accepted && !result.empty()) {
-                                       gfx->pending_net_address = result;
-                                       gfx->pending_menu_selection = MainMenu::kMaJoinGame;
-                                     }
-                                   }),
-                               gfx);
+                                    "", 40, 10, 80, nullptr, "ADDRESS: ", false,
+                                    [this](bool accepted, std::string const& result) {
+                                      if (accepted && !result.empty()) {
+                                        gfx->pending_net_address = result;
+                                        gfx->pending_menu_selection = MainMenu::kMaJoinGame;
+                                      }
+                                    }),
+                                gfx);
           break;
         }
 
@@ -236,14 +237,14 @@ bool MainMenuState::Update() {
         case MainMenu::kMaJoinOnline: {
           g_sound_player->Play(common.sound_hook[SoundMenuSelect]);
           gfx->state_stack.Push(std::make_unique<InputStringState>(
-                                   "", 6, 10, 80, ::toupper, "ROOM CODE: ", false,
-                                   [this](bool accepted, std::string const& result) {
-                                     if (accepted && result.size() == 6) {
-                                       gfx->pending_net_address = result;
-                                       gfx->pending_menu_selection = MainMenu::kMaJoinOnline;
-                                     }
-                                   }),
-                               gfx);
+                                    "", 6, 10, 80, ::toupper, "ROOM CODE: ", false,
+                                    [this](bool accepted, std::string const& result) {
+                                      if (accepted && result.size() == 6) {
+                                        gfx->pending_net_address = result;
+                                        gfx->pending_menu_selection = MainMenu::kMaJoinOnline;
+                                      }
+                                    }),
+                                gfx);
           break;
         }
 
@@ -309,17 +310,19 @@ bool MainMenuState::Update() {
         auto* item = gfx->player_menu.ItemFromId(item_id);
         if (item && gfx->player_menu.ItemPosition(*item, x, y)) {
           x += gfx->player_menu.value_offset_x + 2;
-          gfx->state_stack.Push(std::make_unique<InputStringState>(
-                                   ws.name, 20, x, y, nullptr, "", false,
-                                   [this](bool accepted, std::string const& result) {
-                                     auto& ws = *gfx->player_menu.ws;
-                                     if (accepted) ws.name = result;
-                                     if (ws.name.empty()) Settings::GenerateName(ws, gfx->rand);
-                                     ws.random_name = false;
-                                     g_sound_player->Play(gfx->common->sound_hook[SoundMenuSelect]);
-                                     gfx->player_menu.UpdateItems(*gfx->common);
-                                   }),
-                               gfx);
+          gfx->state_stack.Push(
+              std::make_unique<InputStringState>(ws.name, 20, x, y, nullptr, "", false,
+                                                 [this](bool accepted, std::string const& result) {
+                                                   auto& ws = *gfx->player_menu.ws;
+                                                   if (accepted) ws.name = result;
+                                                   if (ws.name.empty())
+                                                     Settings::GenerateName(ws, gfx->rand);
+                                                   ws.random_name = false;
+                                                   g_sound_player->Play(
+                                                       gfx->common->sound_hook[SoundMenuSelect]);
+                                                   gfx->player_menu.UpdateItems(*gfx->common);
+                                                 }),
+              gfx);
         }
       } else if (item_id == PlayerMenu::kPlSaveProfileAs) {
         g_sound_player->Play(common.sound_hook[SoundMenuSelect]);
@@ -332,7 +335,7 @@ bool MainMenuState::Update() {
                               [this](std::string const& result) {
                                 if (!result.empty()) {
                                   gfx->player_menu.ws->SaveProfile(gfx->GetUserConfigNode() /
-                                                                  "Profiles" / (result + ".toml"));
+                                                                   "Profiles" / (result + ".toml"));
                                 }
                                 g_sound_player->Play(gfx->common->sound_hook[SoundMenuSelect]);
                                 gfx->player_menu.UpdateItems(*gfx->common);
@@ -368,30 +371,30 @@ bool MainMenuState::Update() {
           x += gfx->player_menu.value_offset_x + 2;
           int weap_idx = item_id - PlayerMenu::kPlWeap0;
           gfx->state_stack.Push(std::make_unique<InputStringState>(
-                                   "", 10, x, y, nullptr, "", false,
-                                   [this, weap_idx](bool accepted, std::string const& result) {
-                                     if (accepted && !result.empty()) {
-                                       Common& common = *gfx->common;
-                                       auto& ws = *gfx->player_menu.ws;
-                                       uint32_t num_weapons = (uint32_t)common.weapons.size();
+                                    "", 10, x, y, nullptr, "", false,
+                                    [this, weap_idx](bool accepted, std::string const& result) {
+                                      if (accepted && !result.empty()) {
+                                        Common& common = *gfx->common;
+                                        auto& ws = *gfx->player_menu.ws;
+                                        uint32_t num_weapons = (uint32_t)common.weapons.size();
 
-                                       uint32_t best = ws.weapons[weap_idx];
-                                       double best_dist = std::numeric_limits<double>::max();
-                                       for (uint32_t i = 1; i <= num_weapons; ++i) {
-                                         std::string& name =
-                                             common.weapons[common.weap_order[i - 1]].name;
-                                         double dist = Levenshtein(name.c_str(), result.c_str()) /
-                                                       (double)name.length();
-                                         if (dist < best_dist) {
-                                           best = i;
-                                           best_dist = dist;
-                                         }
-                                       }
-                                       ws.weapons[weap_idx] = best;
-                                       gfx->player_menu.UpdateItems(common);
-                                     }
-                                   }),
-                               gfx);
+                                        uint32_t best = ws.weapons[weap_idx];
+                                        double best_dist = std::numeric_limits<double>::max();
+                                        for (uint32_t i = 1; i <= num_weapons; ++i) {
+                                          std::string& name =
+                                              common.weapons[common.weap_order[i - 1]].name;
+                                          double dist = Levenshtein(name.c_str(), result.c_str()) /
+                                                        (double)name.length();
+                                          if (dist < best_dist) {
+                                            best = i;
+                                            best_dist = dist;
+                                          }
+                                        }
+                                        ws.weapons[weap_idx] = best;
+                                        gfx->player_menu.UpdateItems(common);
+                                      }
+                                    }),
+                                gfx);
         }
       } else {
         selected_ = gfx->cur_menu->OnEnter(common);

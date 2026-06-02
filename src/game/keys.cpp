@@ -31,18 +31,19 @@ SDL_Scancode liero_to_sdl_keys[] = {
     SDL_SCANCODE_KP_3, SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_PERIOD, SDL_SCANCODE_UNKNOWN,
     SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_NONUSBACKSLASH, SDL_SCANCODE_F11, SDL_SCANCODE_F12,
 
-    kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,  // 27 zeroes
-    SDL_SCANCODE_KP_ENTER,                                                            // Enter (Pad)
-    SDL_SCANCODE_RCTRL,                                                               // Right Ctrl
-    kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,                                               // 12 zeroes
-    SDL_SCANCODE_PRINTSCREEN, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,                           // 10 zeroes
-    SDL_SCANCODE_KP_DIVIDE,                                                           // / (Pad)
+    kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,
+    kZ, kZ, kZ,                                                        // 27 zeroes
+    SDL_SCANCODE_KP_ENTER,                                             // Enter (Pad)
+    SDL_SCANCODE_RCTRL,                                                // Right Ctrl
+    kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,                    // 12 zeroes
+    SDL_SCANCODE_PRINTSCREEN, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,  // 10 zeroes
+    SDL_SCANCODE_KP_DIVIDE,                                            // / (Pad)
     kZ, SDL_SCANCODE_PRINTSCREEN,
-    SDL_SCANCODE_RALT,                         // Right Alt
+    SDL_SCANCODE_RALT,                                       // Right Alt
     kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ, kZ,  // 14 zeroes
-    SDL_SCANCODE_HOME,                         // Home
-    SDL_SCANCODE_UP,                           // Up
-    SDL_SCANCODE_PAGEUP,                       // Page Up
+    SDL_SCANCODE_HOME,                                       // Home
+    SDL_SCANCODE_UP,                                         // Up
+    SDL_SCANCODE_PAGEUP,                                     // Page Up
     kZ,
     SDL_SCANCODE_LEFT,  // Left
     kZ,
@@ -53,7 +54,7 @@ SDL_Scancode liero_to_sdl_keys[] = {
     SDL_SCANCODE_PAGEDOWN,  // Page Down
     SDL_SCANCODE_INSERT,    // Insert
     SDL_SCANCODE_DELETE,    // Delete
-    kZ, kZ, kZ, kZ, kZ           // 5 zeroes
+    kZ, kZ, kZ, kZ, kZ      // 5 zeroes
 };
 
 uint32_t const kMaxScanCodes = sizeof(liero_to_sdl_keys) / sizeof(*liero_to_sdl_keys);

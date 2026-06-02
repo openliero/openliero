@@ -13,4 +13,4 @@ void WriteWarning(std::string const& str) {
   console::Write("WARNING: ");
   console::WriteLine(str);
 }
-}  // namespace Console
+}  // namespace console

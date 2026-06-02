@@ -43,22 +43,22 @@ int IntegerBehavior::OnEnter(Menu& menu, MenuItem& item) {
     bool pct = percentage;
 
     gfx.state_stack.Push(
-        std::make_unique<InputStringState>(
-            ToString(v), digits, x + 2, y, FilterDigits, "", false,
-            [dest_ptr, min_val, max_val, pct, &menu, &item](bool accepted, std::string const& result) {
-              if (accepted && !result.empty()) {
-                int val = std::atoi(result.c_str());
-                if (val < min_val)
-                  val = min_val;
-                else if (val > max_val)
-                  val = max_val;
-                *dest_ptr = val;
-              }
-              // Update the menu item display
-              item.value = ToString(*dest_ptr);
-              item.has_value = true;
-              if (pct) item.value += "%";
-            }),
+        std::make_unique<InputStringState>(ToString(v), digits, x + 2, y, FilterDigits, "", false,
+                                           [dest_ptr, min_val, max_val, pct, &menu, &item](
+                                               bool accepted, std::string const& result) {
+                                             if (accepted && !result.empty()) {
+                                               int val = std::atoi(result.c_str());
+                                               if (val < min_val)
+                                                 val = min_val;
+                                               else if (val > max_val)
+                                                 val = max_val;
+                                               *dest_ptr = val;
+                                             }
+                                             // Update the menu item display
+                                             item.value = ToString(*dest_ptr);
+                                             item.has_value = true;
+                                             if (pct) item.value += "%";
+                                           }),
         &gfx);
   }
   return -1;

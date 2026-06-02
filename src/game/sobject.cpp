@@ -185,7 +185,7 @@ void SObjectType::Create(Game& game, int x, int y, int owner_idx, WormWeapon* fi
             PalIdx pix = game.level.Pixel(x, y);
             int angle = game.rand(128);
             common.nobject_types[2].Create2(game, angle, fixedvec(), Itof(IVec2(x, y)), pix,
-                                           owner_idx, fired_by);
+                                            owner_idx, fired_by);
           }
         }
     }

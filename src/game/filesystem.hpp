@@ -23,7 +23,8 @@ std::size_t FileLength(FILE* f);
 bool CreateDirectories(std::string const& dir);
 
 struct NodeName {
-  NodeName(std::string name_init, bool is_dir_init) : name(std::move(name_init)), is_dir(is_dir_init) {}
+  NodeName(std::string name_init, bool is_dir_init)
+      : name(std::move(name_init)), is_dir(is_dir_init) {}
 
   std::string name;
   bool is_dir;
@@ -139,8 +140,8 @@ bool ShadowsSystem(FsNode const& user_root, std::string const& subdir, std::stri
 
 struct ResolvedPaths {
   FsNode config_node;                        // merged (user + system) for reads
-  FsNode user_config_node;                    // user dir only, for writes
-  uint16_t port;                            // from --port, 0 if not given
+  FsNode user_config_node;                   // user dir only, for writes
+  uint16_t port;                             // from --port, 0 if not given
   std::vector<std::string> positional_args;  // non-flag argv entries
 };
 

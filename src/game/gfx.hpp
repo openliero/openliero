@@ -102,7 +102,7 @@ struct Joystick {
   SDL_JoystickID instance_id;
   bool btn_state[SDL_GAMEPAD_BUTTON_COUNT];
   bool btn_pressed[SDL_GAMEPAD_BUTTON_COUNT];  // Latched on press, cleared by testGamepadButtonOnce
-  bool axis_button_state[12];                   // 6 axes * 2 directions
+  bool axis_button_state[12];                  // 6 axes * 2 directions
   bool axis_pressed[12];  // Latched on axis threshold cross, cleared by consumer
 
   void ClearState() {
@@ -287,7 +287,7 @@ struct Gfx {
   Menu* cur_menu;
   std::string prev_selected_replay_path;
   FsNode settings_node;  // Currently loaded settings file. TODO: This is only used for display. We
-                        // could just remember the name.
+                         // could just remember the name.
   std::shared_ptr<Settings> settings;
 
   bool dos_keys[177];
@@ -322,7 +322,7 @@ struct Gfx {
   uint64_t last_frame;
   unsigned menu_cycles;
   int window_w, window_h;
-  int prev_mag;          // Previous magnification used for drawing
+  int prev_mag;           // Previous magnification used for drawing
   Rect last_update_rect;  // Last region that was updated when flipping
   std::shared_ptr<Common> common;
   std::shared_ptr<SoundPlayer> sound_player;

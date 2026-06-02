@@ -20,8 +20,8 @@ void OnlineConnectState::Enter() {
   fprintf(stderr, "[online] enter: role=%s roomCode='%s'\n",
           role_ == NetSession::kHost ? "Host" : "Client", roomCode_.c_str());
 
-  statusLine1_ =
-      (role_ == NetSession::kHost) ? "CREATING ONLINE ROOM..." : "JOINING ROOM " + roomCode_ + "...";
+  statusLine1_ = (role_ == NetSession::kHost) ? "CREATING ONLINE ROOM..."
+                                              : "JOINING ROOM " + roomCode_ + "...";
   statusLine2_ = "SETTING UP ICE...";
 
   iceAgent_ = std::make_unique<IceAgent>();

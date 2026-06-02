@@ -293,7 +293,8 @@ void Gfx::SetVideoMode() {
   }
   if (settings->spectator_window) {
     if (!sdl_spectator_window) {
-      std::string spectator_window_title = std::string("Liero Spectator Window - ") + BuildVersion();
+      std::string spectator_window_title =
+          std::string("Liero Spectator Window - ") + BuildVersion();
       sdl_spectator_window = SDL_CreateWindow(
           spectator_window_title.c_str(), window_w, window_h,
           SDL_WINDOW_RESIZABLE | (spectator_fullscreen ? SDL_WINDOW_FULLSCREEN : 0));
@@ -392,7 +393,7 @@ void Gfx::OnWindowResize(uint32_t window_id) {
 
     if (settings->spectator_window) {
       sdl_spectator_texture = SDL_CreateTexture(sdl_spectator_renderer, SDL_PIXELFORMAT_ARGB8888,
-                                              SDL_TEXTUREACCESS_STREAMING, 640, 400);
+                                                SDL_TEXTUREACCESS_STREAMING, 640, 400);
       sdl_spectator_draw_surface = SDL_CreateSurface(640, 400, SDL_PIXELFORMAT_ARGB8888);
       SDL_SetRenderLogicalPresentation(sdl_spectator_renderer, 640, 400,
                                        SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -692,7 +693,8 @@ int Gfx::FindGamepadForPlayer(int player_idx) {
   return candidates[0];
 }
 
-void Gfx::DispatchGamepadInput(int gp_idx, uint32_t gamepad_key, bool state, Controller* controller) {
+void Gfx::DispatchGamepadInput(int gp_idx, uint32_t gamepad_key, bool state,
+                               Controller* controller) {
   if (gp_idx < 0 || gp_idx >= 2) return;
 
   // Start button acts as ESC for menu access
@@ -740,7 +742,7 @@ std::string Gfx::GetGamepadKeyName(uint32_t gamepad_key) {
   }
 
   static char const* button_names[] = {"A",  "B",  "X",  "Y",  "Back", "Guide", "Start", "LS",
-                                      "RS", "LB", "RB", "Up", "Down", "Left",  "Right"};
+                                       "RS", "LB", "RB", "Up", "Down", "Left",  "Right"};
 
   if (gamepad_key < 15) return button_names[gamepad_key];
 
@@ -756,9 +758,10 @@ void Gfx::ClearKeys() {
 bool Gfx::TestControlOnce(int control) {
   // Check keyboard bindings for all player profiles (left, right, network)
   for (int p = 0; p < Settings::kNumWormSettings; ++p) {
-    if (settings->worm_settings[p]->input_device != WormSettingsExtensions::kInputKeyboard) continue;
+    if (settings->worm_settings[p]->input_device != WormSettingsExtensions::kInputKeyboard)
+      continue;
     uint32_t key = settings->kExtensions ? settings->worm_settings[p]->controls_ex[control]
-                                        : settings->worm_settings[p]->controls[control];
+                                         : settings->worm_settings[p]->controls[control];
     if (TestAnyKeyOnce(key)) return true;
   }
   return false;
@@ -826,9 +829,10 @@ bool Gfx::TestGamepadDir(int dpad_button) {
 bool Gfx::TestControl(int control) {
   // Check keyboard bindings for all player profiles (left, right, network)
   for (int p = 0; p < Settings::kNumWormSettings; ++p) {
-    if (settings->worm_settings[p]->input_device != WormSettingsExtensions::kInputKeyboard) continue;
+    if (settings->worm_settings[p]->input_device != WormSettingsExtensions::kInputKeyboard)
+      continue;
     uint32_t key = settings->kExtensions ? settings->worm_settings[p]->controls_ex[control]
-                                        : settings->worm_settings[p]->controls[control];
+                                         : settings->worm_settings[p]->controls[control];
     if (TestAnyKey(key)) return true;
   }
   return false;
@@ -837,7 +841,7 @@ bool Gfx::TestControl(int control) {
 void Gfx::ReleaseControl(int control) {
   for (int p = 0; p < Settings::kNumWormSettings; ++p) {
     uint32_t key = settings->kExtensions ? settings->worm_settings[p]->controls_ex[control]
-                                        : settings->worm_settings[p]->controls[control];
+                                         : settings->worm_settings[p]->controls[control];
     ReleaseAnyKey(key);
   }
 }
@@ -857,13 +861,15 @@ void Gfx::MenuFlip(bool quitting) {
   play_renderer.pal = play_renderer.origpal;
   play_renderer.pal.RotateFrom(play_renderer.origpal, 168, 174, menu_cycles);
   play_renderer.pal.SetWormColours(*settings);
-  if (cur_menu == &player_menu && player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx])
+  if (cur_menu == &player_menu &&
+      player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx])
     play_renderer.pal.SetWormColour(0, *player_menu.ws);
   play_renderer.pal.Fade(play_renderer.fade_value);
   single_screen_renderer.pal = single_screen_renderer.origpal;
   single_screen_renderer.pal.RotateFrom(single_screen_renderer.origpal, 168, 174, menu_cycles);
   single_screen_renderer.pal.SetWormColours(*settings);
-  if (cur_menu == &player_menu && player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx])
+  if (cur_menu == &player_menu &&
+      player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx])
     single_screen_renderer.pal.SetWormColour(0, *player_menu.ws);
   single_screen_renderer.pal.Fade(single_screen_renderer.fade_value);
   Flip();
@@ -875,8 +881,8 @@ void Gfx::Draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdl_ren
   Color real_pal[256];
   renderer.pal.Activate(real_pal);
   int offset_x, offset_y;
-  int mag =
-      FitScreen(surface.w, surface.h, renderer.render_res_x, renderer.render_res_y, offset_x, offset_y);
+  int mag = FitScreen(surface.w, surface.h, renderer.render_res_x, renderer.render_res_y, offset_x,
+                      offset_y);
 
   Rect new_rect(offset_x, offset_y, renderer.render_res_x * mag, renderer.render_res_y * mag);
 
@@ -899,7 +905,8 @@ void Gfx::Draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdl_ren
 
   uint32_t pal32[256];
   PreparePalette(format_details, NULL, real_pal, pal32);
-  ScaleDraw(src, renderer.render_res_x, renderer.render_res_y, src_pitch, dest, dest_pitch, mag, pal32);
+  ScaleDraw(src, renderer.render_res_x, renderer.render_res_y, src_pitch, dest, dest_pitch, mag,
+            pal32);
 
   SDL_UpdateTexture(&texture, NULL, surface.pixels, surface.w * 4);
   SDL_RenderClear(&sdl_renderer);
@@ -1125,14 +1132,14 @@ ItemBehavior* PlayerMenu::GetItemBehavior(Common& common, MenuItem& item) {
     case kPlFire:
     case kPlChange:
     case kPlJump:
-      return new KeyBehavior(common, ws->controls[item.id - kPlUp], ws->controls_ex[item.id - kPlUp],
-                             ws->gamepad_controls[item.id - kPlUp], ws->input_device,
-                             gfx.settings->kExtensions);
+      return new KeyBehavior(
+          common, ws->controls[item.id - kPlUp], ws->controls_ex[item.id - kPlUp],
+          ws->gamepad_controls[item.id - kPlUp], ws->input_device, gfx.settings->kExtensions);
 
     case kPlDig:  // Controls Extension
-      return new KeyBehavior(common, ws->controls_ex[item.id - kPlUp], ws->controls_ex[item.id - kPlUp],
-                             ws->gamepad_controls[item.id - kPlUp], ws->input_device,
-                             gfx.settings->kExtensions);
+      return new KeyBehavior(
+          common, ws->controls_ex[item.id - kPlUp], ws->controls_ex[item.id - kPlUp],
+          ws->gamepad_controls[item.id - kPlUp], ws->input_device, gfx.settings->kExtensions);
 
     case kPlController:  // Controller
       return new ArrayEnumBehavior(common, ws->controller, common.texts.controllers);
@@ -1243,7 +1250,7 @@ bool Gfx::RunOneFrame() {
         if (settings->single_screen_replay) primary_renderer = &single_screen_renderer;
       } else if (menu_selection == MainMenu::kMaHostGame) {
         state_stack.Push(std::make_unique<NetConnectState>(NetSession::kHost, "", gfx.online_port),
-                        this);
+                         this);
         return true;
       } else if (menu_selection == MainMenu::kMaJoinGame) {
         // Parse address — support "host:port" and "[ipv6]:port" formats
@@ -1291,7 +1298,7 @@ bool Gfx::RunOneFrame() {
       } else if (menu_selection == MainMenu::kMaJoinOnline) {
         std::string code = std::move(pending_net_address);
         state_stack.Push(std::make_unique<OnlineConnectState>(NetSession::kClient, std::move(code)),
-                        this);
+                         this);
         return true;
       }
 
@@ -1387,30 +1394,35 @@ void Gfx::DrawSpectatorInfo() {
 
   single_screen_renderer.bmp.Copy(frozen_spectator_screen);
   if (settings->level_file.empty()) {
-    common.font.DrawCenteredText(single_screen_renderer.bmp, LS(LevelRandom), center_x, center_y - 32,
-                                 7, 2);
+    common.font.DrawCenteredText(single_screen_renderer.bmp, LS(LevelRandom), center_x,
+                                 center_y - 32, 7, 2);
   } else {
     auto level_name = GetBasename(GetLeaf(gfx.settings->level_file));
-    common.font.DrawCenteredText(single_screen_renderer.bmp, LS(LevelIs1) + level_name + LS(LevelIs2),
-                                 center_x, center_y - 32, 7, 2);
+    common.font.DrawCenteredText(single_screen_renderer.bmp,
+                                 LS(LevelIs1) + level_name + LS(LevelIs2), center_x, center_y - 32,
+                                 7, 2);
   }
 
-  std::string vs_text = settings->worm_settings[0]->name + " vs " + settings->worm_settings[1]->name;
+  std::string vs_text =
+      settings->worm_settings[0]->name + " vs " + settings->worm_settings[1]->name;
   // put worm color boxes on a nice spot even if no player names have been entered
   int text_size = std::max(common.font.GetDims(vs_text) * 2, 48);
   common.font.DrawCenteredText(single_screen_renderer.bmp, vs_text, center_x, center_y, 7, 2);
-  FillRect(single_screen_renderer.bmp, center_x - (text_size / 2) - 1, center_y + 23 - 1, 16, 16, 7);
+  FillRect(single_screen_renderer.bmp, center_x - (text_size / 2) - 1, center_y + 23 - 1, 16, 16,
+           7);
   FillRect(single_screen_renderer.bmp, center_x - text_size / 2, center_y + 23, 14, 14,
            settings->worm_settings[0]->color);
-  FillRect(single_screen_renderer.bmp, center_x + (text_size / 2) - 16 - 1, center_y + 23 - 1, 16, 16,
-           7);
+  FillRect(single_screen_renderer.bmp, center_x + (text_size / 2) - 16 - 1, center_y + 23 - 1, 16,
+           16, 7);
   FillRect(single_screen_renderer.bmp, center_x + text_size / 2 - 16, center_y + 23, 14, 14,
            settings->worm_settings[1]->color);
 
   if (controller->Running()) {
-    common.font.DrawCenteredText(single_screen_renderer.bmp, "PAUSED", center_x, center_y + 48, 7, 2);
+    common.font.DrawCenteredText(single_screen_renderer.bmp, "PAUSED", center_x, center_y + 48, 7,
+                                 2);
   } else {
-    common.font.DrawCenteredText(single_screen_renderer.bmp, "SETUP", center_x, center_y + 48, 7, 2);
+    common.font.DrawCenteredText(single_screen_renderer.bmp, "SETUP", center_x, center_y + 48, 7,
+                                 2);
   }
 }
 

@@ -93,8 +93,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     // always display player names, color and time in spectator view
     common.font.DrawText(renderer.bmp, worm.settings->name, offset_x + worm.stats_x * multiplier,
                          renderer.render_res_y - 15, 7);
-    FillRect(renderer.bmp, offset_x + worm.stats_x * multiplier - 1, renderer.render_res_y - 7 - 1, 8,
-             8, 7);
+    FillRect(renderer.bmp, offset_x + worm.stats_x * multiplier - 1, renderer.render_res_y - 7 - 1,
+             8, 8, 7);
     FillRect(renderer.bmp, offset_x + worm.stats_x * multiplier, renderer.render_res_y - 7, 6, 6,
              worm.settings->color);
     // time
@@ -110,8 +110,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
           int ammo_bar_width = ww.ammo * 60 / ww.type->ammo;
 
           if (ammo_bar_width > 0) {
-            DrawBar(renderer.bmp, offset_weapon_list_x, renderer.render_res_y - 40 + i * 8, ammo_bar_width,
-                    5, ammo_bar_width / 6 + 245);
+            DrawBar(renderer.bmp, offset_weapon_list_x, renderer.render_res_y - 40 + i * 8,
+                    ammo_bar_width, 5, ammo_bar_width / 6 + 245);
           }
         }
         if (worm.current_weapon == i) {
@@ -249,11 +249,12 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     SObjectType const& t = common.sobject_types[i->id];
     int frame = i->cur_frame + t.start_frame;
 
-    BlitImageR(renderer.bmp, common.large_sprites.SpritePtr(frame), i->x + offs.x, i->y + offs.y, 16,
-               16);
+    BlitImageR(renderer.bmp, common.large_sprites.SpritePtr(frame), i->x + offs.x, i->y + offs.y,
+               16, 16);
 
     if (game.settings->shadow) {
-      BlitShadowImage(common, renderer.bmp, common.large_sprites.SpritePtr(frame), i->x + offs.x - 3,
+      BlitShadowImage(common, renderer.bmp, common.large_sprites.SpritePtr(frame),
+                      i->x + offs.x - 3,
                       i->y + offs.y + 3,  // TODO: Original doesn't offset the shadow, which is
                                           // clearly wrong. Check that this offset is correct.
                       16, 16);
@@ -290,8 +291,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
 
       if (game.settings->shadow && w.shadow) {
         BlitShadowImage(common, renderer.bmp,
-                        common.small_sprites.SpritePtr(w.start_frame + cur_frame), pos_x - 3 + offs.x,
-                        pos_y + 3 + offs.y, 7, 7);
+                        common.small_sprites.SpritePtr(w.start_frame + cur_frame),
+                        pos_x - 3 + offs.x, pos_y + 3 + offs.y, 7, 7);
       }
 
       BlitImage(renderer.bmp, common.small_sprites[w.start_frame + cur_frame], pos_x + offs.x,
@@ -319,7 +320,7 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       if (i->cur_frame == 0) {
         int name_num = int(&*i - game.wobjects.arr) %
-                      (int)common.weapons.size();  // TODO: Something nicer maybe
+                       (int)common.weapons.size();  // TODO: Something nicer maybe
 
         std::string const& name = common.weapons[name_num].name;
         int width = int(name.size()) * 4;
@@ -383,7 +384,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
         }
 
         if (ww.type - &common.weapons[0] == LC(LaserWeapon) - 1 && w.Pressed(Worm::kFire)) {
-          DrawLine(renderer.bmp, hotspot_x, hotspot_y, temp_x + 7, temp_y + 4, weapon.color_bullets);
+          DrawLine(renderer.bmp, hotspot_x, hotspot_y, temp_x + 7, temp_y + 4,
+                   weapon.color_bullets);
         }
       }
 
@@ -444,7 +446,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
       // int tempX = ftoi(worm.pos.x) - 1 + ftoi(cosTable[ftoi(worm.aimingAngle)] * 16) + offs.x;
       // int tempY = ftoi(worm.pos.y) - 2 + ftoi(sinTable[ftoi(worm.aimingAngle)] * 16) + offs.y;
 
-      BlitImage(renderer.bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x, temp.y);
+      BlitImage(renderer.bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x,
+                temp.y);
 
       if (worm.Pressed(Worm::kChange)) {
         std::string const& name = worm.weapons[worm.current_weapon].type->name;

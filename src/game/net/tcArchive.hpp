@@ -28,4 +28,4 @@ struct FileEntry {
 };
 std::vector<FileEntry> Unpack(const uint8_t* data, size_t len);
 
-}  // namespace TcArchive
+}  // namespace tc_archive

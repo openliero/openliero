@@ -61,7 +61,7 @@ struct IceAgent {
   struct Event {
     enum Type { kStateChanged, kCandidate, kGatheringDone };
     Type type;
-    enum State new_state{};
+    enum State new_state {};
     std::string candidate;
   };
 

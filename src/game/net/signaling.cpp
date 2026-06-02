@@ -308,8 +308,10 @@ void SignalingClient::HandleMessage(const uint8_t* data, size_t len) {
     }
     case proto::kUseRelay: {
       if (len < 1 + proto::kRoomCodeLen + 2 + 8) break;
-      relayPort_ = (uint16_t)(data[1 + proto::kRoomCodeLen] << 8 | data[1 + proto::kRoomCodeLen + 1]);
-      relayToken_.assign(data + 1 + proto::kRoomCodeLen + 2, data + 1 + proto::kRoomCodeLen + 2 + 8);
+      relayPort_ =
+          (uint16_t)(data[1 + proto::kRoomCodeLen] << 8 | data[1 + proto::kRoomCodeLen + 1]);
+      relayToken_.assign(data + 1 + proto::kRoomCodeLen + 2,
+                         data + 1 + proto::kRoomCodeLen + 2 + 8);
       state_ = kRelaying;
       if (on_use_relay) on_use_relay(relayPort_);
       break;

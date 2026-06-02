@@ -128,7 +128,7 @@ void WeaponSelection::DrawSpectatorViewports(Renderer& renderer, GameState state
   // TODO: This just uses the currently activated palette, which might well be wrong.
   gfx.single_screen_renderer.pal = gfx.single_screen_renderer.origpal;
   gfx.single_screen_renderer.pal.RotateFrom(gfx.single_screen_renderer.origpal, 168, 174,
-                                          gfx.menu_cycles);
+                                            gfx.menu_cycles);
   gfx.single_screen_renderer.pal.Fade(gfx.single_screen_renderer.fade_value);
 }
 

@@ -12,8 +12,7 @@ void SoundPlayer::Play(SoundDefT hook, void* id, int loops) {
 
 #if !DISABLE_SOUND
 static void SDLCALL DefaultSoundPlayerStreamCallback(void* userdata, SDL_AudioStream* stream,
-                                                       int additional_amount,
-                                                       int /*total_amount*/) {
+                                                     int additional_amount, int /*total_amount*/) {
   if (additional_amount > 0) {
     uint8_t* data = (uint8_t*)SDL_stack_alloc(uint8_t, additional_amount);
     if (data) {
@@ -46,7 +45,7 @@ DefaultSoundPlayer::DefaultSoundPlayer(Common& c)
 
   const SDL_AudioSpec kSpec = {SDL_AUDIO_S16, 1, 44100};
   stream_ = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &kSpec,
-                                     DefaultSoundPlayerStreamCallback, mixer_);
+                                      DefaultSoundPlayerStreamCallback, mixer_);
 
   if (stream_) {
     initialized_ = true;
@@ -76,7 +75,7 @@ void DefaultSoundPlayer::PlayImpl(int sound, void* id, int loops) {
   if (!initialized_) return;
 
   SfxMixerAdd(mixer_, m_common_->sounds[sound].sound, SfxMixerNow(mixer_), id,
-                loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
+              loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
 #endif
 }
 
@@ -99,5 +98,5 @@ void DefaultSoundPlayer::Stop(void* id) {
 
 void RecordSoundPlayer::PlayImpl(int sound, void* id, int loops) {
   SfxMixerAdd(mixer, m_common_.sounds[sound].sound, SfxMixerNow(mixer), id,
-                loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
+              loops ? SFX_SOUND_LOOP : SFX_SOUND_NORMAL);
 }

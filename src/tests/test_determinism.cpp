@@ -112,7 +112,8 @@ TEST_CASE("Dual simulation produces identical state", "[determinism]") {
     uint32_t hash_a = HashGameState(*f.game_a);
     uint32_t hash_b = HashGameState(*f.game_b);
 
-    INFO("Desync at frame " << frame << ": hashA=0x" << std::hex << hash_a << " hashB=0x" << hash_b);
+    INFO("Desync at frame " << frame << ": hashA=0x" << std::hex << hash_a << " hashB=0x"
+                            << hash_b);
     REQUIRE(hash_a == hash_b);
   }
 }
@@ -232,7 +233,7 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
   common->load(std::move(tc_root));
 
   auto settings = std::make_shared<Settings>();
-  settings->lives = 50;       // Many lives = many death/respawn cycles
+  settings->lives = 50;        // Many lives = many death/respawn cycles
   settings->loading_time = 0;  // Fast weapon reload
   settings->random_level = true;
   settings->game_mode = Settings::kGmKillEmAll;
@@ -371,7 +372,8 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
           auto br_a = game_a.bobjects.Begin();
           auto br_b = game_b.bobjects.Begin();
           int idx = 0;
-          for (; br_a != game_a.bobjects.End() && br_b != game_b.bobjects.End(); ++br_a, ++br_b, ++idx) {
+          for (; br_a != game_a.bobjects.End() && br_b != game_b.bobjects.End();
+               ++br_a, ++br_b, ++idx) {
             if (br_a->pos.x != br_b->pos.x || br_a->pos.y != br_b->pos.y) {
               INFO("  BObject[" << idx << "] pos differs: A=(" << br_a->pos.x << "," << br_a->pos.y
                                 << ") B=(" << br_b->pos.x << "," << br_b->pos.y << ")");
@@ -452,8 +454,9 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
           r_b = game_b.sobjects.All();
           while ((s_a = r_a.Next()) && (s_b = r_b.Next())) {
             if (s_a->id != s_b->id || s_a->cur_frame != s_b->cur_frame) {
-              INFO("  SObject[" << idx << "] differs: A id=" << s_a->id << " frame=" << s_a->cur_frame
-                                << " B id=" << s_b->id << " frame=" << s_b->cur_frame);
+              INFO("  SObject[" << idx << "] differs: A id=" << s_a->id
+                                << " frame=" << s_a->cur_frame << " B id=" << s_b->id
+                                << " frame=" << s_b->cur_frame);
               sobjects_match = false;
               break;
             }
@@ -509,8 +512,8 @@ TEST_CASE("Death and respawn determinism fuzz", "[determinism][death]") {
 
         INFO("Desync at frame " << frame << " (seed=" << seed << ", deaths=" << death_count << ")"
                                 << "\n  RNG match=" << rng_match << " Worms match=" << worms_match
-                                << " Level match=" << level_match << "\n  NObjects: A=" << nobjects_a
-                                << " B=" << nobjects_b << " match=" << nobjects_match
+                                << " Level match=" << level_match << "\n  NObjects: A="
+                                << nobjects_a << " B=" << nobjects_b << " match=" << nobjects_match
                                 << "\n  BObjects: A=" << bobjects_a << " B=" << bobjects_b
                                 << " match=" << bobjects_match << "\n  WObjects: A=" << wobjects_a
                                 << " B=" << wobjects_b << " match=" << wobjects_match

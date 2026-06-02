@@ -173,7 +173,8 @@ TEST_CASE("Settings round-trip via TOML") {
   CHECK(loaded.worm_settings[2]->input_device == original.worm_settings[2]->input_device);
   CHECK(loaded.worm_settings[2]->gamepad_name == original.worm_settings[2]->gamepad_name);
   CHECK(loaded.worm_settings[2]->gamepad_serial == original.worm_settings[2]->gamepad_serial);
-  CHECK(loaded.worm_settings[2]->gamepad_controls[0] == original.worm_settings[2]->gamepad_controls[0]);
+  CHECK(loaded.worm_settings[2]->gamepad_controls[0] ==
+        original.worm_settings[2]->gamepad_controls[0]);
 
   // Cleanup
   std::filesystem::remove(tmp_path);

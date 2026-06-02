@@ -70,7 +70,8 @@ struct Game {
   void ClearWorms();
   void AddWorm(std::shared_ptr<Worm>);
   void ResetWorms();
-  void Draw(Renderer& renderer, GameState state, bool use_spectator_viewports, bool is_replay = false);
+  void Draw(Renderer& renderer, GameState state, bool use_spectator_viewports,
+            bool is_replay = false);
   void StartGame();
   bool IsGameOver();
   void DoDamageDirect(Worm& w, int amount, int by_idx);

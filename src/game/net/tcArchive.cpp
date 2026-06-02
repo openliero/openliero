@@ -95,7 +95,7 @@ std::vector<uint8_t> Pack(FsNode root) {
   // Compress
   mz_ulong comp_bound = mz_compressBound(static_cast<mz_ulong>(raw.size()));
   std::vector<uint8_t> compressed(comp_bound + 5);  // 1 byte flag + 4 byte uncompressed size
-  compressed[0] = 1;                               // compressed flag
+  compressed[0] = 1;                                // compressed flag
   uint32_t raw_size = static_cast<uint32_t>(raw.size());
   std::memcpy(compressed.data() + 1, &raw_size, 4);
 
@@ -167,4 +167,4 @@ std::vector<FileEntry> Unpack(const uint8_t* data, size_t len) {
   return result;
 }
 
-}  // namespace TcArchive
+}  // namespace tc_archive

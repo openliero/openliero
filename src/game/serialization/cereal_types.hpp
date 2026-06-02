@@ -141,9 +141,9 @@ void SerializeSettingsScalars(Archive& ar, Settings& s) {
      cereal::make_nvp("loadChange", s.load_change),
      cereal::make_nvp("namesOnBonuses", s.names_on_bonuses),
      cereal::make_nvp("regenerateLevel", s.regenerate_level), cereal::make_nvp("lives", s.lives),
-     cereal::make_nvp("loadingTime", s.loading_time), cereal::make_nvp("randomLevel", s.random_level),
-     cereal::make_nvp("levelFile", s.level_file), cereal::make_nvp("map", s.map),
-     cereal::make_nvp("screenSync", s.screen_sync));
+     cereal::make_nvp("loadingTime", s.loading_time),
+     cereal::make_nvp("randomLevel", s.random_level), cereal::make_nvp("levelFile", s.level_file),
+     cereal::make_nvp("map", s.map), cereal::make_nvp("screenSync", s.screen_sync));
   ar(cereal::make_nvp("bonusTimeout", s.bonus_timeout));
   // v3 fields. Missing on older configs → defaults remain.
   ar(cereal::make_nvp("inputDelay", s.input_delay));
@@ -183,9 +183,9 @@ void SerializeGameplay(Archive& ar, Settings& s) {
      cereal::make_nvp("loadChange", s.load_change),
      cereal::make_nvp("namesOnBonuses", s.names_on_bonuses),
      cereal::make_nvp("regenerateLevel", s.regenerate_level), cereal::make_nvp("lives", s.lives),
-     cereal::make_nvp("loadingTime", s.loading_time), cereal::make_nvp("randomLevel", s.random_level),
-     cereal::make_nvp("levelFile", s.level_file), cereal::make_nvp("map", s.map),
-     cereal::make_nvp("screenSync", s.screen_sync));
+     cereal::make_nvp("loadingTime", s.loading_time),
+     cereal::make_nvp("randomLevel", s.random_level), cereal::make_nvp("levelFile", s.level_file),
+     cereal::make_nvp("map", s.map), cereal::make_nvp("screenSync", s.screen_sync));
   SerializeArray(ar, "weapTable", s.weap_table);
   ar(cereal::make_nvp("bonusTimeout", s.bonus_timeout));
   ar(cereal::make_nvp("inputDelay", s.input_delay));
@@ -266,8 +266,8 @@ void serialize(Archive& ar, Worm& w) {
   ar(cereal::make_nvp("pos", w.pos), cereal::make_nvp("vel", w.vel),
      cereal::make_nvp("logicRespawn", w.logic_respawn), cereal::make_nvp("hotspotX", w.hotspot_x),
      cereal::make_nvp("hotspotY", w.hotspot_y), cereal::make_nvp("aimingAngle", w.aiming_angle),
-     cereal::make_nvp("aimingSpeed", w.aiming_speed), cereal::make_nvp("ableToJump", w.able_to_jump),
-     cereal::make_nvp("ableToDig", w.able_to_dig),
+     cereal::make_nvp("aimingSpeed", w.aiming_speed),
+     cereal::make_nvp("ableToJump", w.able_to_jump), cereal::make_nvp("ableToDig", w.able_to_dig),
      cereal::make_nvp("keyChangePressed", w.key_change_pressed),
      cereal::make_nvp("movable", w.movable), cereal::make_nvp("animate", w.animate),
      cereal::make_nvp("visible", w.visible), cereal::make_nvp("ready", w.ready),
@@ -276,11 +276,13 @@ void serialize(Archive& ar, Worm& w) {
      cereal::make_nvp("kills", w.kills), cereal::make_nvp("timer", w.timer),
      cereal::make_nvp("killedTimer", w.killed_timer),
      cereal::make_nvp("currentFrame", w.current_frame), cereal::make_nvp("flags", w.flags),
-     cereal::make_nvp("ninjarope", w.ninjarope), cereal::make_nvp("currentWeapon", w.current_weapon),
+     cereal::make_nvp("ninjarope", w.ninjarope),
+     cereal::make_nvp("currentWeapon", w.current_weapon),
      cereal::make_nvp("lastKilledByIdx", w.last_killed_by_idx),
      cereal::make_nvp("fireCone", w.fire_cone),
      cereal::make_nvp("leaveShellTimer", w.leave_shell_timer), cereal::make_nvp("index", w.index),
-     cereal::make_nvp("direction", w.direction), cereal::make_nvp("controlStates", w.control_states),
+     cereal::make_nvp("direction", w.direction),
+     cereal::make_nvp("controlStates", w.control_states),
      cereal::make_nvp("prevControlStates", w.prev_control_states));
   for (int i = 0; i < 4; ++i) ar(cereal::make_nvp("react" + std::to_string(i), w.reacts[i]));
   for (int i = 0; i < NUM_WEAPONS; ++i)
@@ -334,8 +336,8 @@ void save(Archive& ar, Game const& game) {
     // Context: weapon type indices (-1 if null)
     for (int i = 0; i < NUM_WEAPONS; ++i) {
       int32_t weap_idx = w.weapons[i].type
-                            ? static_cast<int32_t>(w.weapons[i].type - &game.common->weapons[0])
-                            : -1;
+                             ? static_cast<int32_t>(w.weapons[i].type - &game.common->weapons[0])
+                             : -1;
       ar(cereal::make_nvp("weapIdx" + std::to_string(i), weap_idx));
     }
 

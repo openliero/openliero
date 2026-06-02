@@ -59,8 +59,7 @@ TEST_CASE("NetSession host and client connect and handshake", "[session]") {
 
   // Poll until both reach Playing state
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
 
   REQUIRE(ready);
@@ -95,8 +94,7 @@ TEST_CASE("NetSession syncs host settings to client", "[session]") {
 
   // Poll until both reach Playing — host settings are authoritative
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
 
   REQUIRE(ready);
@@ -119,7 +117,8 @@ TEST_CASE("NetSession syncs worm colors and weapons between peers", "[session]")
   auto settings_host = std::make_shared<Settings>(*f.settings);
   // Create distinct WormSettings objects so shared_ptr sharing doesn't cause issues
   for (int i = 0; i < Settings::kNumWormSettings; ++i)
-    settings_host->worm_settings[i] = std::make_shared<WormSettings>(*settings_host->worm_settings[i]);
+    settings_host->worm_settings[i] =
+        std::make_shared<WormSettings>(*settings_host->worm_settings[i]);
   settings_host->worm_settings[Settings::kNetworkPlayerIdx]->color = 3;
   settings_host->worm_settings[Settings::kNetworkPlayerIdx]->rgb[0] = 255;
   settings_host->worm_settings[Settings::kNetworkPlayerIdx]->rgb[1] = 0;
@@ -152,8 +151,7 @@ TEST_CASE("NetSession syncs worm colors and weapons between peers", "[session]")
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -191,8 +189,7 @@ TEST_CASE("NetSession client detects host disconnect", "[session]") {
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -294,8 +291,7 @@ TEST_CASE("NetSession TC sync transfers data when hashes differ", "[session][tc]
   bool ready = PollUntil(
       host, client,
       [&]() {
-        return host.State() == NetSession::kPlaying &&
-               client.State() == NetSession::kPlaying;
+        return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
       },
       10000);  // Allow more time for TC transfer
 
@@ -330,8 +326,7 @@ TEST_CASE("NetSession TC sync skips transfer when hashes match", "[session][tc]"
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
 
   REQUIRE(ready);

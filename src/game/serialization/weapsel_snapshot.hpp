@@ -21,7 +21,7 @@
 struct WeaponSelectSnap {
   bool valid = false;
   bool ws_done = false;  // true if WeaponSelection::processFrame returned
-                        // true at this frame (both peers pressed Done).
+                         // true at this frame (both peers pressed Done).
 
   struct PerPlayer {
     std::array<uint32_t, Settings::kSelectableWeapons> weapons{};

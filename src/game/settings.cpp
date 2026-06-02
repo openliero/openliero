@@ -26,7 +26,10 @@ GameplayExtensions::GameplayExtensions()
       tc(std::string("openliero")) {}
 
 AppSettings::AppSettings()
-    : fullscreen(false), single_screen_replay(false), spectator_window(false), blood_particle_max(700) {}
+    : fullscreen(false),
+      single_screen_replay(false),
+      spectator_window(false),
+      blood_particle_max(700) {}
 
 Settings::Settings()
     : max_bonuses(4),
@@ -56,7 +59,7 @@ Settings::Settings()
   worm_settings[2]->color = 32;
 
   unsigned char def_controls[2][7] = {{0x13, 0x21, 0x20, 0x22, 0x1D, 0x2A, 0x38},
-                                     {0xA0, 0xA8, 0xA3, 0xA5, 0x75, 0x90, 0x36}};
+                                      {0xA0, 0xA8, 0xA3, 0xA5, 0x75, 0x90, 0x36}};
 
   unsigned char def_rgb[2][3] = {{26, 26, 63}, {15, 43, 15}};
 

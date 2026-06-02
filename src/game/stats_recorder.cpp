@@ -129,7 +129,8 @@ void NormalStatsRecorder::Tick(Game& game) {
       bool ok = true;
       if (!w->control_states[Worm::Control::kFire] &&
           (!w->control_states[Worm::Control::kChange] ||
-           (!w->control_states[Worm::Control::kLeft] && !w->control_states[Worm::Control::kRight])) &&
+           (!w->control_states[Worm::Control::kLeft] &&
+            !w->control_states[Worm::Control::kRight])) &&
           w->weapons[w->current_weapon].loading_left == 0 &&
           std::find_if(w->weapons, w->weapons + 5,
                        [](WormWeapon& ww) { return ww.loading_left > 0; }) != w->weapons + 5) {

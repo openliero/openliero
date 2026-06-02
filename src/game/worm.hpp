@@ -42,7 +42,18 @@ struct WormWeapon {
 };
 
 struct WormSettingsExtensions {
-  enum Control { kUp, kDown, kLeft, kRight, kFire, kChange, kJump, kDig, kMaxControl = kDig, kMaxControlEx };
+  enum Control {
+    kUp,
+    kDown,
+    kLeft,
+    kRight,
+    kFire,
+    kChange,
+    kJump,
+    kDig,
+    kMaxControl = kDig,
+    kMaxControlEx
+  };
 
   // Input device: 0 = keyboard, 1 = gamepad 0, 2 = gamepad 1, etc.
   static int const kInputKeyboard = 0;
@@ -112,7 +123,8 @@ struct Renderer;
 struct WormAI {
   virtual void Process(Game& game, Worm& worm) = 0;
 
-  virtual void DrawDebug(Game& game, Worm const& worm, Renderer& renderer, int offs_x, int offs_y) {}
+  virtual void DrawDebug(Game& game, Worm const& worm, Renderer& renderer, int offs_x, int offs_y) {
+  }
 };
 
 struct DumbLieroAI : WormAI {
@@ -228,7 +240,9 @@ struct Worm {
 
   void SetControlState(Control control, bool state) { control_states.Set(control, state); }
 
-  void ToggleControlState(Control control) { control_states.Set(control, !control_states[control]); }
+  void ToggleControlState(Control control) {
+    control_states.Set(control, !control_states[control]);
+  }
 
   int MinimapColor() const { return 129 + index * 4; }
 
@@ -259,16 +273,16 @@ struct Worm {
   bool key_change_pressed;
   bool movable;
 
-  bool animate;         // Should the worm be animated?
-  bool visible;         // Is the worm visible?
-  bool ready;           // Is the worm ready to play?
-  bool flag;            // Does the worm have a flag?
+  bool animate;           // Should the worm be animated?
+  bool visible;           // Is the worm visible?
+  bool ready;             // Is the worm ready to play?
+  bool flag;              // Does the worm have a flag?
   bool make_sight_green;  // Changes the sight color
-  int health;           // Health left
-  int lives;            // lives left
-  int kills;            // Kills made
+  int health;             // Health left
+  int lives;              // lives left
+  int kills;              // Kills made
 
-  int timer;        // Timer for GOT
+  int timer;         // Timer for GOT
   int killed_timer;  // Time until worm respawns
   static constexpr int kKilledTimerInitial = 150;
   int current_frame;
@@ -277,10 +291,10 @@ struct Worm {
 
   Ninjarope ninjarope;
 
-  int current_weapon;    // The selected weapon
+  int current_weapon;      // The selected weapon
   int last_killed_by_idx;  // What worm that last killed this worm
-  int fire_cone;         // How much is left of the firecone
-  int leave_shell_timer;  // Time until next shell drop
+  int fire_cone;           // How much is left of the firecone
+  int leave_shell_timer;   // Time until next shell drop
 
   std::shared_ptr<WormSettings> settings;  // !CLONING
   int index;                               // 0 or 1
@@ -301,7 +315,7 @@ struct Worm {
 
   // Data for LocalController
   ControlState clean_control_states;  // This contains the real state of real and
-                                    // extended controls
+                                      // extended controls
 };
 
 bool CheckForWormHit(Game& game, int x, int y, int dist, Worm* own_worm);

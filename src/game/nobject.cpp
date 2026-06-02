@@ -107,8 +107,9 @@ void NObject::Process(Game& game) {
 
     if (t.expl_ground) {
       if (t.start_frame > 0 && t.draw_on_map) {
-        BlitImageOnMap(common, game.level, common.small_sprites.SpritePtr(t.start_frame + cur_frame),
-                       ipos.x - 3, ipos.y - 3, 7, 7);
+        BlitImageOnMap(common, game.level,
+                       common.small_sprites.SpritePtr(t.start_frame + cur_frame), ipos.x - 3,
+                       ipos.y - 3, 7, 7);
         if (game.settings->shadow)
           CorrectShadow(common, game.level,
                         Rect(ipos.x - 8, ipos.y - 8, ipos.x + 9,
@@ -119,8 +120,8 @@ void NObject::Process(Game& game) {
     }
   } else {
     if (!bounced && t.leave_obj_delay != 0 &&
-        t.leave_obj >= 0  // NOTE: AFAIK, this doesn't exist in Liero, but some TCs seem to forget to
-                         // set leaveObjDelay to 0 when not using this trail
+        t.leave_obj >= 0  // NOTE: AFAIK, this doesn't exist in Liero, but some TCs seem to forget
+                          // to set leaveObjDelay to 0 when not using this trail
         && (game.cycles % t.leave_obj_delay) == 0) {
       common.sobject_types[t.leave_obj].Create(game, Ftoi(pos.x), Ftoi(pos.y), owner_idx, fired_by);
     }
@@ -184,11 +185,13 @@ void NObject::Process(Game& game) {
 
   if (do_explode) {
     if (t.create_on_exp >= 0) {
-      common.sobject_types[t.create_on_exp].Create(game, Ftoi(pos.x), Ftoi(pos.y), owner_idx, fired_by);
+      common.sobject_types[t.create_on_exp].Create(game, Ftoi(pos.x), Ftoi(pos.y), owner_idx,
+                                                   fired_by);
     }
 
     if (t.dirt_effect >= 0) {
-      DrawDirtEffect(common, game.rand, game.level, t.dirt_effect, Ftoi(pos.x) - 7, Ftoi(pos.y) - 7);
+      DrawDirtEffect(common, game.rand, game.level, t.dirt_effect, Ftoi(pos.x) - 7,
+                     Ftoi(pos.y) - 7);
 
       if (game.settings->shadow)
         CorrectShadow(common, game.level,
@@ -200,7 +203,7 @@ void NObject::Process(Game& game) {
         int angle = game.rand(128);
         int color_sub = game.rand(2);
         common.nobject_types[t.splinter_type].Create2(game, angle, fixedvec(), pos,
-                                                    t.splinter_colour - color_sub, owner_idx, 0);
+                                                      t.splinter_colour - color_sub, owner_idx, 0);
       }
     }
 

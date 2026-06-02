@@ -358,7 +358,7 @@ void NetSession::WireCallbacks() {
   transport_.on_disconnected = [this]() { OnDisconnected(); };
   transport_.on_handshake = [this](uint32_t seed, uint32_t hash) { OnHandshake(seed, hash); };
   transport_.on_remote_input_batch = [this](uint8_t generation, uint32_t base_frame, uint8_t count,
-                                         uint8_t const* inputs, uint32_t remote_local_frame) {
+                                            uint8_t const* inputs, uint32_t remote_local_frame) {
     OnRemoteInputBatch(generation, base_frame, count, inputs, remote_local_frame);
   };
   transport_.on_player_info = [this](const NetTransport::PlayerInfo& info) { OnPlayerInfo(info); };
@@ -458,7 +458,7 @@ void NetSession::ApplyRemotePlayerInfo(int remote_idx) {
   remote_ws->color = remotePlayerInfo_.color;
   for (int i = 0; i < 3; ++i) remote_ws->rgb[i] = remotePlayerInfo_.rgb[i];
   remote_ws->name.assign(remotePlayerInfo_.name,
-                        strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
+                         strnlen(remotePlayerInfo_.name, sizeof(remotePlayerInfo_.name)));
   remote_worm->settings = remote_ws;
 }
 

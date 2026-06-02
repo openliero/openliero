@@ -206,8 +206,10 @@ TEST_CASE("Rollback recovers from mispredictions under random delay", "[rollback
         b->SetLocalControlState(script.b[i]);
         a->Process();
         b->Process();
-        if (a->LastTickResimFrames() > max_resim_in_a_tick) max_resim_in_a_tick = a->LastTickResimFrames();
-        if (b->LastTickResimFrames() > max_resim_in_a_tick) max_resim_in_a_tick = b->LastTickResimFrames();
+        if (a->LastTickResimFrames() > max_resim_in_a_tick)
+          max_resim_in_a_tick = a->LastTickResimFrames();
+        if (b->LastTickResimFrames() > max_resim_in_a_tick)
+          max_resim_in_a_tick = b->LastTickResimFrames();
         transport.Tick(deliver_a, deliver_b);
       }
       REQUIRE(max_resim_in_a_tick > 0);

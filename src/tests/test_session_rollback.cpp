@@ -65,8 +65,7 @@ TEST_CASE("NetSession reaches Playing and runs ticks", "[session][rollback]") {
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -133,8 +132,7 @@ TEST_CASE("Rollback weapon select transitions to game over a real session",
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -230,8 +228,7 @@ TEST_CASE("Rollback session runs ≥5s game-phase post-WS without desync", "[ses
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -359,8 +356,7 @@ TEST_CASE("Per-worm stats hooks fire on the shadow on both peers", "[session][ro
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -453,8 +449,7 @@ TEST_CASE("Stats accumulate on both peers across a rollback game", "[session][ro
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -576,8 +571,7 @@ TEST_CASE("Host's inputDelay syncs to the client over MatchSettings", "[session]
   REQUIRE(client.JoinGame("127.0.0.1", port));
 
   bool ready = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(ready);
 
@@ -608,8 +602,7 @@ TEST_CASE("Input batches received pre-Playing reach controller post-Playing",
       /*remoteLocalFrame=*/7);
 
   bool reached = PollUntil(host, client, [&]() {
-    return host.State() == NetSession::kPlaying &&
-           client.State() == NetSession::kPlaying;
+    return host.State() == NetSession::kPlaying && client.State() == NetSession::kPlaying;
   });
   REQUIRE(reached);
   REQUIRE(client.Rollback() != nullptr);

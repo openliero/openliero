@@ -72,9 +72,11 @@ uint32_t const kReplayMagic = ('L' << 24) | ('R' << 16) | ('P' << 8) | 'F';
 std::unique_ptr<Game> ReplayReader::BeginPlayback(std::shared_ptr<Common> common,
                                                   std::shared_ptr<SoundPlayer> sound_player) {
   uint32_t read_magic = io::ReadUint32(reader);
-  if (read_magic != kReplayMagic) throw io::ArchiveCheckError("File does not appear to be a replay");
+  if (read_magic != kReplayMagic)
+    throw io::ArchiveCheckError("File does not appear to be a replay");
   replay_version = reader.Get();
-  if (replay_version > kMyReplayVersion) throw io::ArchiveCheckError("Replay version is too recent");
+  if (replay_version > kMyReplayVersion)
+    throw io::ArchiveCheckError("Replay version is too recent");
 
   std::shared_ptr<Settings> settings(new Settings);
   std::unique_ptr<Game> game(new Game(common, settings, sound_player));

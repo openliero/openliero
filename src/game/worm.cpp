@@ -93,37 +93,37 @@ void WormSettings::LoadProfile(FsNode node) {
 
 void Worm::CalculateReactionForce(Game& game, int new_x, int new_y, int dir) {
   static Point const kColPoints[4][7] = {{// DOWN reaction points
-                                         {-1, -4},
-                                         {0, -4},
-                                         {1, -4},
-                                         {0, 0},
-                                         {0, 0},
-                                         {0, 0},
-                                         {0, 0}},
-                                        {// LEFT reaction points
-                                         {1, -3},
-                                         {1, -2},
-                                         {1, -1},
-                                         {1, 0},
-                                         {1, 1},
-                                         {1, 2},
-                                         {1, 3}},
-                                        {// UP reaction points
-                                         {-1, 4},
-                                         {0, 4},
-                                         {1, 4},
-                                         {0, 0},
-                                         {0, 0},
-                                         {0, 0},
-                                         {0, 0}},
-                                        {// RIGHT reaction points
-                                         {-1, -3},
-                                         {-1, -2},
-                                         {-1, -1},
-                                         {-1, 0},
-                                         {-1, 1},
-                                         {-1, 2},
-                                         {-1, 3}}
+                                          {-1, -4},
+                                          {0, -4},
+                                          {1, -4},
+                                          {0, 0},
+                                          {0, 0},
+                                          {0, 0},
+                                          {0, 0}},
+                                         {// LEFT reaction points
+                                          {1, -3},
+                                          {1, -2},
+                                          {1, -1},
+                                          {1, 0},
+                                          {1, 1},
+                                          {1, 2},
+                                          {1, 3}},
+                                         {// UP reaction points
+                                          {-1, 4},
+                                          {0, 4},
+                                          {1, 4},
+                                          {0, 0},
+                                          {0, 0},
+                                          {0, 0},
+                                          {0, 0}},
+                                         {// RIGHT reaction points
+                                          {-1, -3},
+                                          {-1, -2},
+                                          {-1, -1},
+                                          {-1, 0},
+                                          {-1, 1},
+                                          {-1, 2},
+                                          {-1, 3}}
 
   };
 
@@ -319,7 +319,8 @@ void Worm::Process(Game& game) {
           weapons[current_weapon].delay_left <= 0) {
         Fire(game);
       } else if (!Pressed(kFire) || Pressed(kChange) || !weapons[current_weapon].Available()) {
-        if (weapons[current_weapon].type->loop_sound) game.sound_player->Stop(&weapons[current_weapon]);
+        if (weapons[current_weapon].type->loop_sound)
+          game.sound_player->Stop(&weapons[current_weapon]);
       }
 
       ProcessPhysics(game);
@@ -726,8 +727,9 @@ void Worm::DoRespawning(Game& game) {
   int dest_y = Ftoi(pos.y) - 80;
   LimitXy(dest_x, dest_y, game.level.width - 158, game.level.height - 158);
 
-  if (logic_respawn.x < dest_x + 5 && logic_respawn.x > dest_x - 5 && logic_respawn.y < dest_y + 5 &&
-      logic_respawn.y > dest_y - 5 && ready)  // Don't spawn in quicksim
+  if (logic_respawn.x < dest_x + 5 && logic_respawn.x > dest_x - 5 &&
+      logic_respawn.y < dest_y + 5 && logic_respawn.y > dest_y - 5 &&
+      ready)  // Don't spawn in quicksim
   {
     auto ipos = Ftoi(pos);
     DrawDirtEffect(common, game.rand, game.level, 0, ipos.x - 7, ipos.y - 7);

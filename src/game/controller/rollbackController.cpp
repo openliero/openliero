@@ -68,7 +68,7 @@ RollbackController::RollbackController(std::shared_ptr<Common> common,
   std::array<std::shared_ptr<WormSettings>, 2> ws;
   for (int idx = 0; idx < 2; ++idx) {
     ws[idx] = (idx == localIdx_) ? settings->worm_settings[Settings::kNetworkPlayerIdx]
-                                : settings->worm_settings[idx];
+                                 : settings->worm_settings[idx];
   }
   ConfigureGameSlots(game, ws);
   game.AddSpectatorViewport(new SpectatorViewport(Rect(0, 0, 504 + 68, 350), 504, 350));
@@ -787,7 +787,8 @@ void RollbackController::AdvanceWeaponSelection() {
   // place of processFrame / GameSnapshot.
   if (rollback_to >= 0) {
     ++rollbackCount_;
-    lastTickResimFrames_ += static_cast<uint32_t>(static_cast<int32_t>(simFrame_) - rollback_to - 1);
+    lastTickResimFrames_ +=
+        static_cast<uint32_t>(static_cast<int32_t>(simFrame_) - rollback_to - 1);
     auto* last_good = rollbackBuffer_.Find(rollback_to);
     if (last_good && last_good->ws_snap.valid) {
       LoadWeaponSelectSnap(last_good->ws_snap);
@@ -962,7 +963,8 @@ void RollbackController::AdvanceSimulation() {
   // previously-emitted sounds/stats don't duplicate.
   if (rollback_to >= 0) {
     ++rollbackCount_;
-    lastTickResimFrames_ += static_cast<uint32_t>(static_cast<int32_t>(simFrame_) - rollback_to - 1);
+    lastTickResimFrames_ +=
+        static_cast<uint32_t>(static_cast<int32_t>(simFrame_) - rollback_to - 1);
     auto* last_good = rollbackBuffer_.Find(rollback_to);
     // Resident by construction: the stall guard caps simFrame - confirmedSimFrame_
     // at kMaxRollback, and the ring holds kMaxRollback+1 slots.

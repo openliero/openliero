@@ -153,7 +153,7 @@ TEST_CASE("WeaponSelectSnap round-trip preserves state", "[rollback][weapsel]") 
   // one observable axis — otherwise the test wouldn't have exercised
   // any state change to round-trip.
   bool mutated_differs = mutated.players[0].menu_selection != snap.players[0].menu_selection ||
-                        mutated.local_prev_input != snap.local_prev_input;
+                         mutated.local_prev_input != snap.local_prev_input;
   REQUIRE(mutated_differs);
 }
 

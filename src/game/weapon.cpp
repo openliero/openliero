@@ -90,13 +90,15 @@ void WObject::BlowUpObject(Game& game, int cause_idx) {
         int angle = game.rand(128);
         int color_sub = game.rand(2);
         common.nobject_types[w.splinter_type].Create2(game, angle, fixedvec(), fixedvec(x, y),
-                                                    w.splinter_colour - color_sub, cause_idx, fired_by);
+                                                      w.splinter_colour - color_sub, cause_idx,
+                                                      fired_by);
       }
     } else {
       for (int i = 0; i < splinters; ++i) {
         int color_sub = game.rand(2);
         common.nobject_types[w.splinter_type].Create1(game, fixedvec(vel_x, vel_y), fixedvec(x, y),
-                                                    w.splinter_colour - color_sub, cause_idx, fired_by);
+                                                      w.splinter_colour - color_sub, cause_idx,
+                                                      fired_by);
       }
     }
   }
@@ -177,17 +179,18 @@ void WObject::Process(Game& game) {
     }
 
     if (w.obj_trail_type >= 0 && (game.cycles % w.obj_trail_delay) == 0) {
-      common.sobject_types[w.obj_trail_type].Create(game, Ftoi(pos.x), Ftoi(pos.y), owner_idx, fired_by);
+      common.sobject_types[w.obj_trail_type].Create(game, Ftoi(pos.x), Ftoi(pos.y), owner_idx,
+                                                    fired_by);
     }
 
     if (w.part_trail_obj >= 0 && (game.cycles % w.part_trail_delay) == 0) {
       if (w.part_trail_type == 1) {
         common.nobject_types[w.part_trail_obj].Create1(game, vel / LC(SplinterLarpaVelDiv), pos, 0,
-                                                    owner_idx, fired_by);
+                                                       owner_idx, fired_by);
       } else {
         int angle = game.rand(128);
-        common.nobject_types[w.part_trail_obj].Create2(game, angle, vel / LC(SplinterCracklerVelDiv),
-                                                    pos, 0, owner_idx, fired_by);
+        common.nobject_types[w.part_trail_obj].Create2(
+            game, angle, vel / LC(SplinterCracklerVelDiv), pos, 0, owner_idx, fired_by);
       }
     }
 

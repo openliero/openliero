@@ -8,39 +8,39 @@
 #include "game/reader.hpp"
 
 int c_sint32desc[][3] = {{CNRInitialLength, 0x32D7, 0x32DD},
-                        {CNRAttachLength, 0xA679, 0xA67F},
+                         {CNRAttachLength, 0xA679, 0xA67F},
 
-                        {0, -1, -1}};
+                         {0, -1, -1}};
 
 int c_sint24desc[][3] = {{CMinBounceUp, 0x3B7D, 0x3B74},
-                        {CMinBounceDown, 0x3B00, 0x3AF7},
-                        {CMinBounceLeft, 0x3A83, 0x3A7A},
-                        {CMinBounceRight, 0x3A06, 0x39FD},
-                        {CWormGravity, 0x3BDE, 0x3BD7},
-                        {CWalkVelLeft, 0x3F97, 0x3F9D},
-                        {CMaxVelLeft, 0x3F8C, 0x3F83},
-                        {CWalkVelRight, 0x4018, 0x401E},
-                        {CMaxVelRight, 0x400D, 0x4004},
-                        {CJumpForce, 0x3327, 0x332D},
-                        {CMaxAimVelLeft, 0x30F2, 0x30E9},
-                        {CAimAccLeft, 0x30FD, 0x3103},
-                        {CMaxAimVelRight, 0x311A, 0x3111},
-                        {CAimAccRight, 0x3125, 0x312B},
-                        {CNinjaropeGravity, 0xA895, 0xA89B},
-                        {CNRMinLength, 0x3206, 0x31FD},
-                        {CNRMaxLength, 0x3229, 0x3220},
+                         {CMinBounceDown, 0x3B00, 0x3AF7},
+                         {CMinBounceLeft, 0x3A83, 0x3A7A},
+                         {CMinBounceRight, 0x3A06, 0x39FD},
+                         {CWormGravity, 0x3BDE, 0x3BD7},
+                         {CWalkVelLeft, 0x3F97, 0x3F9D},
+                         {CMaxVelLeft, 0x3F8C, 0x3F83},
+                         {CWalkVelRight, 0x4018, 0x401E},
+                         {CMaxVelRight, 0x400D, 0x4004},
+                         {CJumpForce, 0x3327, 0x332D},
+                         {CMaxAimVelLeft, 0x30F2, 0x30E9},
+                         {CAimAccLeft, 0x30FD, 0x3103},
+                         {CMaxAimVelRight, 0x311A, 0x3111},
+                         {CAimAccRight, 0x3125, 0x312B},
+                         {CNinjaropeGravity, 0xA895, 0xA89B},
+                         {CNRMinLength, 0x3206, 0x31FD},
+                         {CNRMaxLength, 0x3229, 0x3220},
 
-                        {CBonusGravity, 0x72C3, 0x72C9},
-                        {CBObjGravity, 0x744A, 0x7450},
+                         {CBonusGravity, 0x72C3, 0x72C9},
+                         {CBObjGravity, 0x744A, 0x7450},
 
-                        // WormFloat hack
-                        {CWormFloatPower, 0x29DB, 0x29E1},
+                         // WormFloat hack
+                         {CWormFloatPower, 0x29DB, 0x29E1},
 
-                        {0, -1, -1}};
+                         {0, -1, -1}};
 
 int c_uint16desc[][2] = {{CBloodLimit, 0xE686},
 
-                        {0, -1}};
+                         {0, -1}};
 
 int c_sint16desc[][2] = {
     {CWormFricMult, 0x39BD},
@@ -82,36 +82,36 @@ int c_sint16desc[][2] = {
     {0, -1}};
 
 int c_uint8desc[][2] = {{CAimMaxRight, 0x3030},
-                       {CAimMinRight, 0x304A},
-                       {CAimMaxLeft, 0x3066},
-                       {CAimMinLeft, 0x3080},
-                       {CNRColourBegin, 0x10FD2},
-                       {CNRColourEnd, 0x11069},
-                       {CBonusExplodeRisk, 0x2DB2},
-                       {CBonusHealthVar, 0x2D56},
-                       {CBonusMinHealth, 0x2D5D},
-                       {CLaserWeapon, 0x7255},
+                        {CAimMinRight, 0x304A},
+                        {CAimMaxLeft, 0x3066},
+                        {CAimMinLeft, 0x3080},
+                        {CNRColourBegin, 0x10FD2},
+                        {CNRColourEnd, 0x11069},
+                        {CBonusExplodeRisk, 0x2DB2},
+                        {CBonusHealthVar, 0x2D56},
+                        {CBonusMinHealth, 0x2D5D},
+                        {CLaserWeapon, 0x7255},
 
-                       {CFirstBloodColour, 0x2388},
-                       {CNumBloodColours, 0x2381},
+                        {CFirstBloodColour, 0x2388},
+                        {CNumBloodColours, 0x2381},
 
-                       {CRemExpObject, 0x8F8B},
+                        {CRemExpObject, 0x8F8B},
 
-                       {0, -1}};
+                        {0, -1}};
 
 int c_sint8desc[][2] = {{CNRPullVel, 0x31D0},
-                       {CNRReleaseVel, 0x31F0},
+                        {CNRReleaseVel, 0x31F0},
 
-                       // FallDamage hack
-                       {CFallDamageRight, 0x3A0E},
-                       {CFallDamageLeft, 0x3A8B},
-                       {CFallDamageDown, 0x3B08},
-                       {CFallDamageUp, 0x3B85},
+                        // FallDamage hack
+                        {CFallDamageRight, 0x3A0E},
+                        {CFallDamageLeft, 0x3A8B},
+                        {CFallDamageDown, 0x3B08},
+                        {CFallDamageUp, 0x3B85},
 
-                       {CBloodStepUp, 0xE67B},
-                       {CBloodStepDown, 0xE68E},
+                        {CBloodStepUp, 0xE67B},
+                        {CBloodStepDown, 0xE68E},
 
-                       {0, -1}};
+                        {0, -1}};
 
 int sstringdesc[][2] = {{SInitSound, 0x177F},
                         {SLoadingSounds, 0x18F2},
@@ -170,11 +170,11 @@ struct HackDesc {
 };
 
 int h_fall_damage_ind[][2] = {{0x3A0A, 0x26},
-                           {0x3A87, 0x26},
-                           {0x3B04, 0x26},
-                           {0x3B81, 0x26},
+                              {0x3A87, 0x26},
+                              {0x3B04, 0x26},
+                              {0x3B81, 0x26},
 
-                           {-1, 0}};
+                              {-1, 0}};
 
 int h_bonus_reload_only_ind[][2] = {
     {0x2DB1, 0xEB},  // We check one byte only, because ProMode has a silly jump destination
@@ -188,23 +188,23 @@ int h_bonus_spawn_rect_ind[][2] = {
     {-1, 0}};
 
 int h_bonus_only_health_ind[][2] = {{0x228B, 0xB0},
-                                {0x228C, 0x02},
+                                    {0x228C, 0x02},
 
-                                {-1, 0}};
+                                    {-1, 0}};
 
 int h_bonus_only_weapon_ind[][2] = {{0x228B, 0xB0},
-                                {0x228C, 0x01},
+                                    {0x228C, 0x01},
 
-                                {-1, 0}};
+                                    {-1, 0}};
 
 int h_bonus_disable_ind[][2] = {{0xBED3, 0xEB},
 
-                             {-1, 0}};
+                                {-1, 0}};
 
 int h_worm_float_ind[][2] = {{0x29D7, 0x26},  // 0x26 is the first byte of the sub instruction
-                          {0x29DA, 0x34},  // 0x34 is the offset to part of velY of the worm
+                             {0x29DA, 0x34},  // 0x34 is the offset to part of velY of the worm
 
-                          {-1, 0}};
+                             {-1, 0}};
 
 int h_rem_exp_ind[][2] = {
     // Start of the mov instruction that zeroes the timeout counter
@@ -232,44 +232,44 @@ HackDesc hhackdesc[] = {{HFallDamage, h_fall_damage_ind},
                         {0, 0}};
 
 char const* sobject_names[14] = {"Large explosion",
-                                "Medium explosion",
-                                "Small explosion",
-                                "Hellraider smoke",
-                                "Zimm flash",
-                                "Nuke smoke",
-                                "Flashing pixel",
-                                "Teleport flash",
-                                "Small explosion, silent",
-                                "Very small explosion, silent",
-                                "Medium explosion, smaller",
-                                "Large explosion, smaller",
-                                "Medium explosion, bigger",
-                                "Unknown"};
+                                 "Medium explosion",
+                                 "Small explosion",
+                                 "Hellraider smoke",
+                                 "Zimm flash",
+                                 "Nuke smoke",
+                                 "Flashing pixel",
+                                 "Teleport flash",
+                                 "Small explosion, silent",
+                                 "Very small explosion, silent",
+                                 "Medium explosion, smaller",
+                                 "Large explosion, smaller",
+                                 "Medium explosion, bigger",
+                                 "Unknown"};
 
 char const* nobject_names[24] = {"Worm 1 parts",
-                                "Worm 2 parts",
-                                "Particle, disappearing",
-                                "Particle, small damage",
-                                "Particle, medium damage",
-                                "Particle, larger damage",
-                                "Blood",
-                                "Shells",
-                                "Clusterbomb bombs",
-                                "Large nukes",
-                                "Hellraider bullets",
-                                "Small nukes",
-                                "Napalm fireballs",
-                                "Dirt",
-                                "Chiquitabomb bombs",
-                                "Grasshopper 1",
-                                "Grasshopper 2",
-                                "Grasshopper 3",
-                                "Grasshopper 4",
-                                "Grasshopper 5",
-                                "Flag 1",
-                                "Flag 2",
-                                "Grasshopper 6",
-                                "Grasshopper 7"};
+                                 "Worm 2 parts",
+                                 "Particle, disappearing",
+                                 "Particle, small damage",
+                                 "Particle, medium damage",
+                                 "Particle, larger damage",
+                                 "Blood",
+                                 "Shells",
+                                 "Clusterbomb bombs",
+                                 "Large nukes",
+                                 "Hellraider bullets",
+                                 "Small nukes",
+                                 "Napalm fireballs",
+                                 "Dirt",
+                                 "Chiquitabomb bombs",
+                                 "Grasshopper 1",
+                                 "Grasshopper 2",
+                                 "Grasshopper 3",
+                                 "Grasshopper 4",
+                                 "Grasshopper 5",
+                                 "Flag 1",
+                                 "Flag 2",
+                                 "Grasshopper 6",
+                                 "Grasshopper 7"};
 
 std::string ToId(std::string const& name) {
   std::string ret;
@@ -521,7 +521,7 @@ void LoadWeapons(Common& common, ReaderFile& exe) {
   ReadMembers<Read8>(exe, common.sobject_types, &SObjectType::damage);
   ReadMembers<Read32>(exe, common.sobject_types,
                       &SObjectType::blow_away);  // blowAway has 13 slots, not 14. The last value
-                                                // will overlap with shadow.
+                                                 // will overlap with shadow.
 
   exe.Seekg(115368);
   ReadMembers<ReadBool>(exe, common.sobject_types, &SObjectType::shadow);
