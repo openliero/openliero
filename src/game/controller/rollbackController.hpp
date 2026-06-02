@@ -100,7 +100,7 @@ struct RollbackController : CommonController {
   // underlying NetSession has gone away (clean PeerLeft or socket
   // close); makes `running()` return false so the main menu hides
   // "RESUME GAME".
-  void MarkUnresumable() { resumable_ = false; }
+  void MarkUnresumable() override { resumable_ = false; }
 
   void SetSkipWeaponSelection(bool skip) { skipWeaponSelection_ = skip; }
 

@@ -24,7 +24,7 @@ int GameEntry(int argc, char* argv[]) try {
 #if OPENLIERO_EMSCRIPTEN
   // Emscripten preloads all data under /openliero; use single-dir mode.
   const char* emscriptenArgv[] = {argv[0], "--config-root", "/openliero", nullptr};
-  auto r = paths::resolve(3, const_cast<char**>(emscriptenArgv));
+  auto r = paths::Resolve(3, const_cast<char**>(emscriptenArgv));
 #else
   auto r = paths::Resolve(argc, argv);
 #endif

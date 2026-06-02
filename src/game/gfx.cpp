@@ -1345,9 +1345,9 @@ void Gfx::MainLoop() {
   emscripten_set_main_loop_arg(
       [](void* arg) {
         Gfx* self = static_cast<Gfx*>(arg);
-        if (!self->runOneFrame()) {
-          if (self->tcChangeRequested()) {
-            self->initFrameStepping();
+        if (!self->RunOneFrame()) {
+          if (self->TcChangeRequested()) {
+            self->InitFrameStepping();
           } else {
             self->controller.reset();
             emscripten_cancel_main_loop();
