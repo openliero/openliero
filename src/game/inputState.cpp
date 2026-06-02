@@ -90,7 +90,7 @@ void InputStringState::Draw() {
                        clr_x + 10 + width, 8, gfx->frozen_screen.pitch);
 
   DrawRoundedBox(gfx->play_renderer.bmp, x_ - 2 - adjust, y_, 0, 7, width);
-  font.DrawText(gfx->play_renderer.bmp, str, x_ - adjust, y_ + 1, 50);
+  font.DrawString(gfx->play_renderer.bmp, str, x_ - adjust, y_ + 1, 50);
 }
 
 // --- WaitForKeyState ---
@@ -154,7 +154,7 @@ void WaitForKeyState::Draw() {
   int cy = 100 - height / 2 - 2;
 
   DrawRoundedBox(gfx->play_renderer.bmp, cx, cy, 0, height + 1, width + 1);
-  gfx->common->font.DrawText(gfx->play_renderer.bmp, text, cx + 2, cy + 2, 50);
+  gfx->common->font.DrawString(gfx->play_renderer.bmp, text, cx + 2, cy + 2, 50);
 }
 
 // --- InfoBoxState ---
@@ -202,5 +202,5 @@ void InfoBoxState::Draw() {
   int cy = y_ - height / 2 - 2;
 
   DrawRoundedBox(gfx->play_renderer.bmp, cx, cy, 0, height + 1, width + 1);
-  gfx->common->font.DrawText(gfx->play_renderer.bmp, text_, cx + 2, cy + 2, 6);
+  gfx->common->font.DrawString(gfx->play_renderer.bmp, text_, cx + 2, cy + 2, 6);
 }

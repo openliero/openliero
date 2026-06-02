@@ -139,10 +139,10 @@ void WeaponSelection::DrawNormalViewports(Renderer& renderer, GameState state) {
     game.Draw(renderer, state, false);
 
     if (game.settings->level_file.empty()) {
-      common.font.DrawText(renderer.bmp, LS(LevelRandom), 0, 162, 50);
+      common.font.DrawString(renderer.bmp, LS(LevelRandom), 0, 162, 50);
     } else {
       auto level_name = GetBasename(GetLeaf(gfx.settings->level_file));
-      common.font.DrawText(renderer.bmp, (LS(LevelIs1) + level_name + LS(LevelIs2)), 0, 162, 50);
+      common.font.DrawString(renderer.bmp, (LS(LevelIs1) + level_name + LS(LevelIs2)), 0, 162, 50);
     }
 
     gfx.frozen_screen.Copy(renderer.bmp);
@@ -155,7 +155,7 @@ void WeaponSelection::DrawNormalViewports(Renderer& renderer, GameState state) {
 
   DrawRoundedBox(renderer.bmp, 114, 2, 0, 7, common.font.GetDims(LS(SelWeap)));
 
-  common.font.DrawText(renderer.bmp, LS(SelWeap), 116, 3, 50);
+  common.font.DrawString(renderer.bmp, LS(SelWeap), 116, 3, 50);
 
   for (std::size_t i = 0; i < menus.size(); ++i) {
     Menu& weapon_menu = menus[i];
@@ -167,8 +167,8 @@ void WeaponSelection::DrawNormalViewports(Renderer& renderer, GameState state) {
 
     int width = common.font.GetDims(ws.name);
     DrawRoundedBox(renderer.bmp, weapon_menu.x + 29 - width / 2, weapon_menu.y - 11, 0, 7, width);
-    common.font.DrawText(renderer.bmp, ws.name, weapon_menu.x + 31 - width / 2, weapon_menu.y - 10,
-                         Palette::kWormSpriteColorBase[worm.index] + 1);
+    common.font.DrawString(renderer.bmp, ws.name, weapon_menu.x + 31 - width / 2,
+                           weapon_menu.y - 10, Palette::kWormSpriteColorBase[worm.index] + 1);
 
     if (!is_ready[i]) {
       menus[i].Draw(common, gfx.play_renderer, false);

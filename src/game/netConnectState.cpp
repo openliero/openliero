@@ -153,17 +153,17 @@ void NetConnectState::Draw() {
   int cy = 60;
 
   int w1 = font.GetDims(line1);
-  font.DrawText(gfx->play_renderer.bmp, line1, cx - w1 / 2, cy, 50);
+  font.DrawString(gfx->play_renderer.bmp, line1, cx - w1 / 2, cy, 50);
 
   int w2 = font.GetDims(line2);
-  font.DrawText(gfx->play_renderer.bmp, line2, cx - w2 / 2, cy + 12, 7);
+  font.DrawString(gfx->play_renderer.bmp, line2, cx - w2 / 2, cy + 12, 7);
 
   // Show local addresses when hosting
   if (role_ == NetSession::kHost && !localAddresses_.empty()) {
     int addr_y = cy + 30;
     std::string hdr = "CONNECT USING:";
     int wh = font.GetDims(hdr);
-    font.DrawText(gfx->play_renderer.bmp, hdr, cx - wh / 2, addr_y, 6);
+    font.DrawString(gfx->play_renderer.bmp, hdr, cx - wh / 2, addr_y, 6);
     addr_y += 10;
 
     for (auto& addr : localAddresses_) {
@@ -173,7 +173,7 @@ void NetConnectState::Draw() {
       else
         display = addr.ip + ":" + std::to_string(port_);
       int wd = font.GetDims(display);
-      font.DrawText(gfx->play_renderer.bmp, display, cx - wd / 2, addr_y, 7);
+      font.DrawString(gfx->play_renderer.bmp, display, cx - wd / 2, addr_y, 7);
       addr_y += 10;
     }
 
@@ -181,21 +181,21 @@ void NetConnectState::Draw() {
       uint16_t ext_port = externalIPs_.ipv4_port ? externalIPs_.ipv4_port : port_;
       std::string d = externalIPs_.ipv4 + ":" + std::to_string(ext_port) + " (EXTERNAL)";
       int wd = font.GetDims(d);
-      font.DrawText(gfx->play_renderer.bmp, d, cx - wd / 2, addr_y, 45);
+      font.DrawString(gfx->play_renderer.bmp, d, cx - wd / 2, addr_y, 45);
       addr_y += 10;
     }
     if (!externalIPs_.ipv6.empty()) {
       uint16_t ext_port = externalIPs_.ipv6_port ? externalIPs_.ipv6_port : port_;
       std::string d = "[" + externalIPs_.ipv6 + "]:" + std::to_string(ext_port) + " (EXTERNAL)";
       int wd = font.GetDims(d);
-      font.DrawText(gfx->play_renderer.bmp, d, cx - wd / 2, addr_y, 45);
+      font.DrawString(gfx->play_renderer.bmp, d, cx - wd / 2, addr_y, 45);
       addr_y += 10;
     }
 
     int w3 = font.GetDims(line3);
-    font.DrawText(gfx->play_renderer.bmp, line3, cx - w3 / 2, addr_y + 6, 6);
+    font.DrawString(gfx->play_renderer.bmp, line3, cx - w3 / 2, addr_y + 6, 6);
   } else {
     int w3 = font.GetDims(line3);
-    font.DrawText(gfx->play_renderer.bmp, line3, cx - w3 / 2, cy + 30, 6);
+    font.DrawString(gfx->play_renderer.bmp, line3, cx - w3 / 2, cy + 30, 6);
   }
 }

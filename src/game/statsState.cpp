@@ -70,8 +70,8 @@ struct StatsRenderer {
         BlitImage(renderer.bmp, common.WormSpriteObj(2, i == 0 ? 1 : 0, i), x - 8, y);
 
         cell c(i == 0 ? TextCell::kRight : TextCell::kLeft);
-        common.font.DrawText(renderer.bmp, c << game.worms[i]->settings->name,
-                             x + (i == 0 ? -16 : 16), y + 2, kTextColor);
+        common.font.DrawString(renderer.bmp, c << game.worms[i]->settings->name,
+                               x + (i == 0 ? -16 : 16), y + 2, kTextColor);
       }
     });
   }
@@ -82,8 +82,8 @@ struct StatsRenderer {
       BlitImage(renderer.bmp, common.WormSpriteObj(2, i == 0 ? 1 : 0, i), x - 8, y);
 
       cell c(i == 0 ? TextCell::kRight : TextCell::kLeft);
-      common.font.DrawText(renderer.bmp, c << game.worms[i]->settings->name,
-                           x + (i == 0 ? -16 : 16), y + 2, kTextColor);
+      common.font.DrawString(renderer.bmp, c << game.worms[i]->settings->name,
+                             x + (i == 0 ? -16 : 16), y + 2, kTextColor);
     });
 
     if (!visible) {
@@ -95,8 +95,8 @@ struct StatsRenderer {
   template <typename Ws>
   void DrawWormStat(char const* name, Ws worm_stat) {
     Hblock(11, [this, name, &worm_stat] {
-      common.font.DrawText(renderer.bmp, cell(TextCell::kCenter).Ref() << name,
-                           renderer.render_res_x / 2 + offs_x, y, kTextColor);
+      common.font.DrawString(renderer.bmp, cell(TextCell::kCenter).Ref() << name,
+                             renderer.render_res_x / 2 + offs_x, y, kTextColor);
 
       for (int i = 0; i < 2; ++i) {
         TextCell::Placement p = i == 0 ? TextCell::kRight : TextCell::kLeft;
@@ -105,7 +105,7 @@ struct StatsRenderer {
         WormStats& w = stats.worms[i];
         cell c(p);
         worm_stat(w, c);
-        common.font.DrawText(renderer.bmp, c, x, y, kTextColor);
+        common.font.DrawString(renderer.bmp, c, x, y, kTextColor);
       }
     });
   }
@@ -113,14 +113,14 @@ struct StatsRenderer {
   template <typename Stat>
   void DrawStat(char const* name, Stat stat) {
     Hblock(11, [this, name, &stat] {
-      common.font.DrawText(renderer.bmp, cell(TextCell::kRight).Ref() << name,
-                           renderer.render_res_x / 2 + offs_x, y, kTextColor);
+      common.font.DrawString(renderer.bmp, cell(TextCell::kRight).Ref() << name,
+                             renderer.render_res_x / 2 + offs_x, y, kTextColor);
 
       int x = renderer.render_res_x / 2 + 10 + offs_x;
 
       cell c(TextCell::kLeft);
       stat(c);
-      common.font.DrawText(renderer.bmp, c, x, y, kTextColor);
+      common.font.DrawString(renderer.bmp, c, x, y, kTextColor);
     });
   }
 
@@ -136,7 +136,7 @@ struct StatsRenderer {
       color = 3;
     }
 
-    common.font.DrawText(renderer.bmp, c, x, y, color);
+    common.font.DrawString(renderer.bmp, c, x, y, color);
 
     if (level == 0) y += 11;
   }

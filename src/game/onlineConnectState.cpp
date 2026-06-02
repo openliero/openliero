@@ -258,19 +258,19 @@ void OnlineConnectState::Draw() {
   int cy = 60;
 
   int w1 = font.GetDims(statusLine1_);
-  font.DrawText(gfx->play_renderer.bmp, statusLine1_, cx - w1 / 2, cy, 50);
+  font.DrawString(gfx->play_renderer.bmp, statusLine1_, cx - w1 / 2, cy, 50);
 
   int w2 = font.GetDims(statusLine2_);
-  font.DrawText(gfx->play_renderer.bmp, statusLine2_, cx - w2 / 2, cy + 14, 7);
+  font.DrawString(gfx->play_renderer.bmp, statusLine2_, cx - w2 / 2, cy + 14, 7);
 
   if (role_ == NetSession::kHost && !roomCode_.empty() &&
       signaling_.State() == SignalingClient::kHosting) {
     std::string code_str = "CODE: " + roomCode_;
     int wc = font.GetDims(code_str);
-    font.DrawText(gfx->play_renderer.bmp, code_str, cx - wc / 2, cy + 30, 45);
+    font.DrawString(gfx->play_renderer.bmp, code_str, cx - wc / 2, cy + 30, 45);
   }
 
   std::string esc = "PRESS ESC TO CANCEL";
   int we = font.GetDims(esc);
-  font.DrawText(gfx->play_renderer.bmp, esc, cx - we / 2, 170, 7);
+  font.DrawString(gfx->play_renderer.bmp, esc, cx - we / 2, 170, 7);
 }

@@ -113,22 +113,22 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
               ammo_bar_width / 10 + 245);
 
     if ((game.cycles % 20) > 10 && worm.visible) {
-      common.font.DrawText(renderer.bmp, LS(Reloading), worm.stats_x * multiplier, 164 * multiplier,
-                           50);
+      common.font.DrawString(renderer.bmp, LS(Reloading), worm.stats_x * multiplier,
+                             164 * multiplier, 50);
     }
   }
 
-  common.font.DrawText(renderer.bmp, (LS(Kills) + ToString(worm.kills)), worm.stats_x * multiplier,
-                       renderer.render_res_y - 29, 10);
+  common.font.DrawString(renderer.bmp, (LS(Kills) + ToString(worm.kills)),
+                         worm.stats_x * multiplier, renderer.render_res_y - 29, 10);
 
   if (is_replay) {
-    common.font.DrawText(renderer.bmp, worm.settings->name, worm.stats_x * multiplier,
-                         renderer.render_res_y - 15, 7);
+    common.font.DrawString(renderer.bmp, worm.settings->name, worm.stats_x * multiplier,
+                           renderer.render_res_y - 15, 7);
     FillRect(renderer.bmp, worm.stats_x * multiplier, renderer.render_res_y - 7 - 1, 8, 8, 7);
     FillRect(renderer.bmp, (worm.stats_x + 1) * multiplier, renderer.render_res_y - 7, 6, 6,
              worm.settings->color);
-    common.font.DrawText(renderer.bmp, TimeToStringEx(game.cycles * 14, false, true),
-                         95 * multiplier, renderer.render_res_y - 15, 7);
+    common.font.DrawString(renderer.bmp, TimeToStringEx(game.cycles * 14, false, true),
+                           95 * multiplier, renderer.render_res_y - 15, 7);
   }
 
   int const kStateColours[2][2] = {{6, 10}, {79, 4}};
@@ -136,8 +136,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
   switch (game.settings->game_mode) {
     case Settings::kGmKillEmAll:
     case Settings::kGmScalesOfJustice: {
-      common.font.DrawText(renderer.bmp, (LS(Lives) + ToString(worm.lives)),
-                           worm.stats_x * multiplier, renderer.render_res_y - 22, 6);
+      common.font.DrawString(renderer.bmp, (LS(Lives) + ToString(worm.lives)),
+                             worm.stats_x * multiplier, renderer.render_res_y - 22, 6);
     } break;
 
     case Settings::kGmHoldazone: {
@@ -148,9 +148,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
 
       int color = kStateColours[game.holdazone.holder_idx != worm.index][state];
 
-      common.font.DrawText(renderer.bmp, TimeToString(worm.timer), 5 * multiplier,
-                           106 * multiplier + 84 * worm.index * multiplier,
-                           renderer.render_res_y - 39, color);
+      common.font.DrawString(renderer.bmp, TimeToString(worm.timer), 5 * multiplier,
+                             106 * multiplier + 84 * worm.index * multiplier,
+                             renderer.render_res_y - 39, color);
     } break;
 
     case Settings::kGmGameOfTag: {
@@ -161,9 +161,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
 
       int color = kStateColours[game.last_killed_idx != worm.index][state];
 
-      common.font.DrawText(renderer.bmp, TimeToString(worm.timer), 5 * multiplier,
-                           106 * multiplier + 84 * worm.index * multiplier,
-                           renderer.render_res_y - 39, color);
+      common.font.DrawString(renderer.bmp, TimeToString(worm.timer), 5 * multiplier,
+                             106 * multiplier + 84 * worm.index * multiplier,
+                             renderer.render_res_y - 39, color);
     } break;
   }
 
@@ -202,8 +202,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
     }
 
     if (!worm.visible && worm.killed_timer <= 0 && !worm.ready) {
-      common.font.DrawText(renderer.bmp, LS(PressFire), rect.CenterX() - 30, 76, 0);
-      common.font.DrawText(renderer.bmp, LS(PressFire), rect.CenterX() - 31, 75, 50);
+      common.font.DrawString(renderer.bmp, LS(PressFire), rect.CenterX() - 30, 76, 0);
+      common.font.DrawString(renderer.bmp, LS(PressFire), rect.CenterX() - 31, 75, 50);
 
       if (game.settings->allow_viewing_spawn_point && worm.Pressed(Worm::kChange)) {
         int temp_x = Ftoi(worm.pos.x) - 7 + offs.x;
@@ -217,8 +217,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
 
     if (banner_y > -8 && worm.health <= 0) {
       if (game.settings->game_mode == Settings::kGmGameOfTag && game.got_changed) {
-        common.font.DrawText(renderer.bmp, LS(YoureIt), rect.x1 + 3, banner_y + 1, 0);
-        common.font.DrawText(renderer.bmp, LS(YoureIt), rect.x1 + 2, banner_y, 50);
+        common.font.DrawString(renderer.bmp, LS(YoureIt), rect.x1 + 3, banner_y + 1, 0);
+        common.font.DrawString(renderer.bmp, LS(YoureIt), rect.x1 + 2, banner_y, 50);
       }
     }
 
@@ -228,12 +228,12 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState state, bool is_rep
       if (v != this && other_worm.health <= 0 && v->banner_y > -8) {
         if (other_worm.last_killed_by_idx == worm.index) {
           std::string msg(LS(KilledMsg) + other_worm.settings->name);
-          common.font.DrawText(renderer.bmp, msg, rect.x1 + 3, v->banner_y + 1, 0);
-          common.font.DrawText(renderer.bmp, msg, rect.x1 + 2, v->banner_y, 50);
+          common.font.DrawString(renderer.bmp, msg, rect.x1 + 3, v->banner_y + 1, 0);
+          common.font.DrawString(renderer.bmp, msg, rect.x1 + 2, v->banner_y, 50);
         } else {
           std::string msg(other_worm.settings->name + LS(CommittedSuicideMsg));
-          common.font.DrawText(renderer.bmp, msg, rect.x1 + 3, v->banner_y + 1, 0);
-          common.font.DrawText(renderer.bmp, msg, rect.x1 + 2, v->banner_y, 50);
+          common.font.DrawString(renderer.bmp, msg, rect.x1 + 3, v->banner_y + 1, 0);
+          common.font.DrawString(renderer.bmp, msg, rect.x1 + 2, v->banner_y, 50);
         }
       }
     }

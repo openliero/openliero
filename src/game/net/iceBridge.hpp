@@ -6,7 +6,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 using BridgeSocket = SOCKET;
-static constexpr BridgeSocket BRIDGE_INVALID = INVALID_SOCKET;
+static constexpr BridgeSocket kBridgeInvalid = INVALID_SOCKET;
 #else
 #include <netinet/in.h>
 using BridgeSocket = int;
@@ -32,7 +32,7 @@ struct IceBridge {
   IceBridge& operator=(const IceBridge&) = delete;
 
   // Create the bridge socket pair and wire up the IceAgent's onRecv callback.
-  // Returns the ENet-side socket fd, or BRIDGE_INVALID on error.
+  // Returns the ENet-side socket fd, or kBridgeInvalid on error.
   BridgeSocket Create(IceAgent& agent);
 
   // Poll: read outgoing ENet data from bridge socket → juice_send().

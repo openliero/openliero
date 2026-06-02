@@ -54,8 +54,8 @@ unsigned char CodepointToFontByte(char32_t cp) {
 
 }  // namespace
 
-void Font::DrawText(Bitmap& scr, char const* str, std::size_t len, int x, int y, int color,
-                    int size) {
+void Font::DrawString(Bitmap& scr, char const* str, std::size_t len, int x, int y, int color,
+                      int size) {
   int org_x = x;
 
   for (std::size_t i = 0; i < len;) {
@@ -80,7 +80,7 @@ void Font::DrawText(Bitmap& scr, char const* str, std::size_t len, int x, int y,
 
 void Font::DrawFramedText(Bitmap& scr, std::string const& text, int x, int y, int color) {
   DrawRoundedBox(scr, x, y, 0, 7, GetDims(text));
-  DrawText(scr, text, x + 2, y + 1, color);
+  DrawString(scr, text, x + 2, y + 1, color);
 }
 
 int Font::GetDims(char const* str, std::size_t len, int* height) {

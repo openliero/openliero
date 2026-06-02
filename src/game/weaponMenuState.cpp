@@ -113,8 +113,8 @@ void WeaponMenuState::Draw() {
   DrawRoundedBox(gfx->play_renderer.bmp, 179, 20, 0, 7, common.font.GetDims(LS(Weapon)));
   DrawRoundedBox(gfx->play_renderer.bmp, 249, 20, 0, 7, common.font.GetDims(LS(Availability)));
 
-  common.font.DrawText(gfx->play_renderer.bmp, LS(Weapon), 181, 21, 50);
-  common.font.DrawText(gfx->play_renderer.bmp, LS(Availability), 251, 21, 50);
+  common.font.DrawString(gfx->play_renderer.bmp, LS(Weapon), 181, 21, 50);
+  common.font.DrawString(gfx->play_renderer.bmp, LS(Availability), 251, 21, 50);
 
   weaponMenu_->Draw(common, gfx->play_renderer, false);
 }

@@ -14,10 +14,10 @@ void MenuItem::Draw(Common& common, Renderer& renderer, int x, int y, bool selec
     if (has_value)
       DrawRoundedBox(renderer.bmp, x + value_offset_x - (value_wid >> 1), y, 0, 7, value_wid);
   } else {
-    common.font.DrawText(renderer.bmp, string, x + 3, y + 2, 0);
+    common.font.DrawString(renderer.bmp, string, x + 3, y + 2, 0);
     if (has_value)
-      common.font.DrawText(renderer.bmp, value, x + value_offset_x - (value_wid >> 1) + 3, y + 2,
-                           0);
+      common.font.DrawString(renderer.bmp, value, x + value_offset_x - (value_wid >> 1) + 3, y + 2,
+                             0);
   }
 
   PalIdx c;
@@ -29,7 +29,8 @@ void MenuItem::Draw(Common& common, Renderer& renderer, int x, int y, bool selec
   else
     c = color;
 
-  common.font.DrawText(renderer.bmp, string, x + 2, y + 1, c);
+  common.font.DrawString(renderer.bmp, string, x + 2, y + 1, c);
   if (has_value)
-    common.font.DrawText(renderer.bmp, value, x + value_offset_x - (value_wid >> 1) + 2, y + 1, c);
+    common.font.DrawString(renderer.bmp, value, x + value_offset_x - (value_wid >> 1) + 2, y + 1,
+                           c);
 }

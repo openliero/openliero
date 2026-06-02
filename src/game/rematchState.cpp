@@ -173,7 +173,7 @@ void RematchState::Draw() {
   // Title
   std::string title = "REMATCH";
   int tw = font.GetDims(title);
-  font.DrawText(gfx->play_renderer.bmp, title, cx - tw / 2, y, 50);
+  font.DrawString(gfx->play_renderer.bmp, title, cx - tw / 2, y, 50);
   y += 14;
 
   // Score summary from last game
@@ -184,7 +184,7 @@ void RematchState::Draw() {
       std::string score = w0->settings->name + "  " + std::to_string(w0->kills) + " - " +
                           std::to_string(w1->kills) + "  " + w1->settings->name;
       int sw = font.GetDims(score);
-      font.DrawText(gfx->play_renderer.bmp, score, cx - sw / 2, y, 7);
+      font.DrawString(gfx->play_renderer.bmp, score, cx - sw / 2, y, 7);
     }
     y += 14;
   }
@@ -201,24 +201,24 @@ void RematchState::Draw() {
     // Draw local player status
     std::string local_line = you + ":";
     int llw = font.GetDims(local_line);
-    font.DrawText(gfx->play_renderer.bmp, local_line, cx - llw / 2 - 10, y, 7);
+    font.DrawString(gfx->play_renderer.bmp, local_line, cx - llw / 2 - 10, y, 7);
     // Draw indicator after text
     int local_ind_x = cx - llw / 2 - 10 + llw + 4;
     if (local_ready)
-      font.DrawText(gfx->play_renderer.bmp, "READY", local_ind_x, y, 63);
+      font.DrawString(gfx->play_renderer.bmp, "READY", local_ind_x, y, 63);
     else
-      font.DrawText(gfx->play_renderer.bmp, "X", local_ind_x, y, 18);
+      font.DrawString(gfx->play_renderer.bmp, "X", local_ind_x, y, 18);
     y += 10;
 
     // Draw remote player status
     std::string remote_line = peer + ":";
     int rlw = font.GetDims(remote_line);
-    font.DrawText(gfx->play_renderer.bmp, remote_line, cx - rlw / 2 - 10, y, 7);
+    font.DrawString(gfx->play_renderer.bmp, remote_line, cx - rlw / 2 - 10, y, 7);
     int remote_ind_x = cx - rlw / 2 - 10 + rlw + 4;
     if (remote_ready)
-      font.DrawText(gfx->play_renderer.bmp, "READY", remote_ind_x, y, 63);
+      font.DrawString(gfx->play_renderer.bmp, "READY", remote_ind_x, y, 63);
     else
-      font.DrawText(gfx->play_renderer.bmp, "X", remote_ind_x, y, 18);
+      font.DrawString(gfx->play_renderer.bmp, "X", remote_ind_x, y, 18);
     y += 14;
   }
 

@@ -128,7 +128,7 @@ void LevelSelectorState::DrawExtra() {
 
   int wid = common.font.GetDims(title);
   DrawRoundedBox(gfx->play_renderer.bmp, 178, 20, 0, 7, wid);
-  common.font.DrawText(gfx->play_renderer.bmp, title, 180, 21, 50);
+  common.font.DrawString(gfx->play_renderer.bmp, title, 180, 21, 50);
 }
 
 // --- ReplaySelectorState ---

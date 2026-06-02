@@ -15,7 +15,7 @@ struct Font {
 
   Font() : chars(250) {}
 
-  void DrawText(Bitmap& scr, char const* str, std::size_t len, int x, int y, int color, int size);
+  void DrawString(Bitmap& scr, char const* str, std::size_t len, int x, int y, int color, int size);
   int GetDims(char const* str, std::size_t len, int* height = 0);
   void DrawChar(Bitmap& scr, unsigned char ch, int x, int y, int color, int size);
 
@@ -25,7 +25,7 @@ struct Font {
 
   void DrawCenteredText(Bitmap& scr, std::string const& str, int x, int y, int color, int size) {
     int len = GetDims(str) * size;
-    DrawText(scr, str.data(), str.size(), x - (len / 2), y, color, size);
+    DrawString(scr, str.data(), str.size(), x - (len / 2), y, color, size);
   }
 
   void DrawCenteredText(Bitmap& scr, std::string const& str, int x, int y, int color) {
@@ -35,19 +35,19 @@ struct Font {
   // draws text with a simple shadow underneath it, so even text that would blend into the
   // background can be displayed
   void DrawShadowedText(Bitmap& scr, std::string const& str, int x, int y, int color) {
-    DrawText(scr, str, x + 1, y + 1, color / 2);
-    DrawText(scr, str, x, y, color);
+    DrawString(scr, str, x + 1, y + 1, color / 2);
+    DrawString(scr, str, x, y, color);
   }
 
-  void DrawText(Bitmap& scr, char const* str, std::size_t len, int x, int y, int color) {
-    DrawText(scr, str, len, x, y, color, 1);
+  void DrawString(Bitmap& scr, char const* str, std::size_t len, int x, int y, int color) {
+    DrawString(scr, str, len, x, y, color, 1);
   }
 
-  void DrawText(Bitmap& scr, std::string const& str, int x, int y, int color) {
-    DrawText(scr, str.data(), str.size(), x, y, color, 1);
+  void DrawString(Bitmap& scr, std::string const& str, int x, int y, int color) {
+    DrawString(scr, str.data(), str.size(), x, y, color, 1);
   }
 
-  void DrawText(Bitmap& scr, TextCell const& str, int x, int y, int color) {
+  void DrawString(Bitmap& scr, TextCell const& str, int x, int y, int color) {
     if (str.buffer.empty()) return;
 
     if (str.placement != TextCell::kLeft) {
@@ -59,7 +59,8 @@ struct Font {
         x -= w;
     }
 
-    DrawText(scr, reinterpret_cast<char const*>(&str.buffer[0]), str.buffer.size(), x, y, color, 1);
+    DrawString(scr, reinterpret_cast<char const*>(&str.buffer[0]), str.buffer.size(), x, y, color,
+               1);
   }
 
   int GetDims(std::string const& str, int* height = 0) {

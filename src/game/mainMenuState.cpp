@@ -95,7 +95,7 @@ void MainMenuState::Enter() {
   gfx->Process();
 
   FillRect(gfx->play_renderer.bmp, 0, 151, 160, 7, 0);
-  common.font.DrawText(gfx->play_renderer.bmp, LS(Copyright2), 2, 152, 19);
+  common.font.DrawString(gfx->play_renderer.bmp, LS(Copyright2), 2, 152, 19);
 
   if (gfx->controller->Running()) {
     gfx->main_menu.SetVisibility(MainMenu::kMaResumeGame, true);

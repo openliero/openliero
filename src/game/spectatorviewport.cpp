@@ -82,25 +82,25 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
                 ammo_bar_width, ammo_bar_width / 10 + 245);
 
       if ((game.cycles % 20) > 10 && worm.visible) {
-        common.font.DrawText(renderer.bmp, LS(Reloading), offset_x + worm.stats_x * multiplier, 164,
-                             50);
+        common.font.DrawString(renderer.bmp, LS(Reloading), offset_x + worm.stats_x * multiplier,
+                               164, 50);
       }
     }
 
-    common.font.DrawText(renderer.bmp, (LS(Kills) + ToString(worm.kills)),
-                         offset_x + worm.stats_x * multiplier, renderer.render_res_y - 29, 10);
+    common.font.DrawString(renderer.bmp, (LS(Kills) + ToString(worm.kills)),
+                           offset_x + worm.stats_x * multiplier, renderer.render_res_y - 29, 10);
 
     // always display player names, color and time in spectator view
-    common.font.DrawText(renderer.bmp, worm.settings->name, offset_x + worm.stats_x * multiplier,
-                         renderer.render_res_y - 15, 7);
+    common.font.DrawString(renderer.bmp, worm.settings->name, offset_x + worm.stats_x * multiplier,
+                           renderer.render_res_y - 15, 7);
     FillRect(renderer.bmp, offset_x + worm.stats_x * multiplier - 1, renderer.render_res_y - 7 - 1,
              8, 8, 7);
     FillRect(renderer.bmp, offset_x + worm.stats_x * multiplier, renderer.render_res_y - 7, 6, 6,
              worm.settings->color);
     // time
     // FIXME: only draw this once, not once per worm
-    common.font.DrawText(renderer.bmp, TimeToStringEx(game.cycles * 14, false, true), center_x - 15,
-                         renderer.render_res_y - 15, 7);
+    common.font.DrawString(renderer.bmp, TimeToStringEx(game.cycles * 14, false, true),
+                           center_x - 15, renderer.render_res_y - 15, 7);
 
     // draw available/selected weapons
     if (state == kStateGame) {
@@ -115,11 +115,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
           }
         }
         if (worm.current_weapon == i) {
-          common.font.DrawText(renderer.bmp, worm.weapons[i].type->name, offset_weapon_list_x,
-                               renderer.render_res_y - 40 + i * 8, 187);
+          common.font.DrawString(renderer.bmp, worm.weapons[i].type->name, offset_weapon_list_x,
+                                 renderer.render_res_y - 40 + i * 8, 187);
         } else {
-          common.font.DrawText(renderer.bmp, worm.weapons[i].type->name, offset_weapon_list_x,
-                               renderer.render_res_y - 40 + i * 8, 185);
+          common.font.DrawString(renderer.bmp, worm.weapons[i].type->name, offset_weapon_list_x,
+                                 renderer.render_res_y - 40 + i * 8, 185);
         }
       }
     }
@@ -129,8 +129,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     switch (game.settings->game_mode) {
       case Settings::kGmKillEmAll:
       case Settings::kGmScalesOfJustice: {
-        common.font.DrawText(renderer.bmp, (LS(Lives) + ToString(worm.lives)),
-                             offset_x + worm.stats_x * multiplier, renderer.render_res_y - 22, 6);
+        common.font.DrawString(renderer.bmp, (LS(Lives) + ToString(worm.lives)),
+                               offset_x + worm.stats_x * multiplier, renderer.render_res_y - 22, 6);
       } break;
 
       case Settings::kGmHoldazone: {
@@ -141,8 +141,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
 
         int color = kStateColours[game.holdazone.holder_idx != worm.index][state];
 
-        common.font.DrawText(renderer.bmp, TimeToString(worm.timer), 5, 106 + 84 * worm.index,
-                             renderer.render_res_y - 39, color);
+        common.font.DrawString(renderer.bmp, TimeToString(worm.timer), 5, 106 + 84 * worm.index,
+                               renderer.render_res_y - 39, color);
       } break;
 
       case Settings::kGmGameOfTag: {
@@ -153,8 +153,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
 
         int color = kStateColours[game.last_killed_idx != worm.index][state];
 
-        common.font.DrawText(renderer.bmp, TimeToString(worm.timer), 5, 106 + 84 * worm.index,
-                             renderer.render_res_y - 39, color);
+        common.font.DrawString(renderer.bmp, TimeToString(worm.timer), 5, 106 + 84 * worm.index,
+                               renderer.render_res_y - 39, color);
       } break;
     }
   }
@@ -199,8 +199,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
 
     if (banner_y > -8 && worm.health <= 0) {
       if (game.settings->game_mode == Settings::kGmGameOfTag && game.got_changed) {
-        common.font.DrawText(renderer.bmp, LS(YoureIt), rect.x1 + 3, banner_y + 1, 0);
-        common.font.DrawText(renderer.bmp, LS(YoureIt), rect.x1 + 2, banner_y, 50);
+        common.font.DrawString(renderer.bmp, LS(YoureIt), rect.x1 + 3, banner_y + 1, 0);
+        common.font.DrawString(renderer.bmp, LS(YoureIt), rect.x1 + 2, banner_y, 50);
       }
     }
   }
@@ -209,13 +209,13 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     if (worm.health <= 0 && banner_y > -8) {
       if (worm.last_killed_by_idx == worm.index) {
         std::string msg(worm.settings->name + LS(CommittedSuicideMsg));
-        common.font.DrawText(renderer.bmp, msg, rect.x1 + 3, banner_y + 1, 0);
-        common.font.DrawText(renderer.bmp, msg, rect.x1 + 2, banner_y, 50);
+        common.font.DrawString(renderer.bmp, msg, rect.x1 + 3, banner_y + 1, 0);
+        common.font.DrawString(renderer.bmp, msg, rect.x1 + 2, banner_y, 50);
       } else {
         std::string msg(game.worms[worm.last_killed_by_idx]->settings->name + " killed " +
                         worm.settings->name);
-        common.font.DrawText(renderer.bmp, msg, rect.x1 + 3, banner_y + 1, 0);
-        common.font.DrawText(renderer.bmp, msg, rect.x1 + 2, banner_y, 50);
+        common.font.DrawString(renderer.bmp, msg, rect.x1 + 3, banner_y + 1, 0);
+        common.font.DrawString(renderer.bmp, msg, rect.x1 + 2, banner_y, 50);
       }
     }
   }

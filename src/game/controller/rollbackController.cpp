@@ -1124,7 +1124,7 @@ void RollbackController::Draw(Renderer& renderer, bool use_spectator_viewports) 
     Font& font = game.common->font;
     char buf[16];
     std::snprintf(buf, sizeof(buf), "RB:%u", lastTickResimFrames_);
-    font.DrawText(renderer.bmp, buf, 2, renderer.render_res_y - 9, 50);
+    font.DrawString(renderer.bmp, buf, 2, renderer.render_res_y - 9, 50);
   }
 
   if (IsPaused()) {
@@ -1141,18 +1141,18 @@ void RollbackController::Draw(Renderer& renderer, bool use_spectator_viewports) 
     if (localPaused_) {
       std::string title = "GAME PAUSED";
       int tw = font.GetDims(title);
-      font.DrawText(renderer.bmp, title, cx - tw / 2, cy, 50);
+      font.DrawString(renderer.bmp, title, cx - tw / 2, cy, 50);
 
       pauseMenu_.Place(cx, cy + 16);
       pauseMenu_.Draw(common, renderer, false);
     } else {
       std::string title = "PAUSED BY PEER";
       int tw = font.GetDims(title);
-      font.DrawText(renderer.bmp, title, cx - tw / 2, cy, 50);
+      font.DrawString(renderer.bmp, title, cx - tw / 2, cy, 50);
 
       std::string hint = "PRESS ESC TO DISCONNECT";
       int hw = font.GetDims(hint);
-      font.DrawText(renderer.bmp, hint, cx - hw / 2, cy + 16, 6);
+      font.DrawString(renderer.bmp, hint, cx - hw / 2, cy + 16, 6);
     }
   }
 }
