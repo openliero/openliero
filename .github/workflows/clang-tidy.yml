@@ -2,15 +2,10 @@
 
 name: Clang-Tidy
 
-# TEMPORARILY DISABLED for the clang flag-day window. PR1 reformats
-# every line in src/, which made diff-only clang-tidy gating equivalent
-# to a tree-wide run — exposing the entire backlog of pre-existing
-# tidy violations that diff-only gating had been hiding. PR3 (the
-# "remaining tidy fixes" PR in docs/clang-flag-day.md) will fix those
-# violations and re-enable the workflow as tree-wide blocking.
-#
-# Manual runs still possible via `workflow_dispatch`.
+# Tree-wide gating: runs clang-tidy across every TU in compile_commands.json.
+# Re-enabled at the end of the clang flag-day window (PR3).
 on:  # yamllint disable-line rule:truthy
+  pull_request:
   workflow_dispatch:
 
 env:
@@ -35,6 +30,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang-tidy \
+            jq \
             autoconf \
             autoconf-archive \
             automake \
@@ -62,7 +58,12 @@ jobs:
             libdbus-1-dev \
             libudev-dev \
             libwayland-dev \
-            libdecor-0-dev
+            libdecor-0-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libswresample-dev \
+            libswscale-dev
 
       - name: Get cmake/ninja
         uses: lukka/get-cmake@latest
@@ -74,15 +75,19 @@ jobs:
           vcpkgConfigurationJsonGlob: 'vcpkg-configuration.json'
           appendedCacheKey: 'sdl3-v2'
 
+      # Configure with the tool gates ON so tidy sees src/video_tool/ and
+      # src/tc_tool/. linux-x64-ci's condition guard requires CI=true.
       - name: Configure
-        run: cmake --preset linux-x64-ci -DOPENLIERO_BUILD_TESTS=ON
+        run: |
+          cmake --preset linux-x64-ci \
+            -DOPENLIERO_BUILD_TESTS=ON \
+            -DOPENLIERO_BUILD_VIDEOTOOL=ON \
+            -DOPENLIERO_BUILD_TCTOOL=ON
 
       # Build the game target so any source files generated mid-build
       # (e.g. via add_custom_command) exist before clang-tidy parses TUs.
       - name: Build (prime generated sources)
         run: cmake --build build/linux-x64-ci --config Release --target game
 
-      - name: Run clang-tidy on PR diff
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: ./scripts/clang-tidy-diff.sh build/linux-x64-ci "$BASE_SHA"
+      - name: Run clang-tidy tree-wide
+        run: ./scripts/clang-tidy-all.sh build/linux-x64-ci
