@@ -54,7 +54,11 @@ void SfxFreeSound(sfx_sound* snd) { delete snd; }
 
 std::vector<int16_t>& SfxSoundData(sfx_sound* snd) { return snd->samples; }
 
-#define INACTIVE_FLAGS (-1)
+// Unsigned-typed: the comparisons against `channel::flags` (a uint32_t) go
+// through std::cmp_equal, which is signedness-aware — a signed -1 would
+// compare unequal to the unsigned 0xFFFFFFFF stored in `flags` and silently
+// leave every channel "active" with a null `sound`.
+#define INACTIVE_FLAGS 0xFFFFFFFFu
 #define MK_HANDLE(num, idx) ((uint32)(((num) << 8) + (idx)))
 #define CHECK_HANDLE(h) (((self)->channel_states[(h) & 0xff].id == (h)) ? ((h) & 0xff) : -1)
 
@@ -180,7 +184,7 @@ void SfxMixerStop(sfx_mixer* self, void* h) {
   int const kCh = FindChannel(self, h);
   if (kCh < 0) return;
 
-  self->channel_states[kCh].flags = -1;
+  self->channel_states[kCh].flags = INACTIVE_FLAGS;
 }
 
 void* SfxMixerAdd(sfx_mixer* self, sfx_sound* snd, uint32_t time, void* h, uint32_t flags) {
