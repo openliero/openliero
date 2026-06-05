@@ -2,8 +2,8 @@
 // leading underscore is mandatory — it's the macro spelling MSVC
 // looks for. NOLINT keeps clang-tidy's macro-naming rule from
 // stripping the underscore.
-// NOLINTNEXTLINE(readability-identifier-naming, bugprone-reserved-identifier)
-#define USE_MATH_DEFINES
+// NOLINTNEXTLINE(readability-identifier-naming, bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp)
+#define _USE_MATH_DEFINES
 #include "predictive_ai.hpp"
 #include <algorithm>
 #include <cmath>
