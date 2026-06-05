@@ -276,8 +276,8 @@ static inline bool DotOrDotDot(char const* name) {
 DirectoryListing::DirectoryListing(std::string const& dir) {
   char const* dir_path = dir.empty() ? "." : dir.c_str();
 
-  BOOST_HANDLE handle = nullptr;
-  BOOST_SYSTEM_DIRECTORY_TYPE scratch = nullptr;
+  BOOST_HANDLE handle{};
+  BOOST_SYSTEM_DIRECTORY_TYPE scratch{};
   FilenameResult name;  // initialization quiets compiler warnings
 
   if (!dir_path[0])

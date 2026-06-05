@@ -86,6 +86,16 @@
 #   `goto fail` for the TGA reader's error-unwind chain.
 # * concurrency-mt-unsafe: flags `localtime`, `strerror`, etc. We are
 #   single-threaded outside the AI thread pool, which is documented.
+# * modernize-use-std-print: requires C++23 `<print>` / `std::println`,
+#   which the linux-x64-ci preset's local GCC has but CI's GCC 13 and
+#   the macOS deployment target (pre-13.3 `std::format` runtime) do not.
+#   Rewriting `printf` to `std::println` breaks the build on those
+#   toolchains.
+# * cppcoreguidelines-init-variables: auto-adds `= nullptr` to any
+#   uninitialised variable, including platform-specific struct types
+#   inside `#if _WIN32` blocks (e.g. `WIN32_FIND_DATAA scratch`) which
+#   the local linux preset never compiles. False positives are
+#   irrecoverable without per-platform manual review.
 Checks: "*,\
   -google-readability-todo,\
   -altera-*,\
@@ -93,6 +103,8 @@ Checks: "*,\
   -boost-*,\
   -clang-analyzer-*,\
   -concurrency-mt-unsafe,\
+  -cppcoreguidelines-init-variables,\
+  -modernize-use-std-print,\
   -fuchsia-*,\
   -llvm-header-guard,\
   -llvm-include-order,\

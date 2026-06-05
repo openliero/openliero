@@ -20,7 +20,7 @@ struct Viewport;
 struct Worm;
 struct Renderer;
 
-using GameState = enum {
+enum GameState {
   kStateInitial,
   kStateWeaponSelection,
   kStateGame,

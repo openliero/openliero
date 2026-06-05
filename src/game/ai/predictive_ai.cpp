@@ -9,8 +9,8 @@
 #include <cmath>
 
 #include <cfloat>
+#include <cstdio>
 #include <limits>
-#include <print>
 #include <sstream>
 #include "../game.hpp"
 #include "../gfx/blit.hpp"
@@ -813,7 +813,7 @@ TransModel::TransModel(Weights& weights, bool /*testing*/) {
     auto& v = trans[i];
     double const kSum = std::accumulate(v, v + TransModel::kFreeStates, 0.0);
 
-    if (kSum < 0.999 || kSum > 1.0001) std::println("{}: {:f}", i, kSum);
+    if (kSum < 0.999 || kSum > 1.0001) std::printf("%d: %f\n", i, kSum);
   }
 }
 
