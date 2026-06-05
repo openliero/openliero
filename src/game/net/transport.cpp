@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <print>
 
 #define ENET_IMPLEMENTATION
 #include <enet.h>
@@ -274,7 +273,8 @@ bool NetTransport::Poll() {
             }
             uint64_t const kTotal = cnt_input + cnt_batch + cnt_checksum + cnt_other;
             if (kTotal > 0 && kTotal % 140 == 0) {
-              std::println(stderr, "[transport rx] input={} batch={} checksum={} other={}",
+              std::fprintf(stderr,
+                           "[transport rx] input=%llu batch=%llu checksum=%llu other=%llu\n",
                            static_cast<unsigned long long>(cnt_input),
                            static_cast<unsigned long long>(cnt_batch),
                            static_cast<unsigned long long>(cnt_checksum),
@@ -318,9 +318,9 @@ bool NetTransport::Poll() {
                   // hard to attribute to a version mismatch. Surface
                   // the actual cause so mixed-version test setups are
                   // diagnosable immediately.
-                  std::println(stderr,
-                               "[transport] handshake protocol version mismatch: peer={} local={} "
-                               "— peers must be on the same build",
+                  std::fprintf(stderr,
+                               "[transport] handshake protocol version mismatch: peer=%u local=%u "
+                               "— peers must be on the same build\n",
                                static_cast<unsigned>(data[1]),
                                static_cast<unsigned>(kProtocolVersion));
                   break;

@@ -1,6 +1,6 @@
 #include "replay_to_video.hpp"
 
-#include <print>
+#include <cstdio>
 #include <string>
 #include "game/filesystem.hpp"
 #include "game/game.hpp"
@@ -142,7 +142,7 @@ void ReplayToVideo(std::shared_ptr<Common> const& common, bool spectator,
     }
 
     if ((f % (70 * 5)) == 0) {
-      std::print("\r{}", TimeToStringFrames(f));
+      std::printf("\r%s", TimeToStringFrames(f));
       fflush(stdout);  // NOLINT(cert-err33-c) — progress indicator on stdout; failures are
                        // non-fatal here.
     }

@@ -4,7 +4,6 @@
 #include <enet.h>
 #include <cstdio>
 #include <cstring>
-#include <print>
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
@@ -50,7 +49,7 @@ bool SignalingClient::Connect(const std::string& server_addr, uint16_t server_po
 
   ENetSocket const kSock = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
   if (kSock == ENET_SOCKET_NULL) {
-    std::println(stderr, "[signaling] ERROR: failed to create socket");
+    std::fprintf(stderr, "[signaling] ERROR: failed to create socket\n");
     return false;
   }
 
@@ -64,7 +63,7 @@ bool SignalingClient::Connect(const std::string& server_addr, uint16_t server_po
   ENetAddress resolved = {};
   resolved.port = server_port;
   if (enet_address_set_host(&resolved, server_addr.c_str()) != 0) {
-    std::println(stderr, "[signaling] ERROR: failed to resolve '{}'", server_addr);
+    std::fprintf(stderr, "[signaling] ERROR: failed to resolve '%s'\n", server_addr.c_str());
     enet_socket_destroy(kSock);
     return false;
   }
@@ -317,7 +316,7 @@ void SignalingClient::HandleMessage(const uint8_t* data, size_t len) {
       break;
     }
     case proto::kRoomExpired: {
-      std::println(stderr, "[signaling] room expired");
+      std::fprintf(stderr, "[signaling] room expired\n");
       state_ = kFailed;
       if (on_room_expired) on_room_expired();
       break;
@@ -325,7 +324,7 @@ void SignalingClient::HandleMessage(const uint8_t* data, size_t len) {
     case proto::kError: {
       std::string msg;
       if (len > 2) msg = std::string(reinterpret_cast<const char*>(data) + 2, len - 2);
-      std::println(stderr, "[signaling] ERROR from server: {}", msg);
+      std::fprintf(stderr, "[signaling] ERROR from server: %s\n", msg.c_str());
       state_ = kFailed;
       if (on_error) on_error(msg);
       break;

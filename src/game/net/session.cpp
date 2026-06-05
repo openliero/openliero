@@ -1,10 +1,10 @@
 #include "session.hpp"
 
 #include <miniz.h>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <print>
 
 #include "memoryFs.hpp"
 #include "tcArchive.hpp"
@@ -703,7 +703,7 @@ void MaybeLog(char const* who, uint64_t& counter, uint32_t frame, uint32_t check
   if (!ChecksumLogEnabled()) return;
   ++counter;
   if (counter % 70 == 0) {  // ~1 second at 70 Hz
-    std::println(stderr, "[checksum {}] count={} frame={} value={:08x}", who,
+    std::fprintf(stderr, "[checksum %s] count=%llu frame=%u value=%08x\n", who,
                  static_cast<unsigned long long>(counter), frame, checksum);
   }
 }
@@ -726,7 +726,7 @@ void NetSession::OnChecksum(uint8_t generation, uint32_t frame, uint32_t remote_
     if (checksumBuffer_[kSlot].checksum != remote_checksum) {
       desyncDetected_ = true;
       desyncFrame_ = frame;
-      std::println(stderr, "DESYNC DETECTED at frame {}! local={:08x} remote={:08x}", frame,
+      std::fprintf(stderr, "DESYNC DETECTED at frame %u! local=%08x remote=%08x\n", frame,
                    checksumBuffer_[kSlot].checksum, remote_checksum);
     }
   } else {
@@ -752,7 +752,7 @@ void NetSession::OnLocalChecksum(uint32_t frame, uint32_t checksum) {
       if (pendingRemoteChecksums_[i].checksum != checksum) {
         desyncDetected_ = true;
         desyncFrame_ = frame;
-        std::println(stderr, "DESYNC DETECTED at frame {}! local={:08x} remote={:08x}", frame,
+        std::fprintf(stderr, "DESYNC DETECTED at frame %u! local=%08x remote=%08x\n", frame,
                      checksum, pendingRemoteChecksums_[i].checksum);
       }
       // Remove by swapping with last

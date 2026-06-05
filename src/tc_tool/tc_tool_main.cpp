@@ -3,8 +3,8 @@
 #include "game/filesystem.hpp"
 #include "game/reader.hpp"
 
+#include <cstdio>
 #include <cstring>
-#include <print>
 #include <string>
 #include <vector>
 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) try {
 
   // First positional is the path to the legacy Liero install directory.
   if (r.positional_args.empty()) {
-    std::println("tctool <path-to-tc>");
+    std::printf("tctool <path-to-tc>\n");
     return 0;
   }
   std::string const& exe_path = r.positional_args[0];
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) try {
       ReaderFile exe(exe_reader);
 
       if (exe.Len() >= 135000 && exe.Len() <= 137000) {
-        std::println("Converting {}...", name.name);
+        std::printf("Converting %s...\n", name.name.c_str());
 
         // TODO: Some TCs change the name of the .SND or .CHR for some reason.
         // We could read that name from the exe to make them work.
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) try {
 
         FsNode const kOutNode = r.user_config_node / "TC" / tc_name;
 
-        std::println("Writing to {}...", kOutNode.FullPath());
+        std::printf("Writing to %s...\n", kOutNode.FullPath().c_str());
 
         CommonSave(common, kOutNode.FullPath());
 
@@ -78,12 +78,12 @@ int main(int argc, char* argv[]) try {
   }
 
   if (!found) {
-    std::println("Could not find a suitable LIERO.EXE in {}", exe_path);
+    std::printf("Could not find a suitable LIERO.EXE in %s\n", exe_path.c_str());
   }
 
   return 0;
 } catch (std::exception const& ex) {
-  std::println("EXCEPTION: {}", ex.what());
+  std::printf("EXCEPTION: %s\n", ex.what());
   return 1;
 } catch (...) {  // NOLINT(bugprone-empty-catch) — last-chance handler in main; prevents any non-std
                  // exception from escaping.

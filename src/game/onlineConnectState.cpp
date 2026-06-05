@@ -9,7 +9,6 @@
 
 #include <cstdio>
 #include <memory>
-#include <print>
 #include <string>
 
 using netutil::NowMs;
@@ -18,8 +17,8 @@ OnlineConnectState::OnlineConnectState(NetSession::Role role, std::string room_c
     : role_(role), roomCode_(std::move(room_code)) {}
 
 void OnlineConnectState::Enter() {
-  std::println(stderr, "[online] enter: role={} roomCode='{}'",
-               role_ == NetSession::kHost ? "Host" : "Client", roomCode_);
+  std::fprintf(stderr, "[online] enter: role=%s roomCode='%s'\n",
+               role_ == NetSession::kHost ? "Host" : "Client", roomCode_.c_str());
 
   statusLine1_ = (role_ == NetSession::kHost) ? "CREATING ONLINE ROOM..."
                                               : "JOINING ROOM " + roomCode_ + "...";
@@ -45,7 +44,7 @@ void OnlineConnectState::Enter() {
   };
 
   iceAgent_->on_state_change = [this](IceAgent::State state) {
-    std::println(stderr, "[online] ICE state: {}", static_cast<int>(state));
+    std::fprintf(stderr, "[online] ICE state: %d\n", static_cast<int>(state));
     switch (state) {
       case IceAgent::State::kGathering:
         statusLine2_ = "GATHERING CANDIDATES...";
@@ -80,7 +79,7 @@ void OnlineConnectState::Enter() {
 void OnlineConnectState::StartSignaling() {
   // Wire signaling callbacks
   signaling_.on_room_created = [this](const std::string& code) {
-    std::println(stderr, "[online] onRoomCreated: code={}", code);
+    std::fprintf(stderr, "[online] onRoomCreated: code=%s\n", code.c_str());
     roomCode_ = code;
     statusLine1_ = "ROOM CODE: " + code;
     statusLine2_ = "WAITING FOR PEER...";
@@ -89,7 +88,7 @@ void OnlineConnectState::StartSignaling() {
   };
 
   signaling_.on_peer_joined = [this]() {
-    std::println(stderr, "[online] onPeerJoined");
+    std::fprintf(stderr, "[online] onPeerJoined\n");
     statusLine2_ = "PEER JOINED! EXCHANGING ICE...";
 
     // Now send our ICE credentials and buffered candidates
@@ -99,7 +98,7 @@ void OnlineConnectState::StartSignaling() {
   };
 
   signaling_.on_join_acked = [this]() {
-    std::println(stderr, "[online] join acknowledged");
+    std::fprintf(stderr, "[online] join acknowledged\n");
     statusLine2_ = "JOINED! EXCHANGING ICE...";
 
     // Send our ICE credentials and buffered candidates
@@ -110,7 +109,7 @@ void OnlineConnectState::StartSignaling() {
 
   // ICE callbacks from signaling
   signaling_.on_peer_credentials = [this](const std::string& ufrag, const std::string& pwd) {
-    std::println(stderr, "[online] onPeerCredentials: ufrag={}", ufrag);
+    std::fprintf(stderr, "[online] onPeerCredentials: ufrag=%s\n", ufrag.c_str());
     iceAgent_->SetRemoteCredentials(ufrag, pwd);
   };
 
@@ -127,13 +126,13 @@ void OnlineConnectState::StartSignaling() {
   };
 
   signaling_.on_error = [this](const std::string& msg) {
-    std::println(stderr, "[online] onError: {}", msg);
+    std::fprintf(stderr, "[online] onError: %s\n", msg.c_str());
     statusLine2_ = "ERROR: " + msg;
     cancel_ = true;
   };
 
   signaling_.on_room_expired = [this]() {
-    std::println(stderr, "[online] onRoomExpired");
+    std::fprintf(stderr, "[online] onRoomExpired\n");
     statusLine2_ = "ROOM EXPIRED";
     cancel_ = true;
   };
@@ -204,7 +203,7 @@ bool OnlineConnectState::Update() {
 }
 
 void OnlineConnectState::TransitionToGame() {
-  std::println(stderr, "[online] ICE connected — creating bridge and transitioning to game");
+  std::fprintf(stderr, "[online] ICE connected — creating bridge and transitioning to game\n");
 
   // Disconnect signaling (no longer needed)
   signaling_.Disconnect();
@@ -212,7 +211,7 @@ void OnlineConnectState::TransitionToGame() {
   // Create the loopback bridge
   auto bridge_fd = iceBridge_->Create(*iceAgent_);
   if (bridge_fd == kBridgeInvalid) {
-    std::println(stderr, "[online] ERROR: failed to create ICE bridge");
+    std::fprintf(stderr, "[online] ERROR: failed to create ICE bridge\n");
     statusLine2_ = "BRIDGE CREATION FAILED";
     cancel_ = true;
     return;
@@ -223,7 +222,7 @@ void OnlineConnectState::TransitionToGame() {
   // Create a NetTransport using the bridge socket
   NetTransport transport;
   if (!transport.CreateHostOnBridgeSocket(bridge_fd)) {
-    std::println(stderr, "[online] ERROR: failed to create ENet host on bridge socket");
+    std::fprintf(stderr, "[online] ERROR: failed to create ENet host on bridge socket\n");
     statusLine2_ = "ENET BRIDGE SETUP FAILED";
     cancel_ = true;
     return;

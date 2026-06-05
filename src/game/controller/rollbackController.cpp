@@ -15,7 +15,6 @@
 #include <cstring>
 #include <ctime>
 #include <memory>
-#include <print>
 #include <utility>
 
 // Shared two-player setup for the live and shadow games. Both must
@@ -619,7 +618,7 @@ void RollbackController::StartReplayRecording() {
       shadowReplay_ = std::make_unique<ReplayWriter>(std::move(replayWriterOverride_));
       shadowReplay_->BeginRecord(*shadowGame_);
     } catch (std::runtime_error& e) {
-      std::println(stderr, "[replay] failed to start recording: {}", e.what());
+      std::fprintf(stderr, "[replay] failed to start recording: %s\n", e.what());
       shadowReplay_.reset();
     }
     return;
@@ -664,7 +663,7 @@ void RollbackController::StartReplayRecording() {
     shadowReplay_ = std::make_unique<ReplayWriter>(node.ToWriter());
     shadowReplay_->BeginRecord(*shadowGame_);
   } catch (std::runtime_error& e) {
-    std::println(stderr, "[replay] failed to start recording: {}", e.what());
+    std::fprintf(stderr, "[replay] failed to start recording: %s\n", e.what());
     shadowReplay_.reset();
   }
 }
@@ -709,7 +708,7 @@ void RollbackController::DriveShadow() {
       try {
         shadowReplay_->RecordFrame();
       } catch (std::runtime_error& e) {
-        std::println(stderr, "[replay] aborting recording at frame {}: {}", kF, e.what());
+        std::fprintf(stderr, "[replay] aborting recording at frame %d: %s\n", kF, e.what());
         shadowReplay_.reset();
       }
     }
@@ -722,12 +721,11 @@ void RollbackController::DriveShadow() {
     // surfaces without spamming stderr.
     uint32_t const kShadowChk = WideRollbackChecksum(*shadowGame_);
     if (kShadowChk != slot->checksum && !shadowMismatchLogged_) {
-      std::println(
-          stderr,
-          "[replay shadow] mismatch at frame {}: shadow={:08x} live={:08x} curLocal={:02x} "
-          "curRemote={:02x} slot.localInput={:02x} slot.remoteInput={:02x} shadowRand={:08x}",
-          kF, kShadowChk, slot->checksum, kCurLocal, kCurRemote, slot->local_input,
-          slot->remote_input, shadowGame_->rand.last);
+      std::fprintf(stderr,
+                   "[replay shadow] mismatch at frame %d: shadow=%08x live=%08x curLocal=%02x "
+                   "curRemote=%02x slot.localInput=%02x slot.remoteInput=%02x shadowRand=%08x\n",
+                   kF, kShadowChk, slot->checksum, kCurLocal, kCurRemote, slot->local_input,
+                   slot->remote_input, shadowGame_->rand.last);
       shadowMismatchLogged_ = true;
     }
   }

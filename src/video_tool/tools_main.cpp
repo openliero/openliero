@@ -5,10 +5,10 @@
 #include "game/reader.hpp"
 #include "game/text.hpp"
 
+#include <cstdio>
 #include <ctime>
 #include <exception>
 #include <memory>
-#include <print>
 
 #include "replay_to_video.hpp"
 
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) try {
       if (GetExtension(path.name) == "lrp") {
         auto const& full_path = JoinPath(root, path.name);
         if (Match(full_path, replay_path)) {
-          std::println("Converting {}", full_path);
+          std::printf("Converting %s\n", full_path.c_str());
           ReplayToVideo(kCommon, spectator, full_path, full_path + suffix + ".mp4");
         }
       }
