@@ -3,8 +3,12 @@
 name: Clang-Tidy
 
 # Gating model (post clang flag-day):
-# - pull_request: diff-only via scripts/clang-tidy-diff.sh. Fast (~1-2 min)
-#   and catches any tidy violation a PR introduces on the lines it changes.
+# - pull_request: diff-only via scripts/clang-tidy-diff.sh against
+#   origin/master. Fast (~1-2 min) and catches any tidy violation a PR
+#   introduces on the lines it changes.
+# - push to master: diff-only against the pre-push SHA
+#   (github.event.before). Catches violations introduced by the merge
+#   commit itself, mirrors the PR check, stays fast.
 # - workflow_dispatch: tree-wide via scripts/clang-tidy-all.sh. Run manually
 #   after a clang-tidy version bump or .clang-tidy edit to confirm the whole
 #   tree is still clean.
@@ -14,6 +18,9 @@ name: Clang-Tidy
 #   blocking PRs or burning CI minutes on no-op nights.
 on:  # yamllint disable-line rule:truthy
   pull_request:
+  push:
+    branches:
+      - master
   workflow_dispatch:
   schedule:
     - cron: '17 3 * * *'  # 03:17 UTC daily
@@ -141,8 +148,21 @@ jobs:
         if: github.event_name == 'pull_request' && steps.gate.outputs.skip != 'true'
         run: ./scripts/clang-tidy-diff.sh build/linux-x64-ci
 
+      # Diff against the pre-push SHA. github.event.before is the SHA
+      # master pointed to before this push; HEAD is the new tip. On the
+      # very first push to a freshly-created branch GitHub sets `before`
+      # to 0000... — fall back to HEAD~1 in that case.
+      - name: Run clang-tidy (diff-only on master push)
+        if: github.event_name == 'push' && steps.gate.outputs.skip != 'true'
+        run: |
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            base="HEAD~1"
+          fi
+          ./scripts/clang-tidy-diff.sh build/linux-x64-ci "$base"
+
       - name: Run clang-tidy (tree-wide on dispatch/schedule)
-        if: github.event_name != 'pull_request' && steps.gate.outputs.skip != 'true'
+        if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && steps.gate.outputs.skip != 'true'
         run: ./scripts/clang-tidy-all.sh build/linux-x64-ci
 
       - name: Record last-success SHA (nightly)
