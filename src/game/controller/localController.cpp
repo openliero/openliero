@@ -213,8 +213,8 @@ void LocalController::ChangeState(GameState new_state) {
 
     if (Settings::kExtensions && game.settings->record_replays) {
       try {
-        std::time_t ticks = std::time(nullptr);
-        std::tm* now = std::localtime(&ticks);
+        std::time_t const kTicks = std::time(nullptr);
+        std::tm* now = std::localtime(&kTicks);
 
         char buf[512];
         // NOLINTNEXTLINE(cert-err33-c) — buffer is generous; truncation only on a malformed locale and is non-fatal here.

@@ -2,11 +2,21 @@
 
 name: Clang-Tidy
 
-# Tree-wide gating: runs clang-tidy across every TU in compile_commands.json.
-# Re-enabled at the end of the clang flag-day window (PR3).
+# Gating model (post clang flag-day):
+# - pull_request: diff-only via scripts/clang-tidy-diff.sh. Fast (~1-2 min)
+#   and catches any tidy violation a PR introduces on the lines it changes.
+# - workflow_dispatch: tree-wide via scripts/clang-tidy-all.sh. Run manually
+#   after a clang-tidy version bump or .clang-tidy edit to confirm the whole
+#   tree is still clean.
+# - schedule (nightly): tree-wide, but only if master HEAD has changed since
+#   the last successful nightly run (cached SHA). Drift from tidy version
+#   bumps or upstream header changes still surfaces within 24h without
+#   blocking PRs or burning CI minutes on no-op nights.
 on:  # yamllint disable-line rule:truthy
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'  # 03:17 UTC daily
 
 env:
   SCCACHE_GHA_ENABLED: true
@@ -22,10 +32,44 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      # Nightly fast-path: if HEAD matches the SHA of the last successful
+      # nightly run, skip the whole job. Cache key includes the current
+      # SHA so each successful save lands in a fresh slot; restore-keys
+      # prefix picks the most recent prior save.
+      - name: Restore last-success SHA (nightly)
+        if: github.event_name == 'schedule'
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .last-clang-tidy-success-sha
+          key: clang-tidy-success-${{ github.sha }}
+          restore-keys: |
+            clang-tidy-success-
+
+      - name: Decide whether to run (nightly)
+        if: github.event_name == 'schedule'
+        id: gate
+        run: |
+          if [ -f .last-clang-tidy-success-sha ]; then
+            last=$(cat .last-clang-tidy-success-sha)
+            current=$(git rev-parse HEAD)
+            if [ "$last" = "$current" ]; then
+              echo "No new commits since last successful nightly ($last); skipping."
+              echo "skip=true" >>"$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Last success: $last; current HEAD: $current; running."
+          else
+            echo "No prior success recorded; running."
+          fi
+          echo "skip=false" >>"$GITHUB_OUTPUT"
+
       - name: Setup sccache
+        if: steps.gate.outputs.skip != 'true'
         uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -66,9 +110,11 @@ jobs:
             libswscale-dev
 
       - name: Get cmake/ninja
+        if: steps.gate.outputs.skip != 'true'
         uses: lukka/get-cmake@latest
 
       - name: Setup vcpkg
+        if: steps.gate.outputs.skip != 'true'
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg/vcpkg'
@@ -78,6 +124,7 @@ jobs:
       # Configure with the tool gates ON so tidy sees src/video_tool/ and
       # src/tc_tool/. linux-x64-ci's condition guard requires CI=true.
       - name: Configure
+        if: steps.gate.outputs.skip != 'true'
         run: |
           cmake --preset linux-x64-ci \
             -DOPENLIERO_BUILD_TESTS=ON \
@@ -87,7 +134,24 @@ jobs:
       # Build the game target so any source files generated mid-build
       # (e.g. via add_custom_command) exist before clang-tidy parses TUs.
       - name: Build (prime generated sources)
+        if: steps.gate.outputs.skip != 'true'
         run: cmake --build build/linux-x64-ci --config Release --target game
 
-      - name: Run clang-tidy tree-wide
+      - name: Run clang-tidy (diff-only on PRs)
+        if: github.event_name == 'pull_request' && steps.gate.outputs.skip != 'true'
+        run: ./scripts/clang-tidy-diff.sh build/linux-x64-ci
+
+      - name: Run clang-tidy (tree-wide on dispatch/schedule)
+        if: github.event_name != 'pull_request' && steps.gate.outputs.skip != 'true'
         run: ./scripts/clang-tidy-all.sh build/linux-x64-ci
+
+      - name: Record last-success SHA (nightly)
+        if: github.event_name == 'schedule' && steps.gate.outputs.skip != 'true' && success()
+        run: git rev-parse HEAD > .last-clang-tidy-success-sha
+
+      - name: Save last-success SHA (nightly)
+        if: github.event_name == 'schedule' && steps.gate.outputs.skip != 'true' && success()
+        uses: actions/cache/save@v4
+        with:
+          path: .last-clang-tidy-success-sha
+          key: clang-tidy-success-${{ github.sha }}

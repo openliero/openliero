@@ -633,8 +633,8 @@ void RollbackController::StartReplayRecording() {
   if (!kConfigRoot.imp) return;
 
   try {
-    std::time_t ticks = std::time(nullptr);
-    std::tm* now = std::localtime(&ticks);
+    std::time_t const kTicks = std::time(nullptr);
+    std::tm* now = std::localtime(&kTicks);
     char time_buf[64];
     // NOLINTNEXTLINE(cert-err33-c) — buffer is generous; truncation only on a malformed locale and is non-fatal here.
     std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H.%M.%S", now);

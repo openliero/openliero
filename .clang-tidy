@@ -96,11 +96,19 @@
 #   inside `#if _WIN32` blocks (e.g. `WIN32_FIND_DATAA scratch`) which
 #   the local linux preset never compiles. False positives are
 #   irrecoverable without per-platform manual review.
+# * cert-err33-c: flags every `fprintf`/`printf` whose return value
+#   isn't checked. The codebase uses these as fire-and-forget logging
+#   on stderr (transport, signaling, replay-recording, online-connect,
+#   tc/video tools); the check produces ~25 nuisance hits with no
+#   actionable signal. Genuine "ignored return" bugs (fopen, fclose,
+#   scanf, ...) are caught by the same family check
+#   `bugprone-unused-return-value`, which stays enabled.
 Checks: "*,\
   -google-readability-todo,\
   -altera-*,\
   -abseil-*,\
   -boost-*,\
+  -cert-err33-c,\
   -clang-analyzer-*,\
   -concurrency-mt-unsafe,\
   -cppcoreguidelines-init-variables,\
