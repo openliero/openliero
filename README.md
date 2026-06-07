@@ -86,6 +86,38 @@ before importing. Build provenance can be verified independently with the
 gh attestation verify <artifact-file> --repo openliero/openliero
 ```
 
+## Extracting game data for total conversions
+
+For copyright reasons, this repository does not contain the original Liero sound
+files. Included instead is the original ruleset together with the lierolibre
+sound effects.
+
+To use the original data, or any total conversion, run `tctool` on the game
+data. The examples below assume you are running from inside the extracted
+portable archive, where `portable.txt` causes `tctool` to write the TC into
+the same folder.
+
+### Windows
+
+```powershell
+Invoke-WebRequest https://www.liero.be/download/liero-1.36-bundle.zip -OutFile liero-1.36-bundle.zip
+Expand-Archive -LiteralPath .\liero-1.36-bundle.zip .
+.\tctool.exe liero-1.36-bundle
+Rename-Item .\TC\liero-1.36-bundle "Liero v1.33"
+Remove-Item .\liero-1.36-bundle.zip
+Remove-Item -Recurse .\liero-1.36-bundle
+```
+
+### Linux/macOS
+
+```bash
+curl https://www.liero.be/download/liero-1.36-bundle.zip -O
+unzip liero-1.36-bundle.zip
+./tctool liero-1.36-bundle
+mv TC/liero-1.36-bundle TC/"Liero v1.33"
+rm -rf liero-1.36-bundle.zip liero-1.36-bundle
+```
+
 ## Building
 
 ### Prerequisites
@@ -259,38 +291,6 @@ To git-blame past mechanical reformats, point blame at the ignore list once:
 
 ```bash
 git config blame.ignoreRevsFile .git-blame-ignore-revs
-```
-
-### Extracting game data for total conversions
-
-For copyright reasons, this repository does not contain the original Liero sound
-files. Included instead is the original ruleset together with the lierolibre
-sound effects.
-
-To use the original data, or any total conversion, run `tctool` on the game
-data. The examples below assume you are running from inside the extracted
-portable archive, where `portable.txt` causes `tctool` to write the TC into
-the same folder.
-
-#### Windows
-
-```powershell
-Invoke-WebRequest https://www.liero.be/download/liero-1.36-bundle.zip -OutFile liero-1.36-bundle.zip
-Expand-Archive -LiteralPath .\liero-1.36-bundle.zip .
-.\tctool.exe liero-1.36-bundle
-Rename-Item .\TC\liero-1.36-bundle "Liero v1.33"
-Remove-Item .\liero-1.36-bundle.zip
-Remove-Item -Recurse .\liero-1.36-bundle
-```
-
-#### Linux/macOS
-
-```bash
-curl https://www.liero.be/download/liero-1.36-bundle.zip -O
-unzip liero-1.36-bundle.zip
-./tctool liero-1.36-bundle
-mv TC/liero-1.36-bundle TC/"Liero v1.33"
-rm -rf liero-1.36-bundle.zip liero-1.36-bundle
 ```
 
 ## License
