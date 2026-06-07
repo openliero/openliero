@@ -203,6 +203,64 @@ Options:
 - `--jobs N`, `-j N` — parallel worker threads (default: 16)
 - `--jitter N` — random packet delivery delay of 0-N ticks (default: 0 = instant)
 
+### Linting and formatting
+
+CI runs `clang-format` tree-wide on every PR and blocks merge on any drift,
+plus `clang-tidy` diff-only on PRs and master pushes (with a nightly tree-wide
+sweep). You can run the same checks locally before pushing.
+
+#### clang-format
+
+The clang-format version is **pinned to 22**. Other versions produce subtly
+different output and will fail CI. Install a v22 binary (Homebrew's `llvm`
+formula or [apt.llvm.org](https://apt.llvm.org/)) and either symlink it as
+`clang-format` or export `CLANG_FORMAT=clang-format-22`.
+
+```bash
+# diff-only — what would change on your branch vs origin/master
+scripts/clang-format-diff.sh
+
+# tree-wide — every file under src/ (matches CI)
+scripts/clang-format-all.sh
+```
+
+Matching CMake targets (configure any preset first):
+
+```bash
+cmake --build build/$PRESET --target clang-format       # diff-only
+cmake --build build/$PRESET --target clang-format-all   # tree-wide
+```
+
+#### clang-tidy
+
+Requires a build directory with `compile_commands.json`. The `linux-x64-ci`
+preset is what CI uses; locally any preset works.
+
+```bash
+cmake --preset linux-x64-ci -DOPENLIERO_BUILD_TESTS=ON \
+  -DOPENLIERO_BUILD_VIDEOTOOL=ON -DOPENLIERO_BUILD_TCTOOL=ON
+cmake --build build/linux-x64-ci --target game
+
+# diff-only — fast, mirrors the PR check
+scripts/clang-tidy-diff.sh build/linux-x64-ci
+
+# tree-wide — slow, mirrors the nightly sweep
+scripts/clang-tidy-all.sh build/linux-x64-ci
+```
+
+Matching CMake targets:
+
+```bash
+cmake --build build/linux-x64-ci --target clang-tidy       # diff-only
+cmake --build build/linux-x64-ci --target clang-tidy-all   # tree-wide
+```
+
+To git-blame past mechanical reformats, point blame at the ignore list once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ### Extracting game data for total conversions
 
 For copyright reasons, this repository does not contain the original Liero sound
