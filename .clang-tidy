@@ -181,6 +181,11 @@ Checks: "*,\
   -hicpp-use-nullptr,\
   -hicpp-use-override,\
   -hicpp-vararg"
+# Lint warnings in our own headers (anything under src/) but not in
+# third-party headers (SDL, cereal, vcpkg vendor code, system libs).
+# Without this, tidy only reports warnings whose source location is in
+# the .cpp being analyzed — inline code in headers goes unchecked.
+HeaderFilterRegex: '.*/src/.*\.(h|hpp)$'
 WarningsAsErrors: ''
 CheckOptions:
   - key: 'bugprone-argument-comment.StrictMode'
