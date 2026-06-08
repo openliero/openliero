@@ -79,7 +79,6 @@ cd server && go build -o openliero-relay && go test ./...
 - `data/` — shipped game assets (Profiles, Resources, Setups, TC bundles); installed alongside the binary
 - `tools/cmake/` — preset templates (`PresetTemplates.json`), vcpkg bootstrap, version metadata
 - `packaging/`, `dist/` — platform packaging (icons, Windows AppxManifest, etc.)
-- `docs/ideas/` — design notes; `docs/ideas/multiplayer.md` documents the netplay model
 
 `src/game/metadata.cpp` is generated at configure time by `tools/cmake/metadata.cpp.in` from git — it is `.gitignore`d, never edit it.
 
