@@ -1,6 +1,7 @@
 #pragma once
 
 #include "enumBehavior.hpp"
+#include "menuItem.hpp"
 
 #include <string>
 

@@ -54,7 +54,7 @@ struct StopWorker {};
 
 struct WorkQueue {
   WorkQueue(int thread_count) : queue_mutex(SDL_CreateMutex()), queue_cond(SDL_CreateCondition()) {
-    std::memset(static_cast<void*>(threads), 0, sizeof(threads));
+    threads = {};
     for (int i = 0; i < thread_count; ++i) {
       std::stringstream thread_name;
       thread_name << "ai_" << i;
