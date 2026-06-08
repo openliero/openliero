@@ -307,27 +307,9 @@ just naming.
    and each TU's fix gets applied independently. Result: braces (or
    any other replacement) stack 5–7 deep on the same line.
 
-   Mitigation: run in `-export-fixes` mode, canonicalize the YAML
-   paths with `os.path.normpath`, then apply once with
-   `clang-apply-replacements`:
-   ```bash
-   FIXDIR=$(mktemp -d)
-   run-clang-tidy -p build/linux-x64-ci \
-       -header-filter='.*/src/.*' \
-       -checks='-*,<your-check>' \
-       -export-fixes "$FIXDIR" \
-       -j "$(nproc)" -quiet \
-       'src/.*\.(cpp|cc|cxx)$'
-   python3 -c "
-   import os, re, glob
-   pat = re.compile(r\"(FilePath:\s+')([^']+)(')\")
-   for f in glob.glob('$FIXDIR/*.yaml'):
-       with open(f) as h: s = h.read()
-       n = pat.sub(lambda m: m.group(1)+os.path.normpath(m.group(2))+m.group(3), s)
-       if n != s: open(f, 'w').write(n)
-   "
-   clang-apply-replacements "$FIXDIR"
-   ```
+   Use `scripts/clang-tidy-fix.sh <build-dir> [check-filter]`, which
+   wraps the export-fixes flow with the required path-canonicalisation
+   pass before `clang-apply-replacements` runs.
 
 2. **Per-preset blind spots.** `compile_commands.json` only contains
    TUs that the configured preset compiles. linux-x64-ci with default
