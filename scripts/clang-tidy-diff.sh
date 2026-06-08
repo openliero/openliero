@@ -70,7 +70,10 @@ set -o pipefail
 
 echo "$output"
 
-if echo "$output" | grep -E "^[^[:space:]]+:[0-9]+:[0-9]+: (warning|error):" >/dev/null; then
+# Only fail on diagnostics from our own source tree; ignore third-party
+# headers (vcpkg_installed, build-dir generated files, etc.).
+if echo "$output" | grep -E "^[^[:space:]]+:[0-9]+:[0-9]+: (warning|error):" \
+	| grep -vE "vcpkg_installed/|/build/" >/dev/null; then
 	echo "clang-tidy reported issues on changed lines" >&2
 	exit 1
 fi

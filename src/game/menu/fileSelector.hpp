@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 #include "../common.hpp"
+#include "../gfx.hpp"
+#include "../mixer/player.hpp"
 #include "../text.hpp"
 #include "../worm.hpp"
 #include "menu.hpp"

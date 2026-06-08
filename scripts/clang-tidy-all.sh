@@ -55,7 +55,8 @@ log="$tmpdir/clang-tidy.log"
 printf '%s\n' "${files[@]}" \
 	| xargs -P "$jobs" -I{} bash -c '
 		clang-tidy -p "$0" --quiet --extra-arg=-U__clang_analyzer__ "$1" 2>&1 \
-			| grep -E "^/.*: (warning|error):" || true
+			| grep -E "^/.*: (warning|error):" \
+			| grep -vE "vcpkg_installed/|/build/" || true
 	' "$build_dir" {} | sort -u >"$log"
 
 if [ -s "$log" ]; then
