@@ -48,12 +48,15 @@ if ! jobs=$(nproc 2>/dev/null); then
 	jobs=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
 fi
 
-# Capture without pipefail: clang-tidy-diff.py exits non-zero whenever
+# Capture without -e/pipefail: clang-tidy-diff.py exits non-zero whenever
 # any of its parallel tidy invocations errors out (e.g. a header fed
-# standalone with no compile_commands entry). With pipefail on, the
-# assignment dies before `echo "$output"` runs, so the actual
+# standalone with no compile_commands entry). With either option active,
+# the assignment dies before `echo "$output"` runs, so the actual
 # diagnostics — which are in $output — are lost. We decide pass/fail
 # from the grep below, not from the pipeline's exit status.
+# Note: `set -e` alone kills failed `$(...)` substitutions in bash 5.2+,
+# so we must disable both -e and pipefail (not just pipefail).
+set +e
 set +o pipefail
 output=$(git diff -U0 "${base_ref}"...HEAD -- 'src/*' \
 	| "$diff_cmd" \
@@ -62,6 +65,7 @@ output=$(git diff -U0 "${base_ref}"...HEAD -- 'src/*' \
 		-j"$jobs" \
 		-regex '.*\.(cpp|hpp|h|cc|cxx)$' \
 		-quiet)
+set -e
 set -o pipefail
 
 echo "$output"
