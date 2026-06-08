@@ -7,8 +7,7 @@
 # fixes whose FilePath: strings are textually distinct, so
 # clang-apply-replacements skips deduplication and the replacements
 # stack 5–7 deep on the same line. `run-clang-tidy -fix` has the same
-# bug. See docs/clang-flag-day.md "Lessons from PR2" §1 for the full
-# story.
+# bug.
 #
 # Usage:
 #   scripts/clang-tidy-fix.sh <build-dir> [check-filter]

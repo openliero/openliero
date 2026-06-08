@@ -302,7 +302,6 @@ This wraps `run-clang-tidy -export-fixes` with a path-canonicalisation
 pass before `clang-apply-replacements` runs — needed to avoid a
 per-TU header-rewrite race in clang-tidy 22 where the same header
 reached via different relative include paths gets edited 5–7 times.
-See `docs/clang-flag-day.md` for the full story.
 
 To git-blame past mechanical reformats, point blame at the ignore list once:
 
