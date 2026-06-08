@@ -4,6 +4,33 @@ Handover document for the tree-wide clang-format / clang-tidy
 normalization. Written 2026-06-01 by Claude (via /agent-skills:using-agent-skills),
 in dialogue with the maintainer.
 
+## Status: complete (2026-06-08)
+
+All three PRs landed on master:
+
+| PR | Title | Squash-merge SHA |
+|----|-------|------------------|
+| #85 | Clang flag-day PR1: adopt Google style, reformat tree | `cc82bdd` |
+| #86 | Clang flag-day PR2: adopt Google naming, rename tree | `1587a2d` |
+| #88 | Clang flag-day PR3: tree-wide tidy clean + tree-wide CI gating | `09a4054` |
+
+All three SHAs are recorded in `.git-blame-ignore-revs`. (Note: the
+original entry added during PR1 used the pre-squash branch SHA
+`1fbf37a`, which is not reachable from master and so was a no-op for
+`git blame` users on master. Replaced 2026-06-08 with the squash-merge
+SHAs above.)
+
+`CLAUDE.md` already reflects the post-flag-day CI gating story
+(tree-wide format gate, diff-only tidy on PRs + nightly tree-wide
+sweep), so no further documentation cleanup is required. The remaining
+post-flag-day item the plan called for — tagging
+`post-clang-flag-day` — is left to the maintainer.
+
+The historical handover content below is preserved for reference.
+
+---
+
+
 ## Why
 
 PR #84 wired `clang-tidy` and `clang-format` into CI, but the historical
