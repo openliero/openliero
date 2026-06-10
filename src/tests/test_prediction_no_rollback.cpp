@@ -246,8 +246,8 @@ TEST_CASE("Predicted frames emit sound and promote does not re-emit",
   }
   REQUIRE(best_pos >= 0);
   REQUIRE(best_delay < rollback::kMaxRollback);
-  for (int ws : {0, 1, Settings::kNetworkPlayerIdx}) {
-    for (uint32_t& w : settings->worm_settings[ws]->weapons) {
+  for (int const kWs : {0, 1, Settings::kNetworkPlayerIdx}) {
+    for (uint32_t& w : settings->worm_settings[kWs]->weapons) {
       w = static_cast<uint32_t>(best_pos) + 1;
     }
   }
