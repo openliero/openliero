@@ -2,6 +2,11 @@
   "releases": [],
   "dev": [
     {
+      "name": "build-7777b98",
+      "dir": "dev/build-7777b98",
+      "timestamp": "2026-06-10T16:19:48Z"
+    },
+    {
       "name": "build-fdb7f1b",
       "dir": "dev/build-fdb7f1b",
       "timestamp": "2026-06-09T04:53:04Z"
@@ -45,11 +50,6 @@
       "name": "build-cc29caf",
       "dir": "dev/build-cc29caf",
       "timestamp": "2026-05-31T16:28:11Z"
-    },
-    {
-      "name": "build-f1bb660",
-      "dir": "dev/build-f1bb660",
-      "timestamp": "2026-05-31T07:18:18Z"
     }
   ]
 }
