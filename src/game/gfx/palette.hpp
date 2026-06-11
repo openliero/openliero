@@ -11,9 +11,18 @@ namespace io {
 struct Reader;
 }  // namespace io
 
+// Where a worm's colours live in the palette. Worm sprite art hardcodes
+// pixel values in the ramp, so the defaults must match the shipped sprites;
+// the indirection exists so future skins can claim different blocks.
+struct ColorBlock {
+  int base;          // centre of the shaded sprite ramp (pixels use base-2 .. base+2)
+  int colour_index;  // start of the secondary 6-entry copy block
+  int status_index;  // start of the 3-entry minimap / status copy
+  int width;         // ramp entries centred on base
+};
+
 struct Palette {
-  static int const kWormColourIndexes[2];
-  static int const kWormSpriteColorBase[2];
+  static ColorBlock const kWormColorBlocks[2];
 
   // Full 8-bit per channel. Classic sources (VGA palette files, sprite TGA
   // palettes) are expanded from 6-bit at load time.
@@ -43,11 +52,15 @@ struct Palette {
   }
 
   void SetWormColoursSpan(int base, int const (&c)[3]) {
-    ScaleAdd(base - 2, c, 38, 0);
-    ScaleAdd(base - 1, c, 50, 0);
-    ScaleAdd(base, c, 64, 0);
-    ScaleAdd(base + 1, c, 47, 1008);
-    ScaleAdd(base + 2, c, 28, 2205);
+    // Hand-tuned 64-step gradient deriving the 5-entry shaded ramp from a
+    // single base colour.
+    static constexpr struct {
+      int scale, add;
+    } kSteps[5] = {{38, 0}, {50, 0}, {64, 0}, {47, 1008}, {28, 2205}};
+
+    for (int j = 0; j < 5; ++j) {
+      ScaleAdd(base - 2 + j, c, kSteps[j].scale, kSteps[j].add);
+    }
   }
 
   void ResetPalette(Palette const& new_pal, Settings const& /*settings*/) {

@@ -71,24 +71,22 @@ void Palette::Read(io::Reader& r) {
   }
 }
 
-int const Palette::kWormColourIndexes[2] = {0x58, 0x78};  // TODO: Read from EXE?
-
-// Sprite palette bases per worm index (hardcoded in worm sprite precomputation)
-int const Palette::kWormSpriteColorBase[2] = {32, 41};
+// Worm sprites have hardcoded pixel values: 30-34 for worm 0, 39-43 for
+// worm 1, with secondary copies at 0x58 / 0x78 and minimap / status colours
+// at 129 / 133. TODO: Read from EXE?
+ColorBlock const Palette::kWormColorBlocks[2] = {{32, 0x58, 129, 5}, {41, 0x78, 133, 5}};
 
 void Palette::SetWormColour(int i, WormSettings const& settings) {
-  // Always write to the sprite-referenced palette positions for this worm index.
-  // Worm sprites have hardcoded pixel values: 30-34 for worm 0, 39-43 for worm 1.
-  int const kIdx = kWormSpriteColorBase[i];
+  ColorBlock const& block = kWormColorBlocks[i];
 
-  SetWormColoursSpan(kIdx, settings.rgb);
+  SetWormColoursSpan(block.base, settings.rgb);
 
   for (int j = 0; j < 6; ++j) {
-    entries[kWormColourIndexes[i] + j] = entries[kIdx + (j % 3) - 1];
+    entries[block.colour_index + j] = entries[block.base + (j % 3) - 1];
   }
 
   for (int j = 0; j < 3; ++j) {
-    entries[129 + i * 4 + j] = entries[kIdx + j];
+    entries[block.status_index + j] = entries[block.base + j];
   }
 }
 
