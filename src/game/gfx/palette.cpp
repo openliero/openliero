@@ -9,22 +9,21 @@
 
 void Palette::Activate(Color real_pal[256]) {
   for (int i = 0; i < 256; ++i) {
-    real_pal[i].r = entries[i].r << 2;
-    real_pal[i].g = entries[i].g << 2;
-    real_pal[i].b = entries[i].b << 2;
+    real_pal[i].r = entries[i].r;
+    real_pal[i].g = entries[i].g;
+    real_pal[i].b = entries[i].b;
   }
 }
 
 static int FadeValue(int v, int amount) {
-  assert(v < 64);
   v = (v * amount) >> 5;
   v = std::max(v, 0);
   return v;
 }
 
 static int LightUpValue(int v, int amount) {
-  v = (v * (32 - amount) + amount * 63) >> 5;
-  v = std::min(v, 63);
+  v = (v * (32 - amount) + amount * 255) >> 5;
+  v = std::min(v, 255);
   return v;
 }
 
@@ -60,13 +59,15 @@ void Palette::RotateFrom(Palette& source, int from, int to, unsigned dist) {
 void Palette::Clear() { std::memset(entries, 0, sizeof(entries)); }
 
 void Palette::Read(io::Reader& r) {
+  // Classic palette files carry 6-bit VGA channels; expand to the 8-bit
+  // range entries hold, preserving the legacy (v & 63) << 2 screen values.
   for (auto& entrie : entries) {
     uint8_t rgb[3];
     r.Get(rgb, 3);
 
-    entrie.r = rgb[0] & 63;
-    entrie.g = rgb[1] & 63;
-    entrie.b = rgb[2] & 63;
+    entrie.r = (rgb[0] & 63) << 2;
+    entrie.g = (rgb[1] & 63) << 2;
+    entrie.b = (rgb[2] & 63) << 2;
   }
 }
 

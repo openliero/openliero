@@ -15,6 +15,8 @@ struct Palette {
   static int const kWormColourIndexes[2];
   static int const kWormSpriteColorBase[2];
 
+  // Full 8-bit per channel. Classic sources (VGA palette files, sprite TGA
+  // palettes) are expanded from 6-bit at load time.
   Color entries[256];
 
   void Activate(Color real_pal[256]);
@@ -23,14 +25,21 @@ struct Palette {
   void RotateFrom(Palette& source, int from, int to, unsigned dist);
   void Read(io::Reader& r);
 
+  // `c` channels are 0..63. The ramp math runs in 6-bit precision and is
+  // expanded to the 8-bit entry range, keeping classic worm shading
+  // byte-identical to the VGA pipeline.
   void ScaleAdd(int dest, int const (&c)[3], int scale, int add) {
-    entries[dest].r = (add + c[0] * scale) / 64;
-    entries[dest].g = (add + c[1] * scale) / 64;
-    entries[dest].b = (add + c[2] * scale) / 64;
+    int const kR = (add + c[0] * scale) / 64;
+    int const kG = (add + c[1] * scale) / 64;
+    int const kB = (add + c[2] * scale) / 64;
 
-    assert(entries[dest].r < 64);
-    assert(entries[dest].g < 64);
-    assert(entries[dest].b < 64);
+    assert(kR < 64);
+    assert(kG < 64);
+    assert(kB < 64);
+
+    entries[dest].r = kR << 2;
+    entries[dest].g = kG << 2;
+    entries[dest].b = kB << 2;
   }
 
   void SetWormColoursSpan(int base, int const (&c)[3]) {

@@ -97,6 +97,15 @@ std::unique_ptr<Game> ReplayReader::BeginPlayback(
 
   CerealRead(reader, *game);
 
+  if (replay_version < 7) {
+    // Pre-7 replays stored the level palette as 6-bit VGA channels.
+    for (auto& e : game->level.origpal.entries) {
+      e.r <<= 2;
+      e.g <<= 2;
+      e.b <<= 2;
+    }
+  }
+
   return game;
 }
 

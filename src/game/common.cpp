@@ -270,10 +270,13 @@ static int ReadSpriteTga(io::Reader& r, int dest_image_width, int dest_image_hei
   CHECK(image_height == dest_image_height);
 
   if (pal) {
+    // Quantize the 24-bit TGA palette to the classic 6-bit VGA grid
+    // (entries are 8-bit; dropping the low 2 bits keeps classic rendering
+    // byte-identical to the original >>2-then-<<2 pipeline).
     for (auto& entry : pal->entries) {
-      entry.b = r.Get() >> 2;
-      entry.g = r.Get() >> 2;
-      entry.r = r.Get() >> 2;
+      entry.b = r.Get() & 0xfc;
+      entry.g = r.Get() & 0xfc;
+      entry.r = r.Get() & 0xfc;
     }
   } else {
     r.TrySkip(256 * 3);  // Ignore palette
