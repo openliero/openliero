@@ -199,7 +199,8 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
                               .level = game.level,
                               .pal32 = renderer.pal32,
                               .world_offset_x = -kOffs.x,
-                              .world_offset_y = -kOffs.y};
+                              .world_offset_y = -kOffs.y,
+                              .mode = renderer.mode};
 
     DrawLevel(renderer.bmp, game.level, kOffs.x, kOffs.y);
 

@@ -124,3 +124,29 @@ TEST_CASE("Bitmap has a mode field defaulting to kClassic") {
   Bitmap bmp;
   CHECK(bmp.mode == ColorMode::kClassic);
 }
+
+// Task 3: SetPixel must clear display_valid for authored cells.
+
+TEST_CASE("Level::SetPixel clears display_valid for an authored cell") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+
+  level.display_data.assign(16, 0);
+  level.display_valid.assign(16, 0);
+  level.display_valid[5] = 1;  // pixel (1,1) authored; 4-wide level → idx 5
+
+  level.SetPixel(1, 1, 0, common);
+
+  CHECK(level.display_valid[5] == 0);
+  CHECK(level.display_valid[0] == 0);  // untouched pixel unaffected
+}
+
+TEST_CASE("Level::SetPixel on classic level (empty display layer) does not crash") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+
+  CHECK_NOTHROW(level.SetPixel(0, 0, 7, common));
+  CHECK(level.display_valid.empty());
+}

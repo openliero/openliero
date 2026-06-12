@@ -20,6 +20,7 @@
 #include "math/rect.hpp"
 #include "rand.hpp"
 #include "settings.hpp"
+#include "version.hpp"
 #include "viewport.hpp"
 #include "worm.hpp"
 
@@ -27,6 +28,12 @@
 #include <cereal/types/vector.hpp>
 #include <cstdint>
 #include <utility>
+
+// Replay version active on the current thread during CerealRead.
+// Set by the replay reader before deserializing; defaults to kMyReplayVersion
+// so that round-trip (save → load within the same process) always uses the
+// current format.
+inline thread_local int g_cereal_replay_version = kMyReplayVersion;
 
 template <class Archive, typename T>
 void serialize(Archive& ar, BasicVec<T, 2>& v) {
@@ -107,10 +114,24 @@ void serialize(Archive& ar, Palette& p) {
 // `materials` is re-derived from `data` + Common at load time (matching
 // the existing replay behaviour), so we don't serialize it. `oldRandomLevel`
 // / `oldLevelFile` / `zeroMaterial` are also not part of the wire format.
+// Split save/load so that the display layer (v8+) is always written but is
+// only read when g_cereal_replay_version >= 8.
 template <class Archive>
-void serialize(Archive& ar, Level& lvl) {
+void save(Archive& ar, Level const& lvl) {
+  ar(cereal::make_nvp("width", lvl.width), cereal::make_nvp("height", lvl.height),
+     cereal::make_nvp("data", lvl.material_id), cereal::make_nvp("origpal", lvl.origpal),
+     cereal::make_nvp("displayData", lvl.display_data),
+     cereal::make_nvp("displayValid", lvl.display_valid));
+}
+
+template <class Archive>
+void load(Archive& ar, Level& lvl) {
   ar(cereal::make_nvp("width", lvl.width), cereal::make_nvp("height", lvl.height),
      cereal::make_nvp("data", lvl.material_id), cereal::make_nvp("origpal", lvl.origpal));
+  if (g_cereal_replay_version >= 8) {
+    ar(cereal::make_nvp("displayData", lvl.display_data),
+       cereal::make_nvp("displayValid", lvl.display_valid));
+  }
 }
 
 // ---- Settings ----

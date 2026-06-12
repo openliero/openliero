@@ -83,6 +83,40 @@ TEST_CASE("updatepal32 tracks palette mutations", "[blit][pal32]") {
   REQUIRE(renderer.pal32[7] == 0xFF405060U);
 }
 
+TEST_CASE("shadowedargb in modern mode darkens display_data for authored seeshadow cell",
+          "[blit][shadow][stage3]") {
+  ShadowFixture f;
+
+  // Pixel (2,3): SeeShadow terrain (material 10) with an authored ARGB.
+  int const kIdx = 2 + 3 * 8;
+  f.level.display_data.assign(64, 0);
+  f.level.display_valid.assign(64, 0);
+  f.level.display_data[kIdx] = 0xFF204060U;
+  f.level.display_valid[kIdx] = 1;
+
+  ShadowQuery const kQModern{.common = f.common,
+                              .level = f.level,
+                              .pal32 = f.renderer.pal32,
+                              .world_offset_x = 0,
+                              .world_offset_y = 0,
+                              .mode = ColorMode::kModern};
+
+  // Darken: each channel >> 1; 0x20->0x10, 0x40->0x20, 0x60->0x30.
+  REQUIRE(kQModern.ShadowedArgb(2, 3) == 0xFF102030U);
+
+  // Classic mode uses pal32[material+4] = pal32[14] = 0xFF112233 from fixture.
+  REQUIRE(f.Query().ShadowedArgb(2, 3) == 0xFF112233U);
+
+  // Modern mode, pixel not authored (display_valid==0): palette fallback.
+  ShadowQuery const kQModern2{.common = f.common,
+                               .level = f.level,
+                               .pal32 = f.renderer.pal32,
+                               .world_offset_x = 0,
+                               .world_offset_y = 0,
+                               .mode = ColorMode::kModern};
+  REQUIRE(kQModern2.ShadowedArgb(0, 3) == 0xFF112233U);  // pixel 0+3*8=24, display_valid==0
+}
+
 TEST_CASE("shadowquery reads material from the level, not the screen", "[blit][shadow]") {
   ShadowFixture const kFixture;
   ShadowQuery const kQ = kFixture.Query();

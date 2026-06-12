@@ -42,7 +42,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
                             .level = game.level,
                             .pal32 = renderer.pal32,
                             .world_offset_x = -kOffs.x,
-                            .world_offset_y = -kOffs.y};
+                            .world_offset_y = -kOffs.y,
+                            .mode = renderer.mode};
 
   for (std::size_t i = 0; i < game.worms.size(); ++i) {
     Worm const& worm = *game.worms[i];

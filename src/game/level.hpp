@@ -48,13 +48,17 @@ struct Level {
   unsigned char* Pixelp(int x, int y) { return &material_id[x + y * width]; }
 
   void SetPixel(int x, int y, PalIdx w, Common& common) {
-    material_id[x + y * width] = w;
-    materials[x + y * width] = common.materials[w];
+    int const kIdx = x + y * width;
+    material_id[kIdx] = w;
+    materials[kIdx] = common.materials[w];
+    if (!display_valid.empty()) display_valid[kIdx] = 0;
   }
 
   void SetPixel(fixedvec pos, PalIdx w, Common& common) {
-    material_id[pos.x + pos.y * width] = w;
-    materials[pos.x + pos.y * width] = common.materials[w];
+    int const kIdx = pos.x + pos.y * width;
+    material_id[kIdx] = w;
+    materials[kIdx] = common.materials[w];
+    if (!display_valid.empty()) display_valid[kIdx] = 0;
   }
 
   Material& Mat(int x, int y) { return materials[x + y * width]; }
