@@ -3,7 +3,9 @@
 #include "common.hpp"
 #include "gfx/bitmap.hpp"
 #include "gfx/palette.hpp"
+#include "io/stream.hpp"
 #include "level.hpp"
+#include "settings.hpp"
 
 // Minimal Common stub: real Common is heavyweight (loads assets), but the
 // display-layer tests only need materials[0..255] populated.
@@ -149,4 +151,92 @@ TEST_CASE("Level::SetPixel on classic level (empty display layer) does not crash
 
   CHECK_NOTHROW(level.SetPixel(0, 0, 7, common));
   CHECK(level.display_valid.empty());
+}
+
+// Task 7: Level::load must detect and read the optional MODERNLV extension.
+
+static constexpr int kLevW = 504, kLevH = 350;
+static constexpr std::size_t kLevCells = kLevW * kLevH;
+
+// Append MODERNLV block (magic + display_data + display_valid) to buf.
+static void AppendModernBlock(std::vector<uint8_t>& buf, std::vector<uint32_t> const& dd,
+                               std::vector<uint8_t> const& dv) {
+  static constexpr uint8_t kMagic[8] = {'M', 'O', 'D', 'E', 'R', 'N', 'L', 'V'};
+  buf.insert(buf.end(), kMagic, kMagic + 8);
+  auto const* raw = reinterpret_cast<uint8_t const*>(dd.data());
+  buf.insert(buf.end(), raw, raw + dd.size() * 4);
+  buf.insert(buf.end(), dv.begin(), dv.end());
+}
+
+TEST_CASE("Level::load classic level leaves display layers empty", "[level][stage3]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  io::MemReader r(bytes);
+
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  CHECK(level.display_data.empty());
+  CHECK(level.display_valid.empty());
+}
+
+TEST_CASE("Level::load MODERNLV block populates display layers", "[level][stage3]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;  // skip POWERLEVEL probe
+
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  dd[0] = 0xFF112233U;
+  dv[0] = 1;
+  dd[kLevCells - 1] = 0xFF445566U;
+  dv[kLevCells - 1] = 1;
+
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  AppendModernBlock(bytes, dd, dv);
+  io::MemReader r(bytes);
+
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  REQUIRE(level.display_data.size() == kLevCells);
+  REQUIRE(level.display_valid.size() == kLevCells);
+  CHECK(level.display_data[0] == 0xFF112233U);
+  CHECK(level.display_valid[0] == 1);
+  CHECK(level.display_data[kLevCells - 1] == 0xFF445566U);
+  CHECK(level.display_valid[kLevCells - 1] == 1);
+  // An unset pixel falls back to palette (display_valid == 0).
+  CHECK(level.display_valid[1] == 0);
+}
+
+TEST_CASE("Level::load POWERLEVEL then MODERNLV block", "[level][stage3]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = true;
+
+  // Build: pixel_data + "POWERLEVEL" + palette(768 zeros) + MODERNLV + display
+  std::vector<uint8_t> bytes(kLevCells, 0);
+
+  static constexpr uint8_t kPL[10] = {'P', 'O', 'W', 'E', 'R', 'L', 'E', 'V', 'E', 'L'};
+  bytes.insert(bytes.end(), kPL, kPL + 10);
+  bytes.insert(bytes.end(), 768, 0);  // palette (all-zero = black)
+
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  dd[7] = 0xFFAABBCCU;
+  dv[7] = 1;
+  AppendModernBlock(bytes, dd, dv);
+
+  io::MemReader r(bytes);
+
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  CHECK(level.has_custom_palette);
+  REQUIRE(level.display_data.size() == kLevCells);
+  CHECK(level.display_data[7] == 0xFFAABBCCU);
+  CHECK(level.display_valid[7] == 1);
 }
