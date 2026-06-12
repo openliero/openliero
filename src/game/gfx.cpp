@@ -1176,15 +1176,17 @@ void PlayerMenu::DrawItemOverlay(Common& /*common*/, MenuItem& item, int x, int 
   if (item.id >= PlayerMenu::kPlRed && item.id <= PlayerMenu::kPlBlue)  // Color settings
   {
     int const kRgbcol = item.id - PlayerMenu::kPlRed;
+    // Bar geometry predates 8-bit channels: map 0..255 back to 0..63 pixels.
+    int const kBarWidth = ws->rgb[kRgbcol] >> 2;
 
     if (selected) {
-      DrawRoundedBox(gfx.play_renderer.bmp, x + 24, y, 168, 7, ws->rgb[kRgbcol] - 1);
+      DrawRoundedBox(gfx.play_renderer.bmp, x + 24, y, 168, 7, kBarWidth - 1);
     } else  // CE98
     {
-      DrawRoundedBox(gfx.play_renderer.bmp, x + 24, y, 0, 7, ws->rgb[kRgbcol] - 1);
+      DrawRoundedBox(gfx.play_renderer.bmp, x + 24, y, 0, 7, kBarWidth - 1);
     }
 
-    FillRect(gfx.play_renderer.bmp, x + 25, y + 1, ws->rgb[kRgbcol], 5, ws->color);
+    FillRect(gfx.play_renderer.bmp, x + 25, y + 1, kBarWidth, 5, ws->color);
   }  // CED9
 }
 
@@ -1205,8 +1207,10 @@ ItemBehavior* PlayerMenu::GetItemBehavior(Common& common, MenuItem& item) {
     case kPlRed:
     case kPlGreen:
     case kPlBlue: {
+      // Step 4 keeps the same 64 positions the VGA picker had; classic
+      // rendering quantizes to that grid anyway.
       auto* b =
-          new IntegerBehavior(common, ws->rgb[item.id - kPlRed], 0, 63, 1, /*percentage=*/false);
+          new IntegerBehavior(common, ws->rgb[item.id - kPlRed], 0, 255, 4, /*percentage=*/false);
       b->scroll_interval = 4;
       return b;
     }

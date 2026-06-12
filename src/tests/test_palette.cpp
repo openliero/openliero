@@ -14,10 +14,10 @@ namespace {
 // refactor must keep steady-state output byte-identical to this.
 uint8_t Legacy6BitToScreen(uint8_t raw) { return static_cast<uint8_t>((raw & 63) << 2); }
 
-// Golden reference for the worm colour ramp: ScaleAdd computed in 6-bit,
-// expanded to screen range by Activate.
-uint8_t LegacyScaleAddToScreen(int c6, int scale, int add) {
-  return static_cast<uint8_t>(((add + c6 * scale) / 64) << 2);
+// Golden reference for the worm colour ramp: the 0..255 input is quantized
+// to the VGA grid, the ramp computed in 6-bit and expanded to screen range.
+uint8_t LegacyScaleAddToScreen(int c, int scale, int add) {
+  return static_cast<uint8_t>(((add + (c >> 2) * scale) / 64) << 2);
 }
 
 struct Rgb {
@@ -73,8 +73,9 @@ TEST_CASE("classic palette load and activate matches the VGA pipeline", "[palett
 }
 
 TEST_CASE("worm colour ramps match the legacy shading", "[palette]") {
-  // Default worm colours from WormSettings / settings.cpp.
-  int const kWormRgb[2][3] = {{26, 26, 63}, {15, 43, 15}};
+  // Default worm colours from WormSettings / settings.cpp (the legacy 6-bit
+  // defaults expanded by << 2).
+  int const kWormRgb[2][3] = {{104, 104, 252}, {60, 172, 60}};
   // Sprite ramp bases and secondary copy locations for each worm index.
   int const kBase[2] = {32, 41};
   int const kColourIndex[2] = {0x58, 0x78};
@@ -108,6 +109,33 @@ TEST_CASE("worm colour ramps match the legacy shading", "[palette]") {
     for (int j = 0; j < 3; ++j) {
       RequireEntry(real_pal[129 + w * 4 + j], kRamp[2 + j]);
     }
+  }
+}
+
+TEST_CASE("classic worm shading quantizes 8-bit colours to the VGA grid", "[palette]") {
+  // Colours that only differ below the VGA grid must shade identically.
+  WormSettings a, b;
+  int const kColorA[3] = {104, 104, 252};
+  int const kColorB[3] = {107, 105, 255};
+  for (int j = 0; j < 3; ++j) {
+    a.rgb[j] = kColorA[j];
+    b.rgb[j] = kColorB[j];
+  }
+
+  Palette pal_a, pal_b;
+  pal_a.Clear();
+  pal_b.Clear();
+  pal_a.SetWormColour(0, a);
+  pal_b.SetWormColour(0, b);
+
+  Color real_a[256], real_b[256];
+  pal_a.Activate(real_a);
+  pal_b.Activate(real_b);
+
+  for (int i = 0; i < 256; ++i) {
+    REQUIRE(real_a[i].r == real_b[i].r);
+    REQUIRE(real_a[i].g == real_b[i].g);
+    REQUIRE(real_a[i].b == real_b[i].b);
   }
 }
 

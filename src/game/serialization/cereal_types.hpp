@@ -246,7 +246,21 @@ void SerializeWormSettingsToml(Archive& ar, WormSettings& ws) {
      cereal::make_nvp("color", ws.color), cereal::make_nvp("inputDevice", ws.input_device),
      cereal::make_nvp("gamepadName", ws.gamepad_name),
      cereal::make_nvp("gamepadSerial", ws.gamepad_serial));
+  // Files without the marker predate 8-bit worm colours and carry 0..63
+  // channels; expand them to the 0..255 range on load.
+  int32_t rgb_depth = 8;
+  if constexpr (Archive::is_loading::value) {
+    rgb_depth = 6;
+  }
+  ar(cereal::make_nvp("rgbDepth", rgb_depth));
   SerializeArray(ar, "rgb", ws.rgb);
+  if constexpr (Archive::is_loading::value) {
+    if (rgb_depth < 8) {
+      for (int& v : ws.rgb) {
+        v = (v & 63) << 2;
+      }
+    }
+  }
   SerializeArray(ar, "weapons", ws.weapons);
   SerializeArray(ar, "controls", ws.controls);
   SerializeArray(ar, "controlsEx", ws.controls_ex);

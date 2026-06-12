@@ -34,13 +34,13 @@ struct Palette {
   void RotateFrom(Palette& source, int from, int to, unsigned dist);
   void Read(io::Reader& r);
 
-  // `c` channels are 0..63. The ramp math runs in 6-bit precision and is
-  // expanded to the 8-bit entry range, keeping classic worm shading
-  // byte-identical to the VGA pipeline.
+  // `c` channels are 0..255 and are quantized to the VGA grid: the ramp
+  // math runs in 6-bit precision and is expanded to the 8-bit entry range,
+  // keeping classic worm shading byte-identical to the VGA pipeline.
   void ScaleAdd(int dest, int const (&c)[3], int scale, int add) {
-    int const kR = (add + c[0] * scale) / 64;
-    int const kG = (add + c[1] * scale) / 64;
-    int const kB = (add + c[2] * scale) / 64;
+    int const kR = (add + (c[0] >> 2) * scale) / 64;
+    int const kG = (add + (c[1] >> 2) * scale) / 64;
+    int const kB = (add + (c[2] >> 2) * scale) / 64;
 
     assert(kR < 64);
     assert(kG < 64);

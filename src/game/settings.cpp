@@ -36,7 +36,7 @@ Settings::Settings()
   unsigned char const kDefControls[2][7] = {{0x13, 0x21, 0x20, 0x22, 0x1D, 0x2A, 0x38},
                                             {0xA0, 0xA8, 0xA3, 0xA5, 0x75, 0x90, 0x36}};
 
-  unsigned char const kDefRgb[2][3] = {{26, 26, 63}, {15, 43, 15}};
+  unsigned char const kDefRgb[2][3] = {{104, 104, 252}, {60, 172, 60}};
 
   for (int i = 0; i < 2; ++i) {
     for (int j = 0; j < 7; ++j) {
