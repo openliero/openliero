@@ -448,6 +448,10 @@ if(OPENLIERO_BUILD_TESTS)
   target_link_libraries(test_palette PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_palette DISCOVERY_MODE PRE_TEST)
 
+  add_executable(test_blit src/tests/test_blit.cpp)
+  target_link_libraries(test_blit PRIVATE game Catch2::Catch2WithMain)
+  catch_discover_tests(test_blit DISCOVERY_MODE PRE_TEST)
+
   add_executable(test_paths src/tests/test_paths.cpp)
   target_link_libraries(test_paths PRIVATE game Catch2::Catch2WithMain)
   target_compile_definitions(test_paths PRIVATE
