@@ -1,7 +1,7 @@
 # Modern Colors
 
 Design notes for evolving Open Liero's color pipeline beyond its 16-bit-era
-constraints, in three independently-shippable stages, with a per-renderer
+constraints, in four independently-shippable stages, with a per-renderer
 "color mode" toggle that can hot-swap between classic VGA and modern looks
 in-game.
 
@@ -9,8 +9,9 @@ This is a design document. **Stages 1 and 2 are implemented** (see
 `docs/plans/modern-colors-stage1.md` and
 `docs/plans/modern-colors-stage2.md` for the task-level records; the
 Stage 2 plan also records where the implementation deviated from the
-design below). Stage 3 remains an unimplemented design and can be
-shipped or abandoned independently.
+design below). **Stage 3 is planned** (`docs/plans/modern-colors-stage3.md`).
+Stages 3 and 4 remain unimplemented designs and can each be shipped or
+abandoned independently.
 
 ---
 
@@ -83,13 +84,14 @@ palette entries. `SetWormColoursSpan` applies a hand-tuned 64-step gradient
 
 ---
 
-## Recommended direction (three stages + two cross-cutting features)
+## Recommended direction (four stages + two cross-cutting features)
 
 | Stage | What ships | Estimated cost | Risk | Ship independently? |
 |---|---|---|---|---|
 | **Stage 1** — Modern Player Colors (**shipped**) | Unlock 6→8 bit per channel; per-worm `ColorBlock` indirection; `ColorMode` enum on Renderer; modern palette derived from the classic one (faithful, full-range); netplay protocol bump for 24-bit worm color | 1–2 days (actual: ~1 day + iteration) | None | Yes |
 | **Stage 2** — ARGB Screen (**shipped**) | Widen `Bitmap` to ARGB; convert the blit primitives to `pal32[]` LUT stores; rewrite `ScaleDraw`; `ShadowQuery` helper for the nine shadow/material-inspector sites; `Level::AppearanceAt()` accessor; fade moved to composition time | ~12 days | Low | Yes |
 | **Stage 3** — Full-Fidelity Terrain | Add `display_data` (ARGB) parallel layer to `Level`; make `AppearanceAt` mode-aware; modern level loader; snapshot `display_data` in `GameSnapshot` | ~9 days | Low | Yes (Stage 2 required) |
+| **Stage 4** — Animated True-Color Terrain | Per-level ARGB animation ramps so authored terrain can cycle colours (true-color water/lava). Stage 3 already lets static modern art and palette-cycled classic terrain coexist via the `display_valid` mask; Stage 4 adds cycling to the authored layer itself, recomputed from `cycles` like palette rotation | ~5 days | Low–Med | Yes (Stage 3 required) |
 | **Hot-toggle** (cross-cutting) | F11 (or settings menu) swaps mode live; per-frame palette rebuild picks the right `origpal` | +0.5 / +0 / +0.5 days per stage | None | With Stage 1 |
 | **Per-window mode** (cross-cutting) | Each `Renderer` has its own `mode`; player screen and spectator window can be in different modes simultaneously | +0.5 / +0 / +0 days per stage | None | With Stage 1 |
 | **Toggle UX** | Settings menu entry + sticky preference + hotkey binding + (optional) cross-fade transition | +1 day, one-time | None | With Stage 1 |
@@ -498,6 +500,15 @@ a modern level pack. If no one ever wants painted-art terrain, this whole
 stage was wasted work — so its motivation needs to come from the TC
 community, not engineering speculation.
 
+**Whichever format ships, Stage 3 must write it down.** The chosen container
+format, the per-pixel `display_valid` semantics, and the authoring rules that
+fall out of the palette-cycling interaction (which index ranges to leave
+unauthored so they keep animating — see the hot-toggle/powerlevel discussion)
+are only useful to a TC author if they are documented. Stage 3 ships a
+TC-author-facing guide, `docs/modern-level-authoring.md`, as a deliverable
+alongside the loader — not an afterthought. Stage 4 extends that same file with
+the animation-ramp additions.
+
 ### Stage 3 cost breakdown
 
 | Work item | Days |
@@ -507,10 +518,11 @@ community, not engineering speculation.
 | Wire `display_data` into `GameSnapshot` (fast + cereal paths) | 1 |
 | Update `Level::AppearanceAt` to be mode-aware + flip renderer to use it | 0.5 |
 | Modern level loader (option (a) — two-layer format) | 2 |
+| Write `docs/modern-level-authoring.md` (format spec + authoring rules) | 0.5 |
 | Update determinism / rollback tests for the new fields | 1 |
 | Testing | 1.5 |
 
-**Total: ~9 working days.**
+**Total: ~9.5 working days.**
 
 ### Verification
 
@@ -523,6 +535,125 @@ community, not engineering speculation.
       "runtime mutations clear `display_valid`" policy).
 - [ ] Rollback tests pass with the larger snapshot.
 - [ ] Replay format unaffected (replays render through the live pipeline).
+- [ ] `docs/modern-level-authoring.md` documents the shipped format, the
+      `display_valid` semantics, and which index ranges to leave unauthored to
+      keep palette-cycling animation.
+
+---
+
+## Stage 4 — Animated True-Color Terrain
+
+### Goal
+
+Let authored terrain *cycle colours* in true colour — true-color water, lava,
+glowing crystals — the modern-mode equivalent of the palette-rotation animation
+classic levels get from `RotateFrom`. Stage 3 deliberately leaves this out: its
+authored pixels are static ARGB, and the v1 answer to "what about animated
+terrain" is *don't author over it* — leave those pixels index-based
+(`display_valid == 0`) so they keep animating through the palette. Stage 4
+removes that restriction by adding animation to the authored layer itself.
+
+### Why it's a separate stage
+
+Classic animation is free because the pixel keeps a constant index and only
+`pal32[index]` changes each frame (`game.cpp:173-175`,
+`palette.cpp:50-57`, the hardcoded 168–174 water shimmer). A Stage 3 authored
+pixel returns a fixed `display_data[idx]` and **bypasses `pal32`**, so it
+cannot animate by the same trick. Animating it needs a genuinely new mechanism
+— authored ARGB ramps and a per-frame resolve — which is why it is split out
+rather than folded into Stage 3's "one real design decision."
+
+### The mechanism: per-level ARGB animation ramps
+
+A modern level declares a small table of **ARGB ramps**, each a short list of
+colours plus a cycle rate:
+
+```cpp
+struct ArgbRamp {
+  std::vector<uint32_t> colors;  // the cycle, in order
+  uint8_t shift;                 // phase = (cycles >> shift) % colors.size()
+};
+```
+
+The authored layer gains a parallel **`display_anim`** byte per pixel: 0 = the
+pixel is static `display_data` (Stage 3 behaviour), N>0 = animated by ramp
+`N-1`. `AppearanceAt` resolves an animated pixel at draw time:
+
+```cpp
+uint32_t AppearanceAt(int idx, ColorMode mode, uint32_t const* pal32,
+                      int cycles) const {
+  if (mode == kModern && !display_valid.empty() && display_valid[idx]) {
+    uint8_t a = display_anim[idx];
+    if (a == 0) return display_data[idx];               // static authored art
+    ArgbRamp const& r = argb_ramps[a - 1];
+    return r.colors[(display_data[idx] + (cycles >> r.shift)) % r.colors.size()];
+  }
+  return pal32[material_id[idx]];                        // palette path (still animates)
+}
+```
+
+Here `display_data[idx]` of an animated pixel stores its **per-pixel phase
+offset** (so a wave can ripple across the surface), not a colour. `cycles`
+reaches `AppearanceAt` the same way `mode` and `pal32` do in Stages 2–3 — a
+per-frame value carried on the `Bitmap` by the renderer, so `DrawLevel`'s
+signature is unchanged.
+
+### Determinism, snapshot, and mutation
+
+- **No new sim state.** `cycles` is already part of the simulation and already
+  snapshotted (`GameSnapshot::cycles`). The ramp tables and the `display_anim`
+  layer are **immutable level data** loaded once; they travel with the level
+  exactly like `display_data` (cereal + wire blob from Stage 3), with the same
+  version bumps already paid there. Animated terrain is therefore
+  byte-deterministic and rollback-safe for free — it recomputes from `cycles`
+  on every peer, same as palette rotation does today.
+- **Mutation policy is unchanged.** A hit cell clears `display_valid[idx]`
+  (Stage 3 clear-on-hit), so shot-up animated terrain falls back to
+  palette-derived appearance like everything else. `display_anim` is immutable;
+  only the valid mask changes, so the snapshot cost is identical to Stage 3's.
+- **Classic mode is untouched** — animated authored pixels are gated behind
+  `mode == kModern`; a classic renderer never consults the ramp table.
+
+### Renderer integration
+
+`AppearanceAt` gains the `cycles` argument (carried on `Bitmap`); `DrawLevel`
+and `DrawMiniature` pass it. `ShadowedArgb` (Stage 3) samples the resolved —
+i.e. already-animated — ARGB before darkening, so shadows under animated
+terrain shimmer with it for free.
+
+### Authoring
+
+Ramps and the `display_anim` layer extend the Stage 3 two-layer level format
+(an artist marks a region as "ramp 2, phase = distance from shore"). A level
+that ships no ramps is exactly a Stage 3 level. Existing classic and Stage 3
+packs load unmodified. Stage 4 **updates `docs/modern-level-authoring.md`** (the
+guide Stage 3 shipped) with the ramp-table and `display_anim` additions — the
+authoring rules are not complete until that file describes them.
+
+### Stage 4 cost breakdown
+
+| Work item | Days |
+|---|---|
+| `ArgbRamp` table + `display_anim` layer on `Level` (load, swap, empty-when-absent) | 1 |
+| Animated branch in `AppearanceAt`; thread `cycles` onto `Bitmap` / `DrawLevel` | 0.5 |
+| Extend the modern level format + loader for ramps and the anim layer | 1.5 |
+| Carry ramps + anim layer in cereal `Level` and the wire blob (reuse Stage 3 seams) | 1 |
+| Update `docs/modern-level-authoring.md` with the ramp / anim-layer format | 0.5 |
+| Determinism / rollback tests for animated terrain; a synthetic animated level | 1 |
+
+**Total: ~5 working days.** (Stage 3 required.)
+
+### Verification
+
+- [ ] A Stage 3 level with no ramps renders identically (animated branch never taken).
+- [ ] An authored animated region cycles in modern mode; the same region is
+      static-or-palette in classic mode.
+- [ ] Two peers and a replay show the animation in lockstep (driven by `cycles`).
+- [ ] Shooting animated terrain clears it to palette fallback (clear-on-hit).
+- [ ] Shadows under animated terrain track the animation.
+- [ ] Determinism / rollback suites pass (no new sim state; `cycles` already snapshotted).
+- [ ] `docs/modern-level-authoring.md` is updated with the ramp-table and
+      `display_anim` format and an authored-animation example.
 
 ---
 
@@ -889,6 +1020,8 @@ mode field. It pays the forward-looking architectural cost (`ColorMode`
 on `Renderer`, `ColorBlock` indirection, per-renderer palette origins)
 that makes everything else cheap if/when it's wanted.
 
-Stages 2 and 3, per-window toggle UI, and curated palette options can be
+Stages 3 and 4, per-window toggle UI, and curated palette options can be
 revisited when player or TC-author demand makes their cost worth paying.
-The homework in this document is intended to make that revisit cheap.
+Stage 4 in particular is pure TC-author territory — it only matters once
+someone wants animated true-color terrain. The homework in this document is
+intended to make that revisit cheap.
