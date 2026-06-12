@@ -3,11 +3,13 @@
 #include <cstdint>
 
 #include "game/common.hpp"
+#include "game/gfx.hpp"
 #include "game/gfx/blit.hpp"
 #include "game/gfx/renderer.hpp"
 #include "game/gfx/shadow_query.hpp"
 #include "game/level.hpp"
 #include "game/material.hpp"
+#include "game/settings.hpp"
 
 namespace {
 
@@ -250,4 +252,44 @@ TEST_CASE("scaledraw magnifies argb and applies the composition fade", "[blit][a
   ScaleDraw(kSrc, 2, 2, 2, reinterpret_cast<uint8_t*>(dest1), 2 * sizeof(uint32_t), 1,
             /*fade=*/0);
   REQUIRE(dest1[0] == 0xFF000000U);
+}
+
+TEST_CASE("updatemenupalettes repacks pal32 with the menu animation", "[blit][pal32]") {
+  // Regression: the menu palette rebuild must end with an UpdatePal32 (and
+  // must not compose) — menus draw through pal32, so a stale LUT freezes
+  // the selected-item blink (rotated entry 168) and worm colour previews.
+  gfx.settings = std::make_shared<Settings>();
+  gfx.play_renderer.Init(8, 8);
+  gfx.single_screen_renderer.Init(8, 8);
+
+  for (int i = 0; i < 256; ++i) {
+    auto const kV = static_cast<uint8_t>(i);
+    gfx.play_renderer.origpal.entries[i] = {.r = kV, .g = kV, .b = kV, .unused = 0};
+  }
+  gfx.single_screen_renderer.origpal = gfx.play_renderer.origpal;
+
+  auto pack = [](Color const& c) {
+    return 0xFF000000U | (static_cast<uint32_t>(c.r) << 16) | (static_cast<uint32_t>(c.g) << 8) |
+           c.b;
+  };
+
+  gfx.UpdateMenuPalettes();
+  uint32_t const kFirst = gfx.play_renderer.pal32[168];
+  REQUIRE(kFirst == pack(gfx.play_renderer.pal.entries[168]));
+  REQUIRE(gfx.single_screen_renderer.pal32[168] ==
+          pack(gfx.single_screen_renderer.pal.entries[168]));
+
+  // The next frame's rebuild advances the water rotation under the
+  // selected-item colour.
+  gfx.UpdateMenuPalettes();
+  REQUIRE(gfx.play_renderer.pal32[168] != kFirst);
+  REQUIRE(gfx.play_renderer.pal32[168] == pack(gfx.play_renderer.pal.entries[168]));
+
+  // Live worm-colour edits must reach pal32 on the same frame.
+  gfx.settings->worm_settings[0]->rgb[0] = 252;
+  gfx.settings->worm_settings[0]->rgb[1] = 0;
+  gfx.settings->worm_settings[0]->rgb[2] = 0;
+  gfx.UpdateMenuPalettes();
+  int const kBase = Palette::kWormColorBlocks[0].base;
+  REQUIRE(gfx.play_renderer.pal32[kBase] == pack(gfx.play_renderer.pal.entries[kBase]));
 }
