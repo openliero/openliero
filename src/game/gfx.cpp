@@ -956,6 +956,9 @@ void Gfx::UpdateMenuPalettes(bool quitting) {
       player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx]) {
     play_renderer.pal.SetWormColour(0, *player_menu.ws, play_renderer.mode);
   }
+  // The fade applies at composition (ScaleDraw); menus draw through pal32,
+  // so every rebuild must end with a repack.
+  play_renderer.UpdatePal32();
   single_screen_renderer.pal = single_screen_renderer.Origpal();
   single_screen_renderer.pal.RotateFrom(single_screen_renderer.Origpal(), 168, 174, menu_cycles);
   single_screen_renderer.pal.SetWormColours(*settings, single_screen_renderer.mode);
@@ -963,7 +966,7 @@ void Gfx::UpdateMenuPalettes(bool quitting) {
       player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx]) {
     single_screen_renderer.pal.SetWormColour(0, *player_menu.ws, single_screen_renderer.mode);
   }
-  Flip();
+  single_screen_renderer.UpdatePal32();
 }
 
 void Gfx::Draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdl_renderer,
