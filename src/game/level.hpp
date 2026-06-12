@@ -103,7 +103,8 @@ struct Level {
   Palette origpal;
   // True when the level shipped its own palette (e.g. POWERLEVEL); such a
   // palette wins in both colour modes. Not serialized: netplay- or
-  // replay-received levels render Modern Vivid in modern mode (v1 policy).
+  // replay-received levels render the stock modern palette in modern mode
+  // (v1 policy).
   bool has_custom_palette = false;
   Material zero_material;
 };

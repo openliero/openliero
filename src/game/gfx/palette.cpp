@@ -103,16 +103,11 @@ void Palette::SetWormColour(int i, WormSettings const& settings, ColorMode mode)
   }
 }
 
-void Palette::MakeVivid() {
+void Palette::ExpandToFullRange() {
   for (auto& e : entries) {
-    // Full-range expansion first so the brightest VGA value maps to 255.
-    int const kR = e.r | (e.r >> 6);
-    int const kG = e.g | (e.g >> 6);
-    int const kB = e.b | (e.b >> 6);
-    int const kGrey = (kR + kG + kB) / 3;
-    e.r = VividChannel(kR, kGrey);
-    e.g = VividChannel(kG, kGrey);
-    e.b = VividChannel(kB, kGrey);
+    e.r |= e.r >> 6;
+    e.g |= e.g >> 6;
+    e.b |= e.b >> 6;
   }
 }
 

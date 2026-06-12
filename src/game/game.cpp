@@ -465,8 +465,8 @@ void Game::Focus(Renderer& renderer) { UpdateSettings(renderer); }
 
 void Game::UpdateSettings(Renderer& renderer) {
   renderer.origpal = level.origpal;  // Activate the Level palette
-  // A level's custom palette wins in both modes; Modern Vivid only
-  // replaces the stock palette.
+  // A level's custom palette wins in both modes; the modern palette only
+  // replaces the stock one.
   renderer.origpal_modern = level.has_custom_palette ? level.origpal : common->modernpal;
 
   for (auto& i : worms) {

@@ -78,18 +78,11 @@ struct Palette {
                    {.scale = 47, .add = 1008},
                    {.scale = 28, .add = 2205}};
 
-    int input[3] = {std::clamp(c[0], 0, 255), std::clamp(c[1], 0, 255), std::clamp(c[2], 0, 255)};
-    if (mode == ColorMode::kModern) {
-      // Modern shading runs the ramp on a saturation-boosted colour so the
-      // Classic/Modern toggle is visible on the worms themselves.
-      int const kGrey = (input[0] + input[1] + input[2]) / 3;
-      for (int& ch : input) {
-        ch = VividChannel(ch, kGrey);
-      }
-    }
+    int const kInput[3] = {std::clamp(c[0], 0, 255), std::clamp(c[1], 0, 255),
+                           std::clamp(c[2], 0, 255)};
 
     for (int j = 0; j < 5; ++j) {
-      ScaleAdd(base - 2 + j, input, kSteps[j].scale, kSteps[j].add, mode);
+      ScaleAdd(base - 2 + j, kInput, kSteps[j].scale, kSteps[j].add, mode);
     }
   }
 
@@ -101,20 +94,13 @@ struct Palette {
   void SetWormColour(int i, WormSettings const& settings, ColorMode mode);
   void SetWormColours(Settings const& settings, ColorMode mode);
 
-  // Derives the Modern Vivid look in place from a classic palette:
-  // full-range expansion (whites reach 255) plus a saturation boost.
-  // The shared transform keeps TC-derived palettes and the modern worm
-  // shading consistent; a TC can still override it with a modern.pal.
-  void MakeVivid();
+  // Expands a classic palette in place from the VGA grid to the full 8-bit
+  // range ((v << 2) | (v >> 4), so the brightest VGA white maps to 255).
+  // Used to derive the modern palette when a TC ships no modern.pal;
+  // colours stay true to the original.
+  void ExpandToFullRange();
 
   void Clear();
-
-  // Saturation boost (Q6 fixed point) shared by MakeVivid and the modern
-  // worm ramp: push a channel away from grey, clamped to range.
-  static int VividChannel(int c, int grey) {
-    static constexpr int kVividSaturationQ6 = 86;  // ~1.34x
-    return std::clamp(grey + ((c - grey) * kVividSaturationQ6) / 64, 0, 255);
-  }
 
  private:
   // The legacy gradient constants are tuned for 6-bit values; `add` scales

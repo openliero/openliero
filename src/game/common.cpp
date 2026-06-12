@@ -383,8 +383,10 @@ void Common::load(const FsNode& node) {
         auto r_ptr = modern_pal_node.ToReader();
         modernpal.ReadFull(*r_ptr);
       } else {
+        // The modern palette stays true to the original: just the classic
+        // palette expanded to the full 8-bit range.
         modernpal = exepal;
-        modernpal.MakeVivid();
+        modernpal.ExpandToFullRange();
       }
     }
 
