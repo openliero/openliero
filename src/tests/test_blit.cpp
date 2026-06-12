@@ -2,7 +2,52 @@
 
 #include <cstdint>
 
+#include "game/common.hpp"
+#include "game/gfx/blit.hpp"
 #include "game/gfx/renderer.hpp"
+#include "game/gfx/shadow_query.hpp"
+#include "game/level.hpp"
+#include "game/material.hpp"
+
+namespace {
+
+// 8x8 level: every pixel is palette index 10 (a SeeShadow material) except
+// column 5 which is index 20 (rock, no shadow).
+struct ShadowFixture {
+  Common common;
+  Level level;
+  Renderer renderer;
+
+  ShadowFixture() : level(common) {
+    common.materials[10].flags = Material::kSeeShadow | Material::kBackground;
+    common.materials[14].flags = Material::kBackground;
+    common.materials[20].flags = Material::kRock;
+
+    level.width = 8;
+    level.height = 8;
+    level.data.assign(64, 10);
+    level.materials.assign(64, common.materials[10]);
+    for (int y = 0; y < 8; ++y) {
+      level.data[5 + y * 8] = 20;
+      level.materials[5 + y * 8] = common.materials[20];
+    }
+
+    renderer.Init(8, 8);
+    renderer.pal.Clear();
+    renderer.pal.entries[14] = {.r = 0x11, .g = 0x22, .b = 0x33, .unused = 0};
+    renderer.UpdatePal32();
+  }
+
+  ShadowQuery Query(int offset_x = 0, int offset_y = 0) const {
+    return ShadowQuery{.common = common,
+                       .level = level,
+                       .pal32 = renderer.pal32,
+                       .world_offset_x = offset_x,
+                       .world_offset_y = offset_y};
+  }
+};
+
+}  // namespace
 
 TEST_CASE("updatepal32 packs the working palette as ARGB8888", "[blit][pal32]") {
   Renderer renderer;
@@ -31,4 +76,97 @@ TEST_CASE("updatepal32 tracks palette mutations", "[blit][pal32]") {
   renderer.pal.entries[7] = {.r = 0x40, .g = 0x50, .b = 0x60, .unused = 0};
   renderer.UpdatePal32();
   REQUIRE(renderer.pal32[7] == 0xFF405060U);
+}
+
+TEST_CASE("shadowquery reads material from the level, not the screen", "[blit][shadow]") {
+  ShadowFixture f;
+  ShadowQuery const kQ = f.Query();
+
+  // SeeShadow terrain: shadowed index is the level pixel + 4.
+  REQUIRE(kQ.ShadowedIndex(2, 3) == 14);
+  REQUIRE(kQ.ShadowedArgb(2, 3) == 0xFF112233U);
+
+  // Rock column: no shadow.
+  REQUIRE(kQ.ShadowedIndex(5, 3) == -1);
+  REQUIRE(kQ.ShadowedArgb(5, 3) == 0U);
+
+  // Outside the level: no shadow, no crash.
+  REQUIRE(kQ.ShadowedIndex(-1, 0) == -1);
+  REQUIRE(kQ.ShadowedIndex(0, -1) == -1);
+  REQUIRE(kQ.ShadowedIndex(8, 0) == -1);
+  REQUIRE(kQ.ShadowedIndex(0, 8) == -1);
+  REQUIRE(kQ.PixelAt(-1, -1) == -1);
+
+  // The world offset maps screen to level coordinates.
+  ShadowQuery const kShifted = f.Query(3, 0);
+  REQUIRE(kShifted.ShadowedIndex(2, 0) == -1);  // screen 2 -> level column 5
+  REQUIRE(kShifted.PixelAt(2, 0) == 20);
+}
+
+TEST_CASE("blitshadowimage shadows only seeshadow terrain", "[blit][shadow]") {
+  ShadowFixture f;
+  ShadowQuery const kQ = f.Query();
+
+  Bitmap& bmp = f.renderer.bmp;
+  Fill(bmp, 10);
+  // Old semantics keyed off the screen; paint a screen pixel with rock
+  // colour over SeeShadow terrain to prove the level now decides.
+  bmp.GetPixel(3, 3) = 20;
+
+  PalIdx const kSprite[9] = {7, 7, 7, 7, 7, 7, 7, 7, 7};
+  BlitShadowImage(kQ, bmp, kSprite, 3, 2, 3, 3);
+
+  // Level decides: (3,3) is SeeShadow terrain even though the screen
+  // showed rock there.
+  REQUIRE(bmp.GetPixel(3, 3) == 14);
+  REQUIRE(bmp.GetPixel(4, 2) == 14);
+  // Rock column untouched.
+  REQUIRE(bmp.GetPixel(5, 2) == 10);
+  REQUIRE(bmp.GetPixel(5, 3) == 10);
+  // Outside the blit rect untouched.
+  REQUIRE(bmp.GetPixel(2, 2) == 10);
+
+  // Clipped blit straddling the top-left corner must not crash.
+  BlitShadowImage(kQ, bmp, kSprite, -1, -1, 3, 3);
+  REQUIRE(bmp.GetPixel(0, 0) == 14);
+}
+
+TEST_CASE("drawshadowline shadows along the line from level material", "[blit][shadow]") {
+  ShadowFixture f;
+  ShadowQuery const kQ = f.Query();
+
+  Bitmap& bmp = f.renderer.bmp;
+  Fill(bmp, 10);
+
+  DrawShadowLine(kQ, bmp, 0, 1, 7, 1);
+
+  for (int x = 0; x < 8; ++x) {
+    if (x == 5) {
+      REQUIRE(bmp.GetPixel(x, 1) == 10);  // rock column skipped
+    } else {
+      REQUIRE(bmp.GetPixel(x, 1) == 14);
+    }
+  }
+  REQUIRE(bmp.GetPixel(3, 0) == 10);  // other rows untouched
+}
+
+TEST_CASE("blitimager draws only where the level pixel is in range", "[blit][shadow]") {
+  ShadowFixture f;
+
+  // Range check is [160, 168) against the level pixel.
+  f.level.data[3 + 3 * 8] = 160;
+  f.level.data[4 + 3 * 8] = 167;
+  f.level.data[2 + 3 * 8] = 168;  // out of range
+
+  ShadowQuery const kQ = f.Query();
+  Bitmap& bmp = f.renderer.bmp;
+  Fill(bmp, 0);
+
+  PalIdx const kSprite[9] = {9, 9, 9, 9, 9, 9, 9, 9, 9};
+  BlitImageR(kQ, bmp, kSprite, 2, 2, 3, 3);
+
+  REQUIRE(bmp.GetPixel(3, 3) == 9);
+  REQUIRE(bmp.GetPixel(4, 3) == 9);
+  REQUIRE(bmp.GetPixel(2, 3) == 0);  // 168: out of range
+  REQUIRE(bmp.GetPixel(3, 2) == 0);  // level pixel 10: out of range
 }
