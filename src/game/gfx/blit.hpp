@@ -10,6 +10,7 @@ struct Level;
 struct Common;
 struct Rand;
 struct Bitmap;
+struct ShadowQuery;
 
 void Vline(Bitmap& scr, int x, int y1, int y2, int color);
 
@@ -22,10 +23,11 @@ void DrawRoundedLineBox(Bitmap& scr, int x, int y, int color, int width, int hei
 void BlitImageNoKeyColour(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height, int pitch);
 // void blitImage(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height);
 void BlitImage(Bitmap& scr, Sprite spr, int x, int y);
-void BlitImageR(Bitmap& scr, const PalIdx* mem, int x, int y, int width, int height);
+void BlitImageR(ShadowQuery const& shadow, Bitmap& scr, const PalIdx* mem, int x, int y, int width,
+                int height);
 void BlitImageTrans(Bitmap& scr, Sprite spr, int x, int y, int phase);
-void BlitShadowImage(Common& common, Bitmap& scr, const PalIdx* mem, int x, int y, int width,
-                     int height);
+void BlitShadowImage(ShadowQuery const& shadow, Bitmap& scr, const PalIdx* mem, int x, int y,
+                     int width, int height);
 void BlitStone(Common& common, Level& level, bool p1, const PalIdx* mem, int x, int y);
 void BlitFireCone(Bitmap& scr, int fc, PalIdx* mem, int x, int y);
 void DrawDirtEffect(Common& common, Rand& rand, Level& level, int dirt_effect, int x, int y);
@@ -36,7 +38,8 @@ void DrawDashedLineBox(Bitmap& scr, int x, int y, int color, int color2, int num
 
 void DrawNinjarope(Common& common, Bitmap& scr, int from_x, int from_y, int to_x, int to_y);
 void DrawLaserSight(Bitmap& scr, Rand& rand, int from_x, int from_y, int to_x, int to_y);
-void DrawShadowLine(Common& common, Bitmap& scr, int from_x, int from_y, int to_x, int to_y);
+void DrawShadowLine(ShadowQuery const& shadow, Bitmap& scr, int from_x, int from_y, int to_x,
+                    int to_y);
 void DrawLine(Bitmap& scr, int from_x, int from_y, int to_x, int to_y, int color);
 
 void DrawGraph(Bitmap& scr, std::vector<double> const& data, int height, int start_x, int start_y,

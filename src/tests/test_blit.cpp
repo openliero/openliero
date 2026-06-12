@@ -140,7 +140,9 @@ TEST_CASE("drawshadowline shadows along the line from level material", "[blit][s
 
   DrawShadowLine(kQ, bmp, 0, 1, 7, 1);
 
-  for (int x = 0; x < 8; ++x) {
+  // DO_LINE never paints the line's start point.
+  REQUIRE(bmp.GetPixel(0, 1) == 10);
+  for (int x = 1; x < 8; ++x) {
     if (x == 5) {
       REQUIRE(bmp.GetPixel(x, 1) == 10);  // rock column skipped
     } else {

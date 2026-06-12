@@ -13,6 +13,7 @@
 #include "bitmap.hpp"
 #include "macros.hpp"
 #include "math/rect.hpp"
+#include "shadow_query.hpp"
 
 void FillRect(Bitmap& scr, int x, int y, int w, int h, int color) {
   int x2 = x + w;
@@ -262,21 +263,27 @@ void BlitImageTrans(Bitmap& scr, Sprite spr, int x, int y, int phase) {
     }                                                                                                \
   } while (false)
 
-void BlitImageR(Bitmap& scr, const PalIdx* mem, int x, int y, int width, int height) {
+void BlitImageR(ShadowQuery const& shadow, Bitmap& scr, const PalIdx* mem, int x, int y, int width,
+                int height) {
   int const pitch = width;
 
   CLIP_IMAGE(scr.clip_rect);
 
   PalIdx* scrptr = static_cast<PalIdx*>(scr.pixels) + y * scr.pitch + x;
 
-  for (int y = 0; y < height; ++y) {
+  for (int dy = 0; dy < height; ++dy) {
     PalIdx* rowdest = scrptr;
     PalIdx const* rowsrc = mem;
 
-    for (int x = 0; x < width; ++x) {
+    for (int dx = 0; dx < width; ++dx) {
       PalIdx const kC = *rowsrc;
-      if (kC && (static_cast<PalIdx>(*rowdest - 160) < 8)) {
-        *rowdest = kC;
+      if (kC) {
+        // Draw only over the level's special range (classically water);
+        // the level, not the screen, is the material source of truth.
+        int const kP = shadow.PixelAt(x + dx, y + dy);
+        if (kP >= 160 && kP < 168) {
+          *rowdest = kC;
+        }
       }
       ++rowsrc;
       ++rowdest;
@@ -341,22 +348,25 @@ void BlitImageOnMap(Common& common, Level& level, PalIdx* mem, int x, int y, int
   });
 }
 
-void BlitShadowImage(Common& common, Bitmap& scr, const PalIdx* mem, int x, int y, int width,
-                     int height) {
+void BlitShadowImage(ShadowQuery const& shadow, Bitmap& scr, const PalIdx* mem, int x, int y,
+                     int width, int height) {
   int const pitch = width;
 
   CLIP_IMAGE(scr.clip_rect);
 
   PalIdx* scrptr = static_cast<PalIdx*>(scr.pixels) + y * scr.pitch + x;
 
-  for (int y = 0; y < height; ++y) {
+  for (int dy = 0; dy < height; ++dy) {
     PalIdx* rowdest = scrptr;
     PalIdx const* rowsrc = mem;
 
-    for (int x = 0; x < width; ++x) {
+    for (int dx = 0; dx < width; ++dx) {
       PalIdx const kC = *rowsrc;
-      if (kC && common.materials[*rowdest].SeeShadow()) {  // TODO: Speed up this test?
-        *rowdest += 4;
+      if (kC) {
+        int const kShadowed = shadow.ShadowedIndex(x + dx, y + dy);
+        if (kShadowed >= 0) {
+          *rowdest = static_cast<PalIdx>(kShadowed);
+        }
       }
       ++rowsrc;
       ++rowdest;
@@ -586,15 +596,16 @@ void DrawLaserSight(Bitmap& scr, Rand& rand, int from_x, int from_y, int to_x, i
   });
 }
 
-void DrawShadowLine(Common& common, Bitmap& scr, int from_x, int from_y, int to_x, int to_y) {
+void DrawShadowLine(ShadowQuery const& shadow, Bitmap& scr, int from_x, int from_y, int to_x,
+                    int to_y) {
   Rect const& clip = scr.clip_rect;
   PalIdx* ptr = scr.pixels;
   unsigned int const kPitch = scr.pitch;
 
   DO_LINE({
     if (clip.Inside(cx, cy)) {
-      PalIdx& pix = ptr[cy * kPitch + cx];
-      if (common.materials[pix].SeeShadow()) pix += 4;
+      int const kShadowed = shadow.ShadowedIndex(cx, cy);
+      if (kShadowed >= 0) ptr[cy * kPitch + cx] = static_cast<PalIdx>(kShadowed);
     }
   });
 }

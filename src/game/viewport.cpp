@@ -6,6 +6,7 @@
 #include "gfx/bitmap.hpp"
 #include "gfx/blit.hpp"
 #include "gfx/renderer.hpp"
+#include "gfx/shadow_query.hpp"
 #include "math.hpp"
 #include "text.hpp"
 
@@ -193,6 +194,13 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
 
     fixedvec const kOffs = rect.Ul() - kRenderPos;
 
+    // Shadows and explosion masks query the level (screen + offset = world).
+    ShadowQuery const kShadow{.common = common,
+                              .level = game.level,
+                              .pal32 = renderer.pal32,
+                              .world_offset_x = -kOffs.x,
+                              .world_offset_y = -kOffs.y};
+
     BlitImageNoKeyColour(renderer.bmp, game.level.data.data(), kOffs.x, kOffs.y, game.level.width,
                          game.level.height);
 
@@ -265,7 +273,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
                   Ftoi(i->y) - 3 + kOffs.y);
 
         if (game.settings->shadow) {
-          BlitShadowImage(common, renderer.bmp, common.small_sprites.SpritePtr(kF),
+          BlitShadowImage(kShadow, renderer.bmp, common.small_sprites.SpritePtr(kF),
                           Ftoi(i->x) - 5 + kOffs.x,  // TODO: Use offsX
                           Ftoi(i->y) - 1 + kOffs.y, 7, 7);
         }
@@ -285,11 +293,11 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
       SObjectType const& t = common.sobject_types[i->id];
       int const kFrame = i->cur_frame + t.start_frame;
 
-      BlitImageR(renderer.bmp, common.large_sprites.SpritePtr(kFrame), i->x + kOffs.x,
+      BlitImageR(kShadow, renderer.bmp, common.large_sprites.SpritePtr(kFrame), i->x + kOffs.x,
                  i->y + kOffs.y, 16, 16);
 
       if (game.settings->shadow) {
-        BlitShadowImage(common, renderer.bmp, common.large_sprites.SpritePtr(kFrame),
+        BlitShadowImage(kShadow, renderer.bmp, common.large_sprites.SpritePtr(kFrame),
                         i->x + kOffs.x - 3,
                         i->y + kOffs.y + 3,  // TODO: Original doesn't offset the shadow, which is
                                              // clearly wrong. Check that this offset is correct.
@@ -330,7 +338,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         int const kPosY = Ftoi(i->pos.y) - 3;
 
         if (game.settings->shadow && w.shadow) {
-          BlitShadowImage(common, renderer.bmp,
+          BlitShadowImage(kShadow, renderer.bmp,
                           common.small_sprites.SpritePtr(w.start_frame + cur_frame),
                           kPosX - 3 + kOffs.x, kPosY + 3 + kOffs.y, 7, 7);
         }
@@ -350,9 +358,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
           pos_y += 3;
 
           if (renderer.bmp.clip_rect.Inside(pos_x, pos_y)) {
-            PalIdx& pix = renderer.bmp.GetPixel(pos_x, pos_y);
-            if (common.materials[pix].SeeShadow()) {
-              pix += 4;
+            int const kShadowed = kShadow.ShadowedIndex(pos_x, pos_y);
+            if (kShadowed >= 0) {
+              renderer.bmp.GetPixel(pos_x, pos_y) = static_cast<PalIdx>(kShadowed);
             }
           }
         }
@@ -383,7 +391,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         auto pos = Ftoi(i->pos) - IVec2(3, 3);
 
         if (game.settings->shadow) {
-          BlitShadowImage(common, renderer.bmp,
+          BlitShadowImage(kShadow, renderer.bmp,
                           common.small_sprites.SpritePtr(t.start_frame + i->cur_frame),
                           pos.x - 3 + kOffs.x, pos.y + 3 + kOffs.y, 7, 7);
         }
@@ -402,9 +410,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
           pos.y += 3;
 
           if (renderer.bmp.clip_rect.Encloses(pos)) {
-            PalIdx& pix = renderer.bmp.GetPixel(pos.x, pos.y);
-            if (common.materials[pix].SeeShadow()) {
-              pix += 4;
+            int const kShadowed = kShadow.ShadowedIndex(pos.x, pos.y);
+            if (kShadowed >= 0) {
+              renderer.bmp.GetPixel(pos.x, pos.y) = static_cast<PalIdx>(kShadowed);
             }
           }
         }
@@ -445,9 +453,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
           BlitImage(renderer.bmp, common.large_sprites[84], kNinjaropeX - 1, kNinjaropeY - 1);
 
           if (game.settings->shadow) {
-            DrawShadowLine(common, renderer.bmp, kNinjaropeX - 3, kNinjaropeY + 3, kTempX + 7 - 3,
+            DrawShadowLine(kShadow, renderer.bmp, kNinjaropeX - 3, kNinjaropeY + 3, kTempX + 7 - 3,
                            kTempY + 4 + 3);
-            BlitShadowImage(common, renderer.bmp, common.large_sprites.SpritePtr(84),
+            BlitShadowImage(kShadow, renderer.bmp, common.large_sprites.SpritePtr(84),
                             kNinjaropeX - 4, kNinjaropeY + 2, 16, 16);
           }
         }
@@ -466,7 +474,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         BlitImage(renderer.bmp, common.WormSpriteObj(w.current_frame, w.direction, w.index), kTempX,
                   kTempY);
         if (game.settings->shadow) {
-          BlitShadowImage(common, renderer.bmp,
+          BlitShadowImage(kShadow, renderer.bmp,
                           common.WormSprite(w.current_frame, w.direction, w.index), kTempX - 3,
                           kTempY + 3, 16, 16);
         }
@@ -519,9 +527,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         ipos.y += 3;
 
         if (renderer.bmp.clip_rect.Encloses(ipos)) {
-          PalIdx& pix = renderer.bmp.GetPixel(ipos.x, ipos.y);
-          if (common.materials[pix].SeeShadow()) {
-            pix += 4;
+          int const kShadowed = kShadow.ShadowedIndex(ipos.x, ipos.y);
+          if (kShadowed >= 0) {
+            renderer.bmp.GetPixel(ipos.x, ipos.y) = static_cast<PalIdx>(kShadowed);
           }
         }
       }

@@ -49,12 +49,13 @@ uint64_t HashFrame(Renderer& renderer) {
 
 int main(int argc, char* argv[]) try {
   if (argc < 3) {
-    std::fprintf(stderr, "usage: framehash <tc-dir> <replay.lrp> [spectator]\n");
+    std::fprintf(stderr, "usage: framehash <tc-dir> <replay.lrp> [s|n] [rgb-dump-file]\n");
     return 2;
   }
   std::string const kTcDir = argv[1];
   std::string const kReplayPath = argv[2];
-  bool const kSpectator = argc > 3;
+  bool const kSpectator = argc > 3 && argv[3][0] == 's';
+  std::FILE* dump = argc > 4 ? std::fopen(argv[4], "wb") : nullptr;
 
   PrecomputeTables();
   auto common = std::make_shared<Common>();
@@ -103,7 +104,22 @@ int main(int argc, char* argv[]) try {
     uint64_t const kH = HashFrame(renderer);
     all = (all ^ kH) * kFnvPrime;
     std::printf("%d %016" PRIx64 "\n", frame, kH);
+
+    if (dump) {
+      Color real_pal[256];
+      renderer.pal.Activate(real_pal);
+      for (int py = 0; py < renderer.bmp.h; ++py) {
+        for (int px = 0; px < renderer.bmp.w; ++px) {
+          Color const& c = real_pal[renderer.bmp.GetPixel(px, py)];
+          uint8_t const rgb[3] = {c.r, c.g, c.b};
+          std::fwrite(rgb, 1, 3, dump);
+        }
+      }
+    }
     ++frame;
+  }
+  if (dump) {
+    std::fclose(dump);  // NOLINT(cert-err33-c) — verification tool
   }
   std::printf("total %d %016" PRIx64 "\n", frame, all);
   return 0;
