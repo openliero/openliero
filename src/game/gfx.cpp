@@ -408,7 +408,7 @@ void Gfx::OnWindowResize(uint32_t window_id) {
 
 void Gfx::LoadMenus() {
   hidden_menu.AddItem(MenuItem(48, 7, "FULLSCREEN (F11)", HiddenMenu::kFullscreen));
-  hidden_menu.AddItem(MenuItem(48, 7, "MODERN COLORS (F9)", HiddenMenu::kColorMode));
+  hidden_menu.AddItem(MenuItem(48, 7, "MODERN COLORS (F10)", HiddenMenu::kColorMode));
   hidden_menu.AddItem(MenuItem(48, 7, "DOUBLE SIZE", HiddenMenu::kDoubleRes));
   hidden_menu.AddItem(MenuItem(48, 7, "POWERLEVEL PALETTES", HiddenMenu::kLoadPowerLevels));
   hidden_menu.AddItem(MenuItem(48, 7, "SHADOWS", HiddenMenu::kShadows));
@@ -576,7 +576,7 @@ void Gfx::ProcessEvent(SDL_Event& ev, Controller* controller) {
         }
       }
 
-      if (kS == SDL_SCANCODE_F9) {
+      if (kS == SDL_SCANCODE_F10) {
         SetColorMode(play_renderer.mode == ColorMode::kModern ? ColorMode::kClassic
                                                               : ColorMode::kModern);
       }
