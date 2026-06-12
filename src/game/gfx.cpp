@@ -1442,7 +1442,7 @@ bool Gfx::RunOneFrame() {
   // Menu states finalize their palettes before drawing (blits resolve
   // through pal32 at draw time); game states rebuild inside Game::Draw.
   auto* top = state_stack.Top();
-  bool const kUseMenuFlip = !(top && !top->WantsMenuFlip());
+  bool const kUseMenuFlip = !top || top->WantsMenuFlip();
   if (kUseMenuFlip) {
     UpdateMenuPalettes(kMenuFadingOut);
   }

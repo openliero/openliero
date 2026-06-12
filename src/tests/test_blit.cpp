@@ -82,8 +82,8 @@ TEST_CASE("updatepal32 tracks palette mutations", "[blit][pal32]") {
 }
 
 TEST_CASE("shadowquery reads material from the level, not the screen", "[blit][shadow]") {
-  ShadowFixture f;
-  ShadowQuery const kQ = f.Query();
+  ShadowFixture const kFixture;
+  ShadowQuery const kQ = kFixture.Query();
 
   // SeeShadow terrain: shadowed index is the level pixel + 4.
   REQUIRE(kQ.ShadowedIndex(2, 3) == 14);
@@ -101,7 +101,7 @@ TEST_CASE("shadowquery reads material from the level, not the screen", "[blit][s
   REQUIRE(kQ.PixelAt(-1, -1) == -1);
 
   // The world offset maps screen to level coordinates.
-  ShadowQuery const kShifted = f.Query(3, 0);
+  ShadowQuery const kShifted = kFixture.Query(3, 0);
   REQUIRE(kShifted.ShadowedIndex(2, 0) == -1);  // screen 2 -> level column 5
   REQUIRE(kShifted.PixelAt(2, 0) == 20);
 }

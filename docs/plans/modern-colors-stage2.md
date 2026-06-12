@@ -1,6 +1,29 @@
 # Implementation Plan: Modern Colors — Stage 2 (ARGB Screen)
 
-**Status: planned** (not started).
+**Status: implemented** (branch `modern-colors-stage2`).
+
+Deviations from the plan, found necessary during implementation:
+
+- **Fade applies at composition, not in the palette rebuild.** `pal.Fade`
+  on the working palette would bake the fade level into every ARGB capture
+  (weapsel backgrounds, the menu's captured game frame, `frozen_screen`
+  dialogs), freezing them at the brightness of the capture frame. The
+  identical per-channel math (`(v * amount) >> 5`) now runs in `ScaleDraw`
+  using `renderer.fade_value` — value-identical for live content and
+  byte-identical to the old composition-time behaviour for frozen content.
+- **`Game::Draw` repaints the background after the palette rebuild.**
+  Callers clear before drawing, which resolves entry 0 through the
+  previous frame's LUT — a one-frame lag on border pixels during screen
+  flashes (caught by a per-frame hash diff).
+- **Verification used `framehash`** (new headless per-frame output hasher,
+  `src/tests/framehash_main.cpp`) instead of videotool diffs: the video
+  tool was broken on master (never wired `ReplayReader::game`, unguarded
+  `worms[1]`) and encodes lossily. Both bugs are fixed in this branch.
+- **Accepted minor visual change** beyond the documented shadow semantics:
+  palette *rotation* (water shimmer) and live worm-colour previews no
+  longer animate inside frozen captures (weapsel backgrounds, the menu's
+  captured game frame) because those pixels are baked ARGB. Fades still
+  apply (see above).
 
 Task breakdown of Stage 2 of `docs/ideas/modern-colors.md`: convert the
 screen back buffer (`Renderer.bmp`, `frozen_screen`) from palette-indexed

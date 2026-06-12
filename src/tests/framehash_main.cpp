@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) try {
   std::string const kTcDir = argv[1];
   std::string const kReplayPath = argv[2];
   bool const kSpectator = argc > 3 && argv[3][0] == 's';
-  std::FILE* dump = argc > 4 ? std::fopen(argv[4], "wb") : nullptr;
+  std::FILE* dump = argc > 4 ? std::fopen(argv[4], "wbe") : nullptr;
 
   PrecomputeTables();
   auto common = std::make_shared<Common>();
@@ -115,10 +115,10 @@ int main(int argc, char* argv[]) try {
       for (int py = 0; py < renderer.bmp.h; ++py) {
         for (int px = 0; px < renderer.bmp.w; ++px) {
           uint32_t const kC = renderer.bmp.GetPixel(px, py);
-          uint8_t const rgb[3] = {FadeChannel((kC >> 16) & 0xFF, kFade),
-                                  FadeChannel((kC >> 8) & 0xFF, kFade),
-                                  FadeChannel(kC & 0xFF, kFade)};
-          std::fwrite(rgb, 1, 3, dump);
+          uint8_t const kRgb[3] = {FadeChannel((kC >> 16) & 0xFF, kFade),
+                                   FadeChannel((kC >> 8) & 0xFF, kFade),
+                                   FadeChannel(kC & 0xFF, kFade)};
+          std::fwrite(kRgb, 1, 3, dump);
         }
       }
     }
