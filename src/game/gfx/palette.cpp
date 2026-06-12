@@ -32,18 +32,18 @@ void Palette::Fade(int amount) {
     return;
   }
 
-  for (auto& entrie : entries) {
-    entrie.r = FadeValue(entrie.r, amount);
-    entrie.g = FadeValue(entrie.g, amount);
-    entrie.b = FadeValue(entrie.b, amount);
+  for (auto& entry : entries) {
+    entry.r = FadeValue(entry.r, amount);
+    entry.g = FadeValue(entry.g, amount);
+    entry.b = FadeValue(entry.b, amount);
   }
 }
 
 void Palette::LightUp(int amount) {
-  for (auto& entrie : entries) {
-    entrie.r = LightUpValue(entrie.r, amount);
-    entrie.g = LightUpValue(entrie.g, amount);
-    entrie.b = LightUpValue(entrie.b, amount);
+  for (auto& entry : entries) {
+    entry.r = LightUpValue(entry.r, amount);
+    entry.g = LightUpValue(entry.g, amount);
+    entry.b = LightUpValue(entry.b, amount);
   }
 }
 
@@ -61,13 +61,13 @@ void Palette::Clear() { std::memset(entries, 0, sizeof(entries)); }
 void Palette::Read(io::Reader& r) {
   // Classic palette files carry 6-bit VGA channels; expand to the 8-bit
   // range entries hold, preserving the legacy (v & 63) << 2 screen values.
-  for (auto& entrie : entries) {
+  for (auto& entry : entries) {
     uint8_t rgb[3];
     r.Get(rgb, 3);
 
-    entrie.r = (rgb[0] & 63) << 2;
-    entrie.g = (rgb[1] & 63) << 2;
-    entrie.b = (rgb[2] & 63) << 2;
+    entry.r = (rgb[0] & 63) << 2;
+    entry.g = (rgb[1] & 63) << 2;
+    entry.b = (rgb[2] & 63) << 2;
   }
 }
 
@@ -79,13 +79,13 @@ ColorBlock const Palette::kWormColorBlocks[2] = {
     {.base = 41, .colour_index = 0x78, .status_index = 133, .width = 5}};
 
 void Palette::ReadFull(io::Reader& r) {
-  for (auto& entrie : entries) {
+  for (auto& entry : entries) {
     uint8_t rgb[3];
     r.Get(rgb, 3);
 
-    entrie.r = rgb[0];
-    entrie.g = rgb[1];
-    entrie.b = rgb[2];
+    entry.r = rgb[0];
+    entry.g = rgb[1];
+    entry.b = rgb[2];
   }
 }
 
