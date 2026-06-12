@@ -1220,9 +1220,11 @@ ItemBehavior* PlayerMenu::GetItemBehavior(Common& common, MenuItem& item) {
     case kPlGreen:
     case kPlBlue: {
       // Step 4 keeps the same 64 positions the VGA picker had; classic
-      // rendering quantizes to that grid anyway.
+      // rendering quantizes to that grid anyway. In classic mode the value
+      // is also shown in the original 0..63 numbering.
       auto* b =
           new IntegerBehavior(common, ws->rgb[item.id - kPlRed], 0, 255, 4, /*percentage=*/false);
+      b->display_div = gfx.play_renderer.mode == ColorMode::kClassic ? 4 : 1;
       b->scroll_interval = 4;
       return b;
     }
