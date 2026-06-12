@@ -1228,8 +1228,10 @@ void RollbackController::Draw(Renderer& renderer, bool use_spectator_viewports) 
     int const kCx = renderer.render_res_x / 2;
     int const kCy = renderer.render_res_y / 2 - 20;
 
-    renderer.pal = game.common->exepal;
-    renderer.pal.RotateFrom(game.common->exepal, 168, 174, gfx.menu_cycles);
+    Palette const& base_pal =
+        renderer.mode == ColorMode::kModern ? game.common->modernpal : game.common->exepal;
+    renderer.pal = base_pal;
+    renderer.pal.RotateFrom(base_pal, 168, 174, gfx.menu_cycles);
     renderer.pal.Fade(fadeValue_);
 
     if (localPaused_) {

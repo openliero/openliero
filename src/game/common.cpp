@@ -379,17 +379,12 @@ void Common::load(const FsNode& node) {
     {
       auto modern_pal_node = node / "modern.pal";
       if (modern_pal_node.Exists()) {
+        // A TC can ship a curated full-8-bit palette for modern mode.
         auto r_ptr = modern_pal_node.ToReader();
         modernpal.ReadFull(*r_ptr);
       } else {
-        // No curated modern palette: expand the classic palette from the
-        // VGA grid to the full 8-bit range so whites reach 255.
         modernpal = exepal;
-        for (auto& e : modernpal.entries) {
-          e.r |= e.r >> 6;
-          e.g |= e.g >> 6;
-          e.b |= e.b >> 6;
-        }
+        modernpal.MakeVivid();
       }
     }
 

@@ -236,7 +236,7 @@ TEST_CASE("readfull keeps 8-bit channels unclamped", "[palette]") {
   }
 }
 
-TEST_CASE("modern worm shading uses full 8-bit precision", "[palette]") {
+TEST_CASE("modern worm shading is saturated full 8-bit precision", "[palette]") {
   WormSettings ws;
   ws.rgb[0] = 255;
   ws.rgb[1] = 128;
@@ -246,7 +246,12 @@ TEST_CASE("modern worm shading uses full 8-bit precision", "[palette]") {
   pal.Clear();
   pal.SetWormColour(0, ws, ColorMode::kModern);
 
-  // Full-precision golden reference: (4*add + c*scale) / 64, clamped.
+  // Golden reference: saturation-boosted input, then the full-precision
+  // ramp (4*add + c*scale) / 64, clamped.
+  int const kGrey = (ws.rgb[0] + ws.rgb[1] + ws.rgb[2]) / 3;
+  int const kVivid[3] = {Palette::VividChannel(ws.rgb[0], kGrey),
+                         Palette::VividChannel(ws.rgb[1], kGrey),
+                         Palette::VividChannel(ws.rgb[2], kGrey)};
   struct {
     int scale, add;
   } const kSteps[5] = {{.scale = 38, .add = 0},
@@ -261,7 +266,7 @@ TEST_CASE("modern worm shading uses full 8-bit precision", "[palette]") {
       return static_cast<uint8_t>(kV < 255 ? kV : 255);
     };
     Rgb const kExpected{
-        .r = scale_add(ws.rgb[0]), .g = scale_add(ws.rgb[1]), .b = scale_add(ws.rgb[2])};
+        .r = scale_add(kVivid[0]), .g = scale_add(kVivid[1]), .b = scale_add(kVivid[2])};
     RequireEntry(pal.entries[kIdx], kExpected);
   }
 
@@ -303,4 +308,30 @@ TEST_CASE("out-of-range worm colours are clamped by the ramp math", "[palette]")
       REQUIRE(pal_overshoot.entries[i].b == pal_white.entries[i].b);
     }
   }
+}
+
+TEST_CASE("makevivid expands range and boosts saturation, keeping greys grey", "[palette]") {
+  Palette pal;
+  pal.Clear();
+  // Entry 0: mid grey (classic 32,32,32 stored expanded).
+  pal.entries[0] = {.r = 128, .g = 128, .b = 128, .unused = 0};
+  // Entry 1: the classic worm blue.
+  pal.entries[1] = {.r = 104, .g = 104, .b = 248, .unused = 0};
+  // Entry 2: brightest classic white (must reach full range).
+  pal.entries[2] = {.r = 252, .g = 252, .b = 252, .unused = 0};
+
+  pal.MakeVivid();
+
+  // Grey stays grey (expansion only).
+  REQUIRE(static_cast<int>(pal.entries[0].r) == static_cast<int>(pal.entries[0].g));
+  REQUIRE(static_cast<int>(pal.entries[0].g) == static_cast<int>(pal.entries[0].b));
+
+  // The blue becomes visibly more saturated: blue channel up, red/green down.
+  REQUIRE(static_cast<int>(pal.entries[1].b) > 251);
+  REQUIRE(static_cast<int>(pal.entries[1].r) < 104);
+
+  // Whites reach true 255.
+  REQUIRE(static_cast<int>(pal.entries[2].r) == 255);
+  REQUIRE(static_cast<int>(pal.entries[2].g) == 255);
+  REQUIRE(static_cast<int>(pal.entries[2].b) == 255);
 }
