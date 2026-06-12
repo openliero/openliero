@@ -137,6 +137,9 @@ std::unique_ptr<Game> ReplayReader::BeginPlayback(
     ExpandLegacyWormRgb(*game);
   }
 
+  // The replay stream carries the palette but not the custom-palette flag.
+  game->level.DeriveHasCustomPalette(common->exepal);
+
   return game;
 }
 

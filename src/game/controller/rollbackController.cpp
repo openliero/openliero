@@ -139,6 +139,7 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
     game.level.origpal.entries[i].g = pal_data[i * 3 + 1];
     game.level.origpal.entries[i].b = pal_data[i * 3 + 2];
   }
+  game.level.DeriveHasCustomPalette(common.exepal);
 
   game.rand.Deserialize(kRandState);
   game.rand.last = rand_last;

@@ -129,9 +129,11 @@ be toggled live. As built:
   full 8-bit range (`(v << 2) | (v >> 4)`, so the brightest VGA white is a
   true 255). A TC may override it by shipping a `modern.pal` (768-byte raw
   RGB, read unclamped); the stock game ships none.
-- A level's custom palette wins in both modes. `Level::has_custom_palette`
-  is not serialized, so netplay-/replay-received levels render the stock
-  modern palette in modern mode (acceptable v1 simplification).
+- A level's custom palette wins in both modes. The palette itself already
+  travels in the netplay level blob and the replay stream; the
+  custom-palette flag is re-derived on arrival by comparing against the
+  stock palette (`Level::DeriveHasCustomPalette`), so POWERLEVEL palettes
+  render correctly in both modes on both peers and in replays.
 - Toggle UX: `MODERN COLORS (F10)` in the options menu and an F10 hotkey
   flip the live mode instantly mid-game or in menus (the open menu's value
   strings are refreshed on toggle). The choice persists as `modernColors`

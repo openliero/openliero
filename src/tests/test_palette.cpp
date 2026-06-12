@@ -5,6 +5,7 @@
 
 #include "game/gfx/palette.hpp"
 #include "game/io/stream.hpp"
+#include "game/level.hpp"
 #include "game/worm.hpp"
 
 namespace {
@@ -325,4 +326,20 @@ TEST_CASE("expandtofullrange maps the VGA grid onto the full 8-bit range", "[pal
   REQUIRE(static_cast<int>(pal.entries[2].g) == 255);
   REQUIRE(static_cast<int>(pal.entries[2].b) == 255);
   REQUIRE(static_cast<int>(pal.entries[0].r) == 0);
+}
+
+TEST_CASE("received levels derive the custom palette flag", "[palette]") {
+  Common common;
+  Level level(common);
+
+  Palette stock;
+  stock.Clear();
+  level.origpal.Clear();
+
+  level.DeriveHasCustomPalette(stock);
+  REQUIRE(!level.has_custom_palette);
+
+  level.origpal.entries[200].g = 12;
+  level.DeriveHasCustomPalette(stock);
+  REQUIRE(level.has_custom_palette);
 }
