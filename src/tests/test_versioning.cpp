@@ -328,7 +328,7 @@ TEST_CASE("versioning: Settings toToml/fromToml produces human-readable config",
   CHECK(kToml.contains("[player2]"));
   CHECK(kToml.contains("[network_player]"));
   // Version field present for future-proofing
-  CHECK(kToml.contains("version = 3"));
+  CHECK(kToml.contains("version = 4"));
   // No ptr_wrapper noise
   CHECK(!kToml.contains("ptr_wrapper"));
   CHECK(!kToml.contains("[s]"));
@@ -395,4 +395,25 @@ TEST_CASE("versioning: settings TOML without rgbDepth expands worm rgb", "[versi
   CHECK(dst.worm_settings[0]->rgb[0] == 60);
   CHECK(dst.worm_settings[0]->rgb[1] == 172);
   CHECK(dst.worm_settings[0]->rgb[2] == 60);
+}
+
+TEST_CASE("versioning: modernColors round-trips and defaults to classic", "[versioning]") {
+  Settings src;
+  src.modern_colors = true;
+  std::string const kToml = src.ToToml();
+  CHECK(kToml.contains("modernColors = true"));
+
+  Settings dst;
+  dst.FromToml(kToml);
+  CHECK(dst.modern_colors == true);
+
+  // Configs predating the field stay classic (missing key keeps the
+  // struct default).
+  Settings legacy;
+  std::string toml = kToml;
+  auto const kPos = toml.find("modernColors = true");
+  REQUIRE(kPos != std::string::npos);
+  toml.replace(kPos, std::string("modernColors = true").length(), "");
+  legacy.FromToml(toml);
+  CHECK(legacy.modern_colors == false);
 }

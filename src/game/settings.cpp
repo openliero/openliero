@@ -109,6 +109,9 @@ std::string Settings::ToToml() const {
     ar.startNode();
     int32_t version = kConfigVersion;
     ar(cereal::make_nvp("version", version));
+    // TOML-only (display preference): the binary Settings blob is embedded
+    // in replays and must keep its field layout.
+    ar(cereal::make_nvp("modernColors", const_cast<Settings&>(*this).modern_colors));
     SerializeSettingsScalars(ar, const_cast<Settings&>(*this));
     SerializeArray(ar, "weapTable", const_cast<Settings&>(*this).weap_table);
     ar.finishNode();
@@ -135,6 +138,7 @@ void Settings::FromToml(std::string const& data) {
   ar.startNode();
   int32_t version = 0;
   ar(cereal::make_nvp("version", version));
+  ar(cereal::make_nvp("modernColors", modern_colors));
   SerializeSettingsScalars(ar, *this);
   SerializeArray(ar, "weapTable", weap_table);
   ar.finishNode();

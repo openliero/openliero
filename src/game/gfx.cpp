@@ -408,6 +408,7 @@ void Gfx::OnWindowResize(uint32_t window_id) {
 
 void Gfx::LoadMenus() {
   hidden_menu.AddItem(MenuItem(48, 7, "FULLSCREEN (F11)", HiddenMenu::kFullscreen));
+  hidden_menu.AddItem(MenuItem(48, 7, "MODERN COLORS (F9)", HiddenMenu::kColorMode));
   hidden_menu.AddItem(MenuItem(48, 7, "DOUBLE SIZE", HiddenMenu::kDoubleRes));
   hidden_menu.AddItem(MenuItem(48, 7, "POWERLEVEL PALETTES", HiddenMenu::kLoadPowerLevels));
   hidden_menu.AddItem(MenuItem(48, 7, "SHADOWS", HiddenMenu::kShadows));
@@ -507,6 +508,12 @@ void Gfx::SetSpectatorFullscreen(bool new_fullscreen) {
   SetVideoMode();
 }
 
+void Gfx::SetColorMode(ColorMode new_mode) {
+  play_renderer.mode = new_mode;
+  single_screen_renderer.mode = new_mode;
+  settings->modern_colors = new_mode == ColorMode::kModern;
+}
+
 void Gfx::SetFullscreen(bool new_fullscreen) {
   if (new_fullscreen == settings->fullscreen) {
     return;
@@ -567,6 +574,11 @@ void Gfx::ProcessEvent(SDL_Event& ev, Controller* controller) {
         } else {
           SetSpectatorFullscreen(!spectator_fullscreen);
         }
+      }
+
+      if (kS == SDL_SCANCODE_F9) {
+        SetColorMode(play_renderer.mode == ColorMode::kModern ? ColorMode::kClassic
+                                                              : ColorMode::kModern);
       }
 
       if (kS == SDL_SCANCODE_F4 && (ev.key.mod & SDL_KMOD_ALT)) {
