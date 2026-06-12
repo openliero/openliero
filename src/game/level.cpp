@@ -206,7 +206,7 @@ void Level::MakeShadow(Common& common) {
 void Level::Resize(int width_new, int height_new) {
   width = width_new;
   height = height_new;
-  data.resize(width * height);
+  material_id.resize(width * height);
   materials.resize(width * height);
 }
 
@@ -216,7 +216,7 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
   // std::size_t len = f.len;
   bool reset_palette = true;
 
-  r.Get(reinterpret_cast<uint8_t*>(data.data()), width * height);
+  r.Get(reinterpret_cast<uint8_t*>(material_id.data()), width * height);
 
   if (/*len >= 504*350 + 10 + 256*3
    &&*/
@@ -234,8 +234,8 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
     }
   }
 
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    materials[i] = common.materials[data[i]];
+  for (std::size_t i = 0; i < material_id.size(); ++i) {
+    materials[i] = common.materials[material_id[i]];
   }
 
   if (reset_palette) {
@@ -345,7 +345,10 @@ void Level::DrawMiniature(Bitmap& dest, int map_x, int map_y, int step) {
   for (int y = map_y; y < kMapEndY; ++y) {
     int mx = step / 2;
     for (int x = map_x; x < kMapEndX; ++x) {
-      dest.SetPixel(x, y, CheckedPixelWrap(mx, my));
+      auto const kIdx = static_cast<unsigned int>(mx + my * width);
+      if (kIdx < material_id.size() && dest.clip_rect.Inside(x, y)) {
+        dest.GetPixel(x, y) = AppearanceAt(static_cast<int>(kIdx), dest.mode, dest.pal32);
+      }
       mx += step;
     }
     my += step;

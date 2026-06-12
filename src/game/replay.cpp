@@ -249,7 +249,7 @@ uint32_t WideRollbackChecksum(Game& game) {
   std::size_t const kCells =
       static_cast<std::size_t>(game.level.width) * static_cast<std::size_t>(game.level.height);
   if (kCells > 0) {
-    MixBytes(h, game.level.data.data(), kCells);
+    MixBytes(h, game.level.material_id.data(), kCells);
   }
 
   return h;

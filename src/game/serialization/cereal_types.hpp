@@ -110,7 +110,7 @@ void serialize(Archive& ar, Palette& p) {
 template <class Archive>
 void serialize(Archive& ar, Level& lvl) {
   ar(cereal::make_nvp("width", lvl.width), cereal::make_nvp("height", lvl.height),
-     cereal::make_nvp("data", lvl.data), cereal::make_nvp("origpal", lvl.origpal));
+     cereal::make_nvp("data", lvl.material_id), cereal::make_nvp("origpal", lvl.origpal));
 }
 
 // ---- Settings ----
@@ -449,10 +449,10 @@ void load(Archive& ar, Game& game) {
   // Level
   ar(cereal::make_nvp("level", game.level));
 
-  // Rebuild materials from data + Common (materials are not serialized —
-  // they're derived from level.data and the material table in Common).
+  // Rebuild materials from material_id + Common (materials are not serialized —
+  // they're derived from level.material_id and the material table in Common).
   game.level.materials.resize(game.level.width * game.level.height);
-  for (std::size_t i = 0; i < game.level.data.size(); ++i) {
-    game.level.materials[i] = game.common->materials[game.level.data[i]];
+  for (std::size_t i = 0; i < game.level.material_id.size(); ++i) {
+    game.level.materials[i] = game.common->materials[game.level.material_id[i]];
   }
 }

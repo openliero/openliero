@@ -708,7 +708,7 @@ void NetSession::GenerateAndSendMap() {
   std::memcpy(raw.data() + 8, rand_state.data(), rand_state_len);
   std::memcpy(raw.data() + 8 + rand_state_len, &rand_last, 4);
   size_t const kPixelsOffset = 8 + rand_state_len + 4;
-  std::memcpy(raw.data() + kPixelsOffset, level.data.data(), kPixelDataSize);
+  std::memcpy(raw.data() + kPixelsOffset, level.material_id.data(), kPixelDataSize);
 
   // Palette
   uint8_t* pal_ptr = raw.data() + kPixelsOffset + kPixelDataSize;

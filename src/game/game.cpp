@@ -722,7 +722,7 @@ void Game::SaveSnapshotFast(GameSnapshot& snap) const {
     snap.level_materials.resize(kCells);
   }
   if (kCells > 0) {
-    std::memcpy(snap.level_data.data(), level.data.data(), kCells);
+    std::memcpy(snap.level_data.data(), level.material_id.data(), kCells);
     std::memcpy(snap.level_materials.data(), level.materials.data(), kCells * sizeof(Material));
   }
 }
@@ -753,7 +753,7 @@ void Game::LoadSnapshotFast(GameSnapshot const& snap) {
   std::size_t const kCells =
       static_cast<std::size_t>(level.width) * static_cast<std::size_t>(level.height);
   if (kCells > 0) {
-    std::memcpy(level.data.data(), snap.level_data.data(), kCells);
+    std::memcpy(level.material_id.data(), snap.level_data.data(), kCells);
     std::memcpy(level.materials.data(), snap.level_materials.data(), kCells * sizeof(Material));
   }
 }

@@ -27,10 +27,10 @@ struct ShadowFixture {
 
     level.width = 8;
     level.height = 8;
-    level.data.assign(64, 10);
+    level.material_id.assign(64, 10);
     level.materials.assign(64, common.materials[10]);
     for (int y = 0; y < 8; ++y) {
-      level.data[5 + y * 8] = 20;
+      level.material_id[5 + y * 8] = 20;
       level.materials[5 + y * 8] = common.materials[20];
     }
 
@@ -161,9 +161,9 @@ TEST_CASE("blitimager draws only where the level pixel is in range", "[blit][sha
   ShadowFixture f;
 
   // Range check is [160, 168) against the level pixel.
-  f.level.data[3 + 3 * 8] = 160;
-  f.level.data[4 + 3 * 8] = 167;
-  f.level.data[2 + 3 * 8] = 168;  // out of range
+  f.level.material_id[3 + 3 * 8] = 160;
+  f.level.material_id[4 + 3 * 8] = 167;
+  f.level.material_id[2 + 3 * 8] = 168;  // out of range
 
   ShadowQuery const kQ = f.Query();
   Bitmap& bmp = f.renderer.bmp;
@@ -204,7 +204,7 @@ TEST_CASE("appearanceat resolves level pixels through pal32", "[blit][argb]") {
   f.renderer.pal.entries[10] = {.r = 4, .g = 5, .b = 6, .unused = 0};
   f.renderer.UpdatePal32();
 
-  REQUIRE(f.level.AppearanceAt(0, f.renderer.pal32) == 0xFF040506U);
+  REQUIRE(f.level.AppearanceAt(0, f.renderer.mode, f.renderer.pal32) == 0xFF040506U);
 }
 
 TEST_CASE("drawlevel paints terrain and blitbitmap restores argb", "[blit][argb]") {

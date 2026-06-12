@@ -135,16 +135,16 @@ void DrawLevel(Bitmap& scr, Level const& level, int x, int y) {
   int width = level.width;
   int height = level.height;
   int const pitch = level.width;
-  PalIdx const* mem = level.data.data();
+  PalIdx const* mem = level.material_id.data();
 
   CLIP_IMAGE(scr.clip_rect);
 
   uint32_t* scrptr = scr.pixels + y * scr.pitch + x;
-  int idx = static_cast<int>(mem - level.data.data());
+  int idx = static_cast<int>(mem - level.material_id.data());
 
   for (int dy = 0; dy < height; ++dy) {
     for (int dx = 0; dx < width; ++dx) {
-      scrptr[dx] = level.AppearanceAt(idx + dx, scr.pal32);
+      scrptr[dx] = level.AppearanceAt(idx + dx, scr.mode, scr.pal32);
     }
 
     scrptr += scr.pitch;
@@ -353,7 +353,7 @@ void BlitImageOnMap(Common& common, Level& level, PalIdx* mem, int x, int y, int
 
   CLIP_IMAGE(kClipRect);
 
-  BLITL(level.data.data(), level.width, level.materials.data(), {
+  BLITL(level.material_id.data(), level.width, level.materials.data(), {
     if (c) {
       PalIdx n;
       if (rowmatdest->DirtBack())
@@ -473,7 +473,7 @@ void DrawDirtEffect(Common& common, Rand& rand, Level& level, int dirt_effect, i
   CLIP_IMAGE(kClip);
 
   if (tex.n_draw_back) {
-    BLITL(level.data.data(), level.width, level.materials.data(), {
+    BLITL(level.material_id.data(), level.width, level.materials.data(), {
       switch (c) {
         case 6:
           if (rowmatdest->AnyDirt()) {
@@ -500,7 +500,7 @@ void DrawDirtEffect(Common& common, Rand& rand, Level& level, int dirt_effect, i
       }
     });
   } else {
-    BLITL(level.data.data(), level.width, level.materials.data(), {
+    BLITL(level.material_id.data(), level.width, level.materials.data(), {
       switch (c) {
         case 10:
         case 6:

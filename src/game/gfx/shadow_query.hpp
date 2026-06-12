@@ -28,7 +28,7 @@ struct ShadowQuery {
     if (!level.Inside(kWx, kWy)) {
       return -1;
     }
-    return level.data[kWx + kWy * level.width];
+    return level.material_id[kWx + kWy * level.width];
   }
 
   // Shadowed palette index for screen (sx, sy) — the level pixel shifted to
