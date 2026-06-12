@@ -88,7 +88,7 @@ TEST_CASE("worm colour ramps match the legacy shading", "[palette]") {
 
     Palette pal;
     pal.Clear();
-    pal.SetWormColour(w, ws);
+    pal.SetWormColour(w, ws, ColorMode::kClassic);
 
     Color real_pal[256];
     pal.Activate(real_pal);
@@ -125,8 +125,8 @@ TEST_CASE("classic worm shading quantizes 8-bit colours to the VGA grid", "[pale
   Palette pal_a, pal_b;
   pal_a.Clear();
   pal_b.Clear();
-  pal_a.SetWormColour(0, a);
-  pal_b.SetWormColour(0, b);
+  pal_a.SetWormColour(0, a, ColorMode::kClassic);
+  pal_b.SetWormColour(0, b, ColorMode::kClassic);
 
   Color real_a[256], real_b[256];
   pal_a.Activate(real_a);
@@ -208,4 +208,61 @@ TEST_CASE("rotatefrom permutes entries without touching channel values", "[palet
     REQUIRE(rotated.entries[i].g == source.entries[kSrc].g);
     REQUIRE(rotated.entries[i].b == source.entries[kSrc].b);
   }
+}
+
+TEST_CASE("readfull keeps 8-bit channels unclamped", "[palette]") {
+  std::vector<uint8_t> raw(256 * 3);
+  for (std::size_t i = 0; i < raw.size(); ++i) {
+    raw[i] = static_cast<uint8_t>((i * 7 + 3) & 0xff);
+  }
+
+  io::MemReader r(raw.data(), raw.size());
+  Palette pal;
+  pal.ReadFull(r);
+
+  for (int i = 0; i < 256; ++i) {
+    REQUIRE(static_cast<int>(pal.entries[i].r) == static_cast<int>(raw[i * 3]));
+    REQUIRE(static_cast<int>(pal.entries[i].g) == static_cast<int>(raw[i * 3 + 1]));
+    REQUIRE(static_cast<int>(pal.entries[i].b) == static_cast<int>(raw[i * 3 + 2]));
+  }
+}
+
+TEST_CASE("modern worm shading uses full 8-bit precision", "[palette]") {
+  WormSettings ws;
+  ws.rgb[0] = 255;
+  ws.rgb[1] = 128;
+  ws.rgb[2] = 32;
+
+  Palette pal;
+  pal.Clear();
+  pal.SetWormColour(0, ws, ColorMode::kModern);
+
+  // Full-precision golden reference: (4*add + c*scale) / 64, clamped.
+  struct {
+    int scale, add;
+  } const kSteps[5] = {{38, 0}, {50, 0}, {64, 0}, {47, 1008}, {28, 2205}};
+  for (int j = 0; j < 5; ++j) {
+    int const kIdx = 30 + j;
+    int expected[3];
+    for (int ch = 0; ch < 3; ++ch) {
+      int const kV = (4 * kSteps[j].add + ws.rgb[ch] * kSteps[j].scale) / 64;
+      expected[ch] = kV < 255 ? kV : 255;
+    }
+    REQUIRE(static_cast<int>(pal.entries[kIdx].r) == expected[0]);
+    REQUIRE(static_cast<int>(pal.entries[kIdx].g) == expected[1]);
+    REQUIRE(static_cast<int>(pal.entries[kIdx].b) == expected[2]);
+  }
+
+  // And it must actually differ from the classic quantized ramp for this
+  // off-grid colour.
+  Palette classic;
+  classic.Clear();
+  classic.SetWormColour(0, ws, ColorMode::kClassic);
+  bool any_difference = false;
+  for (int j = 30; j <= 34; ++j) {
+    any_difference = any_difference || classic.entries[j].r != pal.entries[j].r ||
+                     classic.entries[j].g != pal.entries[j].g ||
+                     classic.entries[j].b != pal.entries[j].b;
+  }
+  REQUIRE(any_difference);
 }

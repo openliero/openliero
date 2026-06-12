@@ -129,8 +129,8 @@ void WeaponSelection::DrawSpectatorViewports(Renderer& renderer, GameState /*sta
   }
 
   // TODO: This just uses the currently activated palette, which might well be wrong.
-  gfx.single_screen_renderer.pal = gfx.single_screen_renderer.origpal;
-  gfx.single_screen_renderer.pal.RotateFrom(gfx.single_screen_renderer.origpal, 168, 174,
+  gfx.single_screen_renderer.pal = gfx.single_screen_renderer.Origpal();
+  gfx.single_screen_renderer.pal.RotateFrom(gfx.single_screen_renderer.Origpal(), 168, 174,
                                             gfx.menu_cycles);
   gfx.single_screen_renderer.pal.Fade(gfx.single_screen_renderer.fade_value);
 }
@@ -181,8 +181,8 @@ void WeaponSelection::DrawNormalViewports(Renderer& renderer, GameState state) {
   }
 
   // TODO: This just uses the currently activated palette, which might well be wrong.
-  gfx.play_renderer.pal = gfx.play_renderer.origpal;
-  gfx.play_renderer.pal.RotateFrom(gfx.play_renderer.origpal, 168, 174, gfx.menu_cycles);
+  gfx.play_renderer.pal = gfx.play_renderer.Origpal();
+  gfx.play_renderer.pal.RotateFrom(gfx.play_renderer.Origpal(), 168, 174, gfx.menu_cycles);
   gfx.play_renderer.pal.Fade(gfx.play_renderer.fade_value);
 }
 

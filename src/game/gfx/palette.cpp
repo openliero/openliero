@@ -47,7 +47,7 @@ void Palette::LightUp(int amount) {
   }
 }
 
-void Palette::RotateFrom(Palette& source, int from, int to, unsigned dist) {
+void Palette::RotateFrom(Palette const& source, int from, int to, unsigned dist) {
   int const kCount = (to - from + 1);
   dist %= kCount;
 
@@ -76,10 +76,21 @@ void Palette::Read(io::Reader& r) {
 // at 129 / 133. TODO: Read from EXE?
 ColorBlock const Palette::kWormColorBlocks[2] = {{32, 0x58, 129, 5}, {41, 0x78, 133, 5}};
 
-void Palette::SetWormColour(int i, WormSettings const& settings) {
+void Palette::ReadFull(io::Reader& r) {
+  for (auto& entrie : entries) {
+    uint8_t rgb[3];
+    r.Get(rgb, 3);
+
+    entrie.r = rgb[0];
+    entrie.g = rgb[1];
+    entrie.b = rgb[2];
+  }
+}
+
+void Palette::SetWormColour(int i, WormSettings const& settings, ColorMode mode) {
   ColorBlock const& block = kWormColorBlocks[i];
 
-  SetWormColoursSpan(block.base, settings.rgb);
+  SetWormColoursSpan(block.base, settings.rgb, mode);
 
   for (int j = 0; j < 6; ++j) {
     entries[block.colour_index + j] = entries[block.base + (j % 3) - 1];
@@ -90,8 +101,8 @@ void Palette::SetWormColour(int i, WormSettings const& settings) {
   }
 }
 
-void Palette::SetWormColours(Settings const& settings) {
+void Palette::SetWormColours(Settings const& settings, ColorMode mode) {
   for (int i = 0; i < 2; ++i) {
-    SetWormColour(i, *settings.worm_settings[i]);
+    SetWormColour(i, *settings.worm_settings[i], mode);
   }
 }

@@ -937,20 +937,20 @@ void Gfx::MenuFlip(bool quitting) {
   }
 
   ++menu_cycles;
-  play_renderer.pal = play_renderer.origpal;
-  play_renderer.pal.RotateFrom(play_renderer.origpal, 168, 174, menu_cycles);
-  play_renderer.pal.SetWormColours(*settings);
+  play_renderer.pal = play_renderer.Origpal();
+  play_renderer.pal.RotateFrom(play_renderer.Origpal(), 168, 174, menu_cycles);
+  play_renderer.pal.SetWormColours(*settings, play_renderer.mode);
   if (cur_menu == &player_menu &&
       player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx]) {
-    play_renderer.pal.SetWormColour(0, *player_menu.ws);
+    play_renderer.pal.SetWormColour(0, *player_menu.ws, play_renderer.mode);
   }
   play_renderer.pal.Fade(play_renderer.fade_value);
-  single_screen_renderer.pal = single_screen_renderer.origpal;
-  single_screen_renderer.pal.RotateFrom(single_screen_renderer.origpal, 168, 174, menu_cycles);
-  single_screen_renderer.pal.SetWormColours(*settings);
+  single_screen_renderer.pal = single_screen_renderer.Origpal();
+  single_screen_renderer.pal.RotateFrom(single_screen_renderer.Origpal(), 168, 174, menu_cycles);
+  single_screen_renderer.pal.SetWormColours(*settings, single_screen_renderer.mode);
   if (cur_menu == &player_menu &&
       player_menu.ws == settings->worm_settings[Settings::kNetworkPlayerIdx]) {
-    single_screen_renderer.pal.SetWormColour(0, *player_menu.ws);
+    single_screen_renderer.pal.SetWormColour(0, *player_menu.ws, single_screen_renderer.mode);
   }
   single_screen_renderer.pal.Fade(single_screen_renderer.fade_value);
   Flip();

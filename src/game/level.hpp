@@ -84,6 +84,7 @@ struct Level {
     std::swap(width, other.width);
     std::swap(height, other.height);
     std::swap(origpal, other.origpal);
+    std::swap(has_custom_palette, other.has_custom_palette);
     std::swap(old_random_level, other.old_random_level);
     std::swap(old_level_file, other.old_level_file);
     std::swap(zero_material, other.zero_material);
@@ -100,5 +101,9 @@ struct Level {
   std::string old_level_file;
   int width{0}, height{0};
   Palette origpal;
+  // True when the level shipped its own palette (e.g. POWERLEVEL); such a
+  // palette wins in both colour modes. Not serialized: netplay- or
+  // replay-received levels render Modern Vivid in modern mode (v1 policy).
+  bool has_custom_palette = false;
   Material zero_material;
 };
