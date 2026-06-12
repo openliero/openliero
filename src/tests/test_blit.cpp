@@ -172,3 +172,77 @@ TEST_CASE("blitimager draws only where the level pixel is in range", "[blit][sha
   REQUIRE(bmp.GetPixel(2, 3) == 0);  // 168: out of range
   REQUIRE(bmp.GetPixel(3, 2) == 0);  // level pixel 10: out of range
 }
+
+TEST_CASE("widened bitmap stores pal32-resolved argb", "[blit][argb]") {
+  Renderer renderer;
+  renderer.Init(8, 8);
+  renderer.pal.Clear();
+  renderer.pal.entries[5] = {.r = 0x10, .g = 0x20, .b = 0x30, .unused = 0};
+  renderer.UpdatePal32();
+
+  // The bitmap resolves indices through its renderer's frame-scope LUT.
+  REQUIRE(renderer.bmp.pal32 == renderer.pal32);
+
+  Fill(renderer.bmp, 5);
+  REQUIRE(renderer.bmp.GetPixel(0, 0) == 0xFF102030U);
+  REQUIRE(renderer.bmp.GetPixel(7, 7) == 0xFF102030U);
+
+  renderer.bmp.SetPixel(2, 2, 0);
+  REQUIRE(renderer.bmp.GetPixel(2, 2) == 0xFF000000U);
+
+  DrawLine(renderer.bmp, 0, 4, 4, 4, 5);
+  REQUIRE(renderer.bmp.GetPixel(2, 4) == 0xFF102030U);
+}
+
+TEST_CASE("appearanceat resolves level pixels through pal32", "[blit][argb]") {
+  ShadowFixture f;
+  f.renderer.pal.entries[10] = {.r = 4, .g = 5, .b = 6, .unused = 0};
+  f.renderer.UpdatePal32();
+
+  REQUIRE(f.level.AppearanceAt(0, f.renderer.pal32) == 0xFF040506U);
+}
+
+TEST_CASE("drawlevel paints terrain and blitbitmap restores argb", "[blit][argb]") {
+  ShadowFixture f;
+  f.renderer.pal.entries[10] = {.r = 1, .g = 2, .b = 3, .unused = 0};
+  f.renderer.pal.entries[20] = {.r = 7, .g = 8, .b = 9, .unused = 0};
+  f.renderer.UpdatePal32();
+
+  DrawLevel(f.renderer.bmp, f.level, 0, 0);
+  REQUIRE(f.renderer.bmp.GetPixel(0, 0) == f.renderer.pal32[10]);
+  REQUIRE(f.renderer.bmp.GetPixel(5, 2) == f.renderer.pal32[20]);
+
+  // frozen-screen restore path: ARGB -> ARGB, no palette involved.
+  Bitmap frozen;
+  frozen.Copy(f.renderer.bmp);
+  Fill(f.renderer.bmp, 0);
+  BlitBitmap(f.renderer.bmp, frozen, 4, 0, 4, 8);
+  REQUIRE(f.renderer.bmp.GetPixel(5, 2) == f.renderer.pal32[20]);
+  REQUIRE(f.renderer.bmp.GetPixel(0, 0) == f.renderer.pal32[0]);
+}
+
+TEST_CASE("scaledraw magnifies argb and applies the composition fade", "[blit][argb]") {
+  uint32_t const kSrc[4] = {0xFF204060U, 0xFF000000U, 0xFFFFFFFFU, 0xFF102030U};
+
+  uint32_t dest[16] = {};
+  ScaleDraw(kSrc, 2, 2, 2, reinterpret_cast<uint8_t*>(dest), 4 * sizeof(uint32_t), 2,
+            /*fade=*/33);
+  REQUIRE(dest[0] == 0xFF204060U);
+  REQUIRE(dest[1] == 0xFF204060U);
+  REQUIRE(dest[2] == 0xFF000000U);
+  REQUIRE(dest[4] == 0xFF204060U);
+  REQUIRE(dest[10] == 0xFFFFFFFFU);
+  REQUIRE(dest[15] == 0xFF102030U);
+
+  // Half fade: each channel becomes (v * 16) >> 5, the Palette::Fade math.
+  uint32_t dest1[4] = {};
+  ScaleDraw(kSrc, 2, 2, 2, reinterpret_cast<uint8_t*>(dest1), 2 * sizeof(uint32_t), 1,
+            /*fade=*/16);
+  REQUIRE(dest1[0] == 0xFF102030U);
+  REQUIRE(dest1[3] == 0xFF081018U);
+
+  // Fade 0 is black, alpha stays opaque.
+  ScaleDraw(kSrc, 2, 2, 2, reinterpret_cast<uint8_t*>(dest1), 2 * sizeof(uint32_t), 1,
+            /*fade=*/0);
+  REQUIRE(dest1[0] == 0xFF000000U);
+}
