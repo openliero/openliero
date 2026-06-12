@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include "color.hpp"
@@ -41,7 +42,8 @@ struct Palette {
   // Reads a palette that already carries full 8-bit channels (no VGA clamp).
   void ReadFull(io::Reader& r);
 
-  // `c` channels are 0..255. Classic quantizes to the VGA grid and runs the
+  // `c` channels are 0..255 (clamped here — configs and net peers can carry
+  // out-of-range values). Classic quantizes to the VGA grid and runs the
   // ramp math in 6-bit precision, keeping worm shading byte-identical to
   // the VGA pipeline; Modern runs it at full 8-bit precision.
   void ScaleAdd(int dest, int const (&c)[3], int scale, int add, ColorMode mode) {
@@ -52,9 +54,9 @@ struct Palette {
       return;
     }
 
-    int const kR = (add + (c[0] >> 2) * scale) / 64;
-    int const kG = (add + (c[1] >> 2) * scale) / 64;
-    int const kB = (add + (c[2] >> 2) * scale) / 64;
+    int const kR = (add + (std::clamp(c[0], 0, 255) >> 2) * scale) / 64;
+    int const kG = (add + (std::clamp(c[1], 0, 255) >> 2) * scale) / 64;
+    int const kB = (add + (std::clamp(c[2], 0, 255) >> 2) * scale) / 64;
 
     assert(kR < 64);
     assert(kG < 64);
@@ -95,7 +97,7 @@ struct Palette {
   // The legacy gradient constants are tuned for 6-bit values; `add` scales
   // by 4 to land in the 8-bit range.
   static uint8_t ScaleAddChannel8(int c, int scale, int add) {
-    int const kV = (4 * add + c * scale) / 64;
+    int const kV = (4 * add + std::clamp(c, 0, 255) * scale) / 64;
     return static_cast<uint8_t>(kV < 255 ? kV : 255);
   }
 };

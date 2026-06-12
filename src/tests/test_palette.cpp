@@ -278,3 +278,29 @@ TEST_CASE("modern worm shading uses full 8-bit precision", "[palette]") {
   }
   REQUIRE(any_difference);
 }
+
+TEST_CASE("out-of-range worm colours are clamped by the ramp math", "[palette]") {
+  // The picker once overshot to 256, and net peers can send arbitrary
+  // int32 channels; both must shade exactly like 255.
+  WormSettings overshoot;
+  WormSettings white;
+  for (int j = 0; j < 3; ++j) {
+    overshoot.rgb[j] = 256 + j * 1000;
+    white.rgb[j] = 255;
+  }
+
+  for (auto const kMode : {ColorMode::kClassic, ColorMode::kModern}) {
+    Palette pal_overshoot;
+    Palette pal_white;
+    pal_overshoot.Clear();
+    pal_white.Clear();
+    pal_overshoot.SetWormColour(0, overshoot, kMode);
+    pal_white.SetWormColour(0, white, kMode);
+
+    for (int i = 0; i < 256; ++i) {
+      REQUIRE(pal_overshoot.entries[i].r == pal_white.entries[i].r);
+      REQUIRE(pal_overshoot.entries[i].g == pal_white.entries[i].g);
+      REQUIRE(pal_overshoot.entries[i].b == pal_white.entries[i].b);
+    }
+  }
+}

@@ -23,6 +23,7 @@
 #include "viewport.hpp"
 #include "worm.hpp"
 
+#include <algorithm>
 #include <cereal/types/vector.hpp>
 #include <cstdint>
 #include <utility>
@@ -255,10 +256,11 @@ void SerializeWormSettingsToml(Archive& ar, WormSettings& ws) {
   ar(cereal::make_nvp("rgbDepth", rgb_depth));
   SerializeArray(ar, "rgb", ws.rgb);
   if constexpr (Archive::is_loading::value) {
-    if (rgb_depth < 8) {
-      for (int& v : ws.rgb) {
+    for (int& v : ws.rgb) {
+      if (rgb_depth < 8) {
         v = (v & 63) << 2;
       }
+      v = std::clamp(v, 0, 255);
     }
   }
   SerializeArray(ar, "weapons", ws.weapons);

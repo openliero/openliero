@@ -417,3 +417,12 @@ TEST_CASE("versioning: modernColors round-trips and defaults to classic", "[vers
   legacy.FromToml(toml);
   CHECK(legacy.modern_colors == false);
 }
+
+TEST_CASE("versioning: out-of-range worm rgb in TOML is clamped on load", "[versioning]") {
+  // A picker bug briefly stored 256; loads must clamp into 0..255.
+  WormSettings dst;
+  dst.FromToml("rgbDepth = 8\nrgb = [256, -4, 300]\n");
+  CHECK(dst.rgb[0] == 255);
+  CHECK(dst.rgb[1] == 0);
+  CHECK(dst.rgb[2] == 255);
+}

@@ -1219,13 +1219,15 @@ ItemBehavior* PlayerMenu::GetItemBehavior(Common& common, MenuItem& item) {
     case kPlRed:
     case kPlGreen:
     case kPlBlue: {
-      // Step 4 keeps the same 64 positions the VGA picker had; classic
-      // rendering quantizes to that grid anyway. In classic mode the value
-      // is also shown in the original 0..63 numbering.
-      auto* b =
-          new IntegerBehavior(common, ws->rgb[item.id - kPlRed], 0, 255, 4, /*percentage=*/false);
-      b->display_div = gfx.play_renderer.mode == ColorMode::kClassic ? 4 : 1;
-      b->scroll_interval = 4;
+      bool const kClassic = gfx.play_renderer.mode == ColorMode::kClassic;
+      // Classic mode reproduces the original VGA picker exactly: 64
+      // positions shown as 0..63 (stored on the 0..252 grid). Modern mode
+      // moves one value at a time across the full 0..255 range, with a
+      // faster repeat so a sweep takes about as long as in classic.
+      auto* b = new IntegerBehavior(common, ws->rgb[item.id - kPlRed], 0, kClassic ? 252 : 255,
+                                    kClassic ? 4 : 1, /*percentage=*/false);
+      b->display_div = kClassic ? 4 : 1;
+      b->scroll_interval = kClassic ? 4 : 1;
       return b;
     }
 

@@ -8,6 +8,7 @@
 #include "menu.hpp"
 #include "menuItem.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 bool IntegerBehavior::OnLeftRight(Menu& menu, MenuItem& item, int dir) {
@@ -17,7 +18,9 @@ bool IntegerBehavior::OnLeftRight(Menu& menu, MenuItem& item, int dir) {
 
   int new_v = v;
   if ((dir < 0 && new_v > min) || (dir > 0 && new_v < max)) {
-    new_v += dir * step;
+    // Clamp so a step larger than the remaining range can't overshoot the
+    // bounds (e.g. the colour picker's step of 4 against max 255).
+    new_v = std::clamp(new_v + dir * step, min, max);
   }
 
   if (new_v != v) {
