@@ -20,7 +20,6 @@ namespace {
 void UpdateWeapselPalette(Renderer& renderer) {
   renderer.pal = renderer.Origpal();
   renderer.pal.RotateFrom(renderer.Origpal(), 168, 174, gfx.menu_cycles);
-  renderer.pal.Fade(renderer.fade_value);
   renderer.UpdatePal32();
 }
 

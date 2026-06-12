@@ -8,6 +8,7 @@ void Renderer::SetRenderResolution(int x, int y) {
   render_res_x = x;
   render_res_y = y;
   bmp.Alloc(render_res_x, render_res_y);
+  bmp.pal32 = pal32;
 }
 
 void Renderer::LoadPalette(Common const& common) {

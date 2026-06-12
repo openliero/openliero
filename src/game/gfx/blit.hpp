@@ -20,8 +20,10 @@ void DrawBar(Bitmap& scr, int x, int y, int width, int color);
 void DrawBar(Bitmap& scr, int x, int y, int width, int height, int color);
 void DrawRoundedBox(Bitmap& scr, int x, int y, int color, int height, int width);
 void DrawRoundedLineBox(Bitmap& scr, int x, int y, int color, int width, int height);
-void BlitImageNoKeyColour(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height, int pitch);
-// void blitImage(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height);
+// Paints the level's appearance into the screen (the terrain draw).
+void DrawLevel(Bitmap& scr, Level const& level, int x, int y);
+// ARGB rectangle copy at identical coordinates (frozen_screen restores).
+void BlitBitmap(Bitmap& scr, Bitmap const& src, int x, int y, int width, int height);
 void BlitImage(Bitmap& scr, Sprite spr, int x, int y);
 void BlitImageR(ShadowQuery const& shadow, Bitmap& scr, const PalIdx* mem, int x, int y, int width,
                 int height);
@@ -45,15 +47,12 @@ void DrawLine(Bitmap& scr, int from_x, int from_y, int to_x, int to_y, int color
 void DrawGraph(Bitmap& scr, std::vector<double> const& data, int height, int start_x, int start_y,
                int color, int neg_color, bool balanced);
 
-void ScaleDraw(PalIdx* src, int w, int h, std::size_t src_pitch, uint8_t* dest,
-               std::size_t dest_pitch, int mag, const uint32_t* pal32);
+// Nearest-neighbor magnification to an ARGB destination, applying the
+// renderer's fade at composition time (fade >= 32 is identity).
+void ScaleDraw(uint32_t const* src, int w, int h, std::size_t src_pitch, uint8_t* dest,
+               std::size_t dest_pitch, int mag, int fade);
 
-void PreparePaletteBgra(Color real_pal[256], uint32_t (&pal32)[256]);
 int FitScreen(int back_w, int back_h, int scr_w, int scr_h, int& offset_x, int& offset_y);
-
-inline void BlitImageNoKeyColour(Bitmap& scr, PalIdx* mem, int x, int y, int width, int height) {
-  BlitImageNoKeyColour(scr, mem, x, y, width, height, width);
-}
 
 struct Heatmap {
   Heatmap(int width, int height, int org_width, int org_height)

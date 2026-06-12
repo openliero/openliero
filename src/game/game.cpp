@@ -174,13 +174,17 @@ void Game::Draw(Renderer& renderer, GameState state, bool use_spectator_viewport
     renderer.pal.RotateFrom(renderer.Origpal(), w.from, w.to, cycles >> 3);
   }
 
-  renderer.pal.Fade(renderer.fade_value);
-
   if (screen_flash > 0) {
     renderer.pal.LightUp(screen_flash);
   }
 
   renderer.UpdatePal32();
+
+  // Repaint the background through the freshly rebuilt palette. Callers
+  // clear before drawing, but that resolves entry 0 through the previous
+  // frame's LUT — visible as a one-frame lag on the border pixels while a
+  // screen flash lights up the palette.
+  Fill(renderer.bmp, 0);
 
   if (use_spectator_viewports) {
     DrawSpectatorViewports(renderer, state, is_replay);

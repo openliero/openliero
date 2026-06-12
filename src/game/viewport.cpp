@@ -201,8 +201,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
                               .world_offset_x = -kOffs.x,
                               .world_offset_y = -kOffs.y};
 
-    BlitImageNoKeyColour(renderer.bmp, game.level.data.data(), kOffs.x, kOffs.y, game.level.width,
-                         game.level.height);
+    DrawLevel(renderer.bmp, game.level, kOffs.x, kOffs.y);
 
     if (game.settings->game_mode == Settings::kGmHoldazone) {
       bool const kTimingOut = game.holdazone.timeout_left < 70 * 4;
@@ -349,19 +348,15 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         int pos_x = Ftoi(i->pos.x) - x + rect.x1;
         int pos_y = Ftoi(i->pos.y) - y + rect.y1;
 
-        if (renderer.bmp.clip_rect.Inside(pos_x, pos_y)) {
-          renderer.bmp.GetPixel(pos_x, pos_y) = static_cast<PalIdx>(i->cur_frame);
-        }
+        renderer.bmp.SetPixel(pos_x, pos_y, static_cast<PalIdx>(i->cur_frame));
 
         if (game.settings->shadow) {
           pos_x -= 3;
           pos_y += 3;
 
-          if (renderer.bmp.clip_rect.Inside(pos_x, pos_y)) {
-            int const kShadowed = kShadow.ShadowedIndex(pos_x, pos_y);
-            if (kShadowed >= 0) {
-              renderer.bmp.GetPixel(pos_x, pos_y) = static_cast<PalIdx>(kShadowed);
-            }
+          uint32_t const kShadowed = kShadow.ShadowedArgb(pos_x, pos_y);
+          if (kShadowed != 0 && renderer.bmp.clip_rect.Inside(pos_x, pos_y)) {
+            renderer.bmp.GetPixel(pos_x, pos_y) = kShadowed;
           }
         }
       }
@@ -402,7 +397,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
       } else if (i->cur_frame > 1) {
         auto pos = Ftoi(i->pos) + kOffs;
         if (renderer.bmp.clip_rect.Encloses(pos)) {
-          renderer.bmp.GetPixel(pos.x, pos.y) = static_cast<PalIdx>(i->cur_frame);
+          renderer.bmp.SetPixel(pos.x, pos.y, static_cast<PalIdx>(i->cur_frame));
         }
 
         if (game.settings->shadow) {
@@ -410,9 +405,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
           pos.y += 3;
 
           if (renderer.bmp.clip_rect.Encloses(pos)) {
-            int const kShadowed = kShadow.ShadowedIndex(pos.x, pos.y);
-            if (kShadowed >= 0) {
-              renderer.bmp.GetPixel(pos.x, pos.y) = static_cast<PalIdx>(kShadowed);
+            uint32_t const kShadowed = kShadow.ShadowedArgb(pos.x, pos.y);
+            if (kShadowed != 0) {
+              renderer.bmp.GetPixel(pos.x, pos.y) = kShadowed;
             }
           }
         }
@@ -519,7 +514,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
     for (Game::BObjectList::Iterator i = game.bobjects.Begin(); i != game.bobjects.End(); ++i) {
       auto ipos = Ftoi(i->pos) + kOffs;
       if (renderer.bmp.clip_rect.Encloses(ipos)) {
-        renderer.bmp.GetPixel(ipos.x, ipos.y) = static_cast<PalIdx>(i->color);
+        renderer.bmp.SetPixel(ipos.x, ipos.y, static_cast<PalIdx>(i->color));
       }
 
       if (game.settings->shadow) {
@@ -527,9 +522,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         ipos.y += 3;
 
         if (renderer.bmp.clip_rect.Encloses(ipos)) {
-          int const kShadowed = kShadow.ShadowedIndex(ipos.x, ipos.y);
-          if (kShadowed >= 0) {
-            renderer.bmp.GetPixel(ipos.x, ipos.y) = static_cast<PalIdx>(kShadowed);
+          uint32_t const kShadowed = kShadow.ShadowedArgb(ipos.x, ipos.y);
+          if (kShadowed != 0) {
+            renderer.bmp.GetPixel(ipos.x, ipos.y) = kShadowed;
           }
         }
       }
@@ -549,7 +544,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         int const kX = Ftoi(w.pos.x) / 10 + kMapX;
         int const kY = Ftoi(w.pos.y) / 10 + kMapY;
 
-        renderer.bmp.GetPixel(kX, kY) = w.MinimapColor();
+        renderer.bmp.SetPixel(kX, kY, w.MinimapColor());
       }
     }
 

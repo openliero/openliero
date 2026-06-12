@@ -34,7 +34,10 @@ struct ShadowFixture {
 
     renderer.Init(8, 8);
     renderer.pal.Clear();
+    renderer.pal.entries[9] = {.r = 0x99, .g = 0x99, .b = 0x99, .unused = 0};
+    renderer.pal.entries[10] = {.r = 0xaa, .g = 0xaa, .b = 0xaa, .unused = 0};
     renderer.pal.entries[14] = {.r = 0x11, .g = 0x22, .b = 0x33, .unused = 0};
+    renderer.pal.entries[20] = {.r = 0x44, .g = 0x44, .b = 0x44, .unused = 0};
     renderer.UpdatePal32();
   }
 
@@ -111,24 +114,24 @@ TEST_CASE("blitshadowimage shadows only seeshadow terrain", "[blit][shadow]") {
   Fill(bmp, 10);
   // Old semantics keyed off the screen; paint a screen pixel with rock
   // colour over SeeShadow terrain to prove the level now decides.
-  bmp.GetPixel(3, 3) = 20;
+  bmp.GetPixel(3, 3) = f.renderer.pal32[20];
 
   PalIdx const kSprite[9] = {7, 7, 7, 7, 7, 7, 7, 7, 7};
   BlitShadowImage(kQ, bmp, kSprite, 3, 2, 3, 3);
 
   // Level decides: (3,3) is SeeShadow terrain even though the screen
   // showed rock there.
-  REQUIRE(bmp.GetPixel(3, 3) == 14);
-  REQUIRE(bmp.GetPixel(4, 2) == 14);
+  REQUIRE(bmp.GetPixel(3, 3) == f.renderer.pal32[14]);
+  REQUIRE(bmp.GetPixel(4, 2) == f.renderer.pal32[14]);
   // Rock column untouched.
-  REQUIRE(bmp.GetPixel(5, 2) == 10);
-  REQUIRE(bmp.GetPixel(5, 3) == 10);
+  REQUIRE(bmp.GetPixel(5, 2) == f.renderer.pal32[10]);
+  REQUIRE(bmp.GetPixel(5, 3) == f.renderer.pal32[10]);
   // Outside the blit rect untouched.
-  REQUIRE(bmp.GetPixel(2, 2) == 10);
+  REQUIRE(bmp.GetPixel(2, 2) == f.renderer.pal32[10]);
 
   // Clipped blit straddling the top-left corner must not crash.
   BlitShadowImage(kQ, bmp, kSprite, -1, -1, 3, 3);
-  REQUIRE(bmp.GetPixel(0, 0) == 14);
+  REQUIRE(bmp.GetPixel(0, 0) == f.renderer.pal32[14]);
 }
 
 TEST_CASE("drawshadowline shadows along the line from level material", "[blit][shadow]") {
@@ -141,15 +144,15 @@ TEST_CASE("drawshadowline shadows along the line from level material", "[blit][s
   DrawShadowLine(kQ, bmp, 0, 1, 7, 1);
 
   // DO_LINE never paints the line's start point.
-  REQUIRE(bmp.GetPixel(0, 1) == 10);
+  REQUIRE(bmp.GetPixel(0, 1) == f.renderer.pal32[10]);
   for (int x = 1; x < 8; ++x) {
     if (x == 5) {
-      REQUIRE(bmp.GetPixel(x, 1) == 10);  // rock column skipped
+      REQUIRE(bmp.GetPixel(x, 1) == f.renderer.pal32[10]);  // rock column skipped
     } else {
-      REQUIRE(bmp.GetPixel(x, 1) == 14);
+      REQUIRE(bmp.GetPixel(x, 1) == f.renderer.pal32[14]);
     }
   }
-  REQUIRE(bmp.GetPixel(3, 0) == 10);  // other rows untouched
+  REQUIRE(bmp.GetPixel(3, 0) == f.renderer.pal32[10]);  // other rows untouched
 }
 
 TEST_CASE("blitimager draws only where the level pixel is in range", "[blit][shadow]") {
@@ -167,10 +170,10 @@ TEST_CASE("blitimager draws only where the level pixel is in range", "[blit][sha
   PalIdx const kSprite[9] = {9, 9, 9, 9, 9, 9, 9, 9, 9};
   BlitImageR(kQ, bmp, kSprite, 2, 2, 3, 3);
 
-  REQUIRE(bmp.GetPixel(3, 3) == 9);
-  REQUIRE(bmp.GetPixel(4, 3) == 9);
-  REQUIRE(bmp.GetPixel(2, 3) == 0);  // 168: out of range
-  REQUIRE(bmp.GetPixel(3, 2) == 0);  // level pixel 10: out of range
+  REQUIRE(bmp.GetPixel(3, 3) == f.renderer.pal32[9]);
+  REQUIRE(bmp.GetPixel(4, 3) == f.renderer.pal32[9]);
+  REQUIRE(bmp.GetPixel(2, 3) == f.renderer.pal32[0]);  // 168: out of range
+  REQUIRE(bmp.GetPixel(3, 2) == f.renderer.pal32[0]);  // level pixel 10: out of range
 }
 
 TEST_CASE("widened bitmap stores pal32-resolved argb", "[blit][argb]") {
@@ -231,7 +234,9 @@ TEST_CASE("scaledraw magnifies argb and applies the composition fade", "[blit][a
   REQUIRE(dest[1] == 0xFF204060U);
   REQUIRE(dest[2] == 0xFF000000U);
   REQUIRE(dest[4] == 0xFF204060U);
-  REQUIRE(dest[10] == 0xFFFFFFFFU);
+  REQUIRE(dest[8] == 0xFFFFFFFFU);
+  REQUIRE(dest[9] == 0xFFFFFFFFU);
+  REQUIRE(dest[10] == 0xFF102030U);
   REQUIRE(dest[15] == 0xFF102030U);
 
   // Half fade: each channel becomes (v * 16) >> 5, the Palette::Fade math.

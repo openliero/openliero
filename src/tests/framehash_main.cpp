@@ -28,18 +28,22 @@ constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
 uint64_t FnvByte(uint64_t h, uint8_t b) { return (h ^ b) * kFnvPrime; }
 
-// Hashes the visible RGB output: every screen index resolved through the
-// working palette, exactly what composition puts on screen.
+// The composition-time fade, identical to Palette::Fade's per-channel math.
+uint8_t FadeChannel(uint8_t v, int amount) {
+  return amount >= 32 ? v : static_cast<uint8_t>((v * amount) >> 5);
+}
+
+// Hashes the visible RGB output: the ARGB back buffer with the renderer's
+// fade applied, exactly what composition puts on screen.
 uint64_t HashFrame(Renderer& renderer) {
-  Color real_pal[256];
-  renderer.pal.Activate(real_pal);
+  int const kFade = renderer.fade_value;
   uint64_t h = kFnvOffset;
   for (int y = 0; y < renderer.bmp.h; ++y) {
     for (int x = 0; x < renderer.bmp.w; ++x) {
-      Color const& c = real_pal[renderer.bmp.GetPixel(x, y)];
-      h = FnvByte(h, c.r);
-      h = FnvByte(h, c.g);
-      h = FnvByte(h, c.b);
+      uint32_t const kC = renderer.bmp.GetPixel(x, y);
+      h = FnvByte(h, FadeChannel((kC >> 16) & 0xFF, kFade));
+      h = FnvByte(h, FadeChannel((kC >> 8) & 0xFF, kFade));
+      h = FnvByte(h, FadeChannel(kC & 0xFF, kFade));
     }
   }
   return h;
@@ -99,23 +103,26 @@ int main(int argc, char* argv[]) try {
     game->ProcessFrame();
     renderer.Clear();
     game->Draw(renderer, kStateGame, kSpectator, /*is_replay=*/true);
-    renderer.fade_value = 33;
 
+    // Hash with the fade that was in effect during the draw (0 on the very
+    // first frame, like the video tool), then unfade for the rest.
     uint64_t const kH = HashFrame(renderer);
     all = (all ^ kH) * kFnvPrime;
     std::printf("%d %016" PRIx64 "\n", frame, kH);
 
     if (dump) {
-      Color real_pal[256];
-      renderer.pal.Activate(real_pal);
+      int const kFade = renderer.fade_value;
       for (int py = 0; py < renderer.bmp.h; ++py) {
         for (int px = 0; px < renderer.bmp.w; ++px) {
-          Color const& c = real_pal[renderer.bmp.GetPixel(px, py)];
-          uint8_t const rgb[3] = {c.r, c.g, c.b};
+          uint32_t const kC = renderer.bmp.GetPixel(px, py);
+          uint8_t const rgb[3] = {FadeChannel((kC >> 16) & 0xFF, kFade),
+                                  FadeChannel((kC >> 8) & 0xFF, kFade),
+                                  FadeChannel(kC & 0xFF, kFade)};
           std::fwrite(rgb, 1, 3, dump);
         }
       }
     }
+    renderer.fade_value = 33;
     ++frame;
   }
   if (dump) {

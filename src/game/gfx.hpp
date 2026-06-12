@@ -262,9 +262,6 @@ struct Gfx {
   void PlayerSettings(int player);
   void OpenHiddenMenu();
 
-  static void PreparePalette(SDL_PixelFormatDetails const* format, SDL_Palette const* palette,
-                             Color real_pal[256], uint32_t (&pal32)[256]);
-
   static void Overlay(SDL_PixelFormatDetails const* format, uint8_t* src, int w, int h,
                       std::size_t src_pitch, uint8_t* dest, std::size_t dest_pitch, int mag);
 
