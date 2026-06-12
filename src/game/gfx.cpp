@@ -512,6 +512,13 @@ void Gfx::SetColorMode(ColorMode new_mode) {
   play_renderer.mode = new_mode;
   single_screen_renderer.mode = new_mode;
   settings->modern_colors = new_mode == ColorMode::kModern;
+
+  // Item value strings are only rebuilt on menu events, and the colour
+  // picker renders its numbers in mode-dependent units — refresh the open
+  // menu so they don't go stale.
+  if (cur_menu && common) {
+    cur_menu->UpdateItems(*common);
+  }
 }
 
 void Gfx::SetFullscreen(bool new_fullscreen) {
