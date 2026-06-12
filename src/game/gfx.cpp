@@ -947,7 +947,7 @@ void Gfx::PreparePalette(SDL_PixelFormatDetails const* format, SDL_Palette const
   }
 }
 
-void Gfx::MenuFlip(bool quitting) {
+void Gfx::UpdateMenuPalettes(bool quitting) {
   if (play_renderer.fade_value < 32 && !quitting) {
     ++play_renderer.fade_value;
   }
@@ -1452,16 +1452,20 @@ bool Gfx::RunOneFrame() {
     return true;
   }
 
+  // Menu states finalize their palettes before drawing (blits resolve
+  // through pal32 at draw time); game states rebuild inside Game::Draw.
+  auto* top = state_stack.Top();
+  bool const kUseMenuFlip = !(top && !top->WantsMenuFlip());
+  if (kUseMenuFlip) {
+    UpdateMenuPalettes(kMenuFadingOut);
+  }
+
   state_stack.Draw();
 
-  // Flip: game states use plain flip(), menu states use menuFlip()
-  auto* top = state_stack.Top();
-  if (top && !top->WantsMenuFlip()) {
+  if (!kUseMenuFlip) {
     ++menu_cycles;
-    Flip();
-  } else {
-    MenuFlip(kMenuFadingOut);
   }
+  Flip();
 
   return true;
 }

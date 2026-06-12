@@ -452,6 +452,12 @@ if(OPENLIERO_BUILD_TESTS)
   target_link_libraries(test_blit PRIVATE game Catch2::Catch2WithMain)
   catch_discover_tests(test_blit DISCOVERY_MODE PRE_TEST)
 
+  # Headless replay frame hasher (not a Catch2 test): prints per-frame
+  # hashes of the composed screen so renderer refactors can be verified
+  # pixel-identical against a baseline build. See src/tests/framehash_main.cpp.
+  add_executable(framehash src/tests/framehash_main.cpp)
+  target_link_libraries(framehash PRIVATE game)
+
   add_executable(test_paths src/tests/test_paths.cpp)
   target_link_libraries(test_paths PRIVATE game Catch2::Catch2WithMain)
   target_compile_definitions(test_paths PRIVATE

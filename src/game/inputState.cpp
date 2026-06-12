@@ -203,6 +203,7 @@ bool InfoBoxState::Update() {
 void InfoBoxState::Draw() {
   if (clearScreen_) {
     gfx->play_renderer.pal = gfx->common->exepal;
+    gfx->play_renderer.UpdatePal32();
     Fill(gfx->play_renderer.bmp, 0);
   }
 

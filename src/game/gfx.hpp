@@ -126,7 +126,9 @@ struct Gfx {
   void Draw(SDL_Surface& surface, SDL_Texture& texture, SDL_Renderer& sdl_renderer,
             Renderer& renderer);
   void Flip();
-  void MenuFlip(bool quitting = false);
+  // Per-frame menu palette rebuild (fade step, rotation, worm colours).
+  // Runs before state drawing so blits resolve through fresh pal32.
+  void UpdateMenuPalettes(bool quitting = false);
 
   void ClearKeys();
 

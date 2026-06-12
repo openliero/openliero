@@ -166,14 +166,8 @@ void Game::ResetWorms() {
 void Game::AddWorm(std::shared_ptr<Worm> worm) { worms.push_back(std::move(worm)); }
 
 void Game::Draw(Renderer& renderer, GameState state, bool use_spectator_viewports, bool is_replay) {
-  if (use_spectator_viewports) {
-    DrawSpectatorViewports(renderer, state, is_replay);
-  } else {
-    DrawViewports(renderer, state, is_replay);
-  }
-
-  // common->font.drawText(toString(cycles / 70), 10, 10, 7);
-
+  // Finalize the palette before drawing: blits resolve through pal32 at
+  // draw time, so the rebuild must precede everything drawn this frame.
   renderer.pal = renderer.Origpal();
 
   for (auto& w : common->color_anim) {
@@ -185,6 +179,16 @@ void Game::Draw(Renderer& renderer, GameState state, bool use_spectator_viewport
   if (screen_flash > 0) {
     renderer.pal.LightUp(screen_flash);
   }
+
+  renderer.UpdatePal32();
+
+  if (use_spectator_viewports) {
+    DrawSpectatorViewports(renderer, state, is_replay);
+  } else {
+    DrawViewports(renderer, state, is_replay);
+  }
+
+  // common->font.drawText(toString(cycles / 70), 10, 10, 7);
 }
 
 bool CheckBonusSpawnPosition(Game& game, int x, int y) {
