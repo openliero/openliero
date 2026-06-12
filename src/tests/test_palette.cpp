@@ -29,13 +29,17 @@ struct Rgb {
 std::vector<Rgb> LegacyWormRamp(int const (&rgb)[3]) {
   struct {
     int scale, add;
-  } const kSteps[5] = {{38, 0}, {50, 0}, {64, 0}, {47, 1008}, {28, 2205}};
+  } const kSteps[5] = {{.scale = 38, .add = 0},
+                       {.scale = 50, .add = 0},
+                       {.scale = 64, .add = 0},
+                       {.scale = 47, .add = 1008},
+                       {.scale = 28, .add = 2205}};
 
   std::vector<Rgb> ramp;
   for (auto const& step : kSteps) {
-    ramp.push_back({LegacyScaleAddToScreen(rgb[0], step.scale, step.add),
-                    LegacyScaleAddToScreen(rgb[1], step.scale, step.add),
-                    LegacyScaleAddToScreen(rgb[2], step.scale, step.add)});
+    ramp.push_back({.r = LegacyScaleAddToScreen(rgb[0], step.scale, step.add),
+                    .g = LegacyScaleAddToScreen(rgb[1], step.scale, step.add),
+                    .b = LegacyScaleAddToScreen(rgb[2], step.scale, step.add)});
   }
   return ramp;
 }
@@ -114,7 +118,8 @@ TEST_CASE("worm colour ramps match the legacy shading", "[palette]") {
 
 TEST_CASE("classic worm shading quantizes 8-bit colours to the VGA grid", "[palette]") {
   // Colours that only differ below the VGA grid must shade identically.
-  WormSettings a, b;
+  WormSettings a;
+  WormSettings b;
   int const kColorA[3] = {104, 104, 252};
   int const kColorB[3] = {107, 105, 255};
   for (int j = 0; j < 3; ++j) {
@@ -122,13 +127,15 @@ TEST_CASE("classic worm shading quantizes 8-bit colours to the VGA grid", "[pale
     b.rgb[j] = kColorB[j];
   }
 
-  Palette pal_a, pal_b;
+  Palette pal_a;
+  Palette pal_b;
   pal_a.Clear();
   pal_b.Clear();
   pal_a.SetWormColour(0, a, ColorMode::kClassic);
   pal_b.SetWormColour(0, b, ColorMode::kClassic);
 
-  Color real_a[256], real_b[256];
+  Color real_a[256];
+  Color real_b[256];
   pal_a.Activate(real_a);
   pal_b.Activate(real_b);
 
@@ -150,7 +157,8 @@ TEST_CASE("fade endpoints are exact", "[palette]") {
 
   Palette faded = pal;
   faded.Fade(32);  // full brightness: must be a no-op
-  Color a[256], b[256];
+  Color a[256];
+  Color b[256];
   pal.Activate(a);
   faded.Activate(b);
   for (int i = 0; i < 256; ++i) {
@@ -161,10 +169,10 @@ TEST_CASE("fade endpoints are exact", "[palette]") {
 
   faded.Fade(0);  // fully faded: everything black
   faded.Activate(b);
-  for (int i = 0; i < 256; ++i) {
-    REQUIRE(static_cast<int>(b[i].r) == 0);
-    REQUIRE(static_cast<int>(b[i].g) == 0);
-    REQUIRE(static_cast<int>(b[i].b) == 0);
+  for (auto const& e : b) {
+    REQUIRE(static_cast<int>(e.r) == 0);
+    REQUIRE(static_cast<int>(e.g) == 0);
+    REQUIRE(static_cast<int>(e.b) == 0);
   }
 }
 
@@ -179,7 +187,8 @@ TEST_CASE("lightup at zero amount is an identity", "[palette]") {
 
   Palette lit = pal;
   lit.LightUp(0);
-  Color a[256], b[256];
+  Color a[256];
+  Color b[256];
   pal.Activate(a);
   lit.Activate(b);
   for (int i = 0; i < 256; ++i) {
@@ -240,17 +249,20 @@ TEST_CASE("modern worm shading uses full 8-bit precision", "[palette]") {
   // Full-precision golden reference: (4*add + c*scale) / 64, clamped.
   struct {
     int scale, add;
-  } const kSteps[5] = {{38, 0}, {50, 0}, {64, 0}, {47, 1008}, {28, 2205}};
+  } const kSteps[5] = {{.scale = 38, .add = 0},
+                       {.scale = 50, .add = 0},
+                       {.scale = 64, .add = 0},
+                       {.scale = 47, .add = 1008},
+                       {.scale = 28, .add = 2205}};
   for (int j = 0; j < 5; ++j) {
     int const kIdx = 30 + j;
-    int expected[3];
-    for (int ch = 0; ch < 3; ++ch) {
-      int const kV = (4 * kSteps[j].add + ws.rgb[ch] * kSteps[j].scale) / 64;
-      expected[ch] = kV < 255 ? kV : 255;
-    }
-    REQUIRE(static_cast<int>(pal.entries[kIdx].r) == expected[0]);
-    REQUIRE(static_cast<int>(pal.entries[kIdx].g) == expected[1]);
-    REQUIRE(static_cast<int>(pal.entries[kIdx].b) == expected[2]);
+    auto scale_add = [&](int c) {
+      int const kV = (4 * kSteps[j].add + c * kSteps[j].scale) / 64;
+      return static_cast<uint8_t>(kV < 255 ? kV : 255);
+    };
+    Rgb const kExpected{
+        .r = scale_add(ws.rgb[0]), .g = scale_add(ws.rgb[1]), .b = scale_add(ws.rgb[2])};
+    RequireEntry(pal.entries[kIdx], kExpected);
   }
 
   // And it must actually differ from the classic quantized ramp for this

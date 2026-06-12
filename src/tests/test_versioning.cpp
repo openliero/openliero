@@ -376,8 +376,8 @@ TEST_CASE("versioning: worm TOML without rgbDepth expands 6-bit rgb", "[versioni
 }
 
 TEST_CASE("versioning: settings TOML without rgbDepth expands worm rgb", "[versioning]") {
-  Settings src;
-  std::string toml = src.ToToml();
+  Settings const kSrc;
+  std::string toml = kSrc.ToToml();
   // Simulate an old config: strip the markers and write 6-bit channels.
   std::string::size_type pos;
   while ((pos = toml.find("rgbDepth = 8")) != std::string::npos) {

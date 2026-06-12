@@ -70,7 +70,11 @@ struct Palette {
     // single base colour.
     static constexpr struct {
       int scale, add;
-    } kSteps[5] = {{38, 0}, {50, 0}, {64, 0}, {47, 1008}, {28, 2205}};
+    } kSteps[5] = {{.scale = 38, .add = 0},
+                   {.scale = 50, .add = 0},
+                   {.scale = 64, .add = 0},
+                   {.scale = 47, .add = 1008},
+                   {.scale = 28, .add = 2205}};
 
     for (int j = 0; j < 5; ++j) {
       ScaleAdd(base - 2 + j, c, kSteps[j].scale, kSteps[j].add, mode);
