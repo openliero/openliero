@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Regenerate modern_test.lev with a Stage 4 animated ramp extension.
 
-Adds one ramp (shift=1, 4 water-blue colours) and marks the first four
-pixels of the level as animated with phase offsets 0,1,2,3.  The rest of
-the level is unchanged.
+Adds one ramp (shift=1, 4 water-blue colours) and marks a full-width
+horizontal band at the top of the level as animated.  Each pixel in the
+band gets a diagonal phase offset (x+y) % ramp_color_count so adjacent
+pixels shimmer out of phase.  The rest of the level is unchanged.
 
 Run from the repository root:
     python3 tools/gen_stage4_anim.py
@@ -24,8 +25,9 @@ MAGIC = b"MODERNLV"
 RAMP_SHIFT = 1
 RAMP_COLORS = [0xFF1A3A6A, 0xFF2A4A7A, 0xFF3A5A8A, 0xFF0A2A5A]
 
-# Pixels to animate: top-left corner, indices 0-3.
-ANIM_PIXELS = [0, 1, 2, 3]
+# Animated band: full width, this many rows tall from the top.
+# Must match kBandH in the test_level_display.cpp file-based test.
+BAND_HEIGHT = 20
 
 
 def main():
@@ -48,17 +50,21 @@ def main():
     print(f"  display_data at {display_data_off} ({CELLS*4} bytes)")
     print(f"  display_valid at {display_valid_off} ({CELLS} bytes)")
     print(f"  Stage 4 extension will start at {stage4_off}")
+    print(f"  Animating {BAND_HEIGHT} rows × {W} cols = {BAND_HEIGHT * W} pixels")
 
-    # Mutate display_data and display_valid in-place for the animated pixels.
+    # Mutate display_data and display_valid in-place for the animated band.
     buf = bytearray(raw[:stage4_off])
 
-    for i, pix_idx in enumerate(ANIM_PIXELS):
-        phase_offset = i  # display_data stores phase offset for animated pixels
-        # display_data[pix_idx] = phase_offset as uint32_t LE
-        off = display_data_off + pix_idx * 4
-        struct.pack_into("<I", buf, off, phase_offset)
-        # display_valid[pix_idx] = 1
-        buf[display_valid_off + pix_idx] = 1
+    n_colors = len(RAMP_COLORS)
+    for y in range(BAND_HEIGHT):
+        for x in range(W):
+            pix_idx = y * W + x
+            phase_offset = (x + y) % n_colors  # diagonal shimmer
+            # display_data[pix_idx] = phase_offset as uint32_t LE
+            off = display_data_off + pix_idx * 4
+            struct.pack_into("<I", buf, off, phase_offset)
+            # display_valid[pix_idx] = 1
+            buf[display_valid_off + pix_idx] = 1
 
     # Build Stage 4 extension: ramp_count(1) + ramp + display_anim(CELLS).
     ext = bytearray()
@@ -70,10 +76,11 @@ def main():
     for c in RAMP_COLORS:
         ext += struct.pack("<I", c)
 
-    # display_anim: 1 for animated pixels, 0 for the rest.
+    # display_anim: 1 for band pixels, 0 for the rest.
     danim = bytearray(CELLS)
-    for pix_idx in ANIM_PIXELS:
-        danim[pix_idx] = 1
+    for y in range(BAND_HEIGHT):
+        for x in range(W):
+            danim[y * W + x] = 1
     ext += danim
 
     buf += ext

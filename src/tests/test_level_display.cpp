@@ -566,8 +566,9 @@ TEST_CASE("Level::load MODERNLV display_anim OOB value drops anim layer", "[leve
 }
 
 // Stage 4 file-based round-trip: modern_test.lev must carry one animated ramp.
-// The ramp and animated pixels are written by tools/gen_stage4_anim.py.
-// Pixels 0–3 (top-left corner) are animated: display_anim[i]==1, phase offset==i.
+// The ramp and animated band are written by tools/gen_stage4_anim.py.
+// A full-width band of kBandH rows at the top is animated (display_anim==1).
+// Phase offset = (x + y) % 4 for a diagonal shimmer.
 // Ramp: shift=1, colors=[0xFF1A3A6A, 0xFF2A4A7A, 0xFF3A5A8A, 0xFF0A2A5A].
 TEST_CASE("modern_test.lev has Stage 4 anim layer and AppearanceAt cycles correctly",
           "[level][stage4][file]") {
@@ -590,16 +591,26 @@ TEST_CASE("modern_test.lev has Stage 4 anim layer and AppearanceAt cycles correc
   CHECK(level.argb_ramps[0].colors[3] == 0xFF0A2A5AU);
   REQUIRE(level.display_anim.size() == kLevCells);
 
-  for (int i = 0; i < 4; ++i) {
-    CHECK(level.display_valid[i] == 1);
-    CHECK(level.display_anim[i] == 1);
-  }
-  // display_data[i] holds phase offset i.
-  // At cycles=0 (shift=1 → 0>>1=0): pixel i → colors[(i+0)%4]
+  // Spot-check the animated band: first row, first pixel of row 1, last band row.
+  static constexpr int kBandH = 20;
+  CHECK(level.display_valid[0] == 1);
+  CHECK(level.display_anim[0] == 1);
+  CHECK(level.display_valid[kLevW] == 1);
+  CHECK(level.display_anim[kLevW] == 1);
+  CHECK(level.display_valid[(kBandH - 1) * kLevW] == 1);
+  CHECK(level.display_anim[(kBandH - 1) * kLevW] == 1);
+  // First pixel past the band is not animated.
+  CHECK(level.display_anim[kBandH * kLevW] == 0);
+
+  // Phase offsets: pixel(x,y) has phase=(x+y)%4.
+  // Pixel 0 (x=0,y=0): phase=0; pixel 1 (x=1,y=0): phase=1.
+  // At cycles=0 (shift=1 → 0>>1=0):
   uint32_t pal32[256] = {};
   CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32, 0) == 0xFF1A3A6AU);
   CHECK(level.AppearanceAt(1, ColorMode::kModern, pal32, 0) == 0xFF2A4A7AU);
   // At cycles=2 (2>>1=1): pixel 0 → colors[(0+1)%4]=colors[1]
   CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32, 2) == 0xFF2A4A7AU);
   CHECK(level.AppearanceAt(1, ColorMode::kModern, pal32, 2) == 0xFF3A5A8AU);
+  // Pixel kLevW (x=0,y=1): phase=1; at cycles=0 → colors[1]
+  CHECK(level.AppearanceAt(kLevW, ColorMode::kModern, pal32, 0) == 0xFF2A4A7AU);
 }
