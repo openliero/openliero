@@ -98,22 +98,23 @@ def argb32(r: int, g: int, b: int) -> int:
     return (0xFF << 24) | (r << 16) | (g << 8) | b
 
 
-def check_size(path: str, expected_w: int, expected_h: int) -> None:
-    """Error out if the image at path doesn't match the expected dimensions."""
-    w, h = Image.open(path).size
+def open_and_check(path: str, expected_w: int, expected_h: int) -> "Image.Image":
+    """Open image, error if it isn't expected_w×expected_h, return the opened image."""
+    img = Image.open(path)
+    w, h = img.size
     if (w, h) != (expected_w, expected_h):
         err(f"{path}: size {w}×{h} doesn't match --mat size {expected_w}×{expected_h}")
+    return img
 
 
-def load_disp(path: str, level_w: int, level_h: int) -> tuple[bytearray, bytearray]:
-    """Return (display_data, display_valid).
+def load_disp(img: "Image.Image", level_w: int, level_h: int) -> tuple[bytearray, bytearray]:
+    """Return (display_data, display_valid) from a pre-opened, pre-validated image.
 
     Opaque pixels (alpha > 0) are authored; transparent pixels fall back to
     the palette. display_data stores ARGB32 values, little-endian.
     """
     cells = level_w * level_h
-    img = Image.open(path).convert("RGBA")
-    raw = img.tobytes()
+    raw = img.convert("RGBA").tobytes()
     dd = bytearray(cells * 4)
     dv = bytearray(cells)
     for i in range(cells):
@@ -145,18 +146,13 @@ def main() -> None:
     mat, level_w, level_h = load_mat(args.mat)
     cells = level_w * level_h
 
-    if args.disp:
-        check_size(args.disp, level_w, level_h)
-    if args.anim:
-        check_size(args.anim, level_w, level_h)
-
     dd = bytearray(cells * 4)
     dv = bytearray(cells)
     da = bytearray(cells)   # display_anim: 0=no anim, N=ramp N (1-based)
     ramps: list[dict] = []
 
     if args.disp:
-        dd, dv = load_disp(args.disp, level_w, level_h)
+        dd, dv = load_disp(open_and_check(args.disp, level_w, level_h), level_w, level_h)
 
     if args.ramps:
         with open(args.ramps) as f:
@@ -170,8 +166,7 @@ def main() -> None:
                 err(f"ramp {idx}: 1-4096 colors required")
 
     if args.anim:
-        anim_img = Image.open(args.anim).convert("RGBA")
-        anim_raw = anim_img.tobytes()
+        anim_raw = open_and_check(args.anim, level_w, level_h).convert("RGBA").tobytes()
         for i in range(cells):
             r, g, b, a = anim_raw[i * 4], anim_raw[i * 4 + 1], anim_raw[i * 4 + 2], anim_raw[i * 4 + 3]
             if a > 0 and r > 0:

@@ -41,6 +41,7 @@ static std::vector<uint8_t> MakeSizedBuf(int w, int h, uint8_t fill = 0) {
 }
 
 // Append MODERNLV block to buf for a level of w*h cells.
+// Writes ramp_count=0 to match the production format from lev_gen.py.
 static void AppendModernBlock(std::vector<uint8_t>& buf, int w, int h,
                               std::vector<uint32_t> const& dd, std::vector<uint8_t> const& dv) {
   static constexpr uint8_t kMod[8] = {'M', 'O', 'D', 'E', 'R', 'N', 'L', 'V'};
@@ -49,6 +50,7 @@ static void AppendModernBlock(std::vector<uint8_t>& buf, int w, int h,
   auto const* raw = reinterpret_cast<uint8_t const*>(dd.data());
   buf.insert(buf.end(), raw, raw + kCells * 4);
   buf.insert(buf.end(), dv.begin(), dv.end());
+  buf.push_back(0);  // ramp_count = 0
 }
 
 // ---------------------------------------------------------------------------

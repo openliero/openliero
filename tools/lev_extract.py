@@ -166,6 +166,8 @@ def main() -> None:
         # version = data[8]  (reserved)
         level_w = data[9] | (data[10] << 8)
         level_h = data[11] | (data[12] << 8)
+        if not (1 <= level_w <= 4096 and 1 <= level_h <= 4096):
+            err(f"OLLEVEL2 header has invalid dimensions {level_w}×{level_h} (must be 1–4096)")
         body_start = 13
         print(f"OLLEVEL2 header: {level_w}×{level_h}")
     else:
