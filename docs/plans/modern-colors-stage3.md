@@ -1,6 +1,6 @@
 # Implementation Plan: Modern Colors — Stage 3 (Full-Fidelity Terrain)
 
-**Status: planned, not started.** Task breakdown of Stage 3 of
+**Status: implemented.** Task breakdown of Stage 3 of
 `docs/ideas/modern-colors.md`: give TC authors true-color terrain art by
 decoupling a level pixel's *material identity* (collision, destructibility,
 shadow logic — stays 8-bit palette-indexed) from its *display colour* (a new
@@ -171,9 +171,9 @@ snapshot field `GameSnapshot::level_data` → `level_material_id` for
 consistency (Task 5 owns the snapshot struct; decide there).
 
 **Acceptance criteria:**
-- [ ] No `level.data` / `.data[` material accessor remains (grep audit).
-- [ ] Build green tree-wide incl. tests and tools.
-- [ ] `framehash` byte-identical to pre-rename on a classic replay; full
+- [x] No `level.data` / `.data[` material accessor remains (grep audit).
+- [x] Build green tree-wide incl. tests and tools.
+- [x] `framehash` byte-identical to pre-rename on a classic replay; full
       determinism/rollback suites green (pure rename — zero behaviour change).
 
 **Verification:** build + `ctest`; determinism suites; smoke-launch.
@@ -189,17 +189,17 @@ consistency (Task 5 owns the snapshot struct; decide there).
 pass `scr.mode` into `AppearanceAt`.
 
 **Acceptance criteria:**
-- [ ] Classic mode and empty-layer levels render byte-identical (`framehash`
+- [x] Classic mode and empty-layer levels render byte-identical (`framehash`
       on a classic replay in both modes).
-- [ ] With a hand-built in-memory layer, modern mode returns `display_data`
+- [x] With a hand-built in-memory layer, modern mode returns `display_data`
       where valid and palette elsewhere; classic mode ignores the layer.
-- [ ] No allocation for classic levels (display vectors stay empty).
+- [x] No allocation for classic levels (display vectors stay empty).
 
 **Verification:** build + `ctest` incl. new `test_level_display`;
 `framehash`; smoke-launch both modes. **Dependencies:** Task 1. **Scope:** M.
 
 ### Checkpoint A (after Tasks 1–2)
-- [ ] Tree renamed; display seam in place; output identical for all existing
+- [x] Tree renamed; display seam in place; output identical for all existing
       levels in both modes; new unit test exercises the synthetic layer.
 
 ### Phase 2: Mutation policy
@@ -213,9 +213,9 @@ free. Add the same clear to the direct level writers that bypass `SetPixel`:
 (`gfx/blit.cpp`, via the `BLITL` macro region). No ARGB writes in v1.
 
 **Acceptance criteria:**
-- [ ] Shooting a hole / splattering blood on an authored cell reverts that
+- [x] Shooting a hole / splattering blood on an authored cell reverts that
       cell's `AppearanceAt` to palette in both modes (unit test).
-- [ ] Classic levels unaffected (clears are no-ops on empty layer).
+- [x] Classic levels unaffected (clears are no-ops on empty layer).
 
 **Verification:** build + `ctest`; `framehash`; smoke-launch.
 **Dependencies:** Task 2. **Scope:** S.
@@ -232,8 +232,8 @@ offsets). `PixelAt`/`ShadowedIndex` unchanged. Call sites in
 `viewport.cpp`/`spectatorviewport.cpp` pass their renderer's `mode`.
 
 **Acceptance criteria:**
-- [ ] Classic/empty-layer shadows byte-identical (`framehash`).
-- [ ] On an authored cell in modern mode, the shadow is a darkened display
+- [x] Classic/empty-layer shadows byte-identical (`framehash`).
+- [x] On an authored cell in modern mode, the shadow is a darkened display
       sample, not `pal32[idx+4]` (unit test on `ShadowQuery`).
 
 **Verification:** build + `ctest` incl. `test_blit`/`test_level_display`;
@@ -251,11 +251,11 @@ re-derives nothing for it (unlike `materials`) but tolerates an absent layer.
 Bump `kMyReplayVersion` 7→8 with a pre-8 path that loads an empty layer.
 
 **Acceptance criteria:**
-- [ ] `test_rollback_correctness` (cereal-vs-fast oracle) green with a
+- [x] `test_rollback_correctness` (cereal-vs-fast oracle) green with a
       synthetic modern level; `test_rollback_desync`, `test_determinism` green.
-- [ ] A pre-8 replay loads (empty layer, classic appearance) and plays
+- [x] A pre-8 replay loads (empty layer, classic appearance) and plays
       identically.
-- [ ] Classic levels: snapshot/replay bytes unchanged (empty layer).
+- [x] Classic levels: snapshot/replay bytes unchanged (empty layer).
 
 **Verification:** build + `ctest`; determinism/rollback suites; replay an old
 `.lrp`. **Dependencies:** Tasks 2–3. **Scope:** M.
@@ -271,19 +271,19 @@ desync — but both peers must agree on it for modern levels to look right on
 each screen.
 
 **Acceptance criteria:**
-- [ ] `kProtocolVersion` bumped with a comment noting the added layer.
-- [ ] A modern level played in netplay renders authored art on **both**
+- [x] `kProtocolVersion` bumped with a comment noting the added layer.
+- [x] A modern level played in netplay renders authored art on **both**
       peers' modern-mode screens.
-- [ ] A classic level's blob is byte-identical in size to before (empty
+- [x] A classic level's blob is byte-identical in size to before (empty
       layer adds a zero-length section).
-- [ ] `test_rollback_*` / `test_determinism` green (nothing entered the hash).
+- [x] `test_rollback_*` / `test_determinism` green (nothing entered the hash).
 
 **Verification:** build + `ctest`; two-instance local netplay smoke (or the
 existing rollback/session tests where a live peer isn't available).
 **Dependencies:** Task 5. **Scope:** M.
 
 ### Checkpoint B (after Tasks 4–6)
-- [ ] Display layer survives shadow rendering, snapshot, replay, and the wire;
+- [x] Display layer survives shadow rendering, snapshot, replay, and the wire;
       classic paths provably byte-unchanged; determinism suites green.
 
 ### Phase 4: Authoring + verification
@@ -297,15 +297,15 @@ both. Settle the concrete container shape against the TC archive reader here.
 Ship one synthetic modern test level under `data/` for tests and manual checks.
 
 **Acceptance criteria:**
-- [ ] An existing classic TC level loads with no layer and renders identical
+- [x] An existing classic TC level loads with no layer and renders identical
       to today in both modes.
-- [ ] The synthetic modern level renders authored art in modern mode and
+- [x] The synthetic modern level renders authored art in modern mode and
       palette-derived art in classic mode.
-- [ ] A level mixing authored static rock (`display_valid==1`) with
+- [x] A level mixing authored static rock (`display_valid==1`) with
       **unauthored** water in the 168–174 range still shimmers in modern mode
       (the water stays index-based; only the authored rock is frozen ARGB).
-- [ ] The shipped format and its authoring rules are documented (Task 8).
-- [ ] `paths::ShadowsSystem` / Save-As guards still behave (no new shipped
+- [x] The shipped format and its authoring rules are documented (Task 8).
+- [x] `paths::ShadowsSystem` / Save-As guards still behave (no new shipped
       filenames collide).
 
 **Verification:** build + `ctest`; load both levels; smoke-launch both modes.
@@ -328,11 +328,11 @@ extend this same file. This is a Stage 3 deliverable, not an afterthought — it
 is what makes the loader usable by anyone but its author.
 
 **Acceptance criteria:**
-- [ ] `docs/modern-level-authoring.md` exists and matches the format Task 7
+- [x] `docs/modern-level-authoring.md` exists and matches the format Task 7
       actually shipped (container shape, `display_valid` semantics, clear-on-hit).
-- [ ] It lists the animated index ranges and the "leave unauthored to keep
+- [x] It lists the animated index ranges and the "leave unauthored to keep
       animating" rule, with a concrete mixed-terrain example.
-- [ ] It states that classic and existing TC packs load unchanged, and points
+- [x] It states that classic and existing TC packs load unchanged, and points
       forward to Stage 4 for animated true-color terrain.
 
 **Verification:** doc review against the as-built loader (Task 7); links/paths
@@ -342,20 +342,20 @@ resolve.
 #### Task 9: Full verification sweep (design doc Stage 3 checklist)
 
 **Acceptance criteria (`modern-colors.md:516-526`):**
-- [ ] Classic levels render identical to today in classic **and** modern mode.
-- [ ] Modern level: authored art in modern, palette-derived in classic.
-- [ ] Palette-cycling (water shimmer / `color_anim`) still animates on
+- [x] Classic levels render identical to today in classic **and** modern mode.
+- [x] Modern level: authored art in modern, palette-derived in classic.
+- [x] Palette-cycling (water shimmer / `color_anim`) still animates on
       unauthored terrain in modern mode; only authored cells are static.
-- [ ] Holes / blood fall back correctly in both modes (clear-on-hit v1).
-- [ ] Rollback tests pass with the larger snapshot.
-- [ ] Replay round-trips (pre-8 and v8); netplay shows art on both peers.
-- [ ] `double_res` mode renders the modern level correctly.
-- [ ] F10 hot-toggle still instant mid-game and in menus.
-- [ ] Emscripten preset still configures/builds (a few MB extra only when a
+- [x] Holes / blood fall back correctly in both modes (clear-on-hit v1).
+- [x] Rollback tests pass with the larger snapshot.
+- [x] Replay round-trips (pre-8 and v8); netplay shows art on both peers.
+- [x] `double_res` mode renders the modern level correctly.
+- [x] F10 hot-toggle still instant mid-game and in menus.
+- [x] Emscripten preset still configures/builds (a few MB extra only when a
       modern level loads).
-- [ ] Smoke-launch of the **installed** binary per CLAUDE.md (ctest is not a
+- [x] Smoke-launch of the **installed** binary per CLAUDE.md (ctest is not a
       smoke test).
-- [ ] `docs/modern-level-authoring.md` (Task 8) is present and accurate.
+- [x] `docs/modern-level-authoring.md` (Task 8) is present and accurate.
 
 **Dependencies:** Tasks 1–8. **Scope:** M.
 
@@ -371,19 +371,17 @@ resolve.
 | Building ahead of real demand | Med (process) | Format/demand confirmed before this plan; synthetic level keeps the loader testable regardless |
 | Memory / snapshot bloat | Low | Empty-when-classic gating: cost is exactly zero unless a modern level is loaded |
 
-## Open questions (deferred, not blockers)
+## Open questions (resolved)
 
-- **Shadow darkening factor for `display_data`** (halve channels? fixed
-  multiply?) — pick a value in Task 4 that reads close to the classic
-  `pal32[idx+4]` look on the derived layer.
-- **Container shape for the ARGB block** (sidecar vs. embedded in the level
-  file vs. TC-archive entry) — settled in Task 7 against the loader; the only
-  hard constraint is that layer-absent loads identically to today.
+- **Shadow darkening factor for `display_data`:** settled in Task 4 as
+  `0xFF000000 | ((argb & 0x00FEFEFE) >> 1)` — 50% per-channel halve, alpha
+  kept opaque. Reads close to the classic `pal32[idx+4]` look.
+- **Container shape for the ARGB block:** settled in Task 7 as the `MODERNLV`
+  8-byte magic block embedded at the end of the `.LEV` file, after any
+  `POWERLEVEL` block. Layer-absent files load identically to today.
 - **v2 painted mutations** (ARGB scorch/blood sprites writing `display_data`
-  instead of clearing `display_valid`) — out of scope; clear-on-hit is v1.
-- **Animated true-color terrain** (authored ARGB that cycles, not just static
-  art over palette-cycled terrain) — its own stage, `docs/ideas/modern-colors.md`
-  Stage 4. v1 mixes static authored art with index-based animation via the
-  `display_valid` mask.
-- **`material_id` rename of `GameSnapshot::level_data`** — cosmetic; decide in
-  Task 5.
+  instead of clearing `display_valid`) — out of scope; clear-on-hit v1 shipped.
+- **Animated true-color terrain** — out of scope; Stage 4. The `display_valid`
+  mask already provides the extension point.
+- **`material_id` rename of `GameSnapshot::level_data`** — decided in Task 5
+  not to rename (cosmetic; `level_data` stays as-is in the snapshot struct).

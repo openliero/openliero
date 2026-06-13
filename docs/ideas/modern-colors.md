@@ -5,12 +5,11 @@ constraints, in four independently-shippable stages, with a per-renderer
 "color mode" toggle that can hot-swap between classic VGA and modern looks
 in-game.
 
-This is a design document. **Stages 1 and 2 are implemented** (see
-`docs/plans/modern-colors-stage1.md` and
-`docs/plans/modern-colors-stage2.md` for the task-level records; the
-Stage 2 plan also records where the implementation deviated from the
-design below). **Stage 3 is planned** (`docs/plans/modern-colors-stage3.md`).
-Stages 3 and 4 remain unimplemented designs and can each be shipped or
+This is a design document. **Stages 1, 2, and 3 are implemented** (see
+`docs/plans/modern-colors-stage1.md`, `docs/plans/modern-colors-stage2.md`,
+and `docs/plans/modern-colors-stage3.md` for the task-level records; the
+Stage 2 and 3 plans record where the implementation deviated from the design
+below). **Stage 4 remains an unimplemented design** and can be shipped or
 abandoned independently.
 
 ---
@@ -90,7 +89,7 @@ palette entries. `SetWormColoursSpan` applies a hand-tuned 64-step gradient
 |---|---|---|---|---|
 | **Stage 1** — Modern Player Colors (**shipped**) | Unlock 6→8 bit per channel; per-worm `ColorBlock` indirection; `ColorMode` enum on Renderer; modern palette derived from the classic one (faithful, full-range); netplay protocol bump for 24-bit worm color | 1–2 days (actual: ~1 day + iteration) | None | Yes |
 | **Stage 2** — ARGB Screen (**shipped**) | Widen `Bitmap` to ARGB; convert the blit primitives to `pal32[]` LUT stores; rewrite `ScaleDraw`; `ShadowQuery` helper for the nine shadow/material-inspector sites; `Level::AppearanceAt()` accessor; fade moved to composition time | ~12 days | Low | Yes |
-| **Stage 3** — Full-Fidelity Terrain | Add `display_data` (ARGB) parallel layer to `Level`; make `AppearanceAt` mode-aware; modern level loader; snapshot `display_data` in `GameSnapshot` | ~9 days | Low | Yes (Stage 2 required) |
+| **Stage 3** — Full-Fidelity Terrain (**shipped**) | Add `display_data`/`display_valid` parallel layers to `Level`; `Level::data` renamed to `material_id`; `AppearanceAt` mode-aware; clear-on-hit v1; shadow darkening; snapshot (fast + cereal, replay v8); netplay blob (protocol v7); MODERNLV level loader; `docs/modern-level-authoring.md` | ~9 days (actual: ~2 sessions) | Low | Yes (Stage 2 required) |
 | **Stage 4** — Animated True-Color Terrain | Per-level ARGB animation ramps so authored terrain can cycle colours (true-color water/lava). Stage 3 already lets static modern art and palette-cycled classic terrain coexist via the `display_valid` mask; Stage 4 adds cycling to the authored layer itself, recomputed from `cycles` like palette rotation | ~5 days | Low–Med | Yes (Stage 3 required) |
 | **Hot-toggle** (cross-cutting) | F11 (or settings menu) swaps mode live; per-frame palette rebuild picks the right `origpal` | +0.5 / +0 / +0.5 days per stage | None | With Stage 1 |
 | **Per-window mode** (cross-cutting) | Each `Renderer` has its own `mode`; player screen and spectator window can be in different modes simultaneously | +0.5 / +0 / +0 days per stage | None | With Stage 1 |
@@ -374,7 +373,18 @@ ARGB display layer, the shadow result becomes a darkened version of
 
 ---
 
-## Stage 3 — Full-Fidelity Terrain
+## Stage 3 — Full-Fidelity Terrain (implemented)
+
+**Implemented** — `docs/plans/modern-colors-stage3.md` is the task-level record,
+including where the as-built code deviates from this section. Key deviations:
+the design doc said "Replay format unaffected" and "netplay no change" — both
+were wrong for modern levels (see Stage 3 plan corrections); the display layer
+travels in cereal `Level` (replay v8) and in the netplay level blob (protocol
+v7). The two-layer container format chose option (a) with a `MODERNLV` (8-byte
+magic) block appended after any `POWERLEVEL` block. Shadow darkening is
+`0xFF000000 | ((argb & 0x00FEFEFE) >> 1)` (50% per-channel halve). A synthetic
+test level ships at `data/TC/openliero/Levels/modern_test.lev`; the TC-author
+guide is at `docs/modern-level-authoring.md`.
 
 ### Goal
 
@@ -526,16 +536,17 @@ the animation-ramp additions.
 
 ### Verification
 
-- [ ] Classic levels load and render identical to today in classic mode.
-- [ ] Classic levels load and render identical to today in modern mode
+- [x] Classic levels load and render identical to today in classic mode.
+- [x] Classic levels load and render identical to today in modern mode
       (no authored display layer → falls through to palette-derived).
-- [ ] A test modern level with an authored ARGB display layer renders the
+- [x] A test modern level with an authored ARGB display layer renders the
       authored art in modern mode and palette-derived art in classic mode.
-- [ ] Shooting holes / splattering blood works in both modes (with the v1
+- [x] Shooting holes / splattering blood works in both modes (with the v1
       "runtime mutations clear `display_valid`" policy).
-- [ ] Rollback tests pass with the larger snapshot.
-- [ ] Replay format unaffected (replays render through the live pipeline).
-- [ ] `docs/modern-level-authoring.md` documents the shipped format, the
+- [x] Rollback tests pass with the larger snapshot.
+- [x] Replay format: display layer embedded in cereal Level (replay v8);
+      pre-v8 replays load with empty layer (classic appearance, unchanged).
+- [x] `docs/modern-level-authoring.md` documents the shipped format, the
       `display_valid` semantics, and which index ranges to leave unauthored to
       keep palette-cycling animation.
 
@@ -943,18 +954,19 @@ when each stage's work actually starts.
   ARGB vs palette index could theoretically affect Scale2x output. Visual
   diff during testing.
 
-### Stage 3
+### Stage 3 (resolved during implementation)
 
-- **Modern level authoring model: option (a) two-layer vs (b) per-level
-  extended palette.** Decide once a TC author actually expresses interest.
-  Until then this whole stage is speculative.
-- **Runtime mutation policy.** v1 proposal: scorch/blood writes clear
-  `display_valid` for affected pixels, falling back to palette-derived
-  appearance for those areas. Acceptable visual inconsistency? Or do we
-  want sprite-source-derived ARGB writes from the start?
-- **Compatibility of existing TC level files.** Existing TC archives are
-  palette-indexed throughout; they should load with no modern display
-  layer present and render identically to today. Confirm during testing.
+- **Modern level authoring model:** option (a) two-layer shipped.
+  Container: `MODERNLV` (8-byte magic) + `display_data` (w×h×4 ARGB32 LE)
+  + `display_valid` (w×h), appended after any `POWERLEVEL` block.
+  Documented in `docs/modern-level-authoring.md`.
+- **Runtime mutation policy:** v1 clear-on-hit shipped. Scorch/blood/holes
+  clear `display_valid`; hit terrain falls back to palette-derived. Visually
+  acceptable for v1; sprite-source ARGB writes deferred to v2 if demanded.
+- **Compatibility of existing TC level files:** confirmed. Classic levels
+  load with empty display vectors; visually identical in both modes by
+  construction (`AppearanceAt` falls back to palette when `display_valid`
+  is empty). 196/196 tests pass; smoke-launch exit 124.
 
 ### Cross-cutting
 
@@ -1015,13 +1027,15 @@ prep made by earlier stages. The two speculative cross-cutting features
 renderer architecture is already per-instance — a happy accident worth
 preserving.
 
-**Stage 1 is implemented**, including the hot-toggle and the per-renderer
-mode field. It pays the forward-looking architectural cost (`ColorMode`
-on `Renderer`, `ColorBlock` indirection, per-renderer palette origins)
-that makes everything else cheap if/when it's wanted.
+**Stages 1, 2, and 3 are implemented.** Stage 1 paid the forward-looking
+architectural cost (`ColorMode` on `Renderer`, `ColorBlock` indirection,
+per-renderer palette origins). Stage 2 widened the screen to ARGB. Stage 3
+decoupled terrain material identity from display colour — TC authors can now
+ship true-color terrain art via the MODERNLV level format; classic TC packs
+and all existing gameplay are bit-identical.
 
-Stages 3 and 4, per-window toggle UI, and curated palette options can be
-revisited when player or TC-author demand makes their cost worth paying.
-Stage 4 in particular is pure TC-author territory — it only matters once
-someone wants animated true-color terrain. The homework in this document is
-intended to make that revisit cheap.
+Stage 4, per-window toggle UI, and curated palette options can be revisited
+when player or TC-author demand makes their cost worth paying. Stage 4 in
+particular is pure TC-author territory — it only matters once someone wants
+animated true-color terrain. The architectural homework is done: `AppearanceAt`
+and `display_valid` are already the extension points Stage 4 needs.
