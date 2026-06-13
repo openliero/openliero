@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ctime>
 #include "game.hpp"
+#include "gfx/bitmap.hpp"
 #include "math/rect.hpp"
-#include "rand.hpp"
 #include "viewport.hpp"
 #include "worm.hpp"
 
@@ -14,4 +13,11 @@ struct SpectatorViewport : Viewport {
 
   void Draw(Game& game, Renderer& renderer, GameState state, bool is_replay) override;
   void Process(Game& game) override;
+
+  // Reused scratch buffer for the world pass; sized to the visible world
+  // region each frame and downscaled into the spectator rect.
+  Bitmap scratch_bmp;
+  // Current zoom factor (1.0 = native, <1.0 = zoomed out). Display-only —
+  // never touches the simulation and may use floats freely.
+  float zoom{1.0F};
 };

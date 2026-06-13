@@ -756,8 +756,8 @@ void ScaleDraw(uint32_t const* src, int w, int h, std::size_t src_pitch, uint8_t
   }
 }
 
-void ScaleDrawArea(uint32_t const* src, int src_w, int src_h, std::size_t src_pitch,
-                   uint32_t* dest, int dest_w, int dest_h, std::size_t dest_pitch) {
+void ScaleDrawArea(uint32_t const* src, int src_w, int src_h, std::size_t src_pitch, uint32_t* dest,
+                   int dest_w, int dest_h, std::size_t dest_pitch) {
   for (int dy = 0; dy < dest_h; ++dy) {
     int const kSy1 = dy * src_h / dest_h;
     int const kSy2 = (dy + 1) * src_h / dest_h;
@@ -769,7 +769,9 @@ void ScaleDrawArea(uint32_t const* src, int src_w, int src_h, std::size_t src_pi
         dest[dy * dest_pitch + dx] = src[kSy1 * src_pitch + kSx1];
         continue;
       }
-      uint64_t r = 0, g = 0, b = 0;
+      uint64_t r = 0;
+      uint64_t g = 0;
+      uint64_t b = 0;
       for (int sy = kSy1; sy < kSy2; ++sy) {
         uint32_t const* row = src + sy * src_pitch + kSx1;
         for (int sx = kSx1; sx < kSx2; ++sx) {
