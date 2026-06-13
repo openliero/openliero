@@ -313,7 +313,8 @@ TEST_CASE("AppearanceAt shift controls cycle speed", "[level][anim-layer]") {
   CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 3) == 0xFF00BB00U);
 }
 
-TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start", "[level][anim-layer]") {
+TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start",
+          "[level][anim-layer]") {
   Common common;
   FillMaterials(common);
   Level level = MakeClassicLevel(common);
@@ -333,7 +334,8 @@ TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start", "[
   CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 2) == 0xFFAA0000U);  // (1+2)%3=0
 }
 
-TEST_CASE("AppearanceAt out-of-range display_anim falls back to display_data", "[level][anim-layer]") {
+TEST_CASE("AppearanceAt out-of-range display_anim falls back to display_data",
+          "[level][anim-layer]") {
   Common common;
   FillMaterials(common);
   Level level = MakeClassicLevel(common);
