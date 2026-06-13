@@ -2,6 +2,11 @@
   "releases": [],
   "dev": [
     {
+      "name": "build-7ed2663",
+      "dir": "dev/build-7ed2663",
+      "timestamp": "2026-06-13T10:44:43Z"
+    },
+    {
       "name": "build-8ccb1a6",
       "dir": "dev/build-8ccb1a6",
       "timestamp": "2026-06-13T10:23:32Z"
@@ -45,11 +50,6 @@
       "name": "build-fdb7f1b",
       "dir": "dev/build-fdb7f1b",
       "timestamp": "2026-06-09T04:53:04Z"
-    },
-    {
-      "name": "build-10d5b54",
-      "dir": "dev/build-10d5b54",
-      "timestamp": "2026-06-08T20:54:56Z"
     }
   ]
 }
