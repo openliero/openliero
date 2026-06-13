@@ -256,7 +256,8 @@ static double Psigmoid(double x) { return (Sigmoid(x) - 0.5) * 2.0; }
 
 LevelCell* AiContext::PathFind(int x, int y) {
   auto* cell = dlevel.CellFromPx(x, y);
-  bool const kPath = dlevel.Run([=] { return cell->state == PathNode::kClosed; }, dlevel.MakeSucc());
+  bool const kPath =
+      dlevel.Run([=] { return cell->state == PathNode::kClosed; }, dlevel.MakeSucc());
   return kPath ? cell : nullptr;
 }
 
@@ -288,8 +289,8 @@ static double EvaluateState(FollowAI& ai, Worm* me, Game& game, InputContext& /*
 
   if (me_org->steerable_count == 1) {
     auto* missile_cell = ai.dlevel.CellFromPx(me->steerable_sum_x, me->steerable_sum_y);
-    bool const kMissilePath =
-        ai.dlevel.Run([=] { return missile_cell->state == PathNode::kClosed; }, ai.dlevel.MakeSucc());
+    bool const kMissilePath = ai.dlevel.Run(
+        [=] { return missile_cell->state == PathNode::kClosed; }, ai.dlevel.MakeSucc());
 
     if (kMissilePath && worm_cell && missile_cell->g < worm_cell->g) {
       double const kCloser = static_cast<double>(worm_cell->g) - missile_cell->g;
