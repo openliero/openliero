@@ -156,9 +156,15 @@ struct GameSnapshot {
   std::vector<BObject> bobjects_arr;
   std::size_t bobjects_count = 0;
 
+  // Level material_id bytes.  Pre-filled with the level's initial state at
+  // Prepare() time; only dirty cells are overwritten on each subsequent save.
+  // level_materials is omitted: it is always derivable as
+  //   common.materials[material_id[i]]
+  // and is recomputed on restore (see Game::LoadSnapshotFast).
   std::vector<uint8_t> level_data;
-  std::vector<Material> level_materials;
   // display_valid is snapshotted because terrain destruction zeroes it.
+  // Pre-filled with the level's initial state at Prepare() time; dirty cells
+  // overwritten on each subsequent save.
   // display_data is static (never written during simulation) and intentionally
   // omitted here — omitting 64 MB/slot (4096² ARGB) keeps the ring buffer
   // from bloating to ~500 MB for large levels.
@@ -166,16 +172,23 @@ struct GameSnapshot {
 
   uint32_t checksum = 0;
 
-  // Pre-size the dynamic buffers so save/load can avoid allocations.
-  // Call once after the level is generated.
+  // Pre-size the dynamic buffers and fill the level snapshot with the current
+  // level state so that the sparse-save path (SaveSnapshotFast) only needs to
+  // overwrite dirty cells on each subsequent call.
+  // Call once after the level is generated, before the first SaveSnapshotFast.
   void Prepare(Game const& game) {
     bobjects_arr.resize(game.bobjects.limit);
     std::size_t const kCells =
         static_cast<std::size_t>(game.level.width) * static_cast<std::size_t>(game.level.height);
     level_data.resize(kCells);
-    level_materials.resize(kCells);
+    if (kCells > 0) {
+      std::memcpy(level_data.data(), game.level.material_id.data(), kCells);
+    }
     if (!game.level.display_data.empty()) {
       level_display_valid.resize(kCells);
+      if (kCells > 0) {
+        std::memcpy(level_display_valid.data(), game.level.display_valid.data(), kCells);
+      }
     }
   }
 };
