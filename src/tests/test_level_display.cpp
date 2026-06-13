@@ -212,6 +212,163 @@ TEST_CASE("Level::load MODERNLV block populates display layers", "[level][stage3
   CHECK(level.display_valid[1] == 0);
 }
 
+// Stage 4: animated true-color terrain tests.
+
+TEST_CASE("Level has argb_ramps and display_anim empty by default", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level level(common);
+  CHECK(level.argb_ramps.empty());
+  CHECK(level.display_anim.empty());
+}
+
+TEST_CASE("Level::Swap also swaps argb_ramps and display_anim", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level a = MakeClassicLevel(common);
+  Level::ArgbRamp ramp;
+  ramp.colors = {0xFFAA0000U, 0xFF00BB00U};
+  ramp.shift = 0;
+  a.argb_ramps.push_back(ramp);
+  a.display_anim.assign(16, 1);
+
+  Level b(common);
+  b.width = 2;
+  b.height = 2;
+  b.material_id.assign(4, 0);
+  b.materials.assign(4, common.materials[0]);
+
+  a.Swap(b);
+
+  CHECK(a.argb_ramps.empty());
+  CHECK(a.display_anim.empty());
+  CHECK(b.argb_ramps.size() == 1);
+  CHECK(b.display_anim.size() == 16);
+}
+
+TEST_CASE("AppearanceAt animated pixel cycles through colors as cycles advances",
+          "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+  level.display_data.assign(16, 0);
+  level.display_valid.assign(16, 1);
+  level.display_anim.assign(16, 1);
+
+  Level::ArgbRamp ramp;
+  ramp.colors = {0xFFAA0000U, 0xFF00BB00U, 0xFF0000CCU};
+  ramp.shift = 0;
+  level.argb_ramps.push_back(ramp);
+
+  uint32_t pal32[256] = {};
+
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFFAA0000U);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 1) == 0xFF00BB00U);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 2) == 0xFF0000CCU);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 3) == 0xFFAA0000U);
+
+  // Classic mode never consults ramps — falls back to palette.
+  pal32[0] = 0xFF112233U;
+  CHECK(level.AppearanceAt(5, ColorMode::kClassic, pal32, 1) == 0xFF112233U);
+}
+
+TEST_CASE("AppearanceAt shift controls cycle speed", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+  level.display_data.assign(16, 0);
+  level.display_valid.assign(16, 1);
+  level.display_anim.assign(16, 1);
+
+  Level::ArgbRamp ramp;
+  ramp.colors = {0xFFAA0000U, 0xFF00BB00U};
+  ramp.shift = 1;
+  level.argb_ramps.push_back(ramp);
+
+  uint32_t pal32[256] = {};
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFFAA0000U);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 1) == 0xFFAA0000U);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 2) == 0xFF00BB00U);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 3) == 0xFF00BB00U);
+}
+
+TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start",
+          "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+  level.display_data.assign(16, 0);
+  level.display_valid.assign(16, 1);
+  level.display_anim.assign(16, 1);
+  level.display_data[5] = 1;  // pixel 5 has phase offset 1
+
+  Level::ArgbRamp ramp;
+  ramp.colors = {0xFFAA0000U, 0xFF00BB00U, 0xFF0000CCU};
+  ramp.shift = 0;
+  level.argb_ramps.push_back(ramp);
+
+  uint32_t pal32[256] = {};
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFF00BB00U);  // (1+0)%3=1
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 1) == 0xFF0000CCU);  // (1+1)%3=2
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 2) == 0xFFAA0000U);  // (1+2)%3=0
+}
+
+TEST_CASE("AppearanceAt out-of-range display_anim falls back to display_data",
+          "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+  level.display_data.assign(16, 0);
+  level.display_valid.assign(16, 1);
+  level.display_anim.assign(16, 0);
+
+  // display_anim[5] = 0 → static authored (Stage 3 behavior)
+  level.display_data[5] = 0xFF112233U;
+  uint32_t pal32[256] = {};
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFF112233U);
+
+  // display_anim[7] = 5 but only 1 ramp → OOB → fallback to display_data[7]
+  Level::ArgbRamp oob_ramp;
+  oob_ramp.colors = {0xFFAABBCCU};
+  oob_ramp.shift = 0;
+  level.argb_ramps.push_back(oob_ramp);
+  level.display_anim[7] = 5;
+  level.display_data[7] = 0xFF445566U;
+  CHECK(level.AppearanceAt(7, ColorMode::kModern, pal32, 0) == 0xFF445566U);
+}
+
+TEST_CASE("AppearanceAt no-ramps path is identical to stage-3 static", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Level level = MakeClassicLevel(common);
+  level.display_data.assign(16, 0);
+  level.display_valid.assign(16, 0);
+  level.display_data[5] = 0xFF112233U;
+  level.display_valid[5] = 1;
+
+  uint32_t pal32[256] = {};
+  pal32[42] = 0xFFABCDEFU;
+
+  // With no ramps (display_anim empty), cycles arg makes no difference.
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFF112233U);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 42) == 0xFF112233U);
+  CHECK(level.AppearanceAt(5, ColorMode::kClassic, pal32, 42) == 0xFFABCDEFU);
+}
+
+TEST_CASE("Bitmap cycles field defaults to 0", "[level][stage4]") {
+  Bitmap bmp;  // NOLINT(misc-const-correctness)
+  CHECK(bmp.cycles == 0);
+}
+
+TEST_CASE("Bitmap::Copy propagates cycles", "[level][stage4]") {
+  Bitmap src;
+  src.Alloc(4, 4);
+  src.cycles = 99;
+  Bitmap dest;
+  dest.Copy(src);
+  CHECK(dest.cycles == 99);
+}
+
 TEST_CASE("Level::load POWERLEVEL then MODERNLV block", "[level][stage3]") {
   Common common;
   FillMaterials(common);
