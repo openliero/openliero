@@ -269,14 +269,14 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
       if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
         int const kF = common.bonus_frames[i->frame];
 
-        BlitImage(renderer.bmp, common.small_sprites[kF], Ftoi(i->x) - 3 + kOffs.x,
-                  Ftoi(i->y) - 3 + kOffs.y);
-
         if (game.settings->shadow) {
           BlitShadowImage(kShadow, renderer.bmp, common.small_sprites.SpritePtr(kF),
                           Ftoi(i->x) - 5 + kOffs.x,  // TODO: Use offsX
                           Ftoi(i->y) - 1 + kOffs.y, 7, 7);
         }
+
+        BlitImage(renderer.bmp, common.small_sprites[kF], Ftoi(i->x) - 3 + kOffs.x,
+                  Ftoi(i->y) - 3 + kOffs.y);
 
         if (game.settings->names_on_bonuses && i->frame == 0) {
           std::string const& name = common.weapons[i->weapon].name;
@@ -293,9 +293,6 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
       SObjectType const& t = common.sobject_types[i->id];
       int const kFrame = i->cur_frame + t.start_frame;
 
-      BlitImageR(kShadow, renderer.bmp, common.large_sprites.SpritePtr(kFrame), i->x + kOffs.x,
-                 i->y + kOffs.y, 16, 16);
-
       if (game.settings->shadow) {
         BlitShadowImage(kShadow, renderer.bmp, common.large_sprites.SpritePtr(kFrame),
                         i->x + kOffs.x - 3,
@@ -303,6 +300,9 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
                                              // clearly wrong. Check that this offset is correct.
                         16, 16);
       }
+
+      BlitImageR(kShadow, renderer.bmp, common.large_sprites.SpritePtr(kFrame), i->x + kOffs.x,
+                 i->y + kOffs.y, 16, 16);
     }
 
     auto wr = game.wobjects.All();
