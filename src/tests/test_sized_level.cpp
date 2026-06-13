@@ -145,9 +145,11 @@ TEST_CASE("Level::load OLLEVEL2 rejects width > 4096", "[sized-level]") {
   // Build only the header (no body) — load should reject before reading material.
   std::vector<uint8_t> buf;
   buf.insert(buf.end(), kMagic, kMagic + 8);
-  buf.push_back(0);   // version
-  buf.push_back(0x01); buf.push_back(0x10);  // width  = 4097 (0x1001 LE)
-  buf.push_back(0x01); buf.push_back(0x00);  // height = 1
+  buf.push_back(0);  // version
+  buf.push_back(0x01);
+  buf.push_back(0x10);  // width  = 4097 (0x1001 LE)
+  buf.push_back(0x01);
+  buf.push_back(0x00);  // height = 1
   io::MemReader r(buf);
 
   Level level(common);
@@ -162,9 +164,11 @@ TEST_CASE("Level::load OLLEVEL2 rejects height > 4096", "[sized-level]") {
 
   std::vector<uint8_t> buf;
   buf.insert(buf.end(), kMagic, kMagic + 8);
-  buf.push_back(0);   // version
-  buf.push_back(0x01); buf.push_back(0x00);  // width  = 1
-  buf.push_back(0x01); buf.push_back(0x10);  // height = 4097
+  buf.push_back(0);  // version
+  buf.push_back(0x01);
+  buf.push_back(0x00);  // width  = 1
+  buf.push_back(0x01);
+  buf.push_back(0x10);  // height = 4097
   io::MemReader r(buf);
 
   Level level(common);
@@ -179,9 +183,11 @@ TEST_CASE("Level::load OLLEVEL2 rejects width == 0", "[sized-level]") {
 
   std::vector<uint8_t> buf;
   buf.insert(buf.end(), kMagic, kMagic + 8);
-  buf.push_back(0);   // version
-  buf.push_back(0x00); buf.push_back(0x00);  // width  = 0
-  buf.push_back(0x01); buf.push_back(0x00);  // height = 1
+  buf.push_back(0);  // version
+  buf.push_back(0x00);
+  buf.push_back(0x00);  // width  = 0
+  buf.push_back(0x01);
+  buf.push_back(0x00);  // height = 1
   io::MemReader r(buf);
 
   Level level(common);
@@ -196,9 +202,11 @@ TEST_CASE("Level::load OLLEVEL2 rejects height == 0", "[sized-level]") {
 
   std::vector<uint8_t> buf;
   buf.insert(buf.end(), kMagic, kMagic + 8);
-  buf.push_back(0);   // version
-  buf.push_back(0x01); buf.push_back(0x00);  // width  = 1
-  buf.push_back(0x00); buf.push_back(0x00);  // height = 0
+  buf.push_back(0);  // version
+  buf.push_back(0x01);
+  buf.push_back(0x00);  // width  = 1
+  buf.push_back(0x00);
+  buf.push_back(0x00);  // height = 0
   io::MemReader r(buf);
 
   Level level(common);

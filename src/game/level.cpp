@@ -228,7 +228,7 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
     if (r.TryGet(hdr, 5) != 5) {
       return false;
     }
-    load_width  = hdr[1] | (static_cast<int>(hdr[2]) << 8);
+    load_width = hdr[1] | (static_cast<int>(hdr[2]) << 8);
     load_height = hdr[3] | (static_cast<int>(hdr[4]) << 8);
     if (load_width < 1 || load_width > kMaxDim || load_height < 1 || load_height > kMaxDim) {
       return false;
