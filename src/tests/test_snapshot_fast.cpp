@@ -6,7 +6,10 @@
 //   2. Cereal parity: fast-save + fast-restore produces the same
 //      post-restore state as cereal-save + cereal-restore.
 //   3. Performance: save and load both well under 500 µs.
+//   4. Dirty-cell tracking: only modified cells are written on each save;
+//      level_materials is absent from the slot (recomputed on restore).
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdint>
@@ -269,4 +272,62 @@ TEST_CASE("Fast snapshot round-trips the display layer", "[snapshot][rollback][d
   game.SaveSnapshotFast(snap2);
   game.LoadSnapshotFast(snap2);
   REQUIRE(game.level.display_data.empty());
+}
+
+TEST_CASE("Dirty-cell tracking: sparse save, correct restore", "[snapshot][rollback][dirty]") {
+  // Verifies:
+  //  - Level.dirty_list is populated by SetPixel after SaveSnapshotFast inits tracking
+  //  - Only modified cells are written to the slot on subsequent saves
+  //  - level_materials is absent from GameSnapshot (materials recomputed on restore)
+  //  - Round-trip correctness after dirty-cell restore
+
+  GameRunner r(0x1EADBEE5);
+  Game& game = *r.game;
+  std::size_t const kCells =
+      static_cast<std::size_t>(game.level.width) * static_cast<std::size_t>(game.level.height);
+
+  GameSnapshot snap;
+  snap.Prepare(game);
+
+  // First save: inits dirty tracking; snap must carry all initial material_ids.
+  game.SaveSnapshotFast(snap);
+  REQUIRE(snap.level_data.size() == kCells);
+  REQUIRE(
+      std::equal(snap.level_data.begin(), snap.level_data.end(), game.level.material_id.begin()));
+  // dirty_list must now be initialised (empty, since no SetPixel since tracking start).
+  REQUIRE(game.level.dirty_list.empty());  // RED gate: dirty_list doesn't exist yet
+
+  // Modify one cell.
+  int const kX = 42;
+  int const kY = 37;
+  int const kIdx = kX + kY * game.level.width;
+  unsigned char const kOldMat = game.level.material_id[kIdx];
+  unsigned char const kNewMat =
+      (kOldMat == 0) ? static_cast<unsigned char>(1) : static_cast<unsigned char>(0);
+  game.level.SetPixel(kX, kY, kNewMat, *game.common);
+  REQUIRE(game.level.dirty_list.size() == 1);
+
+  // Second save into a fresh slot: must capture the dirty cell.
+  GameSnapshot snap2;
+  snap2.Prepare(game);
+  game.SaveSnapshotFast(snap2);
+  REQUIRE(snap2.level_data[kIdx] == kNewMat);
+  // All other cells still hold their initial values.
+  for (std::size_t i = 0; i < kCells; ++i) {
+    if (static_cast<int>(i) != kIdx) {
+      REQUIRE(snap2.level_data[i] == snap.level_data[i]);
+    }
+  }
+
+  // Corrupt the live cell, restore from snap2, verify correctness.
+  game.level.material_id[kIdx] = kOldMat;
+  game.LoadSnapshotFast(snap2);
+  REQUIRE(game.level.material_id[kIdx] == kNewMat);
+  // materials must be consistent with material_id after restore (no level_materials in slot).
+  REQUIRE(game.level.materials[kIdx].flags == game.common->materials[kNewMat].flags);
+
+  // Restoring snap (taken before the modification) gives back the old cell value.
+  game.LoadSnapshotFast(snap);
+  REQUIRE(game.level.material_id[kIdx] == kOldMat);
+  REQUIRE(game.level.materials[kIdx].flags == game.common->materials[kOldMat].flags);
 }
