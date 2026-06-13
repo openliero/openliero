@@ -159,6 +159,7 @@ static constexpr int kLevW = 504, kLevH = 350;
 static constexpr std::size_t kLevCells = kLevW * kLevH;
 
 // Append MODERNLV block (magic + display_data + display_valid) to buf.
+// Does NOT write ramp_count; produces a Stage-3-format block for compat tests.
 static void AppendModernBlock(std::vector<uint8_t>& buf, std::vector<uint32_t> const& dd,
                               std::vector<uint8_t> const& dv) {
   static constexpr uint8_t kMagic[8] = {'M', 'O', 'D', 'E', 'R', 'N', 'L', 'V'};
@@ -166,6 +167,25 @@ static void AppendModernBlock(std::vector<uint8_t>& buf, std::vector<uint32_t> c
   auto const* raw = reinterpret_cast<uint8_t const*>(dd.data());
   buf.insert(buf.end(), raw, raw + dd.size() * 4);
   buf.insert(buf.end(), dv.begin(), dv.end());
+}
+
+// Append Stage 4 ramp table + display_anim after the display_valid data.
+// Pass empty ramps to write ramp_count=0 (static Stage 4 block).
+static void AppendRampData(std::vector<uint8_t>& buf,
+                           std::vector<Level::ArgbRamp> const& ramps,
+                           std::vector<uint8_t> const& display_anim) {
+  buf.push_back(static_cast<uint8_t>(ramps.size()));
+  for (Level::ArgbRamp const& r : ramps) {
+    buf.push_back(r.shift);
+    auto count = static_cast<uint16_t>(r.colors.size());
+    buf.push_back(count & 0xFFu);
+    buf.push_back((count >> 8) & 0xFFu);
+    auto const* raw = reinterpret_cast<uint8_t const*>(r.colors.data());
+    buf.insert(buf.end(), raw, raw + r.colors.size() * 4);
+  }
+  if (!ramps.empty()) {
+    buf.insert(buf.end(), display_anim.begin(), display_anim.end());
+  }
 }
 
 TEST_CASE("Level::load classic level leaves display layers empty", "[level][stage3]") {
@@ -397,4 +417,149 @@ TEST_CASE("Level::load POWERLEVEL then MODERNLV block", "[level][stage3]") {
   REQUIRE(level.display_data.size() == kLevCells);
   CHECK(level.display_data[7] == 0xFFAABBCCU);
   CHECK(level.display_valid[7] == 1);
+}
+
+// Stage 4: MODERNLV extended loader tests.
+
+TEST_CASE("Level::load MODERNLV with ramp_count=0 leaves anim layer empty", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  dd[0] = 0xFF112233U;
+  dv[0] = 1;
+
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  AppendModernBlock(bytes, dd, dv);
+  AppendRampData(bytes, {}, {});  // ramp_count=0
+
+  io::MemReader r(bytes);
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  REQUIRE(level.display_data.size() == kLevCells);
+  CHECK(level.display_data[0] == 0xFF112233U);
+  CHECK(level.display_valid[0] == 1);
+  CHECK(level.argb_ramps.empty());
+  CHECK(level.display_anim.empty());
+}
+
+TEST_CASE("Level::load MODERNLV with ramps populates argb_ramps and display_anim",
+          "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  // All pixels phase-offset 0; pixel 0 is animated (ramp 1), rest static.
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  dv[0] = 1;  // pixel 0 authored
+  dd[0] = 0;  // phase offset 0
+
+  std::vector<uint8_t> danim(kLevCells, 0);
+  danim[0] = 1;  // pixel 0 uses ramp 1
+
+  Level::ArgbRamp ramp;
+  ramp.colors = {0xFFAA0000U, 0xFF00BB00U};
+  ramp.shift = 1;
+
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  AppendModernBlock(bytes, dd, dv);
+  AppendRampData(bytes, {ramp}, danim);
+
+  io::MemReader r(bytes);
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  REQUIRE(level.argb_ramps.size() == 1);
+  CHECK(level.argb_ramps[0].shift == 1);
+  REQUIRE(level.argb_ramps[0].colors.size() == 2);
+  CHECK(level.argb_ramps[0].colors[0] == 0xFFAA0000U);
+  CHECK(level.argb_ramps[0].colors[1] == 0xFF00BB00U);
+  REQUIRE(level.display_anim.size() == kLevCells);
+  CHECK(level.display_anim[0] == 1);
+  CHECK(level.display_anim[1] == 0);
+  // Animated pixel resolves correctly.
+  uint32_t pal32[256] = {};
+  CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32, 2) == 0xFF00BB00U);
+}
+
+TEST_CASE("Level::load MODERNLV truncated ramp data drops anim layer", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  AppendModernBlock(bytes, dd, dv);
+
+  // Write ramp_count=1 but truncate the ramp body.
+  bytes.push_back(1);  // ramp_count=1
+  bytes.push_back(0);  // shift=0
+  // color_count=2 but only write 1 byte of the count (truncated).
+  bytes.push_back(2);
+  // No color data at all — stream ends here.
+
+  io::MemReader r(bytes);
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  // Truncated ramp data → anim layer dropped.
+  CHECK(level.argb_ramps.empty());
+  CHECK(level.display_anim.empty());
+  // Display layer is still valid.
+  REQUIRE(level.display_data.size() == kLevCells);
+}
+
+TEST_CASE("Level::load MODERNLV zero-length ramp drops anim layer", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  AppendModernBlock(bytes, dd, dv);
+
+  bytes.push_back(1);  // ramp_count=1
+  bytes.push_back(0);  // shift=0
+  bytes.push_back(0);  // color_count low byte = 0
+  bytes.push_back(0);  // color_count high byte = 0 → zero-length ramp (invalid)
+
+  io::MemReader r(bytes);
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  CHECK(level.argb_ramps.empty());
+  CHECK(level.display_anim.empty());
+}
+
+TEST_CASE("Level::load MODERNLV display_anim OOB value drops anim layer", "[level][stage4]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  std::vector<uint32_t> dd(kLevCells, 0);
+  std::vector<uint8_t> dv(kLevCells, 0);
+  std::vector<uint8_t> danim(kLevCells, 0);
+  danim[0] = 2;  // ramp index 2 — but only 1 ramp will be in the table
+
+  Level::ArgbRamp ramp;
+  ramp.colors = {0xFFAA0000U};
+  ramp.shift = 0;
+
+  std::vector<uint8_t> bytes(kLevCells, 0);
+  AppendModernBlock(bytes, dd, dv);
+  AppendRampData(bytes, {ramp}, danim);
+
+  io::MemReader r(bytes);
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+  // display_anim[0]=2 but only 1 ramp → OOB → whole anim layer dropped.
+  CHECK(level.argb_ramps.empty());
+  CHECK(level.display_anim.empty());
 }

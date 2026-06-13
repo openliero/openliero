@@ -274,6 +274,61 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
       }
       r.Get(raw_dd + prepend, kCells * sizeof(uint32_t) - prepend);
       r.Get(display_valid.data(), kCells);
+
+      // Stage 4 extension: ramp_count(1) + ramps + display_anim(cells).
+      // TryGet so Stage-3-format files (stream ends here) still load fine.
+      uint8_t ramp_count = 0;
+      if (r.TryGet(&ramp_count, 1) == 1 && ramp_count > 0) {
+        static constexpr uint16_t kMaxColors = 4096;
+        bool valid = true;
+        std::vector<ArgbRamp> ramps;
+        ramps.reserve(ramp_count);
+
+        for (int ri = 0; ri < ramp_count && valid; ++ri) {
+          uint8_t shift_byte = 0;
+          if (r.TryGet(&shift_byte, 1) != 1) {
+            valid = false;
+            break;
+          }
+          uint8_t count_bytes[2] = {};
+          if (r.TryGet(count_bytes, 2) != 2) {
+            valid = false;
+            break;
+          }
+          auto const kColorCount =
+              static_cast<uint16_t>(count_bytes[0]) |
+              (static_cast<uint16_t>(count_bytes[1]) << 8);
+          if (kColorCount == 0 || kColorCount > kMaxColors) {
+            valid = false;
+            break;
+          }
+          ArgbRamp ramp;
+          ramp.shift = shift_byte;
+          ramp.colors.resize(kColorCount);
+          auto* raw = reinterpret_cast<uint8_t*>(ramp.colors.data());
+          if (r.TryGet(raw, kColorCount * 4U) != kColorCount * 4U) {
+            valid = false;
+            break;
+          }
+          ramps.push_back(ramp);
+        }
+
+        if (valid) {
+          std::vector<uint8_t> anim(kCells);
+          if (r.TryGet(anim.data(), kCells) == kCells) {
+            for (uint8_t a : anim) {
+              if (a > ramp_count) {
+                valid = false;
+                break;
+              }
+            }
+            if (valid) {
+              argb_ramps = std::move(ramps);
+              display_anim = std::move(anim);
+            }
+          }
+        }
+      }
     }
   }
 
