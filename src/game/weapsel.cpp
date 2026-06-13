@@ -128,6 +128,7 @@ void WeaponSelection::DrawSpectatorViewports(Renderer& renderer, GameState /*sta
     // Fit the minimap into a 252×175 pixel area regardless of map size.
     int const kMinimapStepX = std::max((game.level.width + 251) / 252, 1);
     int const kMinimapStepY = std::max((game.level.height + 174) / 175, 1);
+    FillRect(renderer.bmp, kCenterX - 126, renderer.render_res_y - 208, 252, 175, 0);
     game.level.DrawMiniature(renderer.bmp, kCenterX - 126, renderer.render_res_y - 208,
                              kMinimapStepX, kMinimapStepY);
 

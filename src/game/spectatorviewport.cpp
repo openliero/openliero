@@ -66,17 +66,15 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   Common& common = *game.common;
   render_w = renderer.render_res_x;
   render_h = renderer.render_res_y;
-  int const kMultiplier = renderer.render_res_x / 320;
-  int const kCenterX = renderer.render_res_x / 2;
-  int const kRenderW = render_w;
-  int const kRenderH = render_h;
+  int const kMultiplier = render_w / 320;
+  int const kCenterX = render_w / 2;
 
   // ── World pass ────────────────────────────────────────────────────────────
   // Scratch bitmap sized to the visible world region, capped to map dimensions.
   int const kScrW =
-      std::min(static_cast<int>(static_cast<float>(kRenderW) / zoom), game.level.width);
+      std::min(static_cast<int>(static_cast<float>(render_w) / zoom), game.level.width);
   int const kScrH =
-      std::min(static_cast<int>(static_cast<float>(kRenderH) / zoom), game.level.height);
+      std::min(static_cast<int>(static_cast<float>(render_h) / zoom), game.level.height);
 
   scratch_bmp.Alloc(kScrW, kScrH);
   scratch_bmp.pal32 = renderer.pal32;
@@ -418,7 +416,7 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     BlitBitmap(renderer.bmp, scratch_bmp, 0, 0, kScrW, kScrH);
   } else {
     ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, renderer.bmp.pixels,
-                  kRenderW, kRenderH, renderer.bmp.pitch);
+                  render_w, render_h, renderer.bmp.pitch);
   }
 
   // ── HUD overlay (native resolution, drawn on top) ─────────────────────────
