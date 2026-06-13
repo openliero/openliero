@@ -387,7 +387,14 @@ TEST_CASE("level blob round-trip preserves anim layer (stage4)", "[session][stag
   push32le(0xFF608020U);
   for (size_t i = 0; i < kCells; ++i) push8(i == 5 ? 1 : 0);  // display_anim
 
-  ctrl.LoadLevelFromData(blob);
+  // LoadLevelFromData expects: compressed_flag(1) + raw_size(4) + raw_data
+  auto const kRawSize32 = static_cast<uint32_t>(blob.size());
+  std::vector<uint8_t> packet;
+  packet.push_back(0);  // not compressed
+  for (int bi = 0; bi < 4; ++bi) packet.push_back((kRawSize32 >> (8 * bi)) & 0xFF);
+  packet.insert(packet.end(), blob.begin(), blob.end());
+
+  ctrl.LoadLevelFromData(packet);
 
   REQUIRE(ctrl.game.level.argb_ramps.size() == 1);
   CHECK(ctrl.game.level.argb_ramps[0].shift == 2);
