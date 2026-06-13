@@ -278,8 +278,8 @@ struct AiContext {
     int wx = Ftoi(fx) >> 5;
     int wy = Ftoi(fy) >> 5;
 
-    wx = std::max(std::min(wx, state_width), 0);
-    wy = std::max(std::min(wy, state_height), 0);
+    wx = std::max(std::min(wx, state_width - 1), 0);
+    wy = std::max(std::min(wy, state_height - 1), 0);
 
     return state[wx][wy];
   }
