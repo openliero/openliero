@@ -9,7 +9,6 @@
 #include <cstring>
 
 void Level::GenerateDirtPattern(Common& common, Rand& rand) {
-
   SetPixel(0, 0, rand(7) + 12, common);
 
   for (int y = 1; y < height; ++y) {
