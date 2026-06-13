@@ -181,8 +181,7 @@ struct Level {
     if (r.colors.empty()) {
       return display_data[idx];
     }
-    unsigned const kPhase =
-        display_data[idx] + (static_cast<unsigned>(cycles) >> r.shift);
+    unsigned const kPhase = display_data[idx] + (static_cast<unsigned>(cycles) >> r.shift);
     return r.colors[kPhase % r.colors.size()];
   }
 };

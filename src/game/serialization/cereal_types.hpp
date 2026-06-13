@@ -129,8 +129,7 @@ void save(Archive& ar, Level const& lvl) {
      cereal::make_nvp("data", lvl.material_id), cereal::make_nvp("origpal", lvl.origpal),
      cereal::make_nvp("displayData", lvl.display_data),
      cereal::make_nvp("displayValid", lvl.display_valid),
-     cereal::make_nvp("argbRamps", lvl.argb_ramps),
-     cereal::make_nvp("animData", lvl.display_anim));
+     cereal::make_nvp("argbRamps", lvl.argb_ramps), cereal::make_nvp("animData", lvl.display_anim));
 }
 
 template <class Archive>
