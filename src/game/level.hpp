@@ -149,7 +149,7 @@ struct Level {
   // for classic levels — empty means "always use the palette path."
   std::vector<uint32_t> display_data;
   std::vector<uint8_t> display_valid;
-  // Optional animation layer (Stage 4). Empty when the level has no ramps.
+  // Optional animation layer. Empty when the level has no ramps.
   // argb_ramps: the ramp table; display_anim[idx]: 0=static, N=ramp N-1.
   // For animated pixels, display_data[idx] is a per-pixel phase offset, not
   // a colour. All three fields are immutable after load; never snapshotted.

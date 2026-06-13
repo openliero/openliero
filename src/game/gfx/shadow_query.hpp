@@ -11,8 +11,8 @@
 // semantic change: shadows and explosion masks key off terrain, not off
 // whatever sprite happened to be drawn earlier on the screen.
 //
-// Stage 3 seam: when terrain gains an ARGB display layer, ShadowedArgb
-// becomes a darkened display_data sample; the call sites stay unchanged.
+// When terrain has an ARGB display layer, ShadowedArgb becomes a darkened
+// display_data sample; the call sites stay unchanged.
 struct ShadowQuery {
   Common const& common;
   Level const& level;
