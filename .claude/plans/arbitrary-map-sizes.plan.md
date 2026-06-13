@@ -64,7 +64,7 @@ floats freely without touching the fixed-point determinism contract.
 
 ## PRs
 
-### PR 1 — Foundation: make hardcoded 504×350 read `level.width/height` (pure refactor)
+### PR 1 — Foundation: make hardcoded 504×350 read `level.width/height` (pure refactor) — **DONE** ([#103](https://github.com/openliero/openliero/pull/103))
 No behavior change; level still loads at 504×350. De-risks everything downstream.
 - **Viewport construction**: replace literal `504, 350` in the controllers and
   `replay_to_video.cpp:60` with `level.width/height`; decouple spectator `Rect`
@@ -164,7 +164,7 @@ scripts/clang-format-diff.sh && scripts/clang-tidy-diff.sh build/linux-x64
 
 ## Acceptance
 
-- [ ] PR1: all 504×350 hardcodes read `level.width/height`; behavior unchanged; suites green.
+- [x] PR1: all 504×350 hardcodes read `level.width/height`; behavior unchanged; suites green.
 - [ ] PR2: new sized format loads/saves; legacy files still load; 4096² level generates on demand; tools + doc updated.
 - [ ] PR3: random map size editable in MATCH SETUP; config v5; defaults reproduce 504×350.
 - [ ] PR4: spectator auto-zooms to keep both worms visible; 1× on small maps unchanged.
