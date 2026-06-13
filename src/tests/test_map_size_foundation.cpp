@@ -32,10 +32,10 @@ TEST_CASE("DijkstraLevel CellFromPx clamps to actual level bounds, not hardcoded
   // Before PR1: CellFromPx clamps to kFullWidth-1=503, kFullHeight-1=349
   // (hardcoded), so CoordsLevel returns (502, 350) — both outside 252x175.
   LevelCell* cell = dlevel.CellFromPx(9999, 9999);
-  IVec2 coords = dlevel.CoordsLevel(cell);
+  IVec2 const kCoords = dlevel.CoordsLevel(cell);
 
-  REQUIRE(coords.x < 252);
-  REQUIRE(coords.y < 175);
+  REQUIRE(kCoords.x < 252);
+  REQUIRE(kCoords.y < 175);
 }
 
 TEST_CASE("DijkstraLevel CellFromPx works correctly at standard 504x350 size", "[map_size]") {
@@ -53,8 +53,8 @@ TEST_CASE("DijkstraLevel CellFromPx works correctly at standard 504x350 size", "
 
   // Interior position should round-trip through cell coords and stay in-bounds.
   LevelCell* cell = dlevel.CellFromPx(200, 175);
-  IVec2 coords = dlevel.CoordsLevel(cell);
+  IVec2 const kCoords = dlevel.CoordsLevel(cell);
 
-  REQUIRE(coords.x < 504);
-  REQUIRE(coords.y < 350);
+  REQUIRE(kCoords.x < 504);
+  REQUIRE(kCoords.y < 350);
 }
