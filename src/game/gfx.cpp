@@ -1356,7 +1356,9 @@ bool Gfx::RunOneFrame() {
 
         if (old_level && !settings->regenerate_level &&
             settings->random_level == old_level->old_random_level &&
-            settings->level_file == old_level->old_level_file) {
+            settings->level_file == old_level->old_level_file &&
+            settings->random_map_width == old_level->old_random_map_width &&
+            settings->random_map_height == old_level->old_random_map_height) {
           new_controller->SwapLevel(*old_level);
         } else {
           Level new_level(*common);

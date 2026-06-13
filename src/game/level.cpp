@@ -417,6 +417,8 @@ void Level::GenerateFromSettings(Common& common, Settings const& settings, Rand&
 
   old_random_level = settings.random_level;
   old_level_file = settings.level_file;
+  old_random_map_width = settings.random_map_width;
+  old_random_map_height = settings.random_map_height;
 
   if (settings.shadow) {
     MakeShadow(common);
