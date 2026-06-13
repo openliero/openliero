@@ -11,8 +11,8 @@
 #include "text.hpp"
 
 void SpectatorViewport::Process(Game& game) {
-  int const kRenderW = rect.Width();
-  int const kRenderH = rect.Height();
+  int const kRenderW = render_w;
+  int const kRenderH = render_h;
 
   // Bounding box of all worms + margin to keep both worms visible with headroom.
   int const kMargin = 60;
@@ -64,10 +64,12 @@ void SpectatorViewport::Process(Game& game) {
 
 void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bool /*is_replay*/) {
   Common& common = *game.common;
+  render_w = renderer.render_res_x;
+  render_h = renderer.render_res_y;
   int const kMultiplier = renderer.render_res_x / 320;
   int const kCenterX = renderer.render_res_x / 2;
-  int const kRenderW = rect.Width();
-  int const kRenderH = rect.Height();
+  int const kRenderW = render_w;
+  int const kRenderH = render_h;
 
   // ── World pass ────────────────────────────────────────────────────────────
   // Scratch bitmap sized to the visible world region, capped to map dimensions.

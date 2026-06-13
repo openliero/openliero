@@ -20,4 +20,9 @@ struct SpectatorViewport : Viewport {
   // Current zoom factor (1.0 = native, <1.0 = zoomed out). Display-only —
   // never touches the simulation and may use floats freely.
   float zoom{1.0F};
+  // Render dimensions cached from the renderer at the start of each Draw()
+  // call. Process() reads these so it stays consistent with the current
+  // renderer resolution without needing a Renderer& parameter.
+  int render_w{640};
+  int render_h{400};
 };
