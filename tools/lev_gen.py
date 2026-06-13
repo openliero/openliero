@@ -13,6 +13,10 @@ Usage examples:
   Modern:    uv run tools/lev_gen.py --mat material.png --disp display.png --out level.lev
   Animated:  uv run tools/lev_gen.py --mat material.png --disp display.png \\
                                      --ramps ramps.json --anim anim.png --out level.lev
+  Large:     uv run tools/lev_gen.py --mat material.png --width 1024 --height 768 --out level.lev
+
+Non-standard sizes write an OLLEVEL2 header; the default 504×350 writes a
+legacy headerless file for compatibility with older game versions.
 
 See docs/modern-level-authoring.md for a full authoring guide.
 """
@@ -23,8 +27,9 @@ import struct
 import sys
 from PIL import Image
 
-LEVEL_W, LEVEL_H = 504, 350
-CELLS = LEVEL_W * LEVEL_H
+LEGACY_W, LEGACY_H = 504, 350
+MAX_DIM = 4096
+SIZED_MAGIC = b"OLLEVEL2"
 
 # Key-color -> material-index map (openliero TC defaults).
 # Edit this table to match your TC or add colors you painted with.
@@ -45,19 +50,20 @@ def err(msg: str) -> None:
     sys.exit(f"ERROR: {msg}")
 
 
-def load_mat(path: str) -> bytes:
+def load_mat(path: str, level_w: int, level_h: int) -> bytes:
+    cells = level_w * level_h
     img = Image.open(path)
-    if img.size != (LEVEL_W, LEVEL_H):
-        err(f"{path}: must be {LEVEL_W}x{LEVEL_H} px, got {img.size}")
+    if img.size != (level_w, level_h):
+        err(f"{path}: must be {level_w}x{level_h} px, got {img.size}")
     if img.mode == "P":
         # Indexed PNG: palette slot number = material index directly.
         return img.tobytes()
     # RGBA/RGB: map key colors to material indices.
     rgba = img.convert("RGBA")
     raw = rgba.tobytes()
-    out = bytearray([160] * CELLS)  # default to open space (Background-flagged)
+    out = bytearray([160] * cells)  # default to open space (Background-flagged)
     unknown: dict[tuple[int, int, int], int] = {}
-    for i in range(CELLS):
+    for i in range(cells):
         r, g, b = raw[i * 4], raw[i * 4 + 1], raw[i * 4 + 2]
         mat = COLOUR_MAP.get((r, g, b))
         if mat is None:
@@ -90,19 +96,20 @@ def argb32(r: int, g: int, b: int) -> int:
     return (0xFF << 24) | (r << 16) | (g << 8) | b
 
 
-def load_disp(path: str) -> tuple[bytearray, bytearray]:
+def load_disp(path: str, level_w: int, level_h: int) -> tuple[bytearray, bytearray]:
     """Return (display_data, display_valid).
 
     Opaque pixels (alpha > 0) are authored; transparent pixels fall back to
     the palette. display_data stores ARGB32 values, little-endian.
     """
+    cells = level_w * level_h
     img = Image.open(path).convert("RGBA")
-    if img.size != (LEVEL_W, LEVEL_H):
-        err(f"{path}: must be {LEVEL_W}x{LEVEL_H} px")
+    if img.size != (level_w, level_h):
+        err(f"{path}: must be {level_w}x{level_h} px")
     raw = img.tobytes()
-    dd = bytearray(CELLS * 4)
-    dv = bytearray(CELLS)
-    for i in range(CELLS):
+    dd = bytearray(cells * 4)
+    dv = bytearray(cells)
+    for i in range(cells):
         r, g, b, a = raw[i * 4], raw[i * 4 + 1], raw[i * 4 + 2], raw[i * 4 + 3]
         if a > 0:
             struct.pack_into("<I", dd, i * 4, argb32(r, g, b))
@@ -115,28 +122,41 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--mat",   required=True, metavar="PNG",  help="material map")
-    ap.add_argument("--disp",  metavar="PNG",  help="display layer (RGBA)")
-    ap.add_argument("--pal",   metavar="PNG",  help="indexed PNG -> POWERLEVEL palette")
-    ap.add_argument("--ramps", metavar="JSON", help="animation ramp definitions")
-    ap.add_argument("--anim",  metavar="PNG",  help="animation map (R=ramp, G=phase)")
-    ap.add_argument("--out",   required=True,  metavar="LEV",  help="output .lev file")
+    ap.add_argument("--mat",    required=True, metavar="PNG",  help="material map")
+    ap.add_argument("--disp",   metavar="PNG",  help="display layer (RGBA)")
+    ap.add_argument("--pal",    metavar="PNG",  help="indexed PNG -> POWERLEVEL palette")
+    ap.add_argument("--ramps",  metavar="JSON", help="animation ramp definitions")
+    ap.add_argument("--anim",   metavar="PNG",  help="animation map (R=ramp, G=phase)")
+    ap.add_argument("--out",    required=True,  metavar="LEV",  help="output .lev file")
+    ap.add_argument("--width",  type=int, default=LEGACY_W,
+                    metavar="W", help=f"level width in pixels (default {LEGACY_W}, max {MAX_DIM})")
+    ap.add_argument("--height", type=int, default=LEGACY_H,
+                    metavar="H", help=f"level height in pixels (default {LEGACY_H}, max {MAX_DIM})")
     args = ap.parse_args()
+
+    level_w: int = args.width
+    level_h: int = args.height
+    cells = level_w * level_h
+
+    if not (1 <= level_w <= MAX_DIM):
+        err(f"--width must be 1–{MAX_DIM}, got {level_w}")
+    if not (1 <= level_h <= MAX_DIM):
+        err(f"--height must be 1–{MAX_DIM}, got {level_h}")
 
     if args.anim and not args.ramps:
         err("--anim requires --ramps")
     if args.anim and not args.disp:
         err("--anim requires --disp")
 
-    mat = load_mat(args.mat)
+    mat = load_mat(args.mat, level_w, level_h)
 
-    dd = bytearray(CELLS * 4)
-    dv = bytearray(CELLS)
-    da = bytearray(CELLS)   # display_anim: 0=no anim, N=ramp N (1-based)
+    dd = bytearray(cells * 4)
+    dv = bytearray(cells)
+    da = bytearray(cells)   # display_anim: 0=no anim, N=ramp N (1-based)
     ramps: list[dict] = []
 
     if args.disp:
-        dd, dv = load_disp(args.disp)
+        dd, dv = load_disp(args.disp, level_w, level_h)
 
     if args.ramps:
         with open(args.ramps) as f:
@@ -151,21 +171,29 @@ def main() -> None:
 
     if args.anim:
         anim_img = Image.open(args.anim).convert("RGBA")
-        if anim_img.size != (LEVEL_W, LEVEL_H):
-            err(f"{args.anim}: must be {LEVEL_W}x{LEVEL_H} px")
+        if anim_img.size != (level_w, level_h):
+            err(f"{args.anim}: must be {level_w}x{level_h} px")
         anim_raw = anim_img.tobytes()
-        for i in range(CELLS):
+        for i in range(cells):
             r, g, b, a = anim_raw[i * 4], anim_raw[i * 4 + 1], anim_raw[i * 4 + 2], anim_raw[i * 4 + 3]
             if a > 0 and r > 0:
                 if r > len(ramps):
-                    x, y = i % LEVEL_W, i // LEVEL_W
+                    x, y = i % level_w, i // level_w
                     err(f"anim.png pixel ({x},{y}): ramp index {r} "
                         f"exceeds ramp count {len(ramps)}")
                 dv[i] = 1                              # must be valid for anim pixels
                 da[i] = r                              # ramp index (1-based)
                 struct.pack_into("<I", dd, i * 4, g)   # phase offset replaces color
 
+    sized = (level_w != LEGACY_W or level_h != LEGACY_H)
+
     with open(args.out, "wb") as f:
+        if sized:
+            f.write(SIZED_MAGIC)
+            f.write(bytes([0]))  # version
+            f.write(struct.pack("<H", level_w))
+            f.write(struct.pack("<H", level_h))
+
         f.write(mat)
 
         if args.pal:
@@ -194,7 +222,8 @@ def main() -> None:
             else:
                 f.write(b"\x00")  # ramp_count = 0
 
-    parts = ["material map"]
+    parts = [f"material map ({level_w}×{level_h})"]
+    if sized:      parts.insert(0, "OLLEVEL2 header")
     if args.pal:   parts.append("POWERLEVEL palette")
     if args.disp:  parts.append("MODERNLV display layer")
     if ramps:      parts.append(f"{len(ramps)} animation ramp(s)")
