@@ -40,8 +40,9 @@ def err(msg: str) -> None:
 
 # Per-index colours that round-trip cleanly through lev_gen.py's COLOUR_MAP.
 _EXACT_COLOUR: dict[int, tuple[int, int, int]] = {
-    12:  (139, 69,  19),  # dirt
-    13:  (108, 54,  15),  # dirt variant
+    0:   ( 64,  64,  64), # index 0: solid, shot-passable (dark grey)
+    12:  (139,  69,  19), # dirt
+    13:  (108,  54,  15), # dirt variant
     19:  (112, 128, 144), # rock
     30:  (255, 255,   0), # worm barrier (yellow)
     168: ( 26,  58, 106), # water shimmer (dark navy)

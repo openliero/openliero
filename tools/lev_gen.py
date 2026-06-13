@@ -37,6 +37,7 @@ COLOUR_MAP: dict[tuple[int, int, int], int] = {
     (112, 128, 144): 19,   # slate grey   -> rock (indestructible)
     (255, 255,  0  ): 30,  # yellow       -> worm barrier (solid to worms, shots pass through)
     (26,  58,  106): 168,  # dark navy    -> water shimmer (solid, palette-animated)
+    (64,  64,  64  ): 0,   # dark grey    -> index 0 (solid, shot-passable; used by lev_extract)
 }
 
 
@@ -50,12 +51,14 @@ def load_mat(path: str) -> bytes:
         err(f"{path}: must be {LEVEL_W}x{LEVEL_H} px, got {img.size}")
     if img.mode == "P":
         # Indexed PNG: palette slot number = material index directly.
-        return bytes(img.getdata())
+        return img.tobytes()
     # RGBA/RGB: map key colors to material indices.
     rgba = img.convert("RGBA")
+    raw = rgba.tobytes()
     out = bytearray([160] * CELLS)  # default to open space (Background-flagged)
     unknown: dict[tuple[int, int, int], int] = {}
-    for i, (r, g, b, _) in enumerate(rgba.getdata()):
+    for i in range(CELLS):
+        r, g, b = raw[i * 4], raw[i * 4 + 1], raw[i * 4 + 2]
         mat = COLOUR_MAP.get((r, g, b))
         if mat is None:
             unknown[(r, g, b)] = unknown.get((r, g, b), 0) + 1
@@ -96,9 +99,11 @@ def load_disp(path: str) -> tuple[bytearray, bytearray]:
     img = Image.open(path).convert("RGBA")
     if img.size != (LEVEL_W, LEVEL_H):
         err(f"{path}: must be {LEVEL_W}x{LEVEL_H} px")
+    raw = img.tobytes()
     dd = bytearray(CELLS * 4)
     dv = bytearray(CELLS)
-    for i, (r, g, b, a) in enumerate(img.getdata()):
+    for i in range(CELLS):
+        r, g, b, a = raw[i * 4], raw[i * 4 + 1], raw[i * 4 + 2], raw[i * 4 + 3]
         if a > 0:
             struct.pack_into("<I", dd, i * 4, argb32(r, g, b))
             dv[i] = 1
@@ -148,7 +153,9 @@ def main() -> None:
         anim_img = Image.open(args.anim).convert("RGBA")
         if anim_img.size != (LEVEL_W, LEVEL_H):
             err(f"{args.anim}: must be {LEVEL_W}x{LEVEL_H} px")
-        for i, (r, g, b, a) in enumerate(anim_img.getdata()):
+        anim_raw = anim_img.tobytes()
+        for i in range(CELLS):
+            r, g, b, a = anim_raw[i * 4], anim_raw[i * 4 + 1], anim_raw[i * 4 + 2], anim_raw[i * 4 + 3]
             if a > 0 and r > 0:
                 if r > len(ramps):
                     x, y = i % LEVEL_W, i // LEVEL_W
