@@ -428,7 +428,9 @@ void BlitStone(Common& common, Level& level, bool p1, const PalIdx* mem, int x, 
         }
         *rowdest = n;
         *rowmatdest = common.materials[n];
-        if (kDv) kDv[rowdest - kBase] = 0;
+        if (kDv) {
+          kDv[rowdest - kBase] = 0;
+        }
         ++rowsrc;
         ++rowdest;
         ++rowmatdest;
@@ -449,7 +451,9 @@ void BlitStone(Common& common, Level& level, bool p1, const PalIdx* mem, int x, 
         if (kC) {
           *rowdest = kC;
           *rowmatdest = common.materials[kC];
-          if (kDv) kDv[rowdest - kBase] = 0;
+          if (kDv) {
+            kDv[rowdest - kBase] = 0;
+          }
         }
 
         ++rowsrc;

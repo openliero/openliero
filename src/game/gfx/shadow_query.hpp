@@ -48,10 +48,14 @@ struct ShadowQuery {
   uint32_t ShadowedArgb(int sx, int sy) const {
     int const kWx = sx + world_offset_x;
     int const kWy = sy + world_offset_y;
-    if (!level.Inside(kWx, kWy)) return 0;
+    if (!level.Inside(kWx, kWy)) {
+      return 0;
+    }
     int const kLevelIdx = kWx + kWy * level.width;
     int const kP = level.material_id[kLevelIdx];
-    if (!common.materials[kP].SeeShadow()) return 0;
+    if (!common.materials[kP].SeeShadow()) {
+      return 0;
+    }
     if (mode == ColorMode::kModern && !level.display_valid.empty() &&
         level.display_valid[kLevelIdx]) {
       // Darken each channel by 50%; keep alpha opaque.

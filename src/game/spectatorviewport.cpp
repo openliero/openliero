@@ -275,7 +275,7 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
 
     {
       auto wr = game.wobjects.All();
-      for (WObject* i = nullptr; (i = wr.Next());) {
+      for (WObject const* i = nullptr; (i = wr.Next());) {
         Weapon const& w = *i->type;
         if (w.start_frame > -1) {
           int cur_frame = i->cur_frame;
@@ -341,16 +341,16 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
       }
     }
 
-    for (std::size_t i = 0; i < game.worms.size(); ++i) {
-      Worm const& w = *game.worms[i];
+    for (auto const& worm_ptr : game.worms) {
+      Worm const& w = *worm_ptr;
       if (w.visible) {
         int const kTempX = Ftoi(w.pos.x) - 7 + kOffs.x;
         int const kTempY = Ftoi(w.pos.y) - 5 + kOffs.y;
         if (w.ninjarope.out) {
           int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOffs.x;
           int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOffs.y;
-          DrawShadowLine(kShadow, renderer.bmp, kNinjaropeX - 3, kNinjaropeY + 3,
-                         kTempX + 7 - 3, kTempY + 4 + 3);
+          DrawShadowLine(kShadow, renderer.bmp, kNinjaropeX - 3, kNinjaropeY + 3, kTempX + 7 - 3,
+                         kTempY + 4 + 3);
           BlitShadowImage(kShadow, renderer.bmp, common.large_sprites.SpritePtr(84),
                           kNinjaropeX - 4, kNinjaropeY + 2, 16, 16);
         }
@@ -462,8 +462,8 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
       NObjectType const& t = *i->type;
       if (t.start_frame > 0) {
         auto pos = Ftoi(i->pos) - IVec2(3, 3);
-        BlitImage(renderer.bmp, common.small_sprites[t.start_frame + i->cur_frame],
-                  pos.x + kOffs.x, pos.y + kOffs.y);
+        BlitImage(renderer.bmp, common.small_sprites[t.start_frame + i->cur_frame], pos.x + kOffs.x,
+                  pos.y + kOffs.y);
       } else if (i->cur_frame > 1) {
         auto pos = Ftoi(i->pos) + kOffs;
         if (renderer.bmp.clip_rect.Encloses(pos)) {

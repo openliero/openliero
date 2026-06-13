@@ -95,11 +95,11 @@ TEST_CASE("shadowedargb in modern mode darkens display_data for authored seeshad
   f.level.display_valid[kIdx] = 1;
 
   ShadowQuery const kQModern{.common = f.common,
-                              .level = f.level,
-                              .pal32 = f.renderer.pal32,
-                              .world_offset_x = 0,
-                              .world_offset_y = 0,
-                              .mode = ColorMode::kModern};
+                             .level = f.level,
+                             .pal32 = f.renderer.pal32,
+                             .world_offset_x = 0,
+                             .world_offset_y = 0,
+                             .mode = ColorMode::kModern};
 
   // Darken: each channel >> 1; 0x20->0x10, 0x40->0x20, 0x60->0x30.
   REQUIRE(kQModern.ShadowedArgb(2, 3) == 0xFF102030U);
@@ -109,11 +109,11 @@ TEST_CASE("shadowedargb in modern mode darkens display_data for authored seeshad
 
   // Modern mode, pixel not authored (display_valid==0): palette fallback.
   ShadowQuery const kQModern2{.common = f.common,
-                               .level = f.level,
-                               .pal32 = f.renderer.pal32,
-                               .world_offset_x = 0,
-                               .world_offset_y = 0,
-                               .mode = ColorMode::kModern};
+                              .level = f.level,
+                              .pal32 = f.renderer.pal32,
+                              .world_offset_x = 0,
+                              .world_offset_y = 0,
+                              .mode = ColorMode::kModern};
   REQUIRE(kQModern2.ShadowedArgb(0, 3) == 0xFF112233U);  // pixel 0+3*8=24, display_valid==0
 }
 

@@ -10,8 +10,8 @@
 // Minimal Common stub: real Common is heavyweight (loads assets), but the
 // display-layer tests only need materials[0..255] populated.
 static void FillMaterials(Common& common) {
-  for (int i = 0; i < 256; ++i) {
-    common.materials[i].flags = 0;
+  for (auto& mat : common.materials) {
+    mat.flags = 0;
   }
 }
 
@@ -31,34 +31,34 @@ static Level MakeClassicLevel(Common& common) {
 TEST_CASE("Level::display_data and display_valid are empty for classic levels") {
   Common common;
   FillMaterials(common);
-  Level level = MakeClassicLevel(common);
+  Level const kLevel = MakeClassicLevel(common);
 
-  CHECK(level.display_data.empty());
-  CHECK(level.display_valid.empty());
+  CHECK(kLevel.display_data.empty());
+  CHECK(kLevel.display_valid.empty());
 }
 
 TEST_CASE("AppearanceAt classic mode, no display layer — palette path") {
   Common common;
   FillMaterials(common);
-  Level level = MakeClassicLevel(common);
+  Level const kLevel = MakeClassicLevel(common);
 
   uint32_t pal32[256] = {};
   pal32[42] = 0xFFABCDEF;
 
   // With empty display layer, classic mode returns pal32[material_id[idx]].
-  CHECK(level.AppearanceAt(5, ColorMode::kClassic, pal32) == 0xFFABCDEF);
+  CHECK(kLevel.AppearanceAt(5, ColorMode::kClassic, pal32) == 0xFFABCDEF);
 }
 
 TEST_CASE("AppearanceAt modern mode, no display layer — still palette path") {
   Common common;
   FillMaterials(common);
-  Level level = MakeClassicLevel(common);
+  Level const kLevel = MakeClassicLevel(common);
 
   uint32_t pal32[256] = {};
   pal32[42] = 0xFFABCDEF;
 
   // Empty display_valid means always fall back, even in modern mode.
-  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32) == 0xFFABCDEF);
+  CHECK(kLevel.AppearanceAt(5, ColorMode::kModern, pal32) == 0xFFABCDEF);
 }
 
 TEST_CASE("AppearanceAt modern mode, authored pixel — returns display_data") {
@@ -123,7 +123,7 @@ TEST_CASE("Level::Swap also swaps display layer") {
 }
 
 TEST_CASE("Bitmap has a mode field defaulting to kClassic") {
-  Bitmap bmp;
+  Bitmap bmp;  // NOLINT(misc-const-correctness) — const Bitmap triggers -fpermissive
   CHECK(bmp.mode == ColorMode::kClassic);
 }
 
@@ -160,7 +160,7 @@ static constexpr std::size_t kLevCells = kLevW * kLevH;
 
 // Append MODERNLV block (magic + display_data + display_valid) to buf.
 static void AppendModernBlock(std::vector<uint8_t>& buf, std::vector<uint32_t> const& dd,
-                               std::vector<uint8_t> const& dv) {
+                              std::vector<uint8_t> const& dv) {
   static constexpr uint8_t kMagic[8] = {'M', 'O', 'D', 'E', 'R', 'N', 'L', 'V'};
   buf.insert(buf.end(), kMagic, kMagic + 8);
   auto const* raw = reinterpret_cast<uint8_t const*>(dd.data());
@@ -174,8 +174,8 @@ TEST_CASE("Level::load classic level leaves display layers empty", "[level][stag
   Settings settings;
   settings.load_powerlevel_palette = false;
 
-  std::vector<uint8_t> bytes(kLevCells, 0);
-  io::MemReader r(bytes);
+  std::vector<uint8_t> const kBytes(kLevCells, 0);
+  io::MemReader r(kBytes);
 
   Level level(common);
   REQUIRE(level.load(common, settings, r));

@@ -294,7 +294,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
 
       {
         auto wr = game.wobjects.All();
-        for (WObject* i = nullptr; (i = wr.Next());) {
+        for (WObject const* i = nullptr; (i = wr.Next());) {
           Weapon const& w = *i->type;
           if (w.start_frame > -1) {
             int cur_frame = i->cur_frame;
@@ -360,16 +360,16 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
         }
       }
 
-      for (std::size_t i = 0; i < game.worms.size(); ++i) {
-        Worm const& w = *game.worms[i];
+      for (auto const& worm_ptr : game.worms) {
+        Worm const& w = *worm_ptr;
         if (w.visible) {
           int const kTempX = Ftoi(w.pos.x) - 7 + kOffs.x;
           int const kTempY = Ftoi(w.pos.y) - 5 + kOffs.y;
           if (w.ninjarope.out) {
             int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOffs.x;
             int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOffs.y;
-            DrawShadowLine(kShadow, renderer.bmp, kNinjaropeX - 3, kNinjaropeY + 3,
-                           kTempX + 7 - 3, kTempY + 4 + 3);
+            DrawShadowLine(kShadow, renderer.bmp, kNinjaropeX - 3, kNinjaropeY + 3, kTempX + 7 - 3,
+                           kTempY + 4 + 3);
             BlitShadowImage(kShadow, renderer.bmp, common.large_sprites.SpritePtr(84),
                             kNinjaropeX - 4, kNinjaropeY + 2, 16, 16);
           }
@@ -468,8 +468,7 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
             std::string const& name = common.weapons[kNameNum].name;
             int const kWidth = static_cast<int>(name.size()) * 4;
 
-            common.DrawTextSmall(renderer.bmp, name.c_str(),
-                                 Ftoi(i->pos.x) - kWidth / 2 + kOffs.x,
+            common.DrawTextSmall(renderer.bmp, name.c_str(), Ftoi(i->pos.x) - kWidth / 2 + kOffs.x,
                                  Ftoi(i->pos.y) - 10 + kOffs.y);
           }
         }

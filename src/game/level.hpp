@@ -51,14 +51,18 @@ struct Level {
     int const kIdx = x + y * width;
     material_id[kIdx] = w;
     materials[kIdx] = common.materials[w];
-    if (!display_valid.empty()) display_valid[kIdx] = 0;
+    if (!display_valid.empty()) {
+      display_valid[kIdx] = 0;
+    }
   }
 
   void SetPixel(fixedvec pos, PalIdx w, Common& common) {
     int const kIdx = pos.x + pos.y * width;
     material_id[kIdx] = w;
     materials[kIdx] = common.materials[w];
-    if (!display_valid.empty()) display_valid[kIdx] = 0;
+    if (!display_valid.empty()) {
+      display_valid[kIdx] = 0;
+    }
   }
 
   Material& Mat(int x, int y) { return materials[x + y * width]; }
