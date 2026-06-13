@@ -14,13 +14,13 @@
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Settings random_map_width defaults to 504", "[random-map-size]") {
-  Settings s;
-  CHECK(s.random_map_width == 504);
+  Settings const kS;
+  CHECK(kS.random_map_width == 504);
 }
 
 TEST_CASE("Settings random_map_height defaults to 350", "[random-map-size]") {
-  Settings s;
-  CHECK(s.random_map_height == 350);
+  Settings const kS;
+  CHECK(kS.random_map_height == 350);
 }
 
 TEST_CASE("Settings config version is 5", "[random-map-size]") {
