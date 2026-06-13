@@ -76,8 +76,8 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
   // 256 MB covers the worst case: 4096×4096 with full MODERNLV layers (~112 MB).
   static constexpr uint32_t kMaxRawSize = 256 * 1024 * 1024;
   if (raw_size > kMaxRawSize) {
-    std::fprintf(stderr, "LoadLevelFromData: uncompressed size %u exceeds %u limit\n",
-                 raw_size, kMaxRawSize);
+    std::fprintf(stderr, "LoadLevelFromData: uncompressed size %u exceeds %u limit\n", raw_size,
+                 kMaxRawSize);
     return;
   }
 

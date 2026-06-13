@@ -338,8 +338,8 @@ void NetSession::OnMapData(const void* data, size_t len) {
   // (~112 MB uncompressed), with headroom for future growth.
   static constexpr size_t kMaxMapData = 256 * 1024 * 1024;
   if (len > kMaxMapData) {
-    std::fprintf(stderr, "OnMapData: rejected oversized packet (%zu bytes > %zu limit)\n",
-                 len, kMaxMapData);
+    std::fprintf(stderr, "OnMapData: rejected oversized packet (%zu bytes > %zu limit)\n", len,
+                 kMaxMapData);
     return;
   }
 
