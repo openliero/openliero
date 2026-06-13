@@ -181,7 +181,11 @@ struct Level {
     if (r.colors.empty()) {
       return display_data[idx];
     }
-    unsigned const kPhase = display_data[idx] + (static_cast<unsigned>(cycles) >> r.shift);
+    // `shift` comes from level data (file/wire/snapshot); a value >= 32 would
+    // be undefined behaviour in the shift below (and platform-divergent), so
+    // treat it as a frozen animation (advance only by the per-pixel offset).
+    unsigned const kInc = r.shift < 32 ? (static_cast<unsigned>(cycles) >> r.shift) : 0U;
+    unsigned const kPhase = display_data[idx] + kInc;
     return r.colors[kPhase % r.colors.size()];
   }
 };
