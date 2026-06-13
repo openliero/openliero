@@ -720,22 +720,28 @@ void Game::SaveSnapshotFast(GameSnapshot& snap) {
     snap.level_data.resize(kCells);
   }
 
-  if (level.dirty_bits.empty()) {
-    // First save: dirty tracking not yet initialised.  Prepare() already
-    // pre-filled snap.level_data with the initial level state, but guard in
-    // case Prepare() was not called before the first save.
+  if (level.dirty_bits.empty() || !snap.initialized) {
+    // Full copy: either the first save ever (initialise dirty tracking) or the
+    // first save to this particular slot (populate its base level state).
+    // Deferring the per-slot copy to here (rather than doing it eagerly in
+    // Prepare) spreads 8 × W×H bytes across the first 8 gameplay frames
+    // instead of blocking the weapon-selection init loop with a large upfront
+    // allocation on large levels.
     if (kCells > 0) {
       std::memcpy(snap.level_data.data(), level.material_id.data(), kCells);
     }
     if (!level.display_valid.empty() && !snap.level_display_valid.empty()) {
       std::memcpy(snap.level_display_valid.data(), level.display_valid.data(), kCells);
     }
-    level.InitDirtyTracking();
+    if (level.dirty_bits.empty()) {
+      level.InitDirtyTracking();
+    }
+    snap.initialized = true;
   } else {
     // Sparse update: overwrite only the cells modified since game start.
     // dirty_list accumulates and is never cleared, so every slot always
-    // reflects the cumulative diff from the initial level state, making
-    // every slot independently restorable (base = Prepare()-time data).
+    // reflects the cumulative diff from its initial full-copy baseline,
+    // making every slot independently restorable.
     bool const kHasDv = !level.display_valid.empty() && !snap.level_display_valid.empty();
     for (int32_t i : level.dirty_list) {
       auto const kI = static_cast<std::size_t>(i);
