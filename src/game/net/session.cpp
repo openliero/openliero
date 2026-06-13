@@ -704,15 +704,15 @@ void NetSession::GenerateAndSendMap() {
   // has_display_layer(1) + display_data(kPixelDataSize*4) + display_valid(kPixelDataSize)
   size_t const kDisplayExtra = kHasDisplay ? 1 + kPixelDataSize * 4 + kPixelDataSize : 1;
   // anim section: ramp_count(1) + per-ramp[shift(1)+color_count(2)+colors(N*4)] + display_anim
-  size_t kAnimExtra = 1;  // ramp_count byte (0 if no anim)
+  size_t anim_extra = 1;  // ramp_count byte (0 if no anim)
   if (kHasAnim) {
     for (auto const& ramp : level.argb_ramps) {
-      kAnimExtra += 1 + 2 + ramp.colors.size() * 4;
+      anim_extra += 1 + 2 + ramp.colors.size() * 4;
     }
-    kAnimExtra += kPixelDataSize;
+    anim_extra += kPixelDataSize;
   }
-  size_t const kRawSize = 4 + 4 + rand_state_len + 4 + kPixelDataSize + 768 + kDisplayExtra +
-                          kAnimExtra;
+  size_t const kRawSize =
+      4 + 4 + rand_state_len + 4 + kPixelDataSize + 768 + kDisplayExtra + anim_extra;
 
   std::vector<uint8_t> raw(kRawSize);
   std::memcpy(raw.data(), &w, 2);

@@ -144,7 +144,7 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
   // Display layer: has_display_layer(1) + [display_data(cells*4) +
   // display_valid(cells)] when present (v7+ blob).
   size_t const kDispOffset = kPixelsOffset + kPixelDataSize + 768;
-  bool hasDisplay = false;
+  bool has_display = false;
   if (raw.size() > kDispOffset && raw[kDispOffset] == 1) {
     size_t const kNeeded = kDispOffset + 1 + kPixelDataSize * 4 + kPixelDataSize;
     if (raw.size() >= kNeeded) {
@@ -154,7 +154,7 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
                   kPixelDataSize * sizeof(uint32_t));
       std::memcpy(game.level.display_valid.data(),
                   raw.data() + kDispOffset + 1 + kPixelDataSize * 4, kPixelDataSize);
-      hasDisplay = true;
+      has_display = true;
     }
   } else {
     game.level.display_data.clear();
@@ -165,7 +165,7 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
   // + display_anim(cells). ramp_count=0 means no anim.
   game.level.argb_ramps.clear();
   game.level.display_anim.clear();
-  if (hasDisplay) {
+  if (has_display) {
     size_t const kAnimOffset = kDispOffset + 1 + kPixelDataSize * 4 + kPixelDataSize;
     if (raw.size() > kAnimOffset) {
       uint8_t const kRampCount = raw[kAnimOffset];
@@ -176,14 +176,23 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
         ramps.reserve(kRampCount);
         size_t pos = kAnimOffset + 1;
         for (uint8_t ri = 0; ri < kRampCount && valid; ++ri) {
-          if (pos + 3 > raw.size()) { valid = false; break; }
+          if (pos + 3 > raw.size()) {
+            valid = false;
+            break;
+          }
           Level::ArgbRamp ramp;
           ramp.shift = raw[pos];
-          auto const kColorCount =
-              static_cast<uint16_t>(raw[pos + 1]) | (static_cast<uint16_t>(raw[pos + 2]) << 8);
+          auto const kColorCount = static_cast<uint16_t>(
+              static_cast<uint16_t>(raw[pos + 1]) | (static_cast<uint16_t>(raw[pos + 2]) << 8));
           pos += 3;
-          if (kColorCount == 0 || kColorCount > kMaxColors) { valid = false; break; }
-          if (pos + kColorCount * 4U > raw.size()) { valid = false; break; }
+          if (kColorCount == 0 || kColorCount > kMaxColors) {
+            valid = false;
+            break;
+          }
+          if (pos + kColorCount * 4U > raw.size()) {
+            valid = false;
+            break;
+          }
           ramp.colors.resize(kColorCount);
           std::memcpy(ramp.colors.data(), raw.data() + pos, kColorCount * 4U);
           pos += kColorCount * 4U;
@@ -192,11 +201,14 @@ void RollbackController::LoadLevelFromData(const std::vector<uint8_t>& data) {
         if (valid && pos + kPixelDataSize <= raw.size()) {
           std::vector<uint8_t> anim(kPixelDataSize);
           std::memcpy(anim.data(), raw.data() + pos, kPixelDataSize);
-          bool animValid = true;
-          for (uint8_t a : anim) {
-            if (a > kRampCount) { animValid = false; break; }
+          bool anim_valid = true;
+          for (uint8_t const kRampIdx : anim) {
+            if (kRampIdx > kRampCount) {
+              anim_valid = false;
+              break;
+            }
           }
-          if (animValid) {
+          if (anim_valid) {
             game.level.argb_ramps = std::move(ramps);
             game.level.display_anim = std::move(anim);
           }

@@ -172,15 +172,14 @@ static void AppendModernBlock(std::vector<uint8_t>& buf, std::vector<uint32_t> c
 
 // Append Stage 4 ramp table + display_anim after the display_valid data.
 // Pass empty ramps to write ramp_count=0 (static Stage 4 block).
-static void AppendRampData(std::vector<uint8_t>& buf,
-                           std::vector<Level::ArgbRamp> const& ramps,
+static void AppendRampData(std::vector<uint8_t>& buf, std::vector<Level::ArgbRamp> const& ramps,
                            std::vector<uint8_t> const& display_anim) {
   buf.push_back(static_cast<uint8_t>(ramps.size()));
   for (Level::ArgbRamp const& r : ramps) {
     buf.push_back(r.shift);
     auto count = static_cast<uint16_t>(r.colors.size());
-    buf.push_back(count & 0xFFu);
-    buf.push_back((count >> 8) & 0xFFu);
+    buf.push_back(count & 0xFFU);
+    buf.push_back((count >> 8) & 0xFFU);
     auto const* raw = reinterpret_cast<uint8_t const*>(r.colors.data());
     buf.insert(buf.end(), raw, raw + r.colors.size() * 4);
   }
@@ -238,9 +237,9 @@ TEST_CASE("Level::load MODERNLV block populates display layers", "[level][stage3
 TEST_CASE("Level has argb_ramps and display_anim empty by default", "[level][stage4]") {
   Common common;
   FillMaterials(common);
-  Level level(common);
-  CHECK(level.argb_ramps.empty());
-  CHECK(level.display_anim.empty());
+  Level const kLevel(common);
+  CHECK(kLevel.argb_ramps.empty());
+  CHECK(kLevel.display_anim.empty());
 }
 
 TEST_CASE("Level::Swap also swaps argb_ramps and display_anim", "[level][stage4]") {
@@ -314,8 +313,7 @@ TEST_CASE("AppearanceAt shift controls cycle speed", "[level][stage4]") {
   CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 3) == 0xFF00BB00U);
 }
 
-TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start",
-          "[level][stage4]") {
+TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start", "[level][stage4]") {
   Common common;
   FillMaterials(common);
   Level level = MakeClassicLevel(common);
@@ -335,8 +333,7 @@ TEST_CASE("AppearanceAt phase offset in display_data shifts the cycle start",
   CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 2) == 0xFFAA0000U);  // (1+2)%3=0
 }
 
-TEST_CASE("AppearanceAt out-of-range display_anim falls back to display_data",
-          "[level][stage4]") {
+TEST_CASE("AppearanceAt out-of-range display_anim falls back to display_data", "[level][stage4]") {
   Common common;
   FillMaterials(common);
   Level level = MakeClassicLevel(common);
@@ -493,10 +490,10 @@ TEST_CASE("Level::load MODERNLV truncated ramp data drops anim layer", "[level][
   Settings settings;
   settings.load_powerlevel_palette = false;
 
-  std::vector<uint32_t> dd(kLevCells, 0);
-  std::vector<uint8_t> dv(kLevCells, 0);
+  std::vector<uint32_t> const kDd(kLevCells, 0);
+  std::vector<uint8_t> const kDv(kLevCells, 0);
   std::vector<uint8_t> bytes(kLevCells, 0);
-  AppendModernBlock(bytes, dd, dv);
+  AppendModernBlock(bytes, kDd, kDv);
 
   // Write ramp_count=1 but truncate the ramp body.
   bytes.push_back(1);  // ramp_count=1
@@ -521,10 +518,10 @@ TEST_CASE("Level::load MODERNLV zero-length ramp drops anim layer", "[level][sta
   Settings settings;
   settings.load_powerlevel_palette = false;
 
-  std::vector<uint32_t> dd(kLevCells, 0);
-  std::vector<uint8_t> dv(kLevCells, 0);
+  std::vector<uint32_t> const kDd(kLevCells, 0);
+  std::vector<uint8_t> const kDv(kLevCells, 0);
   std::vector<uint8_t> bytes(kLevCells, 0);
-  AppendModernBlock(bytes, dd, dv);
+  AppendModernBlock(bytes, kDd, kDv);
 
   bytes.push_back(1);  // ramp_count=1
   bytes.push_back(0);  // shift=0
@@ -544,8 +541,8 @@ TEST_CASE("Level::load MODERNLV display_anim OOB value drops anim layer", "[leve
   Settings settings;
   settings.load_powerlevel_palette = false;
 
-  std::vector<uint32_t> dd(kLevCells, 0);
-  std::vector<uint8_t> dv(kLevCells, 0);
+  std::vector<uint32_t> const kDd(kLevCells, 0);
+  std::vector<uint8_t> const kDv(kLevCells, 0);
   std::vector<uint8_t> danim(kLevCells, 0);
   danim[0] = 2;  // ramp index 2 — but only 1 ramp will be in the table
 
@@ -554,7 +551,7 @@ TEST_CASE("Level::load MODERNLV display_anim OOB value drops anim layer", "[leve
   ramp.shift = 0;
 
   std::vector<uint8_t> bytes(kLevCells, 0);
-  AppendModernBlock(bytes, dd, dv);
+  AppendModernBlock(bytes, kDd, kDv);
   AppendRampData(bytes, {ramp}, danim);
 
   io::MemReader r(bytes);

@@ -284,7 +284,7 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
         std::vector<ArgbRamp> ramps;
         ramps.reserve(ramp_count);
 
-        for (int ri = 0; ri < ramp_count && valid; ++ri) {
+        for (uint8_t ri = 0; ri < ramp_count && valid; ++ri) {
           uint8_t shift_byte = 0;
           if (r.TryGet(&shift_byte, 1) != 1) {
             valid = false;
@@ -295,9 +295,8 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
             valid = false;
             break;
           }
-          auto const kColorCount =
-              static_cast<uint16_t>(count_bytes[0]) |
-              (static_cast<uint16_t>(count_bytes[1]) << 8);
+          auto const kColorCount = static_cast<uint16_t>(
+              static_cast<uint16_t>(count_bytes[0]) | (static_cast<uint16_t>(count_bytes[1]) << 8));
           if (kColorCount == 0 || kColorCount > kMaxColors) {
             valid = false;
             break;
@@ -316,8 +315,8 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
         if (valid) {
           std::vector<uint8_t> anim(kCells);
           if (r.TryGet(anim.data(), kCells) == kCells) {
-            for (uint8_t a : anim) {
-              if (a > ramp_count) {
+            for (uint8_t const kRampIdx : anim) {
+              if (kRampIdx > ramp_count) {
                 valid = false;
                 break;
               }
@@ -445,7 +444,8 @@ void Level::DrawMiniature(Bitmap& dest, int map_x, int map_y, int step) {
     for (int x = map_x; x < kMapEndX; ++x) {
       auto const kIdx = static_cast<unsigned int>(mx + my * width);
       if (kIdx < material_id.size() && dest.clip_rect.Inside(x, y)) {
-        dest.GetPixel(x, y) = AppearanceAt(static_cast<int>(kIdx), dest.mode, dest.pal32, dest.cycles);
+        dest.GetPixel(x, y) =
+            AppearanceAt(static_cast<int>(kIdx), dest.mode, dest.pal32, dest.cycles);
       }
       mx += step;
     }
