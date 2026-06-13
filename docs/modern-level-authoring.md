@@ -34,8 +34,8 @@ The game auto-sizes to the level on load; no cropping or padding occurs.
 > headerless format for full compatibility with older game versions.
 > All other sizes use an `OLLEVEL2` header that encodes the dimensions
 > (see [Appendix: File Format Specification](#appendix-file-format-specification)).
-> `lev_gen.py` writes this header automatically when `--width` or
-> `--height` is non-default.
+> `lev_gen.py` writes this header automatically when the material image
+> is not 504 × 350.
 
 ### Material indices
 
@@ -325,7 +325,7 @@ To select your level in-game: open the **Settings** menu, navigate to
 Requires [uv](https://docs.astral.sh/uv/). All command forms:
 
 ```bash
-# Classic (default 504×350 — legacy headerless format)
+# Classic (504×350 — legacy headerless format)
 uv run tools/lev_gen.py --mat material.png --out level.lev
 
 # + custom palette
@@ -337,15 +337,13 @@ uv run tools/lev_gen.py --mat material.png --disp display.png --out level.lev
 # Modern + animation
 uv run tools/lev_gen.py --mat material.png --disp display.png \
     --ramps ramps.json --anim anim.png --out level.lev
-
-# Non-default size (writes OLLEVEL2 header automatically)
-uv run tools/lev_gen.py --mat material.png --width 1024 --height 768 --out level.lev
 ```
 
-`--width` and `--height` accept any value from 1 to 4096. When either
-differs from the 504 × 350 default, the script writes an `OLLEVEL2` header
-before the material data. The image passed to `--mat` (and `--disp`,
-`--anim`) must match the specified dimensions.
+The level dimensions are read from `--mat`. Any size from 1 × 1 to
+4096 × 4096 is accepted. 504 × 350 produces a legacy headerless file;
+all other sizes write an `OLLEVEL2` header automatically. All other
+image inputs (`--disp`, `--anim`) must be the same size as `--mat`; the
+script errors out if they differ.
 
 ---
 
