@@ -467,13 +467,13 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
                        Common::fire_cone_offset[w.direction][kAngleFrame][1] + kTempY);
         }
 
-        BlitImage(renderer.bmp, common.WormSpriteObj(w.current_frame, w.direction, w.index), kTempX,
-                  kTempY);
         if (game.settings->shadow) {
           BlitShadowImage(kShadow, renderer.bmp,
                           common.WormSprite(w.current_frame, w.direction, w.index), kTempX - 3,
                           kTempY + 3, 16, 16);
         }
+        BlitImage(renderer.bmp, common.WormSpriteObj(w.current_frame, w.direction, w.index), kTempX,
+                  kTempY);
       }
 
       if (w.ai) {
