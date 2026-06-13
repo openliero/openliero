@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "common.hpp"
+#include "filesystem.hpp"
 #include "gfx/bitmap.hpp"
 #include "gfx/palette.hpp"
 #include "io/stream.hpp"
@@ -562,4 +563,43 @@ TEST_CASE("Level::load MODERNLV display_anim OOB value drops anim layer", "[leve
   // display_anim[0]=2 but only 1 ramp → OOB → whole anim layer dropped.
   CHECK(level.argb_ramps.empty());
   CHECK(level.display_anim.empty());
+}
+
+// Stage 4 file-based round-trip: modern_test.lev must carry one animated ramp.
+// The ramp and animated pixels are written by tools/gen_stage4_anim.py.
+// Pixels 0–3 (top-left corner) are animated: display_anim[i]==1, phase offset==i.
+// Ramp: shift=1, colors=[0xFF1A3A6A, 0xFF2A4A7A, 0xFF3A5A8A, 0xFF0A2A5A].
+TEST_CASE("modern_test.lev has Stage 4 anim layer and AppearanceAt cycles correctly",
+          "[level][stage4][file]") {
+  Common common;
+  FillMaterials(common);
+  Settings settings;
+  settings.load_powerlevel_palette = false;
+
+  auto r_ptr = FsNode("data/TC/openliero/Levels/modern_test.lev").ToReader();
+  io::Reader& r = *r_ptr;
+  Level level(common);
+  REQUIRE(level.load(common, settings, r));
+
+  REQUIRE(level.argb_ramps.size() == 1);
+  CHECK(level.argb_ramps[0].shift == 1);
+  REQUIRE(level.argb_ramps[0].colors.size() == 4);
+  CHECK(level.argb_ramps[0].colors[0] == 0xFF1A3A6AU);
+  CHECK(level.argb_ramps[0].colors[1] == 0xFF2A4A7AU);
+  CHECK(level.argb_ramps[0].colors[2] == 0xFF3A5A8AU);
+  CHECK(level.argb_ramps[0].colors[3] == 0xFF0A2A5AU);
+  REQUIRE(level.display_anim.size() == kLevCells);
+
+  for (int i = 0; i < 4; ++i) {
+    CHECK(level.display_valid[i] == 1);
+    CHECK(level.display_anim[i] == 1);
+  }
+  // display_data[i] holds phase offset i.
+  // At cycles=0 (shift=1 → 0>>1=0): pixel i → colors[(i+0)%4]
+  uint32_t pal32[256] = {};
+  CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32, 0) == 0xFF1A3A6AU);
+  CHECK(level.AppearanceAt(1, ColorMode::kModern, pal32, 0) == 0xFF2A4A7AU);
+  // At cycles=2 (2>>1=1): pixel 0 → colors[(0+1)%4]=colors[1]
+  CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32, 2) == 0xFF2A4A7AU);
+  CHECK(level.AppearanceAt(1, ColorMode::kModern, pal32, 2) == 0xFF3A5A8AU);
 }
