@@ -149,6 +149,33 @@ No behavior change; level still loads at 504×350. De-risks everything downstrea
 - **Validate**: render a replay at 1280×720 and 1920×1080, spectator + normal
   mode; confirm output dimensions and no scaler mismatch.
 
+### PR 6 — Rollback snapshot optimization: dirty-cell tracking for large levels
+
+Online play on large maps (e.g. 4096×4096) is slow because `SaveSnapshotFast`
+memcpys ~48 MB per rollback frame (material_id + material flags + display_valid),
+completely blowing out L3 cache every tick. Local play is unaffected (no rollback).
+
+- **Dirty-cell bitset**: maintain a per-level bitset (or small sorted list) of cells
+  modified since the last snapshot. Terrain destruction is already funneled through
+  `Level::Modify` / the two `SetMaterial` helpers in `level.hpp` — add a dirty-mark
+  there. Snapshot saves the full block on the first frame after `Prepare()`, then
+  saves only dirty cells (index + value pairs) on subsequent frames.
+- **Restore path**: restore full block from the last full snapshot, then apply
+  the forward delta chain (or store snapshots as full + delta in alternation).
+- **Alternatively**: store snapshots as always-full but skip `display_valid` cells
+  that haven't been touched, using a dirty-bitset to know which 64-byte cache lines
+  to copy. This keeps the restore path simple (one memcpy pass) at the cost of
+  slightly more complex save logic.
+- **`level.materials` deduplication**: `level.materials[i]` is always
+  `common.materials[level.material_id[i]]`; after restoring `material_id` we can
+  recompute `materials` in one O(W×H) pass and drop the 16 MB `level_materials`
+  slot entirely.
+- **Mergeable because**: snapshot is entirely in-memory; wire format and disk
+  format are unaffected; existing rollback tests verify correctness.
+- **Validate**: `test_rollback_correctness`, `test_rollback_desync`,
+  `test_snapshot_fast` (add a dirty-tracking round-trip case); confirm online play
+  on the 4096² level is no longer noticeably slower than local play.
+
 ## Validation (every PR)
 
 ```bash
@@ -170,6 +197,7 @@ scripts/clang-format-diff.sh && scripts/clang-tidy-diff.sh build/linux-x64
 | Net play with mismatched sizes | Low | Wire transfer already sends + validates w/h |
 | Memory at 4096² (~117 MB layers + AI) | Medium | D2 cap; fail loudly past 4096; document cost |
 | Determinism regressions from PR1/PR3 sim touch | Medium | `test_determinism`/`test_rollback_*` on every PR |
+| Rollback snapshot too large for online play on big maps | High (4096²) | PR6 — dirty-cell tracking; PR2 already fixed correctness |
 
 ## Acceptance
 
@@ -178,4 +206,5 @@ scripts/clang-format-diff.sh && scripts/clang-tidy-diff.sh build/linux-x64
 - [ ] PR3: random map size editable in MATCH SETUP; config v5; defaults reproduce 504×350.
 - [ ] PR4: spectator auto-zooms to keep both worms visible; 1× on small maps unchanged; minimap scales correctly; weapon-select spectator view correct at all sizes.
 - [ ] PR5: videotool output resolution selectable; scaler input dynamic.
+- [ ] PR6: online play on 4096² level no longer noticeably slower than local play; rollback tests green.
 - [ ] Determinism/rollback suites + format checks pass on every PR.
