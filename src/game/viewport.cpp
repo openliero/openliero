@@ -595,24 +595,24 @@ void Viewport::Draw(Game& game, Renderer& renderer, GameState /*state*/, bool is
     int const kMapY = renderer.render_res_y - 38;
 
     // Fit the minimap into a 52×36 pixel area regardless of map size.
-    int const kMinimapStep =
-        std::max({(game.level.width + 51) / 52, (game.level.height + 35) / 36, 1});
-    game.level.DrawMiniature(renderer.bmp, kMapX, kMapY, kMinimapStep);
+    int const kMinimapStepX = std::max((game.level.width + 51) / 52, 1);
+    int const kMinimapStepY = std::max((game.level.height + 35) / 36, 1);
+    game.level.DrawMiniature(renderer.bmp, kMapX, kMapY, kMinimapStepX, kMinimapStepY);
 
     for (auto& worm : game.worms) {
       Worm const& w = *worm;
 
       if (w.visible) {
-        int const kX = Ftoi(w.pos.x) / kMinimapStep + kMapX;
-        int const kY = Ftoi(w.pos.y) / kMinimapStep + kMapY;
+        int const kX = Ftoi(w.pos.x) / kMinimapStepX + kMapX;
+        int const kY = Ftoi(w.pos.y) / kMinimapStepY + kMapY;
 
         renderer.bmp.SetPixel(kX, kY, w.MinimapColor());
       }
     }
 
     if (game.settings->game_mode == Settings::kGmHoldazone && game.holdazone.timeout_left > 0) {
-      int const kX = game.holdazone.rect.CenterX() / kMinimapStep + kMapX;
-      int const kY = game.holdazone.rect.CenterY() / kMinimapStep + kMapY;
+      int const kX = game.holdazone.rect.CenterX() / kMinimapStepX + kMapX;
+      int const kY = game.holdazone.rect.CenterY() / kMinimapStepY + kMapY;
 
       int color = 168;
 

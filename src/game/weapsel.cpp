@@ -126,10 +126,10 @@ void WeaponSelection::DrawSpectatorViewports(Renderer& renderer, GameState /*sta
              Palette::kWormColorBlocks[1].base);
     common.font.DrawCenteredText(renderer.bmp, "WEAPON SELECTION", kCenterX, kCenterY + 48, 7, 2);
     // Fit the minimap into a 252×175 pixel area regardless of map size.
-    int const kMinimapStep =
-        std::max({(game.level.width + 251) / 252, (game.level.height + 174) / 175, 1});
+    int const kMinimapStepX = std::max((game.level.width + 251) / 252, 1);
+    int const kMinimapStepY = std::max((game.level.height + 174) / 175, 1);
     game.level.DrawMiniature(renderer.bmp, kCenterX - 126, renderer.render_res_y - 208,
-                             kMinimapStep);
+                             kMinimapStepX, kMinimapStepY);
 
     gfx.frozen_spectator_screen.Copy(renderer.bmp);
     cached_spectator_background = true;
