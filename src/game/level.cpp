@@ -214,6 +214,8 @@ bool Level::load(Common& common, Settings const& settings, io::Reader& r) {
   Resize(504, 350);
   display_data.clear();
   display_valid.clear();
+  argb_ramps.clear();
+  display_anim.clear();
 
   bool reset_palette = true;
 
@@ -388,7 +390,7 @@ void Level::DrawMiniature(Bitmap& dest, int map_x, int map_y, int step) {
     for (int x = map_x; x < kMapEndX; ++x) {
       auto const kIdx = static_cast<unsigned int>(mx + my * width);
       if (kIdx < material_id.size() && dest.clip_rect.Inside(x, y)) {
-        dest.GetPixel(x, y) = AppearanceAt(static_cast<int>(kIdx), dest.mode, dest.pal32);
+        dest.GetPixel(x, y) = AppearanceAt(static_cast<int>(kIdx), dest.mode, dest.pal32, dest.cycles);
       }
       mx += step;
     }

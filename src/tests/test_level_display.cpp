@@ -46,7 +46,7 @@ TEST_CASE("AppearanceAt classic mode, no display layer — palette path") {
   pal32[42] = 0xFFABCDEF;
 
   // With empty display layer, classic mode returns pal32[material_id[idx]].
-  CHECK(kLevel.AppearanceAt(5, ColorMode::kClassic, pal32) == 0xFFABCDEF);
+  CHECK(kLevel.AppearanceAt(5, ColorMode::kClassic, pal32, 0) == 0xFFABCDEF);
 }
 
 TEST_CASE("AppearanceAt modern mode, no display layer — still palette path") {
@@ -58,7 +58,7 @@ TEST_CASE("AppearanceAt modern mode, no display layer — still palette path") {
   pal32[42] = 0xFFABCDEF;
 
   // Empty display_valid means always fall back, even in modern mode.
-  CHECK(kLevel.AppearanceAt(5, ColorMode::kModern, pal32) == 0xFFABCDEF);
+  CHECK(kLevel.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFFABCDEF);
 }
 
 TEST_CASE("AppearanceAt modern mode, authored pixel — returns display_data") {
@@ -76,10 +76,10 @@ TEST_CASE("AppearanceAt modern mode, authored pixel — returns display_data") {
   pal32[42] = 0xFFABCDEF;
 
   // Modern mode + valid → authored ARGB.
-  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32) == 0xFF112233);
+  CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 0) == 0xFF112233);
   // Another pixel with display_valid==0 → palette fallback.
   pal32[0] = 0xFF000001;
-  CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32) == 0xFF000001);
+  CHECK(level.AppearanceAt(0, ColorMode::kModern, pal32, 0) == 0xFF000001);
 }
 
 TEST_CASE("AppearanceAt classic mode, authored pixel — ignores display_data") {
@@ -96,7 +96,7 @@ TEST_CASE("AppearanceAt classic mode, authored pixel — ignores display_data") 
   pal32[42] = 0xFFABCDEF;
 
   // Classic mode ignores display_data entirely.
-  CHECK(level.AppearanceAt(5, ColorMode::kClassic, pal32) == 0xFFABCDEF);
+  CHECK(level.AppearanceAt(5, ColorMode::kClassic, pal32, 0) == 0xFFABCDEF);
 }
 
 TEST_CASE("Level::Swap also swaps display layer") {
@@ -268,7 +268,8 @@ TEST_CASE("AppearanceAt animated pixel cycles through colors as cycles advances"
   CHECK(level.AppearanceAt(5, ColorMode::kModern, pal32, 3) == 0xFFAA0000U);
 
   // Classic mode never consults ramps — falls back to palette.
-  pal32[0] = 0xFF112233U;
+  // material_id[5] = 42 (from MakeClassicLevel), so result is pal32[42].
+  pal32[42] = 0xFF112233U;
   CHECK(level.AppearanceAt(5, ColorMode::kClassic, pal32, 1) == 0xFF112233U);
 }
 

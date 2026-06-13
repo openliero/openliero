@@ -286,7 +286,7 @@ TEST_CASE("appearanceat resolves level pixels through pal32", "[blit][argb]") {
   f.renderer.pal.entries[10] = {.r = 4, .g = 5, .b = 6, .unused = 0};
   f.renderer.UpdatePal32();
 
-  REQUIRE(f.level.AppearanceAt(0, f.renderer.mode, f.renderer.pal32) == 0xFF040506U);
+  REQUIRE(f.level.AppearanceAt(0, f.renderer.mode, f.renderer.pal32, 0) == 0xFF040506U);
 }
 
 TEST_CASE("drawlevel paints terrain and blitbitmap restores argb", "[blit][argb]") {
