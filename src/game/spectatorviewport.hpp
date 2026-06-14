@@ -15,6 +15,15 @@ struct Renderer;
 float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, int level_w,
                            int level_h);
 
+// Dimensions of the world-pass scratch bitmap. Capped to render resolution so
+// the scratch never grows larger than the output — the old formula
+// (render_w / zoom) could reach 2x the pixel count at zoom=0.5.
+struct ScratchDims {
+  int w;
+  int h;
+};
+ScratchDims ComputeScratchDims(int render_w, int render_h, int level_w, int level_h);
+
 struct SpectatorViewport : Viewport {
   explicit SpectatorViewport(Rect rect) : Viewport(rect, 0) {}
 

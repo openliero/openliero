@@ -769,6 +769,7 @@ void ScaleDraw(uint32_t const* src, int w, int h, std::size_t src_pitch, uint8_t
 
 void ScaleDrawArea(uint32_t const* src, int src_w, int src_h, std::size_t src_pitch, uint32_t* dest,
                    int dest_w, int dest_h, std::size_t dest_pitch) {
+  ZoneScopedN("ScaleDrawArea");
   for (int dy = 0; dy < dest_h; ++dy) {
     int const kSy1 = dy * src_h / dest_h;
     int const kSy2 = (dy + 1) * src_h / dest_h;
