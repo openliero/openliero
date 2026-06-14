@@ -17,9 +17,8 @@ float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, i
   float const kZoomY = static_cast<float>(render_h) / static_cast<float>(bbox_h);
   // Zoom that shows the entire level — can be >1 for maps smaller than the
   // spectator window so the level fills the available space.
-  float const kLevelFillZoom =
-      std::min(static_cast<float>(render_w) / static_cast<float>(level_w),
-               static_cast<float>(render_h) / static_cast<float>(level_h));
+  float const kLevelFillZoom = std::min(static_cast<float>(render_w) / static_cast<float>(level_w),
+                                        static_cast<float>(render_h) / static_cast<float>(level_h));
   // Never zoom out past the whole-level fit (kLevelFillZoom floor); never
   // upscale past native unless the level is smaller than the window
   // (kLevelFillZoom ceiling). The floor is what keeps a level that already
@@ -49,8 +48,8 @@ void SpectatorViewport::Process(Game& game) {
 
   int const kBboxW = std::max(1, wmax_x - wmin_x + 2 * kMargin);
   int const kBboxH = std::max(1, wmax_y - wmin_y + 2 * kMargin);
-  zoom = ComputeSpectatorZoom(kRenderW, kRenderH, kBboxW, kBboxH, game.level.width,
-                              game.level.height);
+  zoom =
+      ComputeSpectatorZoom(kRenderW, kRenderH, kBboxW, kBboxH, game.level.width, game.level.height);
 
   int const kVisibleW = static_cast<int>(static_cast<float>(kRenderW) / zoom);
   int const kVisibleH = static_cast<int>(static_cast<float>(kRenderH) / zoom);

@@ -16,8 +16,7 @@ float LevelFillZoom(int render_w, int render_h, int level_w, int level_h) {
 
 }  // namespace
 
-TEST_CASE("spectator zoom stays a static fit when the level fits the window",
-          "[spectator][zoom]") {
+TEST_CASE("spectator zoom stays a static fit when the level fits the window", "[spectator][zoom]") {
   // Regression: a 504x350 level inside a 1920x1080 spectator window already
   // fits whole, so the zoom must be the constant whole-level fit regardless of
   // where the worms are — driving them to opposite edges must not shrink the
@@ -30,11 +29,9 @@ TEST_CASE("spectator zoom stays a static fit when the level fits the window",
   float const kFill = LevelFillZoom(kRenderW, kRenderH, kLevelW, kLevelH);  // ~3.0857
 
   // Worms close together: a tiny bounding box.
-  float const kZoomClose =
-      ComputeSpectatorZoom(kRenderW, kRenderH, 120, 120, kLevelW, kLevelH);
+  float const kZoomClose = ComputeSpectatorZoom(kRenderW, kRenderH, 120, 120, kLevelW, kLevelH);
   // Worms at opposite corners: bbox grown past the level by the 60px margins.
-  float const kZoomEdges =
-      ComputeSpectatorZoom(kRenderW, kRenderH, 623, 469, kLevelW, kLevelH);
+  float const kZoomEdges = ComputeSpectatorZoom(kRenderW, kRenderH, 623, 469, kLevelW, kLevelH);
 
   CHECK(kZoomClose == Catch::Approx(kFill).epsilon(1e-4));
   CHECK(kZoomEdges == Catch::Approx(kFill).epsilon(1e-4));
@@ -66,8 +63,7 @@ TEST_CASE("spectator zoom shows the whole level when a large level's worms are f
   int const kLevelH = 3000;
   float const kFill = LevelFillZoom(kRenderW, kRenderH, kLevelW, kLevelH);  // 0.36
 
-  float const kZoom =
-      ComputeSpectatorZoom(kRenderW, kRenderH, kLevelW, kLevelH, kLevelW, kLevelH);
+  float const kZoom = ComputeSpectatorZoom(kRenderW, kRenderH, kLevelW, kLevelH, kLevelW, kLevelH);
   CHECK(kZoom == Catch::Approx(kFill).epsilon(1e-4));
   CHECK(kZoom < 1.0F);
 }
