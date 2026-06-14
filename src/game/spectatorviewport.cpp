@@ -15,12 +15,17 @@ float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, i
                            int level_h) {
   float const kZoomX = static_cast<float>(render_w) / static_cast<float>(bbox_w);
   float const kZoomY = static_cast<float>(render_h) / static_cast<float>(bbox_h);
-  // Cap at the zoom that shows the entire level — can be >1 for maps smaller
-  // than the spectator window so the level fills the available space.
+  // Zoom that shows the entire level — can be >1 for maps smaller than the
+  // spectator window so the level fills the available space.
   float const kLevelFillZoom =
       std::min(static_cast<float>(render_w) / static_cast<float>(level_w),
                static_cast<float>(render_h) / static_cast<float>(level_h));
-  return std::min({kZoomX, kZoomY, kLevelFillZoom});
+  // Never zoom out past the whole-level fit (kLevelFillZoom floor); never
+  // upscale past native unless the level is smaller than the window
+  // (kLevelFillZoom ceiling). The floor is what keeps a level that already
+  // fits from shrinking when worms reach the edges.
+  float const kMaxZoom = std::max(1.0F, kLevelFillZoom);
+  return std::clamp(std::min(kZoomX, kZoomY), kLevelFillZoom, kMaxZoom);
 }
 
 void SpectatorViewport::Process(Game& game) {
