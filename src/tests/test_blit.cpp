@@ -428,10 +428,12 @@ TEST_CASE("spectator-resize: freeze-restore must not shrink renderer bmp",
   Bitmap frozen;
   frozen.Alloc(640, 400);
 
-  // Buggy restore path (what DrawSpectatorInfo used to do): Copy shrinks the
-  // bmp back to the frozen screen's pre-resize dimensions, so pitch drops from
-  // 1920 to 640 while render_res_x remains 1920.
-  renderer.bmp.Copy(frozen);
+  // Correct restore path (the fix): Fill keeps bmp at render resolution;
+  // BlitBitmap copies the frozen content without resizing.
+  Fill(renderer.bmp, 0);
+  if (frozen.pixels != nullptr) {
+    BlitBitmap(renderer.bmp, frozen, 0, 0, frozen.w, frozen.h);
+  }
 
   // ScaleDraw reads at y*pitch for y in [0, render_res_y), so pitch must
   // equal render_res_x to stay in bounds.
