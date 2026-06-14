@@ -434,11 +434,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   if (kScrW == kOutW && kScrH == kOutH) {
     BlitBitmap(renderer.bmp, scratch_bmp, kOutX, kOutY, kScrW, kScrH);
   } else {
-    ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch,
-                  renderer.bmp.pixels +
-                      static_cast<std::size_t>(kOutY) * renderer.bmp.pitch +
-                      static_cast<std::size_t>(kOutX),
-                  kOutW, kOutH, renderer.bmp.pitch);
+    uint32_t* const kDest = renderer.bmp.pixels +
+                            static_cast<std::size_t>(kOutY) * renderer.bmp.pitch +
+                            static_cast<std::size_t>(kOutX);
+    ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, kDest, kOutW, kOutH,
+                  renderer.bmp.pitch);
   }
 
   // ── HUD overlay (native resolution, drawn on top) ─────────────────────────
