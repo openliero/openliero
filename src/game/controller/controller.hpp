@@ -34,6 +34,11 @@ struct Controller {
   // itself as resumable. Default no-op for single-player controllers.
   virtual void MarkUnresumable() {}
 
+  // Returns true when the controller is in the weapon-selection phase.
+  // Used by the spectator renderer to switch between the fixed 640x400
+  // layout (weapon-select / static screens) and native-resolution live play.
+  virtual bool InWeaponSelection() { return false; }
+
   virtual Level* CurrentLevel() = 0;
 
   virtual Game* CurrentGame() = 0;
