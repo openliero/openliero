@@ -612,6 +612,7 @@ bool MainMenuState::Update() {
 }
 
 void MainMenuState::Draw() {
+  gfx->SetSpectatorLayout(/*fixed=*/true);
   gfx->DrawBasicMenu();
   gfx->DrawSpectatorInfo();
 

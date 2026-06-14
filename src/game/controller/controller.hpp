@@ -35,8 +35,7 @@ struct Controller {
   virtual void MarkUnresumable() {}
 
   // Returns true when the controller is in the weapon-selection phase.
-  // Used by the spectator renderer to switch between the fixed 640x400
-  // layout (weapon-select / static screens) and native-resolution live play.
+  // Used by the spectator renderer to switch to the fixed 640x400 layout.
   virtual bool InWeaponSelection() { return false; }
 
   virtual Level* CurrentLevel() = 0;

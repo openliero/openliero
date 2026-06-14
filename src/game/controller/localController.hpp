@@ -33,7 +33,6 @@ struct LocalController : CommonController {
   Game* CurrentGame() override;
   bool Running() override;
   bool InWeaponSelection() override { return state == kStateWeaponSelection; }
-
   Game game;
   std::unique_ptr<WeaponSelection> ws;
   GameState state{kStateInitial};
