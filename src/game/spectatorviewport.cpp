@@ -161,6 +161,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto br = game.bonuses.All();
       for (Bonus const* i = nullptr; (i = br.Next());) {
+        int const kBx = Ftoi(i->x) - 3 + kOx;
+        int const kBy = Ftoi(i->y) - 3 + kOy;
+        if (kBx + 7 < 0 || kBx >= kScrW || kBy + 7 < 0 || kBy >= kScrH) {
+          continue;
+        }
         if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
           int const kF = common.bonus_frames[i->frame];
           BlitShadowImage(kShadow, scratch_bmp, common.small_sprites.SpritePtr(kF),
@@ -172,6 +177,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto sr = game.sobjects.All();
       for (SObject const* i = nullptr; (i = sr.Next());) {
+        int const kSx = i->x + kOx;
+        int const kSy = i->y + kOy;
+        if (kSx + 16 < 0 || kSx >= kScrW || kSy + 16 < 0 || kSy >= kScrH) {
+          continue;
+        }
         SObjectType const& t = common.sobject_types[i->id];
         int const kFrame = i->cur_frame + t.start_frame;
         BlitShadowImage(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame),
@@ -182,6 +192,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto wr = game.wobjects.All();
       for (WObject const* i = nullptr; (i = wr.Next());) {
+        int const kWx = Ftoi(i->pos.x) - 3 + kOx;
+        int const kWy = Ftoi(i->pos.y) - 3 + kOy;
+        if (kWx + 7 < 0 || kWx >= kScrW || kWy + 7 < 0 || kWy >= kScrH) {
+          continue;
+        }
         Weapon const& w = *i->type;
         if (w.start_frame > -1) {
           int cur_frame = i->cur_frame;
@@ -227,6 +242,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto nr = game.nobjects.All();
       for (NObject const* i = nullptr; (i = nr.Next());) {
+        int const kNx = Ftoi(i->pos.x) - 3 + kOx;
+        int const kNy = Ftoi(i->pos.y) - 3 + kOy;
+        if (kNx + 7 < 0 || kNx >= kScrW || kNy + 7 < 0 || kNy >= kScrH) {
+          continue;
+        }
         NObjectType const& t = *i->type;
         if (t.start_frame > 0) {
           auto pos = Ftoi(i->pos) - IVec2(3, 3);
@@ -252,6 +272,9 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
       if (w.visible) {
         int const kTempX = Ftoi(w.pos.x) - 7 + kOx;
         int const kTempY = Ftoi(w.pos.y) - 5 + kOy;
+        if (kTempX + 16 < 0 || kTempX >= kScrW || kTempY + 16 < 0 || kTempY >= kScrH) {
+          continue;
+        }
         if (w.ninjarope.out) {
           int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOx;
           int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOy;
@@ -285,10 +308,14 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto br = game.bonuses.All();
       for (Bonus const* i = nullptr; (i = br.Next());) {
+        int const kBx = Ftoi(i->x) - 3 + kOx;
+        int const kBy = Ftoi(i->y) - 3 + kOy;
+        if (kBx + 7 < 0 || kBx >= kScrW || kBy + 7 < 0 || kBy >= kScrH) {
+          continue;
+        }
         if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
           int const kF = common.bonus_frames[i->frame];
-          BlitImage(scratch_bmp, common.small_sprites[kF], Ftoi(i->x) - 3 + kOx,
-                    Ftoi(i->y) - 3 + kOy);
+          BlitImage(scratch_bmp, common.small_sprites[kF], kBx, kBy);
           if (game.settings->names_on_bonuses && i->frame == 0) {
             std::string const& name = common.weapons[i->weapon].name;
             int const kLen = static_cast<int>(name.size()) * 4;
@@ -302,16 +329,25 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto sr = game.sobjects.All();
       for (SObject const* i = nullptr; (i = sr.Next());) {
+        int const kSx = i->x + kOx;
+        int const kSy = i->y + kOy;
+        if (kSx + 16 < 0 || kSx >= kScrW || kSy + 16 < 0 || kSy >= kScrH) {
+          continue;
+        }
         SObjectType const& t = common.sobject_types[i->id];
         int const kFrame = i->cur_frame + t.start_frame;
-        BlitImageR(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame), i->x + kOx,
-                   i->y + kOy, 16, 16);
+        BlitImageR(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame), kSx, kSy, 16, 16);
       }
     }
 
     {
       auto wr = game.wobjects.All();
       for (WObject* i = nullptr; (i = wr.Next());) {
+        int const kWx = Ftoi(i->pos.x) - 3 + kOx;
+        int const kWy = Ftoi(i->pos.y) - 3 + kOy;
+        if (kWx + 7 < 0 || kWx >= kScrW || kWy + 7 < 0 || kWy >= kScrH) {
+          continue;
+        }
         Weapon const& w = *i->type;
         if (w.start_frame > -1) {
           int cur_frame = i->cur_frame;
@@ -362,6 +398,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto nr = game.nobjects.All();
       for (NObject const* i = nullptr; (i = nr.Next());) {
+        int const kNx = Ftoi(i->pos.x) - 3 + kOx;
+        int const kNy = Ftoi(i->pos.y) - 3 + kOy;
+        if (kNx + 7 < 0 || kNx >= kScrW || kNy + 7 < 0 || kNy >= kScrH) {
+          continue;
+        }
         NObjectType const& t = *i->type;
         if (t.start_frame > 0) {
           auto pos = Ftoi(i->pos) - IVec2(3, 3);
@@ -383,6 +424,9 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
       if (w.visible) {
         int const kTempX = Ftoi(w.pos.x) - 7 + kOx;
         int const kTempY = Ftoi(w.pos.y) - 5 + kOy;
+        if (kTempX + 16 < 0 || kTempX >= kScrW || kTempY + 16 < 0 || kTempY >= kScrH) {
+          continue;
+        }
         int const kAngleFrame = w.AngleFrame();
         if (w.weapons[w.current_weapon].Available()) {
           int const kHotspotX = w.hotspot_x + kOx;
@@ -423,6 +467,9 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
         auto temp = Ftoi(worm.pos) - IVec2(1, 2) + Ftoi(cossin_table[Ftoi(worm.aiming_angle)] * 16);
         temp.x += kOx;
         temp.y += kOy;
+        if (temp.x + 7 < 0 || temp.x >= kScrW || temp.y + 7 < 0 || temp.y >= kScrH) {
+          continue;
+        }
         BlitImage(scratch_bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x,
                   temp.y);
         if (worm.Pressed(Worm::kChange)) {
