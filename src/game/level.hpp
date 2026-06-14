@@ -67,10 +67,7 @@ struct Level {
     if (!display_valid.empty()) {
       display_valid[kIdx] = 0;
     }
-    if (!dirty_bits.empty() && !dirty_bits[static_cast<std::size_t>(kIdx)]) {
-      dirty_bits[static_cast<std::size_t>(kIdx)] = true;
-      dirty_list.push_back(kIdx);
-    }
+    MarkDirty(kIdx);
   }
 
   void SetPixel(fixedvec pos, PalIdx w, Common& common) {
@@ -80,10 +77,7 @@ struct Level {
     if (!display_valid.empty()) {
       display_valid[kIdx] = 0;
     }
-    if (!dirty_bits.empty() && !dirty_bits[static_cast<std::size_t>(kIdx)]) {
-      dirty_bits[static_cast<std::size_t>(kIdx)] = true;
-      dirty_list.push_back(kIdx);
-    }
+    MarkDirty(kIdx);
   }
 
   // Initialise dirty tracking for rollback snapshot optimisation.
@@ -94,8 +88,9 @@ struct Level {
   }
 
   // Mark a flat cell index as dirty for rollback snapshot optimisation.
-  // Called by blit helpers that write material_id directly (bypassing SetPixel).
-  // No-op before InitDirtyTracking is called.
+  // The single choke-point for dirty tracking: SetPixel delegates here, and
+  // blit helpers that write material_id directly (bypassing SetPixel) call it
+  // explicitly. No-op before InitDirtyTracking is called.
   void MarkDirty(int idx) {
     if (!dirty_bits.empty() && !dirty_bits[static_cast<std::size_t>(idx)]) {
       dirty_bits[static_cast<std::size_t>(idx)] = true;

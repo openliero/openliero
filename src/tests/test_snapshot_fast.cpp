@@ -287,6 +287,13 @@ TEST_CASE("Dirty-cell tracking: sparse save, correct restore", "[snapshot][rollb
   std::size_t const kCells =
       static_cast<std::size_t>(game.level.width) * static_cast<std::size_t>(game.level.height);
 
+  // Populate a display layer so the sparse display_valid update path
+  // (SaveSnapshotFast) and its restore (LoadSnapshotFast) are exercised. The
+  // full-copy display_valid path is covered elsewhere; this case covers the
+  // dirty-cell branch, which writes display_valid only for cells in dirty_list.
+  game.level.display_data.assign(kCells, 0);
+  game.level.display_valid.assign(kCells, static_cast<uint8_t>(1));
+
   // snap_a: will be saved twice — before and after the modification.
   // snap_b: saved once, before the modification, to test restoring to initial state.
   GameSnapshot snap_a;
@@ -327,6 +334,15 @@ TEST_CASE("Dirty-cell tracking: sparse save, correct restore", "[snapshot][rollb
       REQUIRE(snap_a.level_data[i] == initial_data[i]);
     }
   }
+  // SetPixel zeroed display_valid at the dirty cell; the sparse save must have
+  // propagated that into the slot while leaving every other cell at its
+  // first-save value of 1.
+  REQUIRE(snap_a.level_display_valid[static_cast<std::size_t>(kIdx)] == 0);
+  for (std::size_t i = 0; i < kCells; ++i) {
+    if (static_cast<int>(i) != kIdx) {
+      REQUIRE(snap_a.level_display_valid[i] == 1);
+    }
+  }
 
   // Fresh slot saved after the modification: first save → full copy of current state.
   GameSnapshot snap_c;
@@ -341,15 +357,20 @@ TEST_CASE("Dirty-cell tracking: sparse save, correct restore", "[snapshot][rollb
 
   // Corrupt the live cell and restore from snap_a (post-modification snapshot).
   game.level.material_id[static_cast<std::size_t>(kIdx)] = kOldMat;
+  game.level.display_valid[static_cast<std::size_t>(kIdx)] = 1;
   game.LoadSnapshotFast(snap_a);
   REQUIRE(game.level.material_id[static_cast<std::size_t>(kIdx)] == kNewMat);
   // materials must be consistent with material_id after restore (no level_materials in slot).
   REQUIRE(game.level.materials[static_cast<std::size_t>(kIdx)].flags ==
           game.common->materials[kNewMat].flags);
+  // display_valid must reflect the post-modification snapshot (cell was zeroed).
+  REQUIRE(game.level.display_valid[static_cast<std::size_t>(kIdx)] == 0);
 
   // Restore from snap_b (saved before the modification) — should recover kOldMat.
   game.LoadSnapshotFast(snap_b);
   REQUIRE(game.level.material_id[static_cast<std::size_t>(kIdx)] == kOldMat);
   REQUIRE(game.level.materials[static_cast<std::size_t>(kIdx)].flags ==
           game.common->materials[kOldMat].flags);
+  // snap_b predates the modification, so display_valid restores to 1.
+  REQUIRE(game.level.display_valid[static_cast<std::size_t>(kIdx)] == 1);
 }
