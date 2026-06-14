@@ -409,6 +409,24 @@ TEST_CASE("updatemenupalettes repacks pal32 with the menu animation", "[blit][pa
   REQUIRE(gfx.play_renderer.pal32[kBase] == pack(gfx.play_renderer.pal.entries[kBase]));
 }
 
+TEST_CASE("scaledrawarea upscales small src to fill larger dest", "[blit][scaledrawarea]") {
+  // Verifies the kCount==0 nearest-neighbour path used when dest > src.
+  // SpectatorViewport::Draw relies on this to upscale a small level to fill
+  // a large spectator window.
+  uint32_t const kSrc[2] = {0xFF112233U, 0xFF445566U};
+  uint32_t dest[8] = {};
+  ScaleDrawArea(kSrc, 2, 1, 2, dest, 4, 2, 4);
+  // Left two columns map to src[0], right two to src[1], both rows.
+  REQUIRE(dest[0] == 0xFF112233U);
+  REQUIRE(dest[1] == 0xFF112233U);
+  REQUIRE(dest[2] == 0xFF445566U);
+  REQUIRE(dest[3] == 0xFF445566U);
+  REQUIRE(dest[4] == 0xFF112233U);
+  REQUIRE(dest[5] == 0xFF112233U);
+  REQUIRE(dest[6] == 0xFF445566U);
+  REQUIRE(dest[7] == 0xFF445566U);
+}
+
 TEST_CASE("spectator-resize: freeze-restore must not shrink renderer bmp",
           "[blit][spectator-resize]") {
   // Regression for resize-while-paused segfault (introduced a634c3b).

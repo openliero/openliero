@@ -33,7 +33,12 @@ void SpectatorViewport::Process(Game& game) {
   int const kBboxH = std::max(1, wmax_y - wmin_y + 2 * kMargin);
   float const kZoomX = static_cast<float>(kRenderW) / static_cast<float>(kBboxW);
   float const kZoomY = static_cast<float>(kRenderH) / static_cast<float>(kBboxH);
-  zoom = std::min({kZoomX, kZoomY, 1.0F});
+  // Cap at the zoom that shows the entire level — can be >1 for maps smaller
+  // than the spectator window so the level fills the available space.
+  float const kLevelFillZoom =
+      std::min(static_cast<float>(kRenderW) / static_cast<float>(game.level.width),
+               static_cast<float>(kRenderH) / static_cast<float>(game.level.height));
+  zoom = std::min({kZoomX, kZoomY, kLevelFillZoom});
 
   int const kVisibleW = static_cast<int>(static_cast<float>(kRenderW) / zoom);
   int const kVisibleH = static_cast<int>(static_cast<float>(kRenderH) / zoom);
@@ -412,7 +417,7 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   }
 
   // ── Composite scratch → renderer ─────────────────────────────────────────
-  if (zoom >= 1.0F) {
+  if (kScrW == render_w && kScrH == render_h) {
     BlitBitmap(renderer.bmp, scratch_bmp, 0, 0, kScrW, kScrH);
   } else {
     ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, renderer.bmp.pixels,
