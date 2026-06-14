@@ -126,17 +126,7 @@ cmake --build build/$PRESET --config Release
 cmake --install build/$PRESET --config Release
 ```
 
-Install the Tracy profiler GUI:
-
-```bash
-# Linux (Debian/Ubuntu)
-apt install tracy
-
-# macOS
-brew install tracy
-
-# Or grab a release binary from https://github.com/wolfpld/tracy/releases
-```
+Install the Tracy profiler GUI: https://github.com/wolfpld/tracy
 
 Run the game and connect the profiler:
 
