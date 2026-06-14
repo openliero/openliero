@@ -743,8 +743,8 @@ void Game::SaveSnapshotFast(GameSnapshot& snap) {
     // reflects the cumulative diff from its initial full-copy baseline,
     // making every slot independently restorable.
     bool const kHasDv = !level.display_valid.empty() && !snap.level_display_valid.empty();
-    for (int32_t i : level.dirty_list) {
-      auto const kI = static_cast<std::size_t>(i);
+    for (int32_t const kDirtyIdx : level.dirty_list) {
+      auto const kI = static_cast<std::size_t>(kDirtyIdx);
       snap.level_data[kI] = level.material_id[kI];
       if (kHasDv) {
         snap.level_display_valid[kI] = level.display_valid[kI];
@@ -795,8 +795,8 @@ void Game::LoadSnapshotFast(GameSnapshot const& snap) {
         level.materials[i] = common->materials[level.material_id[i]];
       }
     } else {
-      for (int32_t i : level.dirty_list) {
-        auto const kI = static_cast<std::size_t>(i);
+      for (int32_t const kDirtyIdx : level.dirty_list) {
+        auto const kI = static_cast<std::size_t>(kDirtyIdx);
         level.materials[kI] = common->materials[level.material_id[kI]];
       }
     }
