@@ -8,8 +8,12 @@
 #ifdef OPENLIERO_ENABLE_TRACY
 #include <tracy/Tracy.hpp>
 #else
+// These no-op macros match Tracy's mixed-case API names exactly so instrumented
+// call sites compile identically with and without Tracy.
+// NOLINTBEGIN(readability-identifier-naming)
 #define ZoneScoped
 #define ZoneScopedN(name)
 #define FrameMark
 #define FrameMarkNamed(name)
+// NOLINTEND(readability-identifier-naming)
 #endif
