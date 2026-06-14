@@ -25,7 +25,7 @@ struct MinimapFixture {
     level.width = level_w;
     level.height = level_h;
     // All level pixels use palette index 1 (foreground).
-    level.material_id.assign(static_cast<std::size_t>(level_w * level_h), 1);
+    level.material_id.assign(static_cast<std::size_t>(level_w) * level_h, 1);
 
     renderer.Init(bitmap_w, bitmap_h);
     renderer.pal.Clear();
@@ -41,7 +41,9 @@ struct MinimapFixture {
   int ColsInRow(int y) const {
     int n = 0;
     for (int x = 0; x < bmp_w; ++x) {
-      if (renderer.bmp.GetPixel(x, y) == renderer.pal32[1]) ++n;
+      if (renderer.bmp.GetPixel(x, y) == renderer.pal32[1]) {
+        ++n;
+      }
     }
     return n;
   }
@@ -50,7 +52,9 @@ struct MinimapFixture {
   int RowsInCol(int x) const {
     int n = 0;
     for (int y = 0; y < bmp_h; ++y) {
-      if (renderer.bmp.GetPixel(x, y) == renderer.pal32[1]) ++n;
+      if (renderer.bmp.GetPixel(x, y) == renderer.pal32[1]) {
+        ++n;
+      }
     }
     return n;
   }
@@ -60,7 +64,9 @@ struct MinimapFixture {
     int n = 0;
     for (int y = 0; y < bmp_h; ++y) {
       for (int x = 0; x < bmp_w; ++x) {
-        if (renderer.bmp.GetPixel(x, y) == renderer.pal32[1]) ++n;
+        if (renderer.bmp.GetPixel(x, y) == renderer.pal32[1]) {
+          ++n;
+        }
       }
     }
     return n;
