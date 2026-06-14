@@ -408,3 +408,33 @@ TEST_CASE("updatemenupalettes repacks pal32 with the menu animation", "[blit][pa
   int const kBase = Palette::kWormColorBlocks[0].base;
   REQUIRE(gfx.play_renderer.pal32[kBase] == pack(gfx.play_renderer.pal.entries[kBase]));
 }
+
+TEST_CASE("spectator-resize: freeze-restore must not shrink renderer bmp",
+          "[blit][spectator-resize]") {
+  // Regression for resize-while-paused segfault (introduced a634c3b).
+  // After OnWindowResize, SetRenderResolution sets render_res=1920x1080 and
+  // bmp.pitch=1920.  DrawSpectatorInfo (and WeaponSelection::DrawSpectatorViewports)
+  // called bmp.Copy(frozen_spectator_screen), which shrank bmp.pitch back to
+  // the frozen screen's pre-resize pitch (640).  Flip() then called
+  // ScaleDraw(bmp.pixels, render_res_x=1920, render_res_y=1080, pitch=640,...),
+  // which reads at row y*640 for y up to 1079, accessing offset 690560 in a
+  // 256000-element array — out-of-bounds read — segfault.
+  //
+  // The fix: replace bmp.Copy(frozen) with Fill(bmp,0)+BlitBitmap so the bmp
+  // pitch/dimensions are preserved at the render resolution.
+  Renderer renderer;
+  renderer.Init(1920, 1080);
+
+  Bitmap frozen;
+  frozen.Alloc(640, 400);
+
+  // Buggy restore path (what DrawSpectatorInfo used to do): Copy shrinks the
+  // bmp back to the frozen screen's pre-resize dimensions, so pitch drops from
+  // 1920 to 640 while render_res_x remains 1920.
+  renderer.bmp.Copy(frozen);
+
+  // ScaleDraw reads at y*pitch for y in [0, render_res_y), so pitch must
+  // equal render_res_x to stay in bounds.
+  REQUIRE(renderer.bmp.pitch == static_cast<unsigned int>(renderer.render_res_x));
+  REQUIRE(renderer.bmp.h == renderer.render_res_y);
+}
