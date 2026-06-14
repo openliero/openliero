@@ -1,6 +1,7 @@
 #include "spectatorviewport.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include "constants.hpp"
 #include "game.hpp"
 #include "gfx/bitmap.hpp"
@@ -417,11 +418,27 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   }
 
   // ── Composite scratch → renderer ─────────────────────────────────────────
-  if (kScrW == render_w && kScrH == render_h) {
-    BlitBitmap(renderer.bmp, scratch_bmp, 0, 0, kScrW, kScrH);
+  // Scale the scratch into a centred output rect that preserves the level's
+  // aspect ratio; any remaining bars are filled black.
+  int const kOutW =
+      std::min(static_cast<int>(std::lroundf(static_cast<float>(kScrW) * zoom)), render_w);
+  int const kOutH =
+      std::min(static_cast<int>(std::lroundf(static_cast<float>(kScrH) * zoom)), render_h);
+  int const kOutX = (render_w - kOutW) / 2;
+  int const kOutY = (render_h - kOutH) / 2;
+
+  if (kOutX > 0 || kOutY > 0) {
+    Fill(renderer.bmp, 0);
+  }
+
+  if (kScrW == kOutW && kScrH == kOutH) {
+    BlitBitmap(renderer.bmp, scratch_bmp, kOutX, kOutY, kScrW, kScrH);
   } else {
-    ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, renderer.bmp.pixels,
-                  render_w, render_h, renderer.bmp.pitch);
+    ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch,
+                  renderer.bmp.pixels +
+                      static_cast<std::size_t>(kOutY) * renderer.bmp.pitch +
+                      static_cast<std::size_t>(kOutX),
+                  kOutW, kOutH, renderer.bmp.pitch);
   }
 
   // ── HUD overlay (native resolution, drawn on top) ─────────────────────────
