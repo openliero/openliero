@@ -28,11 +28,6 @@ float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, i
   return std::clamp(std::min(kZoomX, kZoomY), kLevelFillZoom, kMaxZoom);
 }
 
-WorldTextureSize SpectatorWorldTextureSize(int level_w, int level_h) {
-  return {.w = std::min(level_w, kSpectatorWorldTextureMax),
-          .h = std::min(level_h, kSpectatorWorldTextureMax)};
-}
-
 SpectatorDstRect ComputeSpectatorDstRect(int render_w, int render_h, int scr_w, int scr_h,
                                          float zoom) {
   int const kOutW =
@@ -40,6 +35,17 @@ SpectatorDstRect ComputeSpectatorDstRect(int render_w, int render_h, int scr_w, 
   int const kOutH =
       std::min(static_cast<int>(std::lroundf(static_cast<float>(scr_h) * zoom)), render_h);
   return {.x = (render_w - kOutW) / 2, .y = (render_h - kOutH) / 2, .w = kOutW, .h = kOutH};
+}
+
+WorldPassScratch ComputeWorldPassScratch(int render_w, int render_h, float zoom, int level_w,
+                                         int level_h) {
+  float const kScale = std::min(1.0F, zoom);
+  // Visible world region at 1:1 (same as the legacy scratch size).
+  int const kViewW = std::min(static_cast<int>(static_cast<float>(render_w) / zoom), level_w);
+  int const kViewH = std::min(static_cast<int>(static_cast<float>(render_h) / zoom), level_h);
+  int const kW = std::max(1, static_cast<int>(std::lroundf(static_cast<float>(kViewW) * kScale)));
+  int const kH = std::max(1, static_cast<int>(std::lroundf(static_cast<float>(kViewH) * kScale)));
+  return {.w = kW, .h = kH, .scale = kScale};
 }
 
 void SpectatorViewport::Process(Game& game) {
@@ -102,85 +108,60 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   int const kCenterX = render_w / 2;
 
   // ── World pass ────────────────────────────────────────────────────────────
-  // Scratch bitmap holds the visible world region at 1:1 pixel scale, capped
-  // to the level dimensions. At zoom < 1 this can be as large as the full
-  // level; the GPU path (Task 1e) will replace this with SDL_RenderTexture.
-  int const kScrW =
+  // kViewW/kViewH is the visible world region at 1:1. When the level fits
+  // (zoom >= 1) the scratch is that region and the world is drawn 1:1 (the GPU
+  // upscales it). When zoomed out (zoom < 1) the world is instead rendered at
+  // ~output resolution into a smaller scratch (PR7 Task 1, downscaled pass), so
+  // the world pass and its texture upload are bounded by the window, not the
+  // level area.
+  int const kViewW =
       std::min(static_cast<int>(static_cast<float>(render_w) / zoom), game.level.width);
-  int const kScrH =
+  int const kViewH =
       std::min(static_cast<int>(static_cast<float>(render_h) / zoom), game.level.height);
+  WorldPassScratch const kWp =
+      ComputeWorldPassScratch(render_w, render_h, zoom, game.level.width, game.level.height);
 
-  scratch_bmp.Alloc(kScrW, kScrH);
+  scratch_bmp.Alloc(kWp.w, kWp.h);
   scratch_bmp.pal32 = renderer.pal32;
   scratch_bmp.mode = renderer.mode;
   scratch_bmp.cycles = game.cycles;
   Fill(scratch_bmp, 0);
 
-  // Offset: world pixel (x, y) maps to scratch pixel (0, 0).
-  int const kOx = -x;
-  int const kOy = -y;
+  if (kWp.scale < 1.0F) {
+    // ── Downscaled overview (zoom < 1) ──────────────────────────────────────
+    // Render the visually-significant world at ~output resolution. Detail that
+    // is sub-pixel or illegible at this zoom — shadows, text labels, fire
+    // cones, laser sights, the aim crosshair, AI debug — is intentionally
+    // omitted; it cannot be seen and is what made the 1:1 path expensive.
+    ZoneScopedN("Spectator::WorldPass::Downscaled");
+    float const kScale = kWp.scale;
+    auto sx = [&](int wx) {
+      return static_cast<int>(std::lroundf(static_cast<float>(wx - x) * kScale));
+    };
+    auto sy = [&](int wy) {
+      return static_cast<int>(std::lroundf(static_cast<float>(wy - y) * kScale));
+    };
+    // World-space AABB cull against the visible region [x, x+kViewW) x [y, y+kViewH).
+    auto in_view = [&](int wx, int wy, int sz) {
+      return wx + sz >= x && wx < x + kViewW && wy + sz >= y && wy < y + kViewH;
+    };
 
-  ShadowQuery const kShadow{.common = common,
-                            .level = game.level,
-                            .pal32 = renderer.pal32,
-                            .world_offset_x = x,
-                            .world_offset_y = y,
-                            .mode = renderer.mode,
-                            .cycles = game.cycles};
-
-  {
-    ZoneScopedN("Spectator::WorldPass::DrawLevel");
-    DrawLevel(scratch_bmp, game.level, kOx, kOy);
-  }
-
-  if (game.settings->game_mode == Settings::kGmHoldazone) {
-    bool const kTimingOut = game.holdazone.timeout_left < 70 * 4;
-    int const kColor = kTimingOut ? 168 : 50;
-    int contender_color = 0;
-    if (game.holdazone.contender_idx >= 0) {
-      Worm const* contender = game.WormByIdx(game.holdazone.contender_idx);
-      if (kTimingOut) {
-        contender_color = contender->MinimapColor();
-      } else {
-        contender_color = Palette::kWormColorBlocks[contender->index].colour_index + 5;
-      }
-    } else {
-      contender_color = kColor;
+    {
+      ZoneScopedN("Spectator::WorldPass::DrawLevel");
+      DrawLevelScaled(scratch_bmp, game.level, x, y, kScale);
     }
-    DrawDashedLineBox(scratch_bmp, game.holdazone.rect.x1 + kOx, game.holdazone.rect.y1 + kOy,
-                      kColor, contender_color, game.holdazone.contender_frames,
-                      Settings::kZoneCaptureTime, game.holdazone.rect.Width(),
-                      game.holdazone.rect.Height(), game.cycles / 10);
-  }
 
-  for (std::size_t i = 0; i < game.worms.size(); ++i) {
-    Worm const& worm = *game.worms[i];
-    if (!worm.visible && worm.killed_timer <= 0 && !worm.ready) {
-      if (game.settings->allow_viewing_spawn_point && worm.Pressed(Worm::kChange)) {
-        int const kTempX = Ftoi(worm.pos.x) - 7 + kOx;
-        int const kTempY = Ftoi(worm.pos.y) - 5 + kOy;
-        BlitImageTrans(scratch_bmp,
-                       common.WormSpriteObj(worm.current_frame, worm.direction, worm.index), kTempX,
-                       kTempY, game.cycles);
-      }
-    }
-  }
-
-  // Pass 1: all shadows before any sprite.
-  if (game.settings->shadow) {
-    ZoneScopedN("Spectator::WorldPass::ShadowPass");
     {
       auto br = game.bonuses.All();
       for (Bonus const* i = nullptr; (i = br.Next());) {
-        int const kBx = Ftoi(i->x) - 3 + kOx;
-        int const kBy = Ftoi(i->y) - 3 + kOy;
-        if (kBx + 7 < 0 || kBx >= kScrW || kBy + 7 < 0 || kBy >= kScrH) {
+        int const kWx = Ftoi(i->x) - 3;
+        int const kWy = Ftoi(i->y) - 3;
+        if (!in_view(kWx, kWy, 7)) {
           continue;
         }
         if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
-          int const kF = common.bonus_frames[i->frame];
-          BlitShadowImage(kShadow, scratch_bmp, common.small_sprites.SpritePtr(kF),
-                          Ftoi(i->x) - 5 + kOx, Ftoi(i->y) - 1 + kOy, 7, 7);
+          BlitImageScaled(scratch_bmp, common.small_sprites[common.bonus_frames[i->frame]], sx(kWx),
+                          sy(kWy), kScale);
         }
       }
     }
@@ -188,24 +169,21 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto sr = game.sobjects.All();
       for (SObject const* i = nullptr; (i = sr.Next());) {
-        int const kSx = i->x + kOx;
-        int const kSy = i->y + kOy;
-        if (kSx + 16 < 0 || kSx >= kScrW || kSy + 16 < 0 || kSy >= kScrH) {
+        if (!in_view(i->x, i->y, 16)) {
           continue;
         }
         SObjectType const& t = common.sobject_types[i->id];
-        int const kFrame = i->cur_frame + t.start_frame;
-        BlitShadowImage(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame),
-                        i->x + kOx - 3, i->y + kOy + 3, 16, 16);
+        BlitImageScaled(scratch_bmp, common.large_sprites[i->cur_frame + t.start_frame], sx(i->x),
+                        sy(i->y), kScale);
       }
     }
 
     {
       auto wr = game.wobjects.All();
       for (WObject const* i = nullptr; (i = wr.Next());) {
-        int const kWx = Ftoi(i->pos.x) - 3 + kOx;
-        int const kWy = Ftoi(i->pos.y) - 3 + kOy;
-        if (kWx + 7 < 0 || kWx >= kScrW || kWy + 7 < 0 || kWy >= kScrH) {
+        int const kWx = Ftoi(i->pos.x) - 3;
+        int const kWy = Ftoi(i->pos.y) - 3;
+        if (!in_view(kWx, kWy, 7)) {
           continue;
         }
         Weapon const& w = *i->type;
@@ -213,8 +191,7 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
           int cur_frame = i->cur_frame;
           int const kShotType = w.shot_type;
           if (kShotType == 2) {
-            cur_frame += 4;
-            cur_frame >>= 3;
+            cur_frame = (cur_frame + 4) >> 3;
             if (cur_frame < 0) {
               cur_frame = 16;
             } else if (cur_frame > 15) {
@@ -224,28 +201,14 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
             if (cur_frame > 64) {
               --cur_frame;
             }
-            cur_frame -= 12;
-            cur_frame >>= 3;
-            if (cur_frame < 0) {
-              cur_frame = 0;
-            } else if (cur_frame > 12) {
-              cur_frame = 12;
-            }
+            cur_frame = (cur_frame - 12) >> 3;
+            cur_frame = std::clamp(cur_frame, 0, 12);
           }
-          int const kPosX = Ftoi(i->pos.x) - 3;
-          int const kPosY = Ftoi(i->pos.y) - 3;
-          if (w.shadow) {
-            BlitShadowImage(kShadow, scratch_bmp,
-                            common.small_sprites.SpritePtr(w.start_frame + cur_frame),
-                            kPosX - 3 + kOx, kPosY + 3 + kOy, 7, 7);
-          }
+          BlitImageScaled(scratch_bmp, common.small_sprites[w.start_frame + cur_frame], sx(kWx),
+                          sy(kWy), kScale);
         } else if (i->cur_frame > 0) {
-          int const kPosX = Ftoi(i->pos.x) + kOx - 3;
-          int const kPosY = Ftoi(i->pos.y) + kOy + 3;
-          uint32_t const kShadowed = kShadow.ShadowedArgb(kPosX, kPosY);
-          if (kShadowed != 0 && scratch_bmp.clip_rect.Inside(kPosX, kPosY)) {
-            scratch_bmp.GetPixel(kPosX, kPosY) = kShadowed;
-          }
+          scratch_bmp.SetPixel(sx(Ftoi(i->pos.x)), sy(Ftoi(i->pos.y)),
+                               static_cast<PalIdx>(i->cur_frame));
         }
       }
     }
@@ -253,272 +216,458 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     {
       auto nr = game.nobjects.All();
       for (NObject const* i = nullptr; (i = nr.Next());) {
-        int const kNx = Ftoi(i->pos.x) - 3 + kOx;
-        int const kNy = Ftoi(i->pos.y) - 3 + kOy;
-        if (kNx + 7 < 0 || kNx >= kScrW || kNy + 7 < 0 || kNy >= kScrH) {
+        int const kWx = Ftoi(i->pos.x) - 3;
+        int const kWy = Ftoi(i->pos.y) - 3;
+        if (!in_view(kWx, kWy, 7)) {
           continue;
         }
         NObjectType const& t = *i->type;
         if (t.start_frame > 0) {
-          auto pos = Ftoi(i->pos) - IVec2(3, 3);
-          BlitShadowImage(kShadow, scratch_bmp,
-                          common.small_sprites.SpritePtr(t.start_frame + i->cur_frame),
-                          pos.x - 3 + kOx, pos.y + 3 + kOy, 7, 7);
+          BlitImageScaled(scratch_bmp, common.small_sprites[t.start_frame + i->cur_frame], sx(kWx),
+                          sy(kWy), kScale);
         } else if (i->cur_frame > 1) {
-          auto pos = Ftoi(i->pos);
-          pos.x += kOx - 3;
-          pos.y += kOy + 3;
-          if (scratch_bmp.clip_rect.Encloses(pos)) {
-            uint32_t const kShadowed = kShadow.ShadowedArgb(pos.x, pos.y);
-            if (kShadowed != 0) {
-              scratch_bmp.GetPixel(pos.x, pos.y) = kShadowed;
-            }
-          }
+          scratch_bmp.SetPixel(sx(Ftoi(i->pos.x)), sy(Ftoi(i->pos.y)),
+                               static_cast<PalIdx>(i->cur_frame));
         }
       }
     }
 
     for (auto const& worm_ptr : game.worms) {
       Worm const& w = *worm_ptr;
-      if (w.visible) {
-        int const kTempX = Ftoi(w.pos.x) - 7 + kOx;
-        int const kTempY = Ftoi(w.pos.y) - 5 + kOy;
-        if (kTempX + 16 < 0 || kTempX >= kScrW || kTempY + 16 < 0 || kTempY >= kScrH) {
-          continue;
-        }
-        if (w.ninjarope.out) {
-          int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOx;
-          int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOy;
-          DrawShadowLine(kShadow, scratch_bmp, kNinjaropeX - 3, kNinjaropeY + 3, kTempX + 7 - 3,
-                         kTempY + 4 + 3);
-          BlitShadowImage(kShadow, scratch_bmp, common.large_sprites.SpritePtr(84), kNinjaropeX - 4,
-                          kNinjaropeY + 2, 16, 16);
-        }
-        BlitShadowImage(kShadow, scratch_bmp,
-                        common.WormSprite(w.current_frame, w.direction, w.index), kTempX - 3,
-                        kTempY + 3, 16, 16);
+      if (!w.visible) {
+        continue;
       }
+      int const kWx = Ftoi(w.pos.x) - 7;
+      int const kWy = Ftoi(w.pos.y) - 5;
+      if (!in_view(kWx, kWy, 16)) {
+        continue;
+      }
+      if (w.ninjarope.out) {
+        DrawNinjarope(common, scratch_bmp, sx(Ftoi(w.ninjarope.pos.x)), sy(Ftoi(w.ninjarope.pos.y)),
+                      sx(Ftoi(w.pos.x)), sy(Ftoi(w.pos.y) - 1));
+        BlitImageScaled(scratch_bmp, common.large_sprites[84], sx(Ftoi(w.ninjarope.pos.x) - 1),
+                        sy(Ftoi(w.ninjarope.pos.y) - 1), kScale);
+      }
+      BlitImageScaled(scratch_bmp, common.WormSpriteObj(w.current_frame, w.direction, w.index),
+                      sx(kWx), sy(kWy), kScale);
     }
 
     for (Game::BObjectList::Iterator i = game.bobjects.Begin(); i != game.bobjects.End(); ++i) {
       auto ipos = Ftoi(i->pos);
-      ipos.x += kOx - 3;
-      ipos.y += kOy + 3;
-      if (scratch_bmp.clip_rect.Encloses(ipos)) {
-        uint32_t const kShadowed = kShadow.ShadowedArgb(ipos.x, ipos.y);
-        if (kShadowed != 0) {
-          scratch_bmp.GetPixel(ipos.x, ipos.y) = kShadowed;
-        }
-      }
+      scratch_bmp.SetPixel(sx(ipos.x), sy(ipos.y), static_cast<PalIdx>(i->color));
     }
-  }
+  } else {
+    int const kScrW = kWp.w;
+    int const kScrH = kWp.h;
+    // Offset: world pixel (x, y) maps to scratch pixel (0, 0).
+    int const kOx = -x;
+    int const kOy = -y;
 
-  // Pass 2: all sprites on top of the fully-composited shadow layer.
-  {
-    ZoneScopedN("Spectator::WorldPass::SpritePass");
-    {
-      auto br = game.bonuses.All();
-      for (Bonus const* i = nullptr; (i = br.Next());) {
-        int const kBx = Ftoi(i->x) - 3 + kOx;
-        int const kBy = Ftoi(i->y) - 3 + kOy;
-        if (kBx + 7 < 0 || kBx >= kScrW || kBy + 7 < 0 || kBy >= kScrH) {
-          continue;
-        }
-        if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
-          int const kF = common.bonus_frames[i->frame];
-          BlitImage(scratch_bmp, common.small_sprites[kF], kBx, kBy);
-          if (game.settings->names_on_bonuses && i->frame == 0) {
-            std::string const& name = common.weapons[i->weapon].name;
-            int const kLen = static_cast<int>(name.size()) * 4;
-            common.DrawTextSmall(scratch_bmp, name.c_str(), Ftoi(i->x) - kLen / 2 + kOx,
-                                 Ftoi(i->y) - 10 + kOy);
-          }
-        }
-      }
-    }
+    ShadowQuery const kShadow{.common = common,
+                              .level = game.level,
+                              .pal32 = renderer.pal32,
+                              .world_offset_x = x,
+                              .world_offset_y = y,
+                              .mode = renderer.mode,
+                              .cycles = game.cycles};
 
     {
-      auto sr = game.sobjects.All();
-      for (SObject const* i = nullptr; (i = sr.Next());) {
-        int const kSx = i->x + kOx;
-        int const kSy = i->y + kOy;
-        if (kSx + 16 < 0 || kSx >= kScrW || kSy + 16 < 0 || kSy >= kScrH) {
-          continue;
-        }
-        SObjectType const& t = common.sobject_types[i->id];
-        int const kFrame = i->cur_frame + t.start_frame;
-        BlitImageR(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame), kSx, kSy, 16, 16);
-      }
+      ZoneScopedN("Spectator::WorldPass::DrawLevel");
+      DrawLevel(scratch_bmp, game.level, kOx, kOy);
     }
 
-    {
-      auto wr = game.wobjects.All();
-      for (WObject* i = nullptr; (i = wr.Next());) {
-        int const kWx = Ftoi(i->pos.x) - 3 + kOx;
-        int const kWy = Ftoi(i->pos.y) - 3 + kOy;
-        if (kWx + 7 < 0 || kWx >= kScrW || kWy + 7 < 0 || kWy >= kScrH) {
-          continue;
+    if (game.settings->game_mode == Settings::kGmHoldazone) {
+      bool const kTimingOut = game.holdazone.timeout_left < 70 * 4;
+      int const kColor = kTimingOut ? 168 : 50;
+      int contender_color = 0;
+      if (game.holdazone.contender_idx >= 0) {
+        Worm const* contender = game.WormByIdx(game.holdazone.contender_idx);
+        if (kTimingOut) {
+          contender_color = contender->MinimapColor();
+        } else {
+          contender_color = Palette::kWormColorBlocks[contender->index].colour_index + 5;
         }
-        Weapon const& w = *i->type;
-        if (w.start_frame > -1) {
-          int cur_frame = i->cur_frame;
-          int const kShotType = w.shot_type;
-          if (kShotType == 2) {
-            cur_frame += 4;
-            cur_frame >>= 3;
-            if (cur_frame < 0) {
-              cur_frame = 16;
-            } else if (cur_frame > 15) {
-              cur_frame -= 16;
-            }
-          } else if (kShotType == 3) {
-            if (cur_frame > 64) {
-              --cur_frame;
-            }
-            cur_frame -= 12;
-            cur_frame >>= 3;
-            if (cur_frame < 0) {
-              cur_frame = 0;
-            } else if (cur_frame > 12) {
-              cur_frame = 12;
-            }
-          }
-          int const kPosX = Ftoi(i->pos.x) - 3;
-          int const kPosY = Ftoi(i->pos.y) - 3;
-          BlitImage(scratch_bmp, common.small_sprites[w.start_frame + cur_frame], kPosX + kOx,
-                    kPosY + kOy);
-        } else if (i->cur_frame > 0) {
-          int const kPosX = Ftoi(i->pos.x) + kOx;
-          int const kPosY = Ftoi(i->pos.y) + kOy;
-          scratch_bmp.SetPixel(kPosX, kPosY, static_cast<PalIdx>(i->cur_frame));
-        }
-        if (!common.h[HRemExp] && i->type - common.weapons.data() == 34 &&
-            game.settings->names_on_bonuses) {
-          if (i->cur_frame == 0) {
-            int const kNameNum =
-                static_cast<int>(&*i - game.wobjects.arr) % static_cast<int>(common.weapons.size());
-            std::string const& name = common.weapons[kNameNum].name;
-            int const kWidth = static_cast<int>(name.size()) * 4;
-            common.DrawTextSmall(scratch_bmp, name.c_str(), Ftoi(i->pos.x) - kWidth / 2 + kOx,
-                                 Ftoi(i->pos.y) - 10 + kOy);
-          }
-        }
+      } else {
+        contender_color = kColor;
       }
-    }
-
-    {
-      auto nr = game.nobjects.All();
-      for (NObject const* i = nullptr; (i = nr.Next());) {
-        int const kNx = Ftoi(i->pos.x) - 3 + kOx;
-        int const kNy = Ftoi(i->pos.y) - 3 + kOy;
-        if (kNx + 7 < 0 || kNx >= kScrW || kNy + 7 < 0 || kNy >= kScrH) {
-          continue;
-        }
-        NObjectType const& t = *i->type;
-        if (t.start_frame > 0) {
-          auto pos = Ftoi(i->pos) - IVec2(3, 3);
-          BlitImage(scratch_bmp, common.small_sprites[t.start_frame + i->cur_frame], pos.x + kOx,
-                    pos.y + kOy);
-        } else if (i->cur_frame > 1) {
-          auto pos = Ftoi(i->pos);
-          pos.x += kOx;
-          pos.y += kOy;
-          if (scratch_bmp.clip_rect.Encloses(pos)) {
-            scratch_bmp.SetPixel(pos.x, pos.y, static_cast<PalIdx>(i->cur_frame));
-          }
-        }
-      }
+      DrawDashedLineBox(scratch_bmp, game.holdazone.rect.x1 + kOx, game.holdazone.rect.y1 + kOy,
+                        kColor, contender_color, game.holdazone.contender_frames,
+                        Settings::kZoneCaptureTime, game.holdazone.rect.Width(),
+                        game.holdazone.rect.Height(), game.cycles / 10);
     }
 
     for (std::size_t i = 0; i < game.worms.size(); ++i) {
-      Worm const& w = *game.worms[i];
-      if (w.visible) {
-        int const kTempX = Ftoi(w.pos.x) - 7 + kOx;
-        int const kTempY = Ftoi(w.pos.y) - 5 + kOy;
-        if (kTempX + 16 < 0 || kTempX >= kScrW || kTempY + 16 < 0 || kTempY >= kScrH) {
-          continue;
-        }
-        int const kAngleFrame = w.AngleFrame();
-        if (w.weapons[w.current_weapon].Available()) {
-          int const kHotspotX = w.hotspot_x + kOx;
-          int const kHotspotY = w.hotspot_y + kOy;
-          WormWeapon const& ww = w.weapons[w.current_weapon];
-          Weapon const& weapon = *ww.type;
-          if (weapon.laser_sight) {
-            DrawLaserSight(scratch_bmp, rand, kHotspotX, kHotspotY, kTempX + 7, kTempY + 4);
-          }
-          if (ww.type - common.weapons.data() == LC(LaserWeapon) - 1 && w.Pressed(Worm::kFire)) {
-            DrawLine(scratch_bmp, kHotspotX, kHotspotY, kTempX + 7, kTempY + 4,
-                     weapon.color_bullets);
-          }
-        }
-        if (w.ninjarope.out) {
-          int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOx;
-          int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOy;
-          DrawNinjarope(common, scratch_bmp, kNinjaropeX, kNinjaropeY, kTempX + 7, kTempY + 4);
-          BlitImage(scratch_bmp, common.large_sprites[84], kNinjaropeX - 1, kNinjaropeY - 1);
-        }
-        if (w.weapons[w.current_weapon].type->fire_cone > 0 && w.fire_cone > 0) {
-          BlitFireCone(scratch_bmp, w.fire_cone / 2,
-                       common.FireConeSprite(kAngleFrame, w.direction),
-                       Common::fire_cone_offset[w.direction][kAngleFrame][0] + kTempX,
-                       Common::fire_cone_offset[w.direction][kAngleFrame][1] + kTempY);
-        }
-        BlitImage(scratch_bmp, common.WormSpriteObj(w.current_frame, w.direction, w.index), kTempX,
-                  kTempY);
-      }
-      if (w.ai) {
-        w.ai->DrawDebug(game, w, renderer, kOx, kOy);
-      }
-    }
-
-    for (auto& i : game.worms) {
-      Worm const& worm = *i;
-      if (worm.visible) {
-        auto temp = Ftoi(worm.pos) - IVec2(1, 2) + Ftoi(cossin_table[Ftoi(worm.aiming_angle)] * 16);
-        temp.x += kOx;
-        temp.y += kOy;
-        if (temp.x + 7 < 0 || temp.x >= kScrW || temp.y + 7 < 0 || temp.y >= kScrH) {
-          continue;
-        }
-        BlitImage(scratch_bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x,
-                  temp.y);
-        if (worm.Pressed(Worm::kChange)) {
-          std::string const& name = worm.weapons[worm.current_weapon].type->name;
-          int const kLen = static_cast<int>(name.size()) * 4;
-          common.DrawTextSmall(scratch_bmp, name.c_str(), Ftoi(worm.pos.x) - kLen / 2 + 1 + kOx,
-                               Ftoi(worm.pos.y) - 10 + kOy);
+      Worm const& worm = *game.worms[i];
+      if (!worm.visible && worm.killed_timer <= 0 && !worm.ready) {
+        if (game.settings->allow_viewing_spawn_point && worm.Pressed(Worm::kChange)) {
+          int const kTempX = Ftoi(worm.pos.x) - 7 + kOx;
+          int const kTempY = Ftoi(worm.pos.y) - 5 + kOy;
+          BlitImageTrans(scratch_bmp,
+                         common.WormSpriteObj(worm.current_frame, worm.direction, worm.index),
+                         kTempX, kTempY, game.cycles);
         }
       }
     }
 
-    for (Game::BObjectList::Iterator i = game.bobjects.Begin(); i != game.bobjects.End(); ++i) {
-      auto ipos = Ftoi(i->pos);
-      ipos.x += kOx;
-      ipos.y += kOy;
-      if (scratch_bmp.clip_rect.Encloses(ipos)) {
-        scratch_bmp.SetPixel(ipos.x, ipos.y, static_cast<PalIdx>(i->color));
+    // Pass 1: all shadows before any sprite.
+    if (game.settings->shadow) {
+      ZoneScopedN("Spectator::WorldPass::ShadowPass");
+      {
+        auto br = game.bonuses.All();
+        for (Bonus const* i = nullptr; (i = br.Next());) {
+          int const kBx = Ftoi(i->x) - 3 + kOx;
+          int const kBy = Ftoi(i->y) - 3 + kOy;
+          if (kBx + 7 < 0 || kBx >= kScrW || kBy + 7 < 0 || kBy >= kScrH) {
+            continue;
+          }
+          if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
+            int const kF = common.bonus_frames[i->frame];
+            BlitShadowImage(kShadow, scratch_bmp, common.small_sprites.SpritePtr(kF),
+                            Ftoi(i->x) - 5 + kOx, Ftoi(i->y) - 1 + kOy, 7, 7);
+          }
+        }
+      }
+
+      {
+        auto sr = game.sobjects.All();
+        for (SObject const* i = nullptr; (i = sr.Next());) {
+          int const kSx = i->x + kOx;
+          int const kSy = i->y + kOy;
+          if (kSx + 16 < 0 || kSx >= kScrW || kSy + 16 < 0 || kSy >= kScrH) {
+            continue;
+          }
+          SObjectType const& t = common.sobject_types[i->id];
+          int const kFrame = i->cur_frame + t.start_frame;
+          BlitShadowImage(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame),
+                          i->x + kOx - 3, i->y + kOy + 3, 16, 16);
+        }
+      }
+
+      {
+        auto wr = game.wobjects.All();
+        for (WObject const* i = nullptr; (i = wr.Next());) {
+          int const kWx = Ftoi(i->pos.x) - 3 + kOx;
+          int const kWy = Ftoi(i->pos.y) - 3 + kOy;
+          if (kWx + 7 < 0 || kWx >= kScrW || kWy + 7 < 0 || kWy >= kScrH) {
+            continue;
+          }
+          Weapon const& w = *i->type;
+          if (w.start_frame > -1) {
+            int cur_frame = i->cur_frame;
+            int const kShotType = w.shot_type;
+            if (kShotType == 2) {
+              cur_frame += 4;
+              cur_frame >>= 3;
+              if (cur_frame < 0) {
+                cur_frame = 16;
+              } else if (cur_frame > 15) {
+                cur_frame -= 16;
+              }
+            } else if (kShotType == 3) {
+              if (cur_frame > 64) {
+                --cur_frame;
+              }
+              cur_frame -= 12;
+              cur_frame >>= 3;
+              if (cur_frame < 0) {
+                cur_frame = 0;
+              } else if (cur_frame > 12) {
+                cur_frame = 12;
+              }
+            }
+            int const kPosX = Ftoi(i->pos.x) - 3;
+            int const kPosY = Ftoi(i->pos.y) - 3;
+            if (w.shadow) {
+              BlitShadowImage(kShadow, scratch_bmp,
+                              common.small_sprites.SpritePtr(w.start_frame + cur_frame),
+                              kPosX - 3 + kOx, kPosY + 3 + kOy, 7, 7);
+            }
+          } else if (i->cur_frame > 0) {
+            int const kPosX = Ftoi(i->pos.x) + kOx - 3;
+            int const kPosY = Ftoi(i->pos.y) + kOy + 3;
+            uint32_t const kShadowed = kShadow.ShadowedArgb(kPosX, kPosY);
+            if (kShadowed != 0 && scratch_bmp.clip_rect.Inside(kPosX, kPosY)) {
+              scratch_bmp.GetPixel(kPosX, kPosY) = kShadowed;
+            }
+          }
+        }
+      }
+
+      {
+        auto nr = game.nobjects.All();
+        for (NObject const* i = nullptr; (i = nr.Next());) {
+          int const kNx = Ftoi(i->pos.x) - 3 + kOx;
+          int const kNy = Ftoi(i->pos.y) - 3 + kOy;
+          if (kNx + 7 < 0 || kNx >= kScrW || kNy + 7 < 0 || kNy >= kScrH) {
+            continue;
+          }
+          NObjectType const& t = *i->type;
+          if (t.start_frame > 0) {
+            auto pos = Ftoi(i->pos) - IVec2(3, 3);
+            BlitShadowImage(kShadow, scratch_bmp,
+                            common.small_sprites.SpritePtr(t.start_frame + i->cur_frame),
+                            pos.x - 3 + kOx, pos.y + 3 + kOy, 7, 7);
+          } else if (i->cur_frame > 1) {
+            auto pos = Ftoi(i->pos);
+            pos.x += kOx - 3;
+            pos.y += kOy + 3;
+            if (scratch_bmp.clip_rect.Encloses(pos)) {
+              uint32_t const kShadowed = kShadow.ShadowedArgb(pos.x, pos.y);
+              if (kShadowed != 0) {
+                scratch_bmp.GetPixel(pos.x, pos.y) = kShadowed;
+              }
+            }
+          }
+        }
+      }
+
+      for (auto const& worm_ptr : game.worms) {
+        Worm const& w = *worm_ptr;
+        if (w.visible) {
+          int const kTempX = Ftoi(w.pos.x) - 7 + kOx;
+          int const kTempY = Ftoi(w.pos.y) - 5 + kOy;
+          if (kTempX + 16 < 0 || kTempX >= kScrW || kTempY + 16 < 0 || kTempY >= kScrH) {
+            continue;
+          }
+          if (w.ninjarope.out) {
+            int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOx;
+            int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOy;
+            DrawShadowLine(kShadow, scratch_bmp, kNinjaropeX - 3, kNinjaropeY + 3, kTempX + 7 - 3,
+                           kTempY + 4 + 3);
+            BlitShadowImage(kShadow, scratch_bmp, common.large_sprites.SpritePtr(84),
+                            kNinjaropeX - 4, kNinjaropeY + 2, 16, 16);
+          }
+          BlitShadowImage(kShadow, scratch_bmp,
+                          common.WormSprite(w.current_frame, w.direction, w.index), kTempX - 3,
+                          kTempY + 3, 16, 16);
+        }
+      }
+
+      for (Game::BObjectList::Iterator i = game.bobjects.Begin(); i != game.bobjects.End(); ++i) {
+        auto ipos = Ftoi(i->pos);
+        ipos.x += kOx - 3;
+        ipos.y += kOy + 3;
+        if (scratch_bmp.clip_rect.Encloses(ipos)) {
+          uint32_t const kShadowed = kShadow.ShadowedArgb(ipos.x, ipos.y);
+          if (kShadowed != 0) {
+            scratch_bmp.GetPixel(ipos.x, ipos.y) = kShadowed;
+          }
+        }
       }
     }
-  }  // end SpritePass zone
+
+    // Pass 2: all sprites on top of the fully-composited shadow layer.
+    {
+      ZoneScopedN("Spectator::WorldPass::SpritePass");
+      {
+        auto br = game.bonuses.All();
+        for (Bonus const* i = nullptr; (i = br.Next());) {
+          int const kBx = Ftoi(i->x) - 3 + kOx;
+          int const kBy = Ftoi(i->y) - 3 + kOy;
+          if (kBx + 7 < 0 || kBx >= kScrW || kBy + 7 < 0 || kBy >= kScrH) {
+            continue;
+          }
+          if (i->timer > LC(BonusFlickerTime) || (game.cycles & 3) == 0) {
+            int const kF = common.bonus_frames[i->frame];
+            BlitImage(scratch_bmp, common.small_sprites[kF], kBx, kBy);
+            if (game.settings->names_on_bonuses && i->frame == 0) {
+              std::string const& name = common.weapons[i->weapon].name;
+              int const kLen = static_cast<int>(name.size()) * 4;
+              common.DrawTextSmall(scratch_bmp, name.c_str(), Ftoi(i->x) - kLen / 2 + kOx,
+                                   Ftoi(i->y) - 10 + kOy);
+            }
+          }
+        }
+      }
+
+      {
+        auto sr = game.sobjects.All();
+        for (SObject const* i = nullptr; (i = sr.Next());) {
+          int const kSx = i->x + kOx;
+          int const kSy = i->y + kOy;
+          if (kSx + 16 < 0 || kSx >= kScrW || kSy + 16 < 0 || kSy >= kScrH) {
+            continue;
+          }
+          SObjectType const& t = common.sobject_types[i->id];
+          int const kFrame = i->cur_frame + t.start_frame;
+          BlitImageR(kShadow, scratch_bmp, common.large_sprites.SpritePtr(kFrame), kSx, kSy, 16,
+                     16);
+        }
+      }
+
+      {
+        auto wr = game.wobjects.All();
+        for (WObject* i = nullptr; (i = wr.Next());) {
+          int const kWx = Ftoi(i->pos.x) - 3 + kOx;
+          int const kWy = Ftoi(i->pos.y) - 3 + kOy;
+          if (kWx + 7 < 0 || kWx >= kScrW || kWy + 7 < 0 || kWy >= kScrH) {
+            continue;
+          }
+          Weapon const& w = *i->type;
+          if (w.start_frame > -1) {
+            int cur_frame = i->cur_frame;
+            int const kShotType = w.shot_type;
+            if (kShotType == 2) {
+              cur_frame += 4;
+              cur_frame >>= 3;
+              if (cur_frame < 0) {
+                cur_frame = 16;
+              } else if (cur_frame > 15) {
+                cur_frame -= 16;
+              }
+            } else if (kShotType == 3) {
+              if (cur_frame > 64) {
+                --cur_frame;
+              }
+              cur_frame -= 12;
+              cur_frame >>= 3;
+              if (cur_frame < 0) {
+                cur_frame = 0;
+              } else if (cur_frame > 12) {
+                cur_frame = 12;
+              }
+            }
+            int const kPosX = Ftoi(i->pos.x) - 3;
+            int const kPosY = Ftoi(i->pos.y) - 3;
+            BlitImage(scratch_bmp, common.small_sprites[w.start_frame + cur_frame], kPosX + kOx,
+                      kPosY + kOy);
+          } else if (i->cur_frame > 0) {
+            int const kPosX = Ftoi(i->pos.x) + kOx;
+            int const kPosY = Ftoi(i->pos.y) + kOy;
+            scratch_bmp.SetPixel(kPosX, kPosY, static_cast<PalIdx>(i->cur_frame));
+          }
+          if (!common.h[HRemExp] && i->type - common.weapons.data() == 34 &&
+              game.settings->names_on_bonuses) {
+            if (i->cur_frame == 0) {
+              int const kNameNum = static_cast<int>(&*i - game.wobjects.arr) %
+                                   static_cast<int>(common.weapons.size());
+              std::string const& name = common.weapons[kNameNum].name;
+              int const kWidth = static_cast<int>(name.size()) * 4;
+              common.DrawTextSmall(scratch_bmp, name.c_str(), Ftoi(i->pos.x) - kWidth / 2 + kOx,
+                                   Ftoi(i->pos.y) - 10 + kOy);
+            }
+          }
+        }
+      }
+
+      {
+        auto nr = game.nobjects.All();
+        for (NObject const* i = nullptr; (i = nr.Next());) {
+          int const kNx = Ftoi(i->pos.x) - 3 + kOx;
+          int const kNy = Ftoi(i->pos.y) - 3 + kOy;
+          if (kNx + 7 < 0 || kNx >= kScrW || kNy + 7 < 0 || kNy >= kScrH) {
+            continue;
+          }
+          NObjectType const& t = *i->type;
+          if (t.start_frame > 0) {
+            auto pos = Ftoi(i->pos) - IVec2(3, 3);
+            BlitImage(scratch_bmp, common.small_sprites[t.start_frame + i->cur_frame], pos.x + kOx,
+                      pos.y + kOy);
+          } else if (i->cur_frame > 1) {
+            auto pos = Ftoi(i->pos);
+            pos.x += kOx;
+            pos.y += kOy;
+            if (scratch_bmp.clip_rect.Encloses(pos)) {
+              scratch_bmp.SetPixel(pos.x, pos.y, static_cast<PalIdx>(i->cur_frame));
+            }
+          }
+        }
+      }
+
+      for (std::size_t i = 0; i < game.worms.size(); ++i) {
+        Worm const& w = *game.worms[i];
+        if (w.visible) {
+          int const kTempX = Ftoi(w.pos.x) - 7 + kOx;
+          int const kTempY = Ftoi(w.pos.y) - 5 + kOy;
+          if (kTempX + 16 < 0 || kTempX >= kScrW || kTempY + 16 < 0 || kTempY >= kScrH) {
+            continue;
+          }
+          int const kAngleFrame = w.AngleFrame();
+          if (w.weapons[w.current_weapon].Available()) {
+            int const kHotspotX = w.hotspot_x + kOx;
+            int const kHotspotY = w.hotspot_y + kOy;
+            WormWeapon const& ww = w.weapons[w.current_weapon];
+            Weapon const& weapon = *ww.type;
+            if (weapon.laser_sight) {
+              DrawLaserSight(scratch_bmp, rand, kHotspotX, kHotspotY, kTempX + 7, kTempY + 4);
+            }
+            if (ww.type - common.weapons.data() == LC(LaserWeapon) - 1 && w.Pressed(Worm::kFire)) {
+              DrawLine(scratch_bmp, kHotspotX, kHotspotY, kTempX + 7, kTempY + 4,
+                       weapon.color_bullets);
+            }
+          }
+          if (w.ninjarope.out) {
+            int const kNinjaropeX = Ftoi(w.ninjarope.pos.x) + kOx;
+            int const kNinjaropeY = Ftoi(w.ninjarope.pos.y) + kOy;
+            DrawNinjarope(common, scratch_bmp, kNinjaropeX, kNinjaropeY, kTempX + 7, kTempY + 4);
+            BlitImage(scratch_bmp, common.large_sprites[84], kNinjaropeX - 1, kNinjaropeY - 1);
+          }
+          if (w.weapons[w.current_weapon].type->fire_cone > 0 && w.fire_cone > 0) {
+            BlitFireCone(scratch_bmp, w.fire_cone / 2,
+                         common.FireConeSprite(kAngleFrame, w.direction),
+                         Common::fire_cone_offset[w.direction][kAngleFrame][0] + kTempX,
+                         Common::fire_cone_offset[w.direction][kAngleFrame][1] + kTempY);
+          }
+          BlitImage(scratch_bmp, common.WormSpriteObj(w.current_frame, w.direction, w.index),
+                    kTempX, kTempY);
+        }
+        if (w.ai) {
+          w.ai->DrawDebug(game, w, renderer, kOx, kOy);
+        }
+      }
+
+      for (auto& i : game.worms) {
+        Worm const& worm = *i;
+        if (worm.visible) {
+          auto temp =
+              Ftoi(worm.pos) - IVec2(1, 2) + Ftoi(cossin_table[Ftoi(worm.aiming_angle)] * 16);
+          temp.x += kOx;
+          temp.y += kOy;
+          if (temp.x + 7 < 0 || temp.x >= kScrW || temp.y + 7 < 0 || temp.y >= kScrH) {
+            continue;
+          }
+          BlitImage(scratch_bmp, common.small_sprites[worm.make_sight_green ? 44 : 43], temp.x,
+                    temp.y);
+          if (worm.Pressed(Worm::kChange)) {
+            std::string const& name = worm.weapons[worm.current_weapon].type->name;
+            int const kLen = static_cast<int>(name.size()) * 4;
+            common.DrawTextSmall(scratch_bmp, name.c_str(), Ftoi(worm.pos.x) - kLen / 2 + 1 + kOx,
+                                 Ftoi(worm.pos.y) - 10 + kOy);
+          }
+        }
+      }
+
+      for (Game::BObjectList::Iterator i = game.bobjects.Begin(); i != game.bobjects.End(); ++i) {
+        auto ipos = Ftoi(i->pos);
+        ipos.x += kOx;
+        ipos.y += kOy;
+        if (scratch_bmp.clip_rect.Encloses(ipos)) {
+          scratch_bmp.SetPixel(ipos.x, ipos.y, static_cast<PalIdx>(i->color));
+        }
+      }
+    }  // end SpritePass zone
+  }  // end 1:1 world pass
 
   // ── Composite scratch → renderer ─────────────────────────────────────────
   // Centred output rect that preserves the level's aspect ratio; any remaining
-  // bars are filled black. Shared by the CPU and GPU composite paths.
-  SpectatorDstRect const kDst = ComputeSpectatorDstRect(render_w, render_h, kScrW, kScrH, zoom);
+  // bars are filled black. The dst rect is computed from the visible region at
+  // 1:1 (kViewW/kViewH) so it is independent of the scratch's render scale;
+  // shared by the CPU and GPU composite paths.
+  SpectatorDstRect const kDst = ComputeSpectatorDstRect(render_w, render_h, kViewW, kViewH, zoom);
 
   if (renderer.gpu_world_composite) {
-    // GPU path (PR7 Task 1b): hand the 1:1 world pass to Gfx, which uploads the
-    // used sub-rect to a streaming texture and scales it on the GPU
+    // GPU path (PR7 Task 1b): hand the world pass to Gfx, which uploads the used
+    // sub-rect to a streaming texture and scales it on the GPU
     // (SDL_RenderTexture), deleting the ~38 ms CPU box-filter. `bmp` becomes a
-    // transparent HUD-only overlay (Task 1c) blended on top of the world.
+    // transparent HUD-only overlay (Task 1c) blended on top of the world. The
+    // scratch is now bounded by the window, so the texture is sized to the
+    // render surface rather than the level.
     ZoneScopedN("Spectator::Composite::GpuHandoff");
-    WorldTextureSize const kTex = SpectatorWorldTextureSize(game.level.width, game.level.height);
     renderer.gpu_world_src = &scratch_bmp;
-    renderer.gpu_world_used_w = kScrW;
-    renderer.gpu_world_used_h = kScrH;
-    renderer.gpu_world_max_w = kTex.w;
-    renderer.gpu_world_max_h = kTex.h;
+    renderer.gpu_world_used_w = kWp.w;
+    renderer.gpu_world_used_h = kWp.h;
+    renderer.gpu_world_max_w = render_w;
+    renderer.gpu_world_max_h = render_h;
     renderer.gpu_world_dst_x = kDst.x;
     renderer.gpu_world_dst_y = kDst.y;
     renderer.gpu_world_dst_w = kDst.w;
@@ -536,18 +685,18 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     uint32_t* const kDest = renderer.bmp.pixels +
                             static_cast<std::size_t>(kDst.y) * renderer.bmp.pitch +
                             static_cast<std::size_t>(kDst.x);
-    if (kScrW == kDst.w && kScrH == kDst.h) {
+    if (kWp.w == kDst.w && kWp.h == kDst.h) {
       // BlitBitmap reads from src at position (x,y), not (0,0) — wrong for a
       // scratch bitmap whose content always starts at (0,0). Copy row-by-row.
       uint32_t const* src_row = scratch_bmp.pixels;
       uint32_t* dst_row = kDest;
-      for (int row = 0; row < kScrH; ++row) {
-        std::memcpy(dst_row, src_row, sizeof(uint32_t) * static_cast<std::size_t>(kScrW));
+      for (int row = 0; row < kWp.h; ++row) {
+        std::memcpy(dst_row, src_row, sizeof(uint32_t) * static_cast<std::size_t>(kWp.w));
         dst_row += renderer.bmp.pitch;
         src_row += scratch_bmp.pitch;
       }
     } else {
-      ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, kDest, kDst.w, kDst.h,
+      ScaleDrawArea(scratch_bmp.pixels, kWp.w, kWp.h, scratch_bmp.pitch, kDest, kDst.w, kDst.h,
                     renderer.bmp.pitch);
     }
   }  // end Composite zone

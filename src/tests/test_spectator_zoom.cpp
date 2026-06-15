@@ -68,26 +68,6 @@ TEST_CASE("spectator zoom shows the whole level when a large level's worms are f
   CHECK(kZoom < 1.0F);
 }
 
-TEST_CASE("spectator world texture clamps level dims to the ceiling", "[spectator][composite]") {
-  // The world texture is allocated once at the level size so the per-frame
-  // upload only ever writes a sub-rect. On a level at or below the ceiling the
-  // dims pass straight through; past the ceiling they clamp so GPU memory stays
-  // bounded (terrain is capped at the same ceiling).
-  WorldTextureSize const kSmall = SpectatorWorldTextureSize(504, 350);
-  CHECK(kSmall.w == 504);
-  CHECK(kSmall.h == 350);
-
-  WorldTextureSize const kAtCeiling =
-      SpectatorWorldTextureSize(kSpectatorWorldTextureMax, kSpectatorWorldTextureMax);
-  CHECK(kAtCeiling.w == kSpectatorWorldTextureMax);
-  CHECK(kAtCeiling.h == kSpectatorWorldTextureMax);
-
-  WorldTextureSize const kOversized =
-      SpectatorWorldTextureSize(kSpectatorWorldTextureMax + 1000, kSpectatorWorldTextureMax + 1);
-  CHECK(kOversized.w == kSpectatorWorldTextureMax);
-  CHECK(kOversized.h == kSpectatorWorldTextureMax);
-}
-
 TEST_CASE("spectator composite dest rect fills the window at zoom 1", "[spectator][composite]") {
   // Scratch exactly the render size, zoom 1 → no scaling, no letterbox bars.
   SpectatorDstRect const kDst = ComputeSpectatorDstRect(1280, 800, 1280, 800, 1.0F);
@@ -128,8 +108,7 @@ TEST_CASE("world pass renders 1:1 when not zoomed out", "[spectator][worldpass]"
   CHECK(kP.h == 350);
 }
 
-TEST_CASE("world pass downscales to output resolution when zoomed out",
-          "[spectator][worldpass]") {
+TEST_CASE("world pass downscales to output resolution when zoomed out", "[spectator][worldpass]") {
   // 4096^2 level, 1280x800 window, worms apart -> zoom ~0.195. The 1:1 scratch
   // would be the whole 4096^2 (~16.7 Mpx); the downscaled pass renders at
   // ~output resolution instead, bounding cost by the window.
