@@ -161,7 +161,7 @@ Delivered on branch `arbitrary-map-sizes-pr4`:
 - **Validate**: render a replay at 1280×720 and 1920×1080, spectator + normal
   mode; confirm output dimensions and no scaler mismatch.
 
-### PR 6 — Rollback snapshot optimization: dirty-cell tracking for large levels
+### PR 6 — Rollback snapshot optimization: dirty-cell tracking for large levels — **DONE** ([#108](https://github.com/openliero/openliero/pull/108))
 
 Online play on large maps (e.g. 4096×4096) is slow because `SaveSnapshotFast`
 memcpys ~48 MB per rollback frame (material_id + material flags + display_valid),
@@ -432,6 +432,6 @@ scripts/clang-format-diff.sh && scripts/clang-tidy-diff.sh build/linux-x64
 - [x] PR3: random map size editable in MATCH SETUP; config v5; defaults reproduce 504×350.
 - [x] PR4: spectator auto-zooms to keep both worms visible; 1× on small maps unchanged; minimap scales correctly; weapon-select spectator view correct at all sizes; native-resolution spectator window.
 - [x] PR5: videotool output resolution selectable; scaler input dynamic.
-- [ ] PR6: online play on 4096² level no longer noticeably slower than local play; rollback tests green.
+- [x] PR6: online play on 4096² level no longer noticeably slower than local play; rollback tests green.
 - [ ] PR7: spectator viewport frame time within budget at ≥1280×800 with worms at maximum separation on a 4096² level.
 - [ ] Determinism/rollback suites + format checks pass on every PR.
