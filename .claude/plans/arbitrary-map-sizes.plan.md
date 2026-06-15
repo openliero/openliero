@@ -370,12 +370,45 @@ GPU composite makes that moot. **Not pursued.**
      `bmp` via `ScaleDrawArea`; `test_blit` unchanged (83 assertions, green).
      Note: videotool is off by default (needs system ffmpeg) so it wasn't
      rebuilt; its `ScaleDrawArea` caller is untouched.
-   - **1f. Profile to confirm. — PENDING (needs a real display).** Re-measure
-     with Tracy at 1280×800 and 1920×1080 on the 4096² level: composite zone
-     should drop to ~0; capture the new texture-upload cost; verify total
-     `SpectatorViewport::Draw` + `Gfx::Flip` is within the 14 ms budget. Cannot be
-     run in the headless dev environment — the GPU path is guarded off under the
-     dummy driver. Hand to a display-capable machine.
+   - **1f. Profile to confirm. — DONE (2026-06-15, on real hardware).** Tracy on
+     the 4096² level, worms at max separation:
+     - GPU composite alone (`cc0ae79`): the ~38 ms CPU composite zone dropped to
+       ~0, but the 1:1 world pass + 64 MB texture upload remained → **~34 ms**
+       total at 1280×800 (`local:draw` 21 ms incl. `DrawLevel` 5.9 ms; `Gfx::Flip`
+       11 ms incl. the upload). Over budget.
+     - Downscaled world pass (`e0a0d6c`, see 1g): **~20 ms** at 3440×1440 (4.95 Mpx
+       window) at max zoom-out. The world pass and its upload are now bounded by
+       the window, not the level; the residual is dominated by the two
+       full-window texture uploads (world + HUD overlay) + present, which scale
+       with window pixels.
+     - **Outcome:** a large improvement (≈34→20 ms) but **still above the 14 ms
+       budget at very large windows**. Accepted for now per playtest. Further
+       gains would come from shrinking/scoping the per-frame uploads (HUD
+       dirty-region upload, or capping the spectator render resolution
+       independently of window size) — tracked as a follow-on, not blocking.
+   - **1g. Downscaled world pass. — DONE (2026-06-15, `e0a0d6c`).** Render the
+     world pass at ~output resolution when `zoom < 1` instead of 1:1, so its CPU
+     cost and texture upload are bounded by the window rather than the level
+     area. `ComputeWorldPassScratch` (unit-tested) gives `scale = min(1, zoom)`
+     and a scratch ≤ the render surface; new `DrawLevelScaled` / `BlitImageScaled`
+     (nearest-neighbour) render terrain and sprites scaled down. `zoom ≥ 1` keeps
+     the existing 1:1 path byte-for-byte (no change for small maps). The
+     downscaled path draws the visually-significant world (terrain, worms +
+     ninjarope, bonuses, s/w/n-objects, blood) and **omits** detail that is
+     sub-pixel/illegible at that zoom (shadows, text labels, fire cones, laser
+     sight, aim crosshair, AI debug). The world texture is now window-bounded, so
+     `SpectatorWorldTextureSize`/the 4096 ceiling were removed.
+   - **1h. Spectator presentation bug fixes (found on real hardware).**
+     - **Pause crash / blank (`703af23`).** `MainMenuState::Enter` calls `Flip()`
+       directly (outside `RunOneFrame`), so a stale `gpu_world_src` from the last
+       gameplay frame drove `DrawSpectatorGpu` against the just-resized menu
+       layout → heap overread. Fixed by making `gpu_world_src` a strict one-shot
+       (gated on, and cleared by, every Flip); non-gameplay frames fall back to
+       the CPU present.
+     - **Black spectator at start / pause until resize (`4f7a187`).** The GPU
+       fade `SDL_SetTextureColorMod` leaked onto the shared `sdl_spectator_texture`
+       (at fade 0 → multiply-by-black); the CPU present path never reset it.
+       Fixed by restoring neutral colormod after each GPU present.
 
 2. **Frustum-cull the sprite and shadow passes.** — **DONE** (`bd8cb77`, PR7 Task 2)
    Every worm, wobject, nobject, bonus, and sobject now gets a cheap AABB check
@@ -446,5 +479,9 @@ scripts/clang-format-diff.sh && scripts/clang-tidy-diff.sh build/linux-x64
 - [x] PR4: spectator auto-zooms to keep both worms visible; 1× on small maps unchanged; minimap scales correctly; weapon-select spectator view correct at all sizes; native-resolution spectator window.
 - [x] PR5: videotool output resolution selectable; scaler input dynamic.
 - [x] PR6: online play on 4096² level no longer noticeably slower than local play; rollback tests green.
-- [ ] PR7: spectator viewport frame time within budget at ≥1280×800 with worms at maximum separation on a 4096² level.
+- [~] PR7: spectator frame time greatly improved (≈34→20 ms) via GPU composite +
+  downscaled world pass; pause/start spectator bugs fixed. **Not strictly within
+  the 14 ms budget** at very large windows (≈20 ms at 3440×1440, max zoom-out) —
+  the residual is the two full-window texture uploads, accepted for now. Frustum
+  cull (Task 2) done; Tasks 3/4 (SIMD, min-zoom cap) left as optional follow-ons.
 - [ ] Determinism/rollback suites + format checks pass on every PR.
