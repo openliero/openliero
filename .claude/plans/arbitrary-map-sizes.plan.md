@@ -311,13 +311,29 @@ GPU composite makes that moot. **Not pursued.**
    (`Draw`/`Flip`/`OnWindowResize` + new texture members in `gfx.hpp`),
    `src/tests/test_spectator_zoom.cpp`. Sub-steps:
 
-   - **1a. Spike the SDL scaling path first.** The spectator renderer already runs
-     `SDL_SetRenderLogicalPresentation(w,h,LETTERBOX)` (gfx.cpp:407), which remaps
-     all render coordinates. Confirm whether a manual letterboxed `SDL_RenderTexture`
-     dest rect cooperates with that, or whether the spectator renderer must drop
-     logical presentation and compute the dest rect explicitly (via `FitScreen`-style
-     aspect math). Resolve this before building the rest — it dictates the dest-rect
-     math everywhere below.
+   - **1a. Spike the SDL scaling path first. — RESOLVED (2026-06-15): keep logical
+     presentation; manual dest rect cooperates.** The spectator renderer runs
+     `SDL_SetRenderLogicalPresentation(w,h,LETTERBOX)` (gfx.cpp:407). The question was
+     whether a manual letterboxed `SDL_RenderTexture` dest rect cooperates with that
+     or whether logical presentation must be dropped.
+     **Finding (empirical):** an SDL3 software-renderer spike replicating the
+     spectator setup (logical size == window pixel size, LETTERBOX) blitted a world
+     texture into a manually-computed centred dest rect and read pixels back: the
+     readback framebuffer is the logical size (1280×800), the world colour lands
+     pixel-exactly inside the manual dest rect, and `SDL_RenderClear` produces exact
+     black bars outside it. Because the logical size **equals** the window pixel size,
+     the logical→physical transform is uniform (identity modulo HiDPI), so there is
+     **no double-letterboxing**.
+     **Decision for 1b/1c:** keep `SDL_SetRenderLogicalPresentation(w,h,LETTERBOX)`
+     untouched; render coordinates are then in logical == window pixels. Reuse the
+     existing CPU-composite aspect math (`kOutX/kOutY/kOutW/kOutH`,
+     spectatorviewport.cpp:496-501) directly as the `SDL_RenderTexture` dstrect (as
+     `SDL_FRect`); `SDL_RenderClear` the spectator renderer to opaque black for the
+     bars before the world blit. No `FitScreen`-style manual letterbox is needed.
+     The "allocate world texture once at max size, upload only the used sub-rect, pass
+     that sub-rect as `srcrect`" approach (1b) is orthogonal to logical presentation
+     (standard `SDL_RenderTexture` srcrect semantics) and is low-risk — not separately
+     spiked. (Spike source kept out-of-tree under `/tmp/sdl_spike_1a.cpp`; not committed.)
    - **1b. World texture.** Add `sdl_spectator_world_texture` (STREAMING, ARGB8888).
      Allocate it **once at max size** — level dims clamped to a ceiling — in
      `OnWindowResize`/`SetVideoMode`, NOT per frame (scratch dims change with zoom).
@@ -404,7 +420,7 @@ scripts/clang-format-diff.sh && scripts/clang-tidy-diff.sh build/linux-x64
 | Determinism regressions from PR1/PR3 sim touch | Medium | `test_determinism`/`test_rollback_*` on every PR |
 | Rollback snapshot too large for online play on big maps | High (4096²) | PR6 — dirty-cell tracking; PR2 already fixed correctness |
 | Spectator world-pass cost O((W×H)/zoom²) on large native windows | High | PR7 — GPU-scale world pass; frustum cull sprites |
-| PR7-1a: `SDL_SetRenderLogicalPresentation(LETTERBOX)` conflicts with manual dest-rect scaling | Medium | Spike (Task 1a) before building 1b/1c; fall back to explicit dest rect + no logical presentation |
+| PR7-1a: `SDL_SetRenderLogicalPresentation(LETTERBOX)` conflicts with manual dest-rect scaling | ~~Medium~~ **Resolved** | Spike (Task 1a, 2026-06-15) proved no conflict: logical size == window pixels ⇒ uniform transform, manual dest rect lands pixel-exact. Keep logical presentation. |
 | PR7-1b: per-frame world-texture upload (≤16 MB+, grows with scratch) becomes the new cost | Medium | Still ≪ 38 ms; cap world-texture max size; measure in Task 1f |
 | PR7-1c: HUD transparency/blend regressions (today's clear is opaque black) | Low | Clear HUD buffer to alpha 0; visual check; HUD is small |
 | PR7-1d: GPU path crashes/no-ops under dummy driver (CI smoke) or in single-screen-replay primary-renderer mode | Medium | Guard on live spectator renderer/window; keep `Gfx::Draw` CPU path for those modes |
