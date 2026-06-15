@@ -1102,6 +1102,15 @@ void Gfx::DrawSpectatorGpu(Renderer& renderer) {
   SDL_RenderTexture(sdl_spectator_renderer, sdl_spectator_world_texture, &kSrc, &kDst);
   SDL_RenderTexture(sdl_spectator_renderer, sdl_spectator_texture, nullptr, nullptr);
   SDL_RenderPresent(sdl_spectator_renderer);
+
+  // sdl_spectator_texture is shared with the CPU present path (menus, pause,
+  // weapon select), which applies fade itself via ScaleDraw and expects a
+  // neutral texture. Restore the modulation so this frame's fade value doesn't
+  // leak — at fade 0 it would otherwise leave the texture multiplying by black
+  // and the CPU path would render an all-black spectator window until a resize
+  // recreated the texture.
+  SDL_SetTextureColorMod(sdl_spectator_world_texture, 255, 255, 255);
+  SDL_SetTextureColorMod(sdl_spectator_texture, 255, 255, 255);
 }
 
 void Gfx::Flip() {
