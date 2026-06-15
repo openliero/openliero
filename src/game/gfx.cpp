@@ -1111,12 +1111,18 @@ void Gfx::Flip() {
   // is turned on
   Draw(*sdl_draw_surface, *sdl_texture, *sdl_renderer, *primary_renderer);
   if (settings->spectator_window) {
-    if (single_screen_renderer.gpu_world_composite && single_screen_renderer.gpu_world_src) {
+    // gpu_world_src is a strict one-shot: it is non-null only for the single
+    // Flip that immediately follows the SpectatorViewport::Draw which set it.
+    // Any other frame — a menu/pause/weapon-select frame, or a direct Flip()
+    // such as MainMenuState::Enter's — finds it null and presents bmp via the
+    // CPU path, so a stale handoff can never blit a freed/mismatched buffer.
+    if (single_screen_renderer.gpu_world_src) {
       DrawSpectatorGpu(single_screen_renderer);
     } else {
       Draw(*sdl_spectator_draw_surface, *sdl_spectator_texture, *sdl_spectator_renderer,
            single_screen_renderer);
     }
+    single_screen_renderer.gpu_world_src = nullptr;
   }
 
   static unsigned int const kDelay = 14U;
