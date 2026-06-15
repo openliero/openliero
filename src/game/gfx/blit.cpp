@@ -39,6 +39,8 @@ void Fill(Bitmap& scr, int color) {
   std::fill(scr.pixels, scr.pixels + scr.pitch * scr.h, scr.pal32[color]);
 }
 
+void FillTransparent(Bitmap& scr) { std::fill(scr.pixels, scr.pixels + scr.pitch * scr.h, 0U); }
+
 void DrawBar(Bitmap& scr, int x, int y, int width, int color) {
   DrawBar(scr, x, y, width, 2, color);
 }

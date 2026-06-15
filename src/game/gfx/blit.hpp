@@ -16,6 +16,11 @@ void Vline(Bitmap& scr, int x, int y1, int y2, int color);
 
 void FillRect(Bitmap& scr, int x, int y, int w, int h, int color);
 void Fill(Bitmap& scr, int color);
+// Clears `scr` to fully transparent (ARGB 0x00000000) rather than to a palette
+// colour. Used for the spectator HUD overlay layer (PR7 Task 1c), which must
+// blend over the GPU-scaled world: only the drawn HUD pixels (opaque pal32)
+// show, everything else is see-through.
+void FillTransparent(Bitmap& scr);
 void DrawBar(Bitmap& scr, int x, int y, int width, int color);
 void DrawBar(Bitmap& scr, int x, int y, int width, int height, int color);
 void DrawRoundedBox(Bitmap& scr, int x, int y, int color, int height, int width);

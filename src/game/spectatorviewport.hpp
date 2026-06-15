@@ -15,6 +15,30 @@ struct Renderer;
 float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, int level_w,
                            int level_h);
 
+// Ceiling applied to the once-allocated spectator world texture so GPU memory
+// stays bounded on very large levels. Terrain itself is capped at this size, so
+// a level can never need a larger scratch than this.
+inline constexpr int kSpectatorWorldTextureMax = 4096;
+
+// Dimensions of the spectator world texture (PR7 Task 1b): the level size
+// clamped to kSpectatorWorldTextureMax. Allocated once per level — the scratch
+// for any zoom is at most the level size, so the per-frame upload only ever
+// writes a sub-rect of this. Pure so it can be unit-tested.
+struct WorldTextureSize {
+  int w, h;
+};
+WorldTextureSize SpectatorWorldTextureSize(int level_w, int level_h);
+
+// Centred, letterboxed destination rect (in window/logical pixels) for the
+// spectator world composite: the scratch (scr_w×scr_h) scaled by `zoom`, capped
+// to the render surface so it never overhangs. Pure so the CPU composite and
+// the GPU composite share one source of truth and it can be unit-tested.
+struct SpectatorDstRect {
+  int x, y, w, h;
+};
+SpectatorDstRect ComputeSpectatorDstRect(int render_w, int render_h, int scr_w, int scr_h,
+                                         float zoom);
+
 struct SpectatorViewport : Viewport {
   explicit SpectatorViewport(Rect rect) : Viewport(rect, 0) {}
 

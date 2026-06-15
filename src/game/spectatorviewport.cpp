@@ -28,6 +28,20 @@ float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, i
   return std::clamp(std::min(kZoomX, kZoomY), kLevelFillZoom, kMaxZoom);
 }
 
+WorldTextureSize SpectatorWorldTextureSize(int level_w, int level_h) {
+  return {.w = std::min(level_w, kSpectatorWorldTextureMax),
+          .h = std::min(level_h, kSpectatorWorldTextureMax)};
+}
+
+SpectatorDstRect ComputeSpectatorDstRect(int render_w, int render_h, int scr_w, int scr_h,
+                                         float zoom) {
+  int const kOutW =
+      std::min(static_cast<int>(std::lroundf(static_cast<float>(scr_w) * zoom)), render_w);
+  int const kOutH =
+      std::min(static_cast<int>(std::lroundf(static_cast<float>(scr_h) * zoom)), render_h);
+  return {.x = (render_w - kOutW) / 2, .y = (render_h - kOutH) / 2, .w = kOutW, .h = kOutH};
+}
+
 void SpectatorViewport::Process(Game& game) {
   int const kRenderW = render_w;
   int const kRenderH = render_h;
@@ -489,25 +503,40 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   }  // end SpritePass zone
 
   // ── Composite scratch → renderer ─────────────────────────────────────────
-  {
-    ZoneScopedN("Spectator::Composite");
-    // Scale the scratch into a centred output rect that preserves the level's
-    // aspect ratio; any remaining bars are filled black.
-    int const kOutW =
-        std::min(static_cast<int>(std::lroundf(static_cast<float>(kScrW) * zoom)), render_w);
-    int const kOutH =
-        std::min(static_cast<int>(std::lroundf(static_cast<float>(kScrH) * zoom)), render_h);
-    int const kOutX = (render_w - kOutW) / 2;
-    int const kOutY = (render_h - kOutH) / 2;
+  // Centred output rect that preserves the level's aspect ratio; any remaining
+  // bars are filled black. Shared by the CPU and GPU composite paths.
+  SpectatorDstRect const kDst = ComputeSpectatorDstRect(render_w, render_h, kScrW, kScrH, zoom);
 
-    if (kOutX > 0 || kOutY > 0) {
+  if (renderer.gpu_world_composite) {
+    // GPU path (PR7 Task 1b): hand the 1:1 world pass to Gfx, which uploads the
+    // used sub-rect to a streaming texture and scales it on the GPU
+    // (SDL_RenderTexture), deleting the ~38 ms CPU box-filter. `bmp` becomes a
+    // transparent HUD-only overlay (Task 1c) blended on top of the world.
+    ZoneScopedN("Spectator::Composite::GpuHandoff");
+    WorldTextureSize const kTex = SpectatorWorldTextureSize(game.level.width, game.level.height);
+    renderer.gpu_world_src = &scratch_bmp;
+    renderer.gpu_world_used_w = kScrW;
+    renderer.gpu_world_used_h = kScrH;
+    renderer.gpu_world_max_w = kTex.w;
+    renderer.gpu_world_max_h = kTex.h;
+    renderer.gpu_world_dst_x = kDst.x;
+    renderer.gpu_world_dst_y = kDst.y;
+    renderer.gpu_world_dst_w = kDst.w;
+    renderer.gpu_world_dst_h = kDst.h;
+    FillTransparent(renderer.bmp);
+  } else {
+    // CPU path (videotool, single-screen replay, dummy driver): box-filter the
+    // scratch straight into `bmp` as before. Retains ScaleDrawArea (Task 1e).
+    ZoneScopedN("Spectator::Composite");
+    renderer.gpu_world_src = nullptr;
+    if (kDst.x > 0 || kDst.y > 0) {
       Fill(renderer.bmp, 0);
     }
 
     uint32_t* const kDest = renderer.bmp.pixels +
-                            static_cast<std::size_t>(kOutY) * renderer.bmp.pitch +
-                            static_cast<std::size_t>(kOutX);
-    if (kScrW == kOutW && kScrH == kOutH) {
+                            static_cast<std::size_t>(kDst.y) * renderer.bmp.pitch +
+                            static_cast<std::size_t>(kDst.x);
+    if (kScrW == kDst.w && kScrH == kDst.h) {
       // BlitBitmap reads from src at position (x,y), not (0,0) — wrong for a
       // scratch bitmap whose content always starts at (0,0). Copy row-by-row.
       uint32_t const* src_row = scratch_bmp.pixels;
@@ -518,7 +547,7 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
         src_row += scratch_bmp.pitch;
       }
     } else {
-      ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, kDest, kOutW, kOutH,
+      ScaleDrawArea(scratch_bmp.pixels, kScrW, kScrH, scratch_bmp.pitch, kDest, kDst.w, kDst.h,
                     renderer.bmp.pitch);
     }
   }  // end Composite zone
