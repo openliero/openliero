@@ -83,38 +83,3 @@ TEST_CASE("spectator zoom tracks the bounding box in the mid-range", "[spectator
   CHECK(kZoom > kFill);
   CHECK(kZoom < 1.0F);
 }
-
-// ---------------------------------------------------------------------------
-// Scratch dims tests (Task 1 — cap scratch to render resolution)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("scratch dims capped to render resolution for level larger than window",
-          "[spectator][scratch]") {
-  // Large level, window 1280x800: scratch must not exceed render dims.
-  // Old formula (render_w/zoom x render_h/zoom) could reach 2560x1600 at
-  // zoom=0.5, wasting 4x pixels in ScaleDrawArea.
-  auto const kDims = ComputeScratchDims(1280, 800, 4096, 4096);
-  CHECK(kDims.w == 1280);
-  CHECK(kDims.h == 800);
-}
-
-TEST_CASE("scratch dims capped to level size for level smaller than window",
-          "[spectator][scratch]") {
-  // Small level inside large window: scratch is level-sized, not window-sized.
-  auto const kDims = ComputeScratchDims(1920, 1080, 504, 350);
-  CHECK(kDims.w == 504);
-  CHECK(kDims.h == 350);
-}
-
-TEST_CASE("scratch dims never exceed either render or level bound", "[spectator][scratch]") {
-  // Level wider than render but shorter: each axis is independently capped.
-  auto const kDims = ComputeScratchDims(800, 600, 1000, 400);
-  CHECK(kDims.w == 800);   // render-capped
-  CHECK(kDims.h == 400);   // level-capped
-}
-
-TEST_CASE("scratch dims equal render when level exactly matches window", "[spectator][scratch]") {
-  auto const kDims = ComputeScratchDims(1280, 800, 1280, 800);
-  CHECK(kDims.w == 1280);
-  CHECK(kDims.h == 800);
-}

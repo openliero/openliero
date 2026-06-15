@@ -28,10 +28,6 @@ float ComputeSpectatorZoom(int render_w, int render_h, int bbox_w, int bbox_h, i
   return std::clamp(std::min(kZoomX, kZoomY), kLevelFillZoom, kMaxZoom);
 }
 
-ScratchDims ComputeScratchDims(int render_w, int render_h, int level_w, int level_h) {
-  return {.w = std::min(render_w, level_w), .h = std::min(render_h, level_h)};
-}
-
 void SpectatorViewport::Process(Game& game) {
   int const kRenderW = render_w;
   int const kRenderH = render_h;
@@ -92,12 +88,13 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   int const kCenterX = render_w / 2;
 
   // ── World pass ────────────────────────────────────────────────────────────
-  // Scratch bitmap sized to the visible world region, capped to render
-  // resolution. Capping here prevents the scratch from growing to
-  // render_w/zoom x render_h/zoom (up to 4x the pixel count at zoom=0.5).
-  auto const kScr = ComputeScratchDims(render_w, render_h, game.level.width, game.level.height);
-  int const kScrW = kScr.w;
-  int const kScrH = kScr.h;
+  // Scratch bitmap holds the visible world region at 1:1 pixel scale, capped
+  // to the level dimensions. At zoom < 1 this can be as large as the full
+  // level; the GPU path (Task 1e) will replace this with SDL_RenderTexture.
+  int const kScrW =
+      std::min(static_cast<int>(static_cast<float>(render_w) / zoom), game.level.width);
+  int const kScrH =
+      std::min(static_cast<int>(static_cast<float>(render_h) / zoom), game.level.height);
 
   scratch_bmp.Alloc(kScrW, kScrH);
   scratch_bmp.pal32 = renderer.pal32;
