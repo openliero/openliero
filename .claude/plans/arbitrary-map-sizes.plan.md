@@ -334,35 +334,48 @@ GPU composite makes that moot. **Not pursued.**
      that sub-rect as `srcrect`" approach (1b) is orthogonal to logical presentation
      (standard `SDL_RenderTexture` srcrect semantics) and is low-risk — not separately
      spiked. (Spike source kept out-of-tree under `/tmp/sdl_spike_1a.cpp`; not committed.)
-   - **1b. World texture.** Add `sdl_spectator_world_texture` (STREAMING, ARGB8888).
-     Allocate it **once at max size** — level dims clamped to a ceiling — in
-     `OnWindowResize`/`SetVideoMode`, NOT per frame (scratch dims change with zoom).
-     Each frame, `SDL_UpdateTexture` only the used `kScrW×kScrH` sub-rect, then
-     `SDL_RenderTexture` with that sub-rect as **srcrect** and the letterboxed
-     output rect (from 1a) as dstrect, `SDL_SCALEMODE_LINEAR`. This replaces the
-     `ScaleDrawArea`/memcpy composite block (spectatorviewport.cpp:491-524).
-   - **1c. HUD overlay.** The HUD currently draws into the same
-     `single_screen_renderer.bmp` as the world (spectatorviewport.cpp:526-664). Split
-     it onto a transparent layer: clear the HUD buffer to **alpha 0** (today's
-     `Fill(renderer.bmp, 0)` writes opaque black `0xFF000000` — change to a
-     transparent clear for the HUD buffer), draw the HUD into it, upload to a
-     native-res overlay texture with `SDL_BLENDMODE_BLEND`, and `SDL_RenderTexture`
-     it on top of the world. Decide where the HUD buffer lives — reuse
-     `single_screen_renderer.bmp` (now HUD-only, still native-res) or a dedicated
-     bitmap. Bars/text helpers (`DrawBar`, `font.DrawString`, `FillRect`) already
-     write through `pal32` ARGB so they keep working once the clear is transparent.
-   - **1d. Scope the GPU path correctly.** Apply it only to the real spectator
-     window. `single_screen_renderer` doubles as the **main-window primary renderer
-     during single-screen replay** (gfx.cpp:411) — in that mode the existing
-     `Gfx::Draw` CPU path must remain. Guard on a live SDL renderer / spectator
-     window so the dummy video driver (CI smoke) and the videotool don't hit it.
-   - **1e. Retain `ScaleDrawArea`.** `video_tool` renders offline with no
-     GPU/window and still calls the CPU composite — leave that path intact;
-     `test_blit` continues to cover it.
-   - **1f. Profile to confirm.** Re-measure with Tracy at 1280×800 and 1920×1080 on
-     the 4096² level: composite zone should drop to ~0; capture the new
-     texture-upload cost; verify total `SpectatorViewport::Draw` + `Gfx::Flip` is
-     within the 14 ms budget.
+   - **1b. World texture. — DONE (2026-06-15, `cc0ae79`).** Added
+     `sdl_spectator_world_texture` (STREAMING, ARGB8888), allocated **once per
+     level** at the level size clamped to `kSpectatorWorldTextureMax` (4096) via
+     the pure, unit-tested `SpectatorWorldTextureSize`. Implemented as a lazy
+     `EnsureSpectatorWorldTexture(need_w, need_h)` (grows only; no per-frame
+     realloc) rather than in `OnWindowResize`, because the world texture is
+     level-sized and window-resize-independent (the spectator renderer persists
+     across window resizes; only `SetVideoMode`'s renderer-destroy invalidates
+     it, where it's nulled for lazy rebuild). Each frame `SDL_UpdateTexture`
+     uploads only the used `kScrW×kScrH` sub-rect, then `Gfx::DrawSpectatorGpu`
+     `SDL_RenderTexture`s it (sub-rect srcrect → letterboxed dstrect from the
+     shared `ComputeSpectatorDstRect`, `SDL_SCALEMODE_LINEAR`). Replaced the
+     `ScaleDrawArea`/memcpy composite block in `SpectatorViewport::Draw`.
+   - **1c. HUD overlay. — DONE (2026-06-15, `cc0ae79`).** In the GPU path the
+     world-pass clear of `renderer.bmp` switched from `Fill(renderer.bmp, 0)`
+     (opaque `pal32[0]`) to the new `FillTransparent` (ARGB `0x00000000`); the
+     HUD draws into that same native-res `single_screen_renderer.bmp` (now
+     HUD-only) and uploads to the existing `sdl_spectator_texture` (now
+     `SDL_BLENDMODE_BLEND`), `SDL_RenderTexture`d on top of the world. Bars/text
+     helpers write opaque `pal32` ARGB and keep working. `ScaleDraw`'s
+     per-channel fade is reproduced via `SDL_SetTextureColorMod` on both layers
+     so the spectator fade-in survives.
+   - **1d. Scope the GPU path correctly. — DONE (2026-06-15, `cc0ae79`).**
+     `Gfx::SpectatorGpuComposite()` enables the path only when `spectator_window`
+     is set, a live `sdl_spectator_renderer`/`sdl_spectator_texture` exist, and
+     `primary_renderer != &single_screen_renderer` (so single-screen replay to
+     the main window keeps the CPU `Gfx::Draw` path). The flag is set per frame
+     before each spectator-viewport draw and `gpu_world_src` reset, so a frame
+     that doesn't redraw the viewport (menu over a frozen game) falls back to the
+     CPU present. The dummy driver / videotool never satisfy the guard. Headless
+     smoke (dummy driver) launches clean.
+   - **1e. Retain `ScaleDrawArea`. — DONE (kept intact).** The CPU composite
+     branch (videotool / single-screen replay) still box-filters the scratch into
+     `bmp` via `ScaleDrawArea`; `test_blit` unchanged (83 assertions, green).
+     Note: videotool is off by default (needs system ffmpeg) so it wasn't
+     rebuilt; its `ScaleDrawArea` caller is untouched.
+   - **1f. Profile to confirm. — PENDING (needs a real display).** Re-measure
+     with Tracy at 1280×800 and 1920×1080 on the 4096² level: composite zone
+     should drop to ~0; capture the new texture-upload cost; verify total
+     `SpectatorViewport::Draw` + `Gfx::Flip` is within the 14 ms budget. Cannot be
+     run in the headless dev environment — the GPU path is guarded off under the
+     dummy driver. Hand to a display-capable machine.
 
 2. **Frustum-cull the sprite and shadow passes.** — **DONE** (`bd8cb77`, PR7 Task 2)
    Every worm, wobject, nobject, bonus, and sobject now gets a cheap AABB check
