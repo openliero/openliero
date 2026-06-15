@@ -68,6 +68,55 @@ TEST_CASE("spectator zoom shows the whole level when a large level's worms are f
   CHECK(kZoom < 1.0F);
 }
 
+TEST_CASE("spectator world texture clamps level dims to the ceiling", "[spectator][composite]") {
+  // The world texture is allocated once at the level size so the per-frame
+  // upload only ever writes a sub-rect. On a level at or below the ceiling the
+  // dims pass straight through; past the ceiling they clamp so GPU memory stays
+  // bounded (terrain is capped at the same ceiling).
+  WorldTextureSize const kSmall = SpectatorWorldTextureSize(504, 350);
+  CHECK(kSmall.w == 504);
+  CHECK(kSmall.h == 350);
+
+  WorldTextureSize const kAtCeiling =
+      SpectatorWorldTextureSize(kSpectatorWorldTextureMax, kSpectatorWorldTextureMax);
+  CHECK(kAtCeiling.w == kSpectatorWorldTextureMax);
+  CHECK(kAtCeiling.h == kSpectatorWorldTextureMax);
+
+  WorldTextureSize const kOversized =
+      SpectatorWorldTextureSize(kSpectatorWorldTextureMax + 1000, kSpectatorWorldTextureMax + 1);
+  CHECK(kOversized.w == kSpectatorWorldTextureMax);
+  CHECK(kOversized.h == kSpectatorWorldTextureMax);
+}
+
+TEST_CASE("spectator composite dest rect fills the window at zoom 1", "[spectator][composite]") {
+  // Scratch exactly the render size, zoom 1 → no scaling, no letterbox bars.
+  SpectatorDstRect const kDst = ComputeSpectatorDstRect(1280, 800, 1280, 800, 1.0F);
+  CHECK(kDst.x == 0);
+  CHECK(kDst.y == 0);
+  CHECK(kDst.w == 1280);
+  CHECK(kDst.h == 800);
+}
+
+TEST_CASE("spectator composite dest rect centres a zoomed-out world", "[spectator][composite]") {
+  // 1000x1000 scratch at zoom 0.5 → 500x500 output centred in a 1280x800
+  // window: x=(1280-500)/2, y=(800-500)/2.
+  SpectatorDstRect const kDst = ComputeSpectatorDstRect(1280, 800, 1000, 1000, 0.5F);
+  CHECK(kDst.w == 500);
+  CHECK(kDst.h == 500);
+  CHECK(kDst.x == 390);
+  CHECK(kDst.y == 150);
+}
+
+TEST_CASE("spectator composite dest rect clamps to the render surface", "[spectator][composite]") {
+  // A computed output larger than the render surface is clamped to it (it must
+  // never overhang), pinning the corresponding offset to 0.
+  SpectatorDstRect const kDst = ComputeSpectatorDstRect(1280, 800, 4096, 1000, 0.5F);
+  CHECK(kDst.w == 1280);  // 4096*0.5 = 2048, clamped to 1280
+  CHECK(kDst.x == 0);
+  CHECK(kDst.h == 500);
+  CHECK(kDst.y == 150);
+}
+
 TEST_CASE("spectator zoom tracks the bounding box in the mid-range", "[spectator][zoom]") {
   // Large level, bbox between "fits" and "whole level": zoom follows the
   // worm-framing value and sits strictly inside (fill, 1.0).
