@@ -1593,13 +1593,17 @@ bool Gfx::RunOneFrame() {
       controller->Unfocus();
       ClearKeys();
 
-      // Restore spectator renderer to the actual window pixel size now that
-      // it's no longer shared with the main window.
+      // Restore the spectator renderer to its windowed render resolution now
+      // that it's no longer shared with the main window. Route through
+      // OnWindowResize so the render resolution, the SDL logical presentation
+      // and the textures are all re-derived together through the PR8 render
+      // cap (ComputeCappedRenderResolution). Setting render_res to the raw
+      // window size here instead would desync it from the capped logical
+      // presentation: the world dst rect would be computed in the larger
+      // window space while SDL clips it to the smaller capped canvas, pushing
+      // the right/bottom of the world — and any worm there — off-screen.
       if (sdl_spectator_window && settings->spectator_window) {
-        int w = 0;
-        int h = 0;
-        SDL_GetWindowSize(sdl_spectator_window, &w, &h);
-        single_screen_renderer.SetRenderResolution(w, h);
+        OnWindowResize(SDL_GetWindowID(sdl_spectator_window));
       }
 
       // Draw one frame so the menu background captures the final game state
