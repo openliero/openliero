@@ -420,6 +420,11 @@ void Gfx::OnWindowResize(uint32_t window_id) {
       // Blend so the GPU HUD overlay (PR7 Task 1c) composites over the world;
       // harmless for the CPU present path, whose frames are fully opaque.
       SDL_SetTextureBlendMode(sdl_spectator_texture, SDL_BLENDMODE_BLEND);
+      // Point-sample the HUD overlay so the small pixel font stays crisp when
+      // SDL upscales the capped surface to a larger window (PR8 cap). The world
+      // texture keeps linear sampling (smooth downscaled overview); only the
+      // HUD must avoid the blur, which made it unreadable above the cap.
+      SDL_SetTextureScaleMode(sdl_spectator_texture, SDL_SCALEMODE_NEAREST);
       sdl_spectator_draw_surface = SDL_CreateSurface(kW, kH, SDL_PIXELFORMAT_ARGB8888);
       SDL_SetRenderLogicalPresentation(sdl_spectator_renderer, kW, kH,
                                        SDL_LOGICAL_PRESENTATION_LETTERBOX);
