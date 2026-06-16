@@ -1,16 +1,18 @@
 # Plan: Arbitrary Map Sizes + Zooming Spectator Viewport + Configurable Videotool Resolution
 
-**Complexity**: Large (originally 5 sequenced PRs; PRs 1–7 landed, PR 8 is the active work)
+**Complexity**: Large (originally 5 sequenced PRs; PRs 1–7 landed, PR 8 code complete and in review — pending real-HW profiling)
 
 ## Summary
 
 Adds: (1) arbitrary map sizes up to 4096×4096 via a new sized on-disk level
 format (legacy headerless 504×350 still loads), (2) a spectator viewport that
 auto-zooms to keep both worms visible on large maps, and (3) a selectable output
-resolution for the videotool. PRs 1–7 are **merged to master**. The remaining
-work (**PR 8**) pushes the spectator frame time under the 14 ms budget on very
-large (4K-class) windows — see the dedicated section at the bottom; everything
-above it is background.
+resolution for the videotool. PRs 1–7 are **merged to master**. **PR 8** pushes
+the spectator frame time under the 14 ms budget on very large (4K-class) windows;
+its code (Tasks 1 & 2) is **complete, tested, and committed** on branch
+`spectator-render-resolution-cap` and open as a PR — the only remaining work is
+real-hardware Tracy profiling + a visual playtest to close acceptance. See the
+PR 8 section at the bottom; everything above it is background.
 
 ## Decisions (still load-bearing)
 
@@ -100,11 +102,26 @@ worms at max separation). Still **above the 14 ms budget at very large windows**
 
 ---
 
-## PR 8 — Bound the spectator cost by a render-resolution cap (ACTIVE)
+## PR 8 — Bound the spectator cost by a render-resolution cap (CODE DONE; PENDING REAL-HW PROFILE)
 
 **Goal:** spectator frame time within the 14 ms budget at 4K-class windows
 (3440×1440 and 3840×2160), 4096² level, worms at maximum separation (full
 zoom-out — the worst case).
+
+**Status (handover):** Tasks 1 and 2 are **implemented, tested, and committed**
+on branch `spectator-render-resolution-cap` (full ctest 274/274, determinism +
+rollback green, clang-format/clang-tidy clean, dummy-driver smoke clean). What
+is **not** done and is the only thing between here and closing the acceptance
+box: (a) the **real-hardware Tracy re-profile** confirming < 14 ms (cannot run
+headless), and (b) a **visual spectator playtest** (the GPU present path is
+guarded off under the dummy driver, so band correctness was proven by code
+enumeration + a full-refresh safety net, not observed). Task 3 remains unstarted
+and is only needed if (a) shows a remainder. One facet of Task 2 (native-res
+crisp HUD) was deliberately deferred — see its section.
+
+Commits: `ComputeCappedRenderResolution` helper + test, the cap wiring (Task 1),
+`ComputeHudDirtyBands` helper + test, and the partial HUD clear/upload wiring
+(Task 2).
 
 ### Problem analysis (profiling-grounded; re-confirm before/after on real HW)
 
@@ -140,51 +157,74 @@ consistently.
 
 ### Approach (in priority order)
 
-#### Task 1 — Cap the spectator internal render resolution (primary fix, low risk)
+#### Task 1 — Cap the spectator internal render resolution (primary fix, low risk) — ✅ DONE
 
-Decouple the spectator render resolution from the window size: render at
-`min(window, cap)` preserving aspect, and let the **existing**
-`SDL_SetRenderLogicalPresentation` upscale to the physical window (that
-mechanism is already in place at `gfx.cpp` ~:407). This bounds **all five**
-window-sized costs (both memsets, the world draw, both uploads) by a constant
-cap instead of the window.
+**Shipped.** The spectator now renders at `min(window, cap)` preserving aspect,
+and the existing `SDL_SetRenderLogicalPresentation` upscales the capped surface
+to the physical window. This bounds all five window-sized costs (both memsets,
+the world draw, both uploads) by the cap instead of the window.
 
-- **Cap value:** start with **1920×1080**, exposed as a hidden-menu setting
-  (mirror an existing numeric setting — pattern: `IntegerBehavior`, `gfx.cpp`
-  ~:1129; settings field + cereal nvp + `kConfigVersion` bump, `settings.hpp` /
-  `cereal_types.hpp`). A single "max spectator render height" (derive width from
-  window aspect) is simpler than two axes and probably sufficient. Default the
-  cap so today's behavior is reproduced when window ≤ cap.
-- **Where to apply:** the spectator renderer's `SetRenderResolution` and the
-  paired `SDL_SetRenderLogicalPresentation` (both in `Gfx::OnWindowResize`,
-  `gfx.cpp` ~:405-414) take `min(window, cap)` instead of the raw window size.
-  `render_res_x/y` then carries the capped size; the world dst-rect math and HUD
-  layout follow automatically. The physical present (logical→window) upscales on
-  the GPU.
-- **Expected:** under 14 ms on its own at 4K.
-- **Cost / tradeoff:** HUD text is upscaled with the world and goes slightly
-  soft. Acceptable for an overview window; if not, add Task 2.
-- **Verify:** re-profile (Tracy zones already in place: `SpectatorViewport::Draw`,
-  `Spectator::WorldPass::*`, `Spectator::Composite::GpuHandoff`,
-  `Gfx::DrawSpectatorGpu`, `Gfx::Flip`) at 3440×1440 and 3840×2160, max
-  zoom-out. Confirm the memsets/uploads shrank to the cap. Visual check: small
-  maps (zoom ≥ 1, window ≤ cap) must be **byte-for-byte unchanged**. Smoke-launch
-  under the dummy driver (the GPU path is guarded off there — must still not
-  crash). `test_spectator_zoom` / `test_blit` stay green; add a unit case for the
-  capped-resolution computation (pure helper, mirror `ComputeWorldPassScratch`
-  in `test_spectator_zoom.cpp`).
+- **Pure helper** `ComputeCappedRenderResolution(window_w, window_h, cap_h)`
+  (`spectatorviewport.{hpp,cpp}`): caps height to `cap_h`, derives width from the
+  window aspect; a no-op when `cap_h <= 0` (disabled) or `window_h <= cap_h`
+  (so small windows are byte-for-byte unchanged); ≥1px width guard. Six
+  `[spectator][rescap]` cases in `test_spectator_zoom.cpp`.
+- **Applied** in `Gfx::OnWindowResize` (the spectator branch, ~`gfx.cpp:406`):
+  the texture, draw surface, `SDL_SetRenderLogicalPresentation`, and
+  `SetRenderResolution` all take the capped `kW/kH`. `render_res_x/y` then
+  carries the capped size; world dst-rect math and HUD layout follow.
+- **Setting** `max_spectator_render_height` (`AppSettings`, default **1080**,
+  `0` = disabled): hidden-menu item "MAX SPECTATOR RES (H)"
+  (`IntegerBehavior`, range 0–4320 step 120), cereal nvp
+  `maxSpectatorRenderHeight`, `kConfigVersion` 5 → **6** (missing key → 1080).
+  Takes effect on the next spectator-window resize / video-mode change.
+- **Cost / tradeoff:** HUD text is upscaled with the world and goes slightly soft
+  at the cap — Task 2's deferred facet (native-res HUD) would restore crispness.
+- **Outstanding verify (real HW):** re-profile (Tracy zones already in place:
+  `SpectatorViewport::Draw`, `Spectator::WorldPass::*`,
+  `Spectator::Composite::GpuHandoff`, `Gfx::DrawSpectatorGpu`, `Gfx::Flip`) at
+  3440×1440 and 3840×2160, max zoom-out; confirm the memsets/uploads shrank to
+  the cap and a small map (zoom ≥ 1, window ≤ cap) is unchanged.
 
-#### Task 2 — Partial HUD upload + partial clear (optional, keeps HUD crisp)
+#### Task 2 — Partial HUD upload + partial clear — ✅ DONE (cost half); native-res HUD facet DEFERRED
 
-Only needed if the soft HUD from Task 1 is unacceptable, or if Task 1 alone
-leaves a remainder. Keep the HUD overlay at native resolution but stop touching
-the whole buffer: track the HUD's dirty bands (bottom ~40 px strip; the banner
-near `banner_y`; the `y=164` "Reloading" text — see the HUD block
-`spectatorviewport.cpp:704-842`) and only `FillTransparent` + `SDL_UpdateTexture`
-those sub-rects. Cuts ~40 MB/frame of HUD traffic to ~1 MB. Stacks cleanly on
-Task 1 (crisp native HUD over a capped world). Watch: bands must cover the
-previous frame's HUD extent too, so moving text (banner scroll) doesn't leave
-stale pixels.
+**Shipped (the cost win).** The HUD overlay no longer clears/uploads the whole
+window-sized buffer each frame; only the dirty bands.
+
+- **Pure helper** `ComputeHudDirtyBands(render_h, banner_y, prev_banner_y)`
+  (`spectatorviewport.{hpp,cpp}`): returns the full-width rows the HUD actually
+  touches — bottom 40 px stats strip, the `y=164` reloading text, and a banner
+  band that **unions current+previous frame** so a scrolling banner leaves no
+  stale row — clamped to `[0, render_h)`, off-screen bands dropped. Band extents
+  were derived by enumerating every `DrawBar`/`DrawString`/`FillRect` in the HUD
+  block (glyph height 8, bars ≤5 px, all inside the 40 px strip; the holdazone/
+  tag timer resolves to `render_h − 39`, also inside it) → coverage is provably
+  complete. Four `[spectator][hudbands]` cases.
+- **`FillTransparentBand(bmp, y, h)`** (`blit.{hpp,cpp}`) clears banded rows.
+- **`SpectatorViewport::Draw`** clears only the bands (full clear on a resolution
+  change) and hands them to the renderer (plain-int fields on `Renderer`);
+  `prev_banner_y` + overlay dims tracked on the viewport.
+- **`Gfx::DrawSpectatorGpu`** uploads only those bands. The first GPU frame after
+  a resolution change *or any CPU present* (menu/pause/alloc-fail fallback)
+  re-uploads the whole overlay, since the texture's untouched rows would
+  otherwise be stale — guarded by `spectator_prev_present_gpu`, maintained in
+  `Flip` and `DrawSpectatorGpu`. (This is the safety net that lets band
+  correctness be asserted without a live GPU to observe.)
+- **Effect:** per-frame HUD clear+upload drops from the full overlay (~16 MB at a
+  1080 cap) to the bands (~1 MB), stacking on Task 1.
+
+**Deferred facet — native-resolution crisp HUD.** The plan also framed Task 2 as
+"keep the HUD overlay at *native* resolution" for crispness. That was **not**
+done: with Task 1 the HUD renders at the capped resolution and is upscaled
+(slightly soft). Making it crisp requires **decoupling the HUD's render
+resolution from the world's** — the HUD block draws into `renderer.bmp` using
+`renderer.render_res_y` / `render_w`, all currently the capped size, and
+`single_screen_renderer` is shared with single-screen replay — so this is a
+non-trivial refactor (two resolutions threaded through one Draw, or a separate
+native-res HUD bitmap+texture). It is a **playtest-gated quality call** ("only if
+the soft HUD is unacceptable"), so it waits on the real-HW playtest. If pursued:
+keep the world capped, give the HUD its own native-res overlay bitmap/texture,
+and recompute the bands in native-res coordinates.
 
 #### Task 3 — Render the world pass into a locked texture (optional, only if still over budget)
 
@@ -230,10 +270,11 @@ For PR 8, additionally re-profile with Tracy on real hardware at 3440×1440 and
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| PR8 Task 1: capped-res HUD text too soft | Medium | Default cap ≥ 1080p; add Task 2 (native-res partial HUD) if playtest dislikes it |
-| PR8 Task 1: small-map / zoom≥1 path accidentally changed | Low | Cap is a no-op when window ≤ cap; assert byte-exact small-map output in test |
-| PR8 Task 1: re-break the two PR7 present bugs (`703af23`, `4f7a187`) | Medium | Keep `gpu_world_src` one-shot + neutral-colormod-restore invariants; smoke-launch incl. pause/menu |
-| PR8 Task 3: locked write-combined texture slow on the RMW (zoom≥1) path | Medium | Use locked path only for the shadow-omitting downscaled pass |
+| PR8 Task 1: capped-res HUD text too soft | Medium | **Open (playtest):** default cap 1080; native-res HUD facet of Task 2 deferred until playtest judges softness |
+| PR8 Task 1: small-map / zoom≥1 path accidentally changed | Low | **Mitigated:** cap is a no-op when window ≤ cap; `[rescap]` test asserts identity; verify on real HW |
+| PR8 Task 1/2: re-break the two PR7 present bugs (`703af23`, `4f7a187`) | Medium | **Code-mitigated, needs playtest:** `gpu_world_src` one-shot + neutral-colormod-restore untouched; Task 2 adds the `spectator_prev_present_gpu` full-refresh guard; dummy-driver smoke clean — but pause/menu visuals unobserved (no GPU here) |
+| PR8 Task 2: dirty bands miss a HUD region → stale/ghost pixels | Medium | **Code-mitigated:** bands derived by exhaustive enumeration of the HUD draws + full-refresh on resize/CPU-present; **confirm by playtest** (death-banner scroll, pause round-trip) |
+| PR8 Task 3 (not started): locked write-combined texture slow on RMW (zoom≥1) | Medium | Use locked path only for the shadow-omitting downscaled pass; only pursue if real-HW profile still over budget |
 | Memory at 4096² (~117 MB layers + AI) | Medium | 4096 cap; fail loudly past it |
 
 ## Acceptance
@@ -242,6 +283,12 @@ For PR 8, additionally re-profile with Tracy on real hardware at 3440×1440 and
 - [x] PR7 ([#114]): spectator GPU composite + downscaled world pass + frustum
   cull; pause/start spectator bugs fixed; ≈45 → ≈20 ms. **Not yet within 14 ms**
   at very large windows.
-- [ ] **PR8: spectator frame time < 14 ms at 3440×1440 and 3840×2160, 4096²,
-  max zoom-out** — via render-resolution cap (Task 1; Tasks 2/3 as needed).
-  Small-map (zoom ≥ 1) output unchanged. Determinism/rollback suites green.
+- [x] **PR8 code:** Task 1 (render-resolution cap + hidden-menu setting, config
+  v6) and Task 2 (partial HUD clear/upload) implemented with unit tests; full
+  ctest 274/274, determinism/rollback green, clang-format/clang-tidy clean,
+  dummy-driver smoke clean. Branch `spectator-render-resolution-cap`.
+- [ ] **PR8 acceptance (real HW, blocks closing):** spectator frame time < 14 ms
+  at 3440×1440 and 3840×2160, 4096², max zoom-out (Tracy re-profile); + visual
+  playtest confirming no HUD ghosting (banner scroll, pause/menu round-trip) and
+  unchanged small-map output. If still over budget → Task 3. If HUD too soft →
+  native-res HUD facet of Task 2.
