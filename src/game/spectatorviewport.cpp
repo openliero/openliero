@@ -48,6 +48,20 @@ WorldPassScratch ComputeWorldPassScratch(int render_w, int render_h, float zoom,
   return {.w = kW, .h = kH, .scale = kScale};
 }
 
+CappedRenderResolution ComputeCappedRenderResolution(int window_w, int window_h, int cap_h) {
+  // Disabled, or the window already fits under the cap → render at native res
+  // (never upscale). Small-window output stays byte-for-byte unchanged.
+  if (cap_h <= 0 || window_h <= cap_h) {
+    return {.w = window_w, .h = window_h};
+  }
+  // Pin height to the cap, derive width from the window aspect so the spectator
+  // overview keeps its shape (ultrawide stays ultrawide). lroundf for symmetric
+  // rounding; guard against a sub-pixel width on extreme aspect ratios.
+  float const kScale = static_cast<float>(cap_h) / static_cast<float>(window_h);
+  int const kW = std::max(1, static_cast<int>(std::lroundf(static_cast<float>(window_w) * kScale)));
+  return {.w = kW, .h = cap_h};
+}
+
 void SpectatorViewport::Process(Game& game) {
   int const kRenderW = render_w;
   int const kRenderH = render_h;
