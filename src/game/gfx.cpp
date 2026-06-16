@@ -1711,7 +1711,20 @@ void Gfx::SetSpectatorLayout(bool fixed) {
     target_w = 640;
     target_h = 400;
   } else {
-    SDL_GetWindowSize(sdl_spectator_window, &target_w, &target_h);
+    int win_w = 0;
+    int win_h = 0;
+    SDL_GetWindowSize(sdl_spectator_window, &win_w, &win_h);
+    // Apply the PR8 render cap so this per-frame render resolution matches the
+    // capped textures and SDL logical presentation that OnWindowResize set.
+    // Without it, on a window taller than the cap (e.g. 3440x1440 -> 2580x1080)
+    // render_res would be reset to the full window every frame while the HUD
+    // and world textures stay capped: the HUD's bottom rows then fall outside
+    // the shorter HUD texture (the HUD vanishes) and the world is clipped to
+    // the capped canvas (worms can leave the screen).
+    CappedRenderResolution const kCap =
+        ComputeCappedRenderResolution(win_w, win_h, settings->max_spectator_render_height);
+    target_w = kCap.w;
+    target_h = kCap.h;
   }
   if (single_screen_renderer.render_res_x != target_w ||
       single_screen_renderer.render_res_y != target_h) {

@@ -24,7 +24,7 @@ struct SpectatorFixture {
   std::shared_ptr<Settings> settings;
   std::shared_ptr<SoundPlayer> sound;
   std::unique_ptr<Game> game;
-  std::unique_ptr<SpectatorViewport> vp;
+  SpectatorViewport vp{Rect(0, 0, 640, 400)};
 
   SpectatorFixture(int level_w, int level_h) {
     PrecomputeTables();
@@ -55,13 +55,12 @@ struct SpectatorFixture {
       w->InitWeapons(*game);
     }
 
-    vp = std::make_unique<SpectatorViewport>(Rect(0, 0, 640, 400));
-    game->AddSpectatorViewport(vp.get());
+    game->AddSpectatorViewport(&vp);
   }
 
-  void SetRenderResolution(int w, int h) const {
-    vp->render_w = w;
-    vp->render_h = h;
+  void SetRenderResolution(int w, int h) {
+    vp.render_w = w;
+    vp.render_h = h;
   }
 
   void PlaceWorm(int idx, int x, int y) const { game->worms[idx]->pos = Itof(IVec2(x, y)); }
@@ -69,23 +68,23 @@ struct SpectatorFixture {
   // Reproduces the visible world region the Draw path actually samples and
   // composites (see SpectatorViewport::Draw): the [x, x+kViewW) x [y, y+kViewH)
   // rectangle, where kViewW/kViewH are clamped to the level like Draw does.
-  void CheckBothWormsVisible(const char* label) const {
-    vp->Process(*game);
+  void CheckBothWormsVisible(const char* label) {
+    vp.Process(*game);
     int const kViewW =
-        std::min(static_cast<int>(static_cast<float>(vp->render_w) / vp->zoom), game->level.width);
+        std::min(static_cast<int>(static_cast<float>(vp.render_w) / vp.zoom), game->level.width);
     int const kViewH =
-        std::min(static_cast<int>(static_cast<float>(vp->render_h) / vp->zoom), game->level.height);
+        std::min(static_cast<int>(static_cast<float>(vp.render_h) / vp.zoom), game->level.height);
     for (int idx = 0; idx < 2; ++idx) {
       int const kWx = Ftoi(game->worms[idx]->pos.x);
       int const kWy = Ftoi(game->worms[idx]->pos.y);
-      INFO(label << " worm " << idx << " at (" << kWx << "," << kWy << ") view=[" << vp->x << ","
-                 << (vp->x + kViewW) << ")x[" << vp->y << "," << (vp->y + kViewH)
-                 << ") zoom=" << vp->zoom << " render=" << vp->render_w << "x" << vp->render_h
+      INFO(label << " worm " << idx << " at (" << kWx << "," << kWy << ") view=[" << vp.x << ","
+                 << (vp.x + kViewW) << ")x[" << vp.y << "," << (vp.y + kViewH)
+                 << ") zoom=" << vp.zoom << " render=" << vp.render_w << "x" << vp.render_h
                  << " level=" << game->level.width << "x" << game->level.height);
-      CHECK(kWx >= vp->x);
-      CHECK(kWx < vp->x + kViewW);
-      CHECK(kWy >= vp->y);
-      CHECK(kWy < vp->y + kViewH);
+      CHECK(kWx >= vp.x);
+      CHECK(kWx < vp.x + kViewW);
+      CHECK(kWy >= vp.y);
+      CHECK(kWy < vp.y + kViewH);
     }
   }
 };
