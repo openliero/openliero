@@ -38,6 +38,21 @@ struct WorldPassScratch {
 WorldPassScratch ComputeWorldPassScratch(int render_w, int render_h, float zoom, int level_w,
                                          int level_h);
 
+// Capped spectator render resolution (PR8 Task 1). The spectator world pass,
+// its memsets and its texture uploads all scale with the render surface, not
+// the map; on very large (4K-class) windows that pushes the frame past budget
+// while the zoomed-out world is already sub-pixel. This caps the *internal*
+// render height to `cap_h` (deriving width from the window aspect) so all those
+// costs are bounded by a constant; the existing SDL_SetRenderLogicalPresentation
+// upscales the capped surface back to the physical window. A no-op (returns the
+// window size unchanged) when `cap_h <= 0` (disabled) or `window_h <= cap_h`
+// (small windows render at native res, byte-for-byte unchanged). Pure so it can
+// be unit-tested.
+struct CappedRenderResolution {
+  int w, h;
+};
+CappedRenderResolution ComputeCappedRenderResolution(int window_w, int window_h, int cap_h);
+
 struct SpectatorViewport : Viewport {
   explicit SpectatorViewport(Rect rect) : Viewport(rect, 0) {}
 

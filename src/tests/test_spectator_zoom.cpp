@@ -133,6 +133,60 @@ TEST_CASE("world pass scratch never collapses below 1 pixel", "[spectator][world
   CHECK(kP.h >= 1);
 }
 
+TEST_CASE("capped render resolution is a no-op when the window fits the cap",
+          "[spectator][rescap]") {
+  // Window shorter than the cap: render at native, byte-for-byte unchanged. This
+  // is the small-window guarantee — the cap must never upscale.
+  CappedRenderResolution const kR = ComputeCappedRenderResolution(1280, 800, 1080);
+  CHECK(kR.w == 1280);
+  CHECK(kR.h == 800);
+}
+
+TEST_CASE("capped render resolution is a no-op when the window equals the cap",
+          "[spectator][rescap]") {
+  // Boundary: window height exactly the cap stays untouched (no off-by-one
+  // downscale of a 1080p window under a 1080 cap).
+  CappedRenderResolution const kR = ComputeCappedRenderResolution(1920, 1080, 1080);
+  CHECK(kR.w == 1920);
+  CHECK(kR.h == 1080);
+}
+
+TEST_CASE("capped render resolution caps a 4K window preserving aspect", "[spectator][rescap]") {
+  // 3840x2160 under a 1080 cap → 1920x1080: height pinned to the cap, width
+  // derived from the 16:9 window aspect (3840*1080/2160 = 1920).
+  CappedRenderResolution const kR = ComputeCappedRenderResolution(3840, 2160, 1080);
+  CHECK(kR.h == 1080);
+  CHECK(kR.w == 1920);
+}
+
+TEST_CASE("capped render resolution caps an ultrawide window preserving aspect",
+          "[spectator][rescap]") {
+  // 3440x1440 under a 1080 cap → 2580x1080 (3440*1080/1440 = 2580): the
+  // ultrawide aspect (~2.39:1) is preserved, not squashed to 16:9.
+  CappedRenderResolution const kR = ComputeCappedRenderResolution(3440, 1440, 1080);
+  CHECK(kR.h == 1080);
+  CHECK(kR.w == 2580);
+}
+
+TEST_CASE("capped render resolution is disabled when the cap is non-positive",
+          "[spectator][rescap]") {
+  // cap_h <= 0 disables the cap entirely → render at the full window.
+  CappedRenderResolution const kDisabled = ComputeCappedRenderResolution(3840, 2160, 0);
+  CHECK(kDisabled.w == 3840);
+  CHECK(kDisabled.h == 2160);
+  CappedRenderResolution const kNeg = ComputeCappedRenderResolution(3840, 2160, -1);
+  CHECK(kNeg.w == 3840);
+  CHECK(kNeg.h == 2160);
+}
+
+TEST_CASE("capped render resolution never collapses width below 1 pixel", "[spectator][rescap]") {
+  // Degenerate guard: a sliver window under a tiny cap must still leave a >=1px
+  // width the renderer can allocate.
+  CappedRenderResolution const kR = ComputeCappedRenderResolution(1, 4000, 1);
+  CHECK(kR.h == 1);
+  CHECK(kR.w >= 1);
+}
+
 TEST_CASE("spectator zoom tracks the bounding box in the mid-range", "[spectator][zoom]") {
   // Large level, bbox between "fits" and "whole level": zoom follows the
   // worm-framing value and sits strictly inside (fill, 1.0).
