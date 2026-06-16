@@ -38,6 +38,7 @@
 #include "gfx/macros.hpp"
 
 #include "menu/arrayEnumBehavior.hpp"
+#include "spectatorviewport.hpp"
 
 // NOLINTNEXTLINE(bugprone-throwing-static-initialization, cert-err58-cpp) — global Gfx is the platform singleton; an exception here means program startup itself has failed.
 Gfx gfx;
@@ -403,9 +404,17 @@ void Gfx::OnWindowResize(uint32_t window_id) {
     }
 
     if (settings->spectator_window) {
-      int w = 0;
-      int h = 0;
-      SDL_GetWindowSize(sdl_spectator_window, &w, &h);
+      int window_w = 0;
+      int window_h = 0;
+      SDL_GetWindowSize(sdl_spectator_window, &window_w, &window_h);
+      // PR8 Task 1: cap the internal render resolution so the world pass, its
+      // memsets and its texture uploads are bounded by a constant on 4K-class
+      // windows. SDL_SetRenderLogicalPresentation (below) upscales the capped
+      // surface back to the physical window. A no-op when window_h <= cap.
+      CappedRenderResolution const kCap =
+          ComputeCappedRenderResolution(window_w, window_h, settings->max_spectator_render_height);
+      int w = kCap.w;
+      int h = kCap.h;
       sdl_spectator_texture = SDL_CreateTexture(sdl_spectator_renderer, SDL_PIXELFORMAT_ARGB8888,
                                                 SDL_TEXTUREACCESS_STREAMING, w, h);
       // Blend so the GPU HUD overlay (PR7 Task 1c) composites over the world;
@@ -439,6 +448,8 @@ void Gfx::LoadMenus() {
   hidden_menu.AddItem(MenuItem(48, 7, "SEE SPAWN POINT", HiddenMenu::kAllowViewingSpawnPoint));
   hidden_menu.AddItem(MenuItem(48, 7, "SINGLE SCREEN REPLAY", HiddenMenu::kSingleScreenReplay));
   hidden_menu.AddItem(MenuItem(48, 7, "SPECTATOR WINDOW", HiddenMenu::kSpectatorWindow));
+  hidden_menu.AddItem(
+      MenuItem(48, 7, "MAX SPECTATOR RES (H)", HiddenMenu::kMaxSpectatorRenderHeight));
 
   player_menu.AddItem(MenuItem(3, 7, "PROFILE LOADED", PlayerMenu::kPlLoadedProfile));
   player_menu.AddItem(MenuItem(3, 7, "SAVE PROFILE", PlayerMenu::kPlSaveProfile));
