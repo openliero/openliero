@@ -53,6 +53,25 @@ struct CappedRenderResolution {
 };
 CappedRenderResolution ComputeCappedRenderResolution(int window_w, int window_h, int cap_h);
 
+// HUD overlay dirty bands (PR8 Task 2). The spectator HUD overlay (drawn over
+// the GPU-composited world) only ever touches a few full-width horizontal
+// strips: the bottom ~40px stats strip, the y=164 "Reloading" text, and the
+// scrolling death banner near banner_y. Tracking these lets the GPU present
+// path clear and upload just those rows instead of the whole window-sized
+// overlay each frame. The banner band spans both the current and previous
+// frame's y so a scrolling banner never leaves a stale row behind. Bands are
+// clamped to [0, render_h); off-screen strips are dropped. Pure so it can be
+// unit-tested.
+struct HudBand {
+  int y, h;
+};
+struct HudDirtyBands {
+  static constexpr int kMaxBands = 3;
+  HudBand bands[kMaxBands];
+  int count;
+};
+HudDirtyBands ComputeHudDirtyBands(int render_h, int banner_y, int prev_banner_y);
+
 struct SpectatorViewport : Viewport {
   explicit SpectatorViewport(Rect rect) : Viewport(rect, 0) {}
 
