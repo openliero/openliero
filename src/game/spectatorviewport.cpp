@@ -154,7 +154,6 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
   Common& common = *game.common;
   render_w = renderer.render_res_x;
   render_h = renderer.render_res_y;
-  int const kMultiplier = render_w / 320;
   int const kCenterX = render_w / 2;
 
   // ── World pass ────────────────────────────────────────────────────────────
@@ -777,7 +776,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     ZoneScopedN("Spectator::HUD");
     for (std::size_t i = 0; i < game.worms.size(); ++i) {
       Worm const& worm = *game.worms[i];
-      int const kHudX = worm.stats_x * kMultiplier;
+      // Left worm (stats_x==0): left-anchored at the left edge.
+      // Right worm (stats_x>0): right-anchored so the HUD sits the same
+      // distance from the right edge as it does in a 320px split-screen
+      // viewport (320 - stats_x - 100 = 2px gap at full health).
+      int const kHudX = (worm.stats_x == 0) ? 0 : (render_w - (320 - worm.stats_x));
       int const kOffsetWeaponListX = kCenterX - 15 + (i == 0 ? -90 : 60);
 
       if (worm.visible) {
