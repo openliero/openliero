@@ -62,6 +62,42 @@ CappedRenderResolution ComputeCappedRenderResolution(int window_w, int window_h,
   return {.w = kW, .h = cap_h};
 }
 
+HudDirtyBands ComputeHudDirtyBands(int render_h, int banner_y, int prev_banner_y) {
+  // Glyph height (Font::DrawChar draws 8 rows at size 1); the banner adds a 1px
+  // drop shadow. The bottom stats strip spans the lowest 40px (weapon list,
+  // life/ammo bars, kills/name/time text, colour box). y=164 is the fixed
+  // "Reloading" text row. These match the draws in SpectatorViewport::Draw's
+  // HUD block — keep them in sync if those move.
+  constexpr int kTextH = 8;
+  constexpr int kBottomStripH = 40;
+  constexpr int kReloadingY = 164;
+  constexpr int kBannerHiddenY = -8;  // banner_y == -8 means hidden (not drawn)
+
+  HudDirtyBands out{};
+
+  // Append [y, y+h) clamped to [0, render_h); drop if it ends up empty.
+  auto push = [&](int y, int h) {
+    int const kY0 = std::max(0, y);
+    int const kY1 = std::min(render_h, y + h);
+    if (kY1 > kY0 && out.count < HudDirtyBands::kMaxBands) {
+      out.bands[out.count++] = {.y = kY0, .h = kY1 - kY0};
+    }
+  };
+
+  push(render_h - kBottomStripH, kBottomStripH);
+  push(kReloadingY, kTextH);
+
+  // Banner band spans both frames' extents so a scrolling banner clears the row
+  // it vacated. Skipped only when hidden in both frames (nothing was drawn).
+  int const kLo = std::min(banner_y, prev_banner_y);
+  int const kHi = std::max(banner_y, prev_banner_y);
+  if (kHi > kBannerHiddenY) {
+    push(kLo, (kHi + kTextH + 1) - kLo);
+  }
+
+  return out;
+}
+
 void SpectatorViewport::Process(Game& game) {
   int const kRenderW = render_w;
   int const kRenderH = render_h;
@@ -686,7 +722,28 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
     renderer.gpu_world_dst_y = kDst.y;
     renderer.gpu_world_dst_w = kDst.w;
     renderer.gpu_world_dst_h = kDst.h;
-    FillTransparent(renderer.bmp);
+
+    // Partial overlay clear (PR8 Task 2): clear only the rows the HUD will draw
+    // into this frame plus the previous frame's banner row, leaving the rest of
+    // the (already transparent) overlay untouched. Force a full clear on the
+    // first frame / after a resolution change so the never-touched regions start
+    // transparent. The same bands drive the partial texture upload in
+    // Gfx::DrawSpectatorGpu.
+    bool const kFullRefresh = (render_w != hud_overlay_w || render_h != hud_overlay_h);
+    HudDirtyBands const kBands = ComputeHudDirtyBands(render_h, banner_y, prev_banner_y);
+    if (kFullRefresh) {
+      FillTransparent(renderer.bmp);
+    } else {
+      for (int i = 0; i < kBands.count; ++i) {
+        FillTransparentBand(renderer.bmp, kBands.bands[i].y, kBands.bands[i].h);
+      }
+    }
+    renderer.hud_overlay_full_refresh = kFullRefresh;
+    renderer.hud_overlay_band_count = kBands.count;
+    for (int i = 0; i < kBands.count; ++i) {
+      renderer.hud_overlay_band_y[i] = kBands.bands[i].y;
+      renderer.hud_overlay_band_h[i] = kBands.bands[i].h;
+    }
   } else {
     // CPU path (videotool, single-screen replay, dummy driver): box-filter the
     // scratch straight into `bmp` as before. Retains ScaleDrawArea (Task 1e).
@@ -854,4 +911,11 @@ void SpectatorViewport::Draw(Game& game, Renderer& renderer, GameState state, bo
       }
     }
   }  // end HUD zone
+
+  // Remember this frame's banner position and overlay size so next frame's
+  // partial-present (PR8 Task 2) can union the banner band and detect a
+  // resolution change.
+  prev_banner_y = banner_y;
+  hud_overlay_w = render_w;
+  hud_overlay_h = render_h;
 }

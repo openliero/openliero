@@ -90,4 +90,12 @@ struct SpectatorViewport : Viewport {
   // renderer resolution without needing a Renderer& parameter.
   int render_w{640};
   int render_h{400};
+  // Previous frame's banner_y and overlay dimensions, for the HUD partial
+  // present (PR8 Task 2): the banner band unions both frames so a scrolling
+  // banner leaves no stale row, and a dimension change forces a full overlay
+  // refresh. -1 dims mean "no overlay drawn yet" → first frame is a full
+  // refresh.
+  int prev_banner_y{-8};
+  int hud_overlay_w{-1};
+  int hud_overlay_h{-1};
 };

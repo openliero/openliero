@@ -413,20 +413,20 @@ void Gfx::OnWindowResize(uint32_t window_id) {
       // surface back to the physical window. A no-op when window_h <= cap.
       CappedRenderResolution const kCap =
           ComputeCappedRenderResolution(window_w, window_h, settings->max_spectator_render_height);
-      int w = kCap.w;
-      int h = kCap.h;
+      int const kW = kCap.w;
+      int const kH = kCap.h;
       sdl_spectator_texture = SDL_CreateTexture(sdl_spectator_renderer, SDL_PIXELFORMAT_ARGB8888,
-                                                SDL_TEXTUREACCESS_STREAMING, w, h);
+                                                SDL_TEXTUREACCESS_STREAMING, kW, kH);
       // Blend so the GPU HUD overlay (PR7 Task 1c) composites over the world;
       // harmless for the CPU present path, whose frames are fully opaque.
       SDL_SetTextureBlendMode(sdl_spectator_texture, SDL_BLENDMODE_BLEND);
-      sdl_spectator_draw_surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB8888);
-      SDL_SetRenderLogicalPresentation(sdl_spectator_renderer, w, h,
+      sdl_spectator_draw_surface = SDL_CreateSurface(kW, kH, SDL_PIXELFORMAT_ARGB8888);
+      SDL_SetRenderLogicalPresentation(sdl_spectator_renderer, kW, kH,
                                        SDL_LOGICAL_PRESENTATION_LETTERBOX);
       // Only resize the renderer when it isn't being used as primary renderer
       // for the main window (i.e. during single-screen replay).
       if (primary_renderer != &single_screen_renderer) {
-        single_screen_renderer.SetRenderResolution(w, h);
+        single_screen_renderer.SetRenderResolution(kW, kH);
       }
     }
   }
@@ -1079,6 +1079,7 @@ void Gfx::DrawSpectatorGpu(Renderer& renderer) {
   if (!sdl_spectator_world_texture) {
     // Allocation failed; present via the CPU path so the window isn't black.
     Draw(*sdl_spectator_draw_surface, *sdl_spectator_texture, *sdl_spectator_renderer, renderer);
+    spectator_prev_present_gpu = false;
     return;
   }
 
@@ -1088,9 +1089,24 @@ void Gfx::DrawSpectatorGpu(Renderer& renderer) {
       .x = 0, .y = 0, .w = renderer.gpu_world_used_w, .h = renderer.gpu_world_used_h};
   SDL_UpdateTexture(sdl_spectator_world_texture, &kUsed, world.pixels,
                     static_cast<int>(world.pitch * sizeof(uint32_t)));
-  // HUD overlay: native-res, transparent background, opaque HUD pixels.
-  SDL_UpdateTexture(sdl_spectator_texture, nullptr, renderer.bmp.pixels,
-                    static_cast<int>(renderer.bmp.pitch * sizeof(uint32_t)));
+  // HUD overlay: transparent background, opaque HUD pixels. Upload only the
+  // dirty bands (PR8 Task 2) — except the first GPU frame after a resolution
+  // change or a CPU present, which must refresh the whole overlay since the
+  // texture's untouched rows would otherwise hold stale content.
+  int const kHudPitchBytes = static_cast<int>(renderer.bmp.pitch * sizeof(uint32_t));
+  bool const kFullHud = renderer.hud_overlay_full_refresh || !spectator_prev_present_gpu;
+  if (kFullHud) {
+    SDL_UpdateTexture(sdl_spectator_texture, nullptr, renderer.bmp.pixels, kHudPitchBytes);
+  } else {
+    for (int i = 0; i < renderer.hud_overlay_band_count; ++i) {
+      int const kY = renderer.hud_overlay_band_y[i];
+      SDL_Rect const kBand{
+          .x = 0, .y = kY, .w = renderer.render_res_x, .h = renderer.hud_overlay_band_h[i]};
+      uint32_t const* const kRows =
+          renderer.bmp.pixels + static_cast<std::size_t>(kY) * renderer.bmp.pitch;
+      SDL_UpdateTexture(sdl_spectator_texture, &kBand, kRows, kHudPitchBytes);
+    }
+  }
 
   // Replicate ScaleDraw's per-channel fade ((v*fade)>>5, fade 0..32) via RGB
   // texture modulation so the spectator fade-in survives; alpha is left intact
@@ -1122,6 +1138,10 @@ void Gfx::DrawSpectatorGpu(Renderer& renderer) {
   // recreated the texture.
   SDL_SetTextureColorMod(sdl_spectator_world_texture, 255, 255, 255);
   SDL_SetTextureColorMod(sdl_spectator_texture, 255, 255, 255);
+
+  // This GPU present owns the overlay texture now, so the next GPU frame may
+  // upload just its dirty bands (PR8 Task 2).
+  spectator_prev_present_gpu = true;
 }
 
 void Gfx::Flip() {
@@ -1141,6 +1161,9 @@ void Gfx::Flip() {
     } else {
       Draw(*sdl_spectator_draw_surface, *sdl_spectator_texture, *sdl_spectator_renderer,
            single_screen_renderer);
+      // This CPU present fully overwrote the overlay texture; force the next GPU
+      // frame to re-upload the whole overlay rather than just its dirty bands.
+      spectator_prev_present_gpu = false;
     }
     single_screen_renderer.gpu_world_src = nullptr;
   }
