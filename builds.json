@@ -2,6 +2,11 @@
   "releases": [],
   "dev": [
     {
+      "name": "build-ce75ebe",
+      "dir": "dev/build-ce75ebe",
+      "timestamp": "2026-06-23T17:51:54Z"
+    },
+    {
       "name": "build-250ed1a",
       "dir": "dev/build-250ed1a",
       "timestamp": "2026-06-20T06:04:41Z"
@@ -45,11 +50,6 @@
       "name": "build-2638c9f",
       "dir": "dev/build-2638c9f",
       "timestamp": "2026-06-14T18:08:00Z"
-    },
-    {
-      "name": "build-8c72960",
-      "dir": "dev/build-8c72960",
-      "timestamp": "2026-06-14T17:02:31Z"
     }
   ]
 }
