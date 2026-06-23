@@ -15,7 +15,7 @@
 // Convergence is asserted via the confirmed-frame checksum callbacks
 // (NetRunResult::desynced / compared_frames), not by comparing the two
 // peers' frozen final state — see net_game_harness.hpp for why. Game-
-// over is the live game's State() == kStateGameEnded latch (plan Task 0).
+// over is the live game's State() == kStateGameEnded latch.
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
